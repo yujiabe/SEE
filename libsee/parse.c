@@ -74,7 +74,7 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
-/*# include <math.h> */
+# include <string.h>
 #endif
 
 #include <see/mem.h>
@@ -1657,9 +1657,7 @@ MemberExpression_dot_eval(n, context, res)
 	EVAL(n->mexp, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToObject(interp, &r2, &r5);
-	res->type = SEE_REFERENCE;
-	res->u.reference.base = r5.u.object;
-	res->u.reference.property = n->name;
+	SEE_SET_REFERENCE(res, r5.u.object, n->name);
 }
 
 static void
@@ -1698,9 +1696,7 @@ MemberExpression_bracket_eval(n, context, res)
 	GetValue(context, &r3, &r4);
 	SEE_ToObject(interp, &r2, &r5);
 	SEE_ToString(interp, &r4, &r6);
-	res->type = SEE_REFERENCE;
-	res->u.reference.base = r5.u.object;
-	res->u.reference.property = r6.u.string;
+	SEE_SET_REFERENCE(res, r5.u.object, r6.u.string);
 }
 
 static void
