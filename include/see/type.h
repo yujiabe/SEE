@@ -11,13 +11,46 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-typedef u_int16_t	  SEE_uint16_t;	  /* 16-bit unsigned integer */
-typedef int32_t	  	  SEE_int32_t;	  /* 32-bit signed integer */
-typedef u_int32_t	  SEE_uint32_t;   /* 32-bit unsigned integer */
+/* 16-bit unsigned integer */
+#if SIZEOF_UNSIGNED_SHORT == 2
+typedef unsigned short	  SEE_uint16_t;
+#elif SIZEOF_UNSIGNED_INT == 2
+typedef unsigned int	  SEE_uint16_t;
+#else
+# error "cannot provide type for SEE_uint16_t"
+#endif
+
+/* 32-bit signed integer */
+#if SIZEOF_SIGNED_INT == 4
+typedef signed int	  SEE_int32_t;
+#elif SIZEOF_SIGNED_LONG == 4
+typedef signed long	  SEE_int32_t;
+#else
+# error "cannot provide type for SEE_int32_t"
+#endif
+
+/* 32-bit unsigned integer */
+#if SIZEOF_UNSIGNED_INT == 4
+typedef unsigned int	  SEE_uint32_t;
+#elif SIZEOF_UNSIGNED_LONG == 4
+typedef unsigned long	  SEE_uint32_t;
+#else
+# error "cannot provide type for SEE_uint32_t"
+#endif
+
+/* 64-bit floating point */
+#if SIZEOF_FLOAT == 8
+typedef float SEE_number_t;
+#elif SIZEOF_DOUBLE == 4
+typedef double SEE_number_t;
+#else
+# error "cannot provide type for SEE_number_t"
+#endif
+
+typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
+
 typedef SEE_uint16_t	  SEE_char_t;     /* UTF-16 encoding */
 typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
-typedef double            SEE_number_t;   /* 64-bit IEEE754 floating point */
-typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
 
 /* an attribute indicating which functions never return. (can be empty) */
 #define SEE_dead	__attribute__((__noreturn__))

@@ -4,6 +4,7 @@ DEVELOPER NOTES
 After checking out this from CVS, you will need to build
 the configure and makefiles from the top level with:
 
+	$ autoconf
 	$ automake -v -a --foreign
 
 If there are problems with old versions of libtool not finding

@@ -1,13 +1,13 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
-bin_PROGRAMS=	see-shell
+bin_PROGRAMS=		see-shell
 
-shell_SOURCES=	main.c shell.c
-shell_HEADERS=	shell.h
-shell_LDADD=	libsee.la
+see_shell_SOURCES=	main.c shell.c
+noinst_HEADERS=		shell.h
+see_shell_LDADD=	libsee.la
 
-shell_DEPENDENCIES=	libsee.la
+see_shell_DEPENDENCIES=	libsee.la
 
-INCLUDES=	-I$(srcdir)/../include
+INCLUDES=		-I$(top_srcdir)/include
 
