@@ -1,0 +1,401 @@
+# Copyright (c) 2003, David Leonard. All rights reserved.
+# $Id$
+
+#
+# This file contains the string constants that are used to
+# generate UCS-16 string constants at compile time. See the
+# Makefile and string.pl for more details.
+#
+# The resulting constants are accessed using the macro STR()
+# from the stringdefs.h header file.
+#
+# NB: If language internationalisation is ever needed, this might
+# be the right place to do most of it.
+#
+
+#
+# general error messages
+#
+bad_argc = "Wrong number of arguments"
+bad_arg = "Invalid argument"
+internal_error = "Internal error"
+new_not_an_object = "Cannot 'new' a non-object"
+not_a_constructor = "Object has no constructor"
+no_such_function = "No such function"
+not_a_function = "Cannot call a non-function"
+not_callable = "Object is not callable"
+instanceof_not_object = "'instanceof' target is not an object"
+in_not_object = "'in' target is not an object"
+no_hasinstance = "object does not support 'instanceof'"
+bad_lvalue = "cannot assign to value"
+regex_syntax_error = "bad regular expression"
+error
+
+#
+# some errors from the string module
+#
+out_of_memory =	"Out of memory"
+no_string_space = "No string space"
+bad_utf16_string = "Invalid UTF-16 sequence in string"
+unknown_file = "<input>"
+duplicate_label = "duplicate label '"
+previous_definition = "previous definition"
+
+#
+# more misc error messages
+#
+toobject_undefined =	"Cannot use undefined as an object"
+toobject_null =		"Cannot use null as an object"
+toboolean_bad =		"Cannot convert the value into a boolean"
+tonumber_bad =		"Cannot convert the value into a number"
+tostring_bad =		"Cannot convert the value into a string"
+
+defaultvalue_string_bad = "Cannot convert object into string"
+defaultvalue_number_bad = "Cannot convert object into number"
+defaultvalue_no_bad =     "Cannot convert object into a default form"
+not_array =		  "Object is not a native Array object"
+array_badlen =		  "Bad length given to Array constructor"
+not_boolean =		  "Object is not a native Boolean object"
+not_function =		  "Object is not a native Function object"
+not_number =		  "Object is not a native Number object"
+not_regexp =		  "Object is not a native RegExp object"
+not_string =		  "Object is not a native String object"
+not_date =		  "Object is not a native Date object"
+
+apply_not_array =	"2nd argument to apply() is not an array"
+bad_radix =		"Bad radix"
+regexp_bad_string =	"Expected a string argument for RegExp constructor"
+uri_badhex =		"Bad hexadecimal encoding"
+bad_utf8 =		"Bad UTF-8 sequence in encoded string"
+bad_unicode =		"unicode codepoint too large for internal UTF-16"
+array_sort_error =	"sort comparison function returned non-number or NaN"
+toLocaleString_notfunc   = "toLocaleString property is not a function"
+toLocaleString_notstring = "toLocaleString() did not return a string"
+
+
+# The default Function program body
+default_function_body = "return undefined;"
+implementation_dependent = "ECMA-262 'implementation dependent' result"
+
+#
+# some strings used by String and Object methods
+#
+empty_string = ""
+zero_digit = "0"
+object_lbracket = "[object "
+comma = ","
+write
+writeval
+minus = "-"
+
+#
+# strings used by Error
+#
+name
+message
+Error
+EvalError
+RangeError
+ReferenceError
+SyntaxError
+TypeError
+URIError
+
+#
+# Strings used by functions
+#
+Arguments
+arguments
+callee
+
+#
+# names used by RegExp
+#
+source
+global
+ignoreCase
+multiline
+lastIndex
+exec
+test
+index
+input
+
+#
+# names used by Date
+#
+parse
+UTC
+toDateString
+toTimeString
+toLocaleDateString
+toLocaleTimeString
+getTime
+getFullYear
+getUTCFullYear
+getMonth
+getUTCMonth
+getDate
+getUTCDate
+getDay
+getUTCDay
+getHours
+getUTCHours
+getMinutes
+getUTCMinutes
+getSeconds
+getUTCSeconds
+getMilliseconds
+getUTCMilliseconds
+getTimezoneOffset
+setTime
+setMilliseconds
+setUTCMilliseconds
+setSeconds
+setUTCSeconds
+setMinutes
+setUTCMinutes
+setHours
+setUTCHours
+setDate
+setUTCDate
+setMonth
+setUTCMonth
+setFullYear
+setUTCFullYear
+toUTCString
+
+#
+# names used by Global
+#
+Global
+Object
+Function
+Array
+String
+Boolean
+Number
+Date
+RegExp
+Math
+
+ObjectConstructor
+FunctionConstructor
+ErrorConstructor
+ArrayConstructor
+StringConstructor
+BooleanConstructor
+NumberConstructor
+DateConstructor
+RegExpConstructor
+
+#
+# constants and methods names of built-in objects
+#
+Infinity
+NaN
+apply
+call
+charAt
+charCodeAt
+concat
+constructor
+decodeURI
+decodeURIComponent
+encodeURI
+encodeURIComponent
+eval
+fromCharCode
+hasOwnProperty
+indexOf
+isFinite
+isNaN
+isPrototypeOf
+join
+lastIndexOf
+length
+localeCompare
+match
+parseFloat
+parseInt
+pop
+propertyIsEnumerable
+prototype
+push
+replace
+reverse
+search
+shift
+slice
+sort
+splice
+split
+substring
+toLocaleLowerCase
+toLocaleString
+toLocaleUpperCase
+toLowerCase
+toString
+toUpperCase
+undefined
+unshift
+valueOf
+
+# Global.Number strings
+MAX_VALUE
+MIN_VALUE
+NEGATIVE_INFINITY
+POSITIVE_INFINITY
+toFixed
+toExponential
+toPrecision
+
+# Global.Math strings
+E
+LN10
+LN2
+LOG2E
+LOG10E
+PI
+SQRT1_2
+SQRT2
+abs
+acos
+asin
+atan
+atan2
+ceil
+cos
+exp
+floor
+log
+max
+min
+pow
+random
+round
+sin
+sqrt
+tan
+
+#
+# backward-compatibility strings
+#
+escape
+unescape
+substr
+getYear
+setYear
+toGMTString
+
+#
+# some strings returned by 'typeof(x)'
+#
+object
+string
+number
+unknown
+
+#
+# Lexer errors
+#
+unexpected_eof = "unexpected eof"
+broken_literal = "line break in string literal"
+escaped_lit_nl = "escaped line break in string literal"
+invalid_esc_x =	 "invalid \\x escape"
+invalid_esc_u =	 "invalid \\u escape"
+hex_literal_detritis = "unexpected characters after hex literal"
+oct_literal_detritis = "unexpected characters after octal literal"
+dec_literal_detritis = "unexpected characters after decimal literal"
+number_too_long = "number too long"
+eof_in_c_comment = "EOF inside /* comment"
+eof_in_regex = "EOF inside regular expression"
+broken_regex = "line break in regular expression"
+
+#
+# Parser errors
+# 
+parse_error = "parse error"
+unexpected_token = "unexpected token"
+return_not_in_function = "return statement not inside a function body"
+
+#
+# lexer tokens
+#
+synchronized
+eleven_filler = "..........."
+implements
+instanceof
+transient
+protected
+interface
+volatile
+debugger
+function
+continue
+abstract
+private
+package
+extends
+boolean
+finally
+default
+native
+export
+typeof
+switch
+return
+throws
+import
+static
+delete
+public
+double
+float
+super
+short
+const
+class
+while
+final
+throw
+catch
+break
+with
+long
+void
+else
+goto
+enum
+this
+byte
+case
+char
+new
+try
+int
+for
+var
+in
+do
+if
+
+#
+# more tokens (literals)
+#
+null
+true
+false
+
+#
+# compatibility strings
+#
+__proto__
+__parent__
+
+#
+# cfunction strings
+#
+cfunction_body1 = "function "
+cfunction_body2 = "() { /* built-in "
+cfunction_body3 = " */ }"

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo ""
+echo "/* Zs code points for use by RegExp */"
+echo ""
+
+echo "SEE_unicode_t SEE_unicode_Zscodes[] = {"
+awk -F\; '$3 == "Zs" { print "	0x" $1 "," }' < ${1-UnicodeData.txt}
+echo "};"
+echo "int SEE_unicode_Zscodeslen = sizeof SEE_unicode_Zscodes / sizeof SEE_unicode_Zscodes[0];"
+echo ""
