@@ -61,7 +61,7 @@ static void *malloc_gc(struct SEE_interpreter *, unsigned int);
 # define INITIAL_FREE		NULL
 #endif /* !HAVE_GC_MALLOC */
 
-void* (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
+void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
 		= INITIAL_MALLOC;
 void (*SEE_mem_free_hook)(struct SEE_interpreter *, void *) 
 		= INITIAL_FREE;
