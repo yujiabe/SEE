@@ -119,6 +119,13 @@ struct SEE_value {
 	(v)->u.completion.target = (tgt);	\
     } while (0)
 
+#define SEE_SET_REFERENCE(v, b, p)		\
+    do {					\
+	(v)->type = SEE_REFERENCE;		\
+	(v)->u.reference.base = (b);		\
+	(v)->u.reference.property = (p);	\
+    } while (0)
+
 /* Converters */
 void SEE_ToPrimitive(struct SEE_interpreter *i,
 			struct SEE_value *val, struct SEE_value *type, 
