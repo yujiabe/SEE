@@ -195,3 +195,19 @@ SEE_PrintObject(interp, o, f)
 	}
 	fprintf(f, ">");
 }
+
+/*
+ * Print a string, in 'literal' form to the given stdio file.
+ */
+void
+SEE_PrintString(interp, s, f)
+	struct SEE_interpreter *interp;
+	struct SEE_string *s;
+	FILE *f;
+{
+	SEE_string_fputs(SEE_string_literal(interp, s), f);
+	fprintf(f, "<%s%s%p>", 
+		s->flags & SEE_STRING_FLAG_INTERNED ? "." : "",
+		s->flags & SEE_STRING_FLAG_STATIC ? "@" : "",
+		s);
+}
