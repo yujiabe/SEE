@@ -132,14 +132,17 @@ struct SEE_value {
 
 /* Convenience macros for numbers */
 #if SEE_NUMBER_IS_FLOAT
-# define SEE_NUMBER_ISNAN(v)    isnanf((v)->u.number)
-# define SEE_NUMBER_ISINF(v)    isinff((v)->u.number)
-# define SEE_NUMBER_ISFINITE(v) finitef((v)->u.number)
+# define SEE_ISNAN(n)		isnanf(n)
+# define SEE_ISINF(n)		isinff(n)
+# define SEE_ISFINITE(n)	finitef(n)
 #elif SEE_NUMBER_IS_DOUBLE
-# define SEE_NUMBER_ISNAN(v)    isnan((v)->u.number)
-# define SEE_NUMBER_ISINF(v)    isinf((v)->u.number)
-# define SEE_NUMBER_ISFINITE(v) finite((v)->u.number)
+# define SEE_ISNAN(n)    	isnan(n)
+# define SEE_ISINF(n)    	isinf(n)
+# define SEE_ISFINITE(n) 	finite(n)
 #endif
+#define SEE_NUMBER_ISNAN(v)    SEE_ISNAN((v)->u.number)
+#define SEE_NUMBER_ISINF(v)    SEE_ISINF((v)->u.number)
+#define SEE_NUMBER_ISFINITE(v) SEE_ISFINITE((v)->u.number)
 #define SEE_NUMBER_ISPINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number > 0)
 #define SEE_NUMBER_ISNINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number < 0)
 
