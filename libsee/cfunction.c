@@ -188,3 +188,13 @@ SEE_cfunction_toString(interp, self, thisobj, argc, argv, res)
 	SEE_string_append(s, STR(cfunction_body3));
 	SEE_SET_STRING(res, s);
 }
+
+struct SEE_string *
+SEE_cfunction_getname(interp, o)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+{
+	struct cfunction *f = (struct cfunction *)o;
+
+	return f->name;
+}

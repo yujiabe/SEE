@@ -45,6 +45,8 @@
 #include <see/input.h>
 #include <see/string.h>
 
+#include "stringdefs.h"
+
 /*
  * input for in-memory ECMAscript UTF-16 strings.
  * (Used when 'eval'ing a string from within the interpreter.)
@@ -113,7 +115,7 @@ SEE_input_string(interp, s)
 	inps->end = s->data + s->length;
 	inps->inp.inputclass = &input_string_class;
 	inps->inp.interpreter = interp;
-	inps->inp.filename = NULL;
+	inps->inp.filename = STR(string_input_name);
 	inps->inp.first_lineno = 1;
 	SEE_INPUT_NEXT((struct SEE_input *)inps);	/* prime */
 	return (struct SEE_input *)inps;

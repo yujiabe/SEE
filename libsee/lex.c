@@ -310,7 +310,7 @@ Punctuator(lex)
 				if (t->identifier[j] != op[j])
 					goto out;
 			if (t->token == tSGMLCOMMENT) {
-				if (interp->compatibility & SEE_COMPAT_EXT1)
+				if (interp->compatibility & SEE_COMPAT_SGMLCOM)
 					return SGMLComment(lex);
 				else
 					goto out;

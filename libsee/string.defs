@@ -43,6 +43,7 @@ out_of_memory =	"Out of memory"
 no_string_space = "No string space"
 bad_utf16_string = "Invalid UTF-16 sequence in string"
 unknown_file = "<input>"
+string_input_name = "<string>"
 duplicate_label = "duplicate label '"
 previous_definition = "previous definition"
 
@@ -323,7 +324,6 @@ broken_regex = "line break in regular expression"
 # 
 parse_error = "parse error"
 unexpected_token = "unexpected token"
-return_not_in_function = "return statement not inside a function body"
 
 #
 # lexer tokens

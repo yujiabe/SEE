@@ -241,7 +241,7 @@ static struct SEE_string *error_at(struct parser *, const char *, ...);
 static int lookahead(struct parser *, int);
 static void trace_event(struct context *);
 static struct SEE_traceback *traceback_enter(struct SEE_interpreter *,
-			struct SEE_object *, struct SEE_throw_location *);
+			struct SEE_object *, struct SEE_throw_location *, int);
 static void traceback_leave(struct SEE_interpreter *,
 			struct SEE_traceback *);
 static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
@@ -308,13 +308,17 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 	    EXPECTED(tokstr);				\
     } while (0)
 #define EXPECTED(tokstr)				\
+    do { 						\
+	    char nexttok[30];				\
+	    strcpy(nexttok, SEE_tokenname(NEXT));	\
 	    SEE_error_throw_string(			\
 		parser->interpreter,			\
 		parser->interpreter->SyntaxError,	\
 		error_at(parser, 			\
 		         "expected %s but got %s",	\
 		         tokstr,			\
-		         SEE_tokenname(NEXT)))
+		         nexttok));			\
+    } while (0)
 
 #define IMPLICIT_CONTINUE_LABEL		((struct SEE_string *)0x1)
 #define IMPLICIT_BREAK_LABEL		((struct SEE_string *)0x2)
@@ -427,7 +431,7 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 	SEE_error_throw_string(				\
 	    parser->interpreter,			\
 	    parser->interpreter->SyntaxError,		\
-	    error_at(parser, "%s before %s",		\
+	    error_at(parser, "%s, near %s",		\
 	    m, SEE_tokenname(NEXT)))
 
 #define PRINT(n)	(*printer->printerclass->print_node)(printer, n)
@@ -738,10 +742,11 @@ trace_event(ctxt)
  * Insert a new entry into the traceback list
  */
 static struct SEE_traceback *
-traceback_enter(interp, callee, loc)
+traceback_enter(interp, callee, loc, call_type)
 	struct SEE_interpreter *interp;
 	struct SEE_object *callee;
 	struct SEE_throw_location *loc;
+	int call_type;
 {
 	struct SEE_traceback *old_tb, *tb;
 
@@ -750,6 +755,7 @@ traceback_enter(interp, callee, loc)
 	tb = SEE_NEW(interp, struct SEE_traceback);
 	tb->call_location = loc;
 	tb->callee = callee;
+	tb->call_type = call_type;
 	tb->prev = old_tb;
 	interp->traceback = tb;
 
@@ -1621,7 +1627,8 @@ MemberExpression_new_eval(n, context, res)
 	if (!SEE_OBJECT_HAS_CONSTRUCT(r2.u.object))
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(not_a_constructor));
-        tb = traceback_enter(interp, r2.u.object, &n->node.location);
+        tb = traceback_enter(interp, r2.u.object, &n->node.location,
+		SEE_CALLTYPE_CONSTRUCT);
 	SEE_OBJECT_CONSTRUCT(interp, r2.u.object, r2.u.object, argc, argv, res);
 	traceback_leave(interp, tb);
 }
@@ -1823,7 +1830,8 @@ CallExpression_eval(n, context, res)
 		r7 = NULL;
 	else
 		r7 = r6;
-        tb = traceback_enter(interp, r3.u.object, &n->node.location);
+        tb = traceback_enter(interp, r3.u.object, &n->node.location,
+		SEE_CALLTYPE_CALL);
 	if (r3.u.object == interp->Global_eval) {
 	    /* The special 'eval' function' */
 	    eval(context, r7, argc, argv, res);
@@ -5902,7 +5910,7 @@ ReturnStatement_parse(parser)
 		    &ReturnStatement_undef_nodeclass);
 	EXPECT(tRETURN);
 	if (!parser->funcdepth)
-		ERRORm(STR(return_not_in_function));
+		ERRORm("'return' not inside function");
 	if (!NEXT_IS_SEMICOLON) {
 	    rn->node.nodeclass = &ReturnStatement_nodeclass;
 	    target_push(parser, rn, 0);
@@ -6828,6 +6836,12 @@ Program_parse(parser)
 	 * Practically, a program does not have parameters nor a name.
 	 */
 	body = PARSE(FunctionBody);
+	if (NEXT == '}')
+		ERRORm("unmatched '}'");
+	if (NEXT == ')')
+		ERRORm("unmatched ')'");
+	if (NEXT == ']')
+		ERRORm("unmatched ']'");
 	if (NEXT != tEND)
 		ERRORm("unexpected token");	/* (typically '}') */
 	return SEE_function_make(parser->interpreter,

@@ -59,6 +59,7 @@ struct SEE_interpreter {
 	struct SEE_traceback {
 		struct SEE_throw_location *call_location;
 		struct SEE_object *callee;
+		int call_type;
 		struct SEE_traceback *prev;
 	} *traceback;
 
@@ -75,6 +76,11 @@ struct SEE_interpreter {
 #define SEE_COMPAT_EXT1		0x0002	/* see1.0 (non-ecma) extensions */
 #define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undefined var */
 #define SEE_COMPAT_UTF_UNSAFE	0x0008	/* accept 'valid but insecure' UTF */
+#define SEE_COMPAT_SGMLCOM	0x0010	/* treat '<!--' as a '//' comment */
+
+/* traceback call_type */
+#define SEE_CALLTYPE_CALL	1
+#define SEE_CALLTYPE_CONSTRUCT	2
 
 void SEE_interpreter_init(struct SEE_interpreter *i);
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);

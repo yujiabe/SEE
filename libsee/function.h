@@ -35,5 +35,10 @@ void SEE_function_put_args(struct context *i, struct function *func,
 /* obj_Function.c */
 struct SEE_object *SEE_function_inst_create(struct SEE_interpreter *i,
 	struct function *func, struct SEE_scope *scope);
+struct SEE_string *SEE_function_getname(struct SEE_interpreter * i,
+        struct SEE_object *o);
+/* cfunction.c */
+struct SEE_string *SEE_cfunction_getname(struct SEE_interpreter *i,
+        struct SEE_object *o);
 
 #endif /* _SEE_h_function_ */

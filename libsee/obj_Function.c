@@ -386,6 +386,26 @@ SEE_Function_new(interp, name, paraminp, bodyinp)
 	return SEE_function_inst_create(interp, f, interp->Global_scope);
 }
 
+/* Returns the name of the function. NB May return NULL. */
+struct SEE_string *
+SEE_function_getname(interp, o)
+	struct SEE_interpreter * interp;
+        struct SEE_object *o;
+{
+	struct function_inst *fi;
+	extern struct SEE_objectclass SEE_cfunction_class;
+
+	if (!o)
+		return NULL;
+	if (o->objectclass == &SEE_cfunction_class)
+		return SEE_cfunction_getname(interp, o);
+	if (o->objectclass != &function_inst_class)
+		return NULL;
+	fi = tofunction(interp, o);
+	return fi->function->name;
+}
+
+
 /* 15.3.5.3 */
 static int
 function_inst_hasinstance(interp, f, vval)
