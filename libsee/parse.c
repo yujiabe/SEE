@@ -395,13 +395,13 @@ static void print_hex(struct printer *printer, int i);
 	  _loc_save = (ctxt)->interpreter->try_location;\
 	  (ctxt)->interpreter->try_location =		\
 		&(n)->location;				\
-	  if ((ctxt)->interpreter->trace)		\
+	  if (_loc_save != &(n)->location)		\
 	    trace_event(ctxt);				\
 	}						\
 	(*(n)->nodeclass->eval)(n, ctxt, res);		\
-	if (ctxt)					\
+	if (ctxt) {					\
 	  (ctxt)->interpreter->try_location = _loc_save;\
-	  if ((ctxt)->interpreter->trace)		\
+	  if (_loc_save != &(n)->location)		\
 	    trace_event(ctxt);				\
 	}						\
     } while (0)
