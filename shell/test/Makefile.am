@@ -7,7 +7,7 @@
 # of the border cases of RegExp and some of the examples found in
 # the ECMA-262 standard.
 #
-# Much better tests can be fashioned out of the overwhelingly
+# Much better tests can be fashioned out of the overwhelmingly
 # comprehensive Mozilla test suite. See:
 #	http://www.mozilla.org/js/tests/library.html
 #
