@@ -439,6 +439,11 @@ main(argc, argv)
 	    default:
 		error = 1;
 	    }
+
+	/* Don't expect any more arguments */
+	if (optind < argc)
+	    error = 1;
+
 	if (error) {
 	    fprintf(stderr, "usage: %s [-c flag] [-d[nElpvecr]] "
 				      "[-f file] [-h file]\n", argv[0]);
