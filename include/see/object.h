@@ -75,8 +75,12 @@ struct SEE_object {
 #define SEE_OBJECT_DEFAULTVALUE(interp, obj, hint, res)			\
 	(*(obj)->objectclass->DefaultValue)(interp, obj, hint, res)
 #define SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res)	\
+	SEE_object_construct(interp, obj, thisobj, argc, argv, res)
+#define _SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res)	\
 	(*(obj)->objectclass->Construct)(interp, obj, thisobj, argc, argv, res)
 #define SEE_OBJECT_CALL(interp, obj, thisobj, argc, argv, res)		\
+	SEE_object_call(interp, obj, thisobj, argc, argv, res)
+#define _SEE_OBJECT_CALL(interp, obj, thisobj, argc, argv, res)		\
 	(*(obj)->objectclass->Call)(interp, obj, thisobj, argc, argv, res)
 #define SEE_OBJECT_HASINSTANCE(interp, obj, instance)			\
 	(*(obj)->objectclass->HasInstance)(interp, obj, instance)
@@ -119,5 +123,11 @@ int SEE_function_is_joined(struct SEE_object *a, struct SEE_object *b);
 
 /* Convenience function equivalent to "new Object()" */
 struct SEE_object *SEE_Object_new(struct SEE_interpreter *);
+
+/* Wrappers that check for recursion limits being reached */
+void SEE_object_call(struct SEE_interpreter *, struct SEE_object *,
+	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+void SEE_object_construct(struct SEE_interpreter *, struct SEE_object *,
+	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
 #endif /* _h_object_ */
