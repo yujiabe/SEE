@@ -5,7 +5,7 @@
 #-- **
 #   ** Change the following to point to see-shell or see-shell.static
 #   ** 
-SHELLPROG="$BUILD/shell/see-shell.static -c ext1 -c undefdef"
+SHELLPROG="/tmp/b/shell/see-shell.static -c ext1 -c undefdef"
 
 ulimit -c 0
 ulimit -t 600
@@ -14,6 +14,14 @@ ulimit -t 600
 isok () {
     test "$d" != "e4x" -a -f "$d"/shell.js 
 }
+
+if $SHELLPROG < /dev/null; then
+	:
+else
+	echo "Cannot execute shell: $SHELLPROG" >&2
+	exit 1
+fi
+
 
 #-- scan for tests
 echo 'scanning tests...' >&2
@@ -31,7 +39,6 @@ done
 
 pos=0
 failed=0
-passed=0
 for d in *; do
     isok "$d" || continue
     arg="-f $d/shell.js"
@@ -42,7 +49,7 @@ for d in *; do
         for i in $e/*.js; do
 	    test -f "$i" || continue
 	    pos=`expr $pos + 1`
-	    echo -n "$pos of $count: $failed failed $passed passed remain 
+	    echo -n "$pos of $count: $failed failed 
 " >&2
 	    echo ""
 	    echo "** $pos $i **"
@@ -54,13 +61,11 @@ for d in *; do
 		     failed=`expr $failed + 1`
 		      ;;
 		  *)
-		     passed=`expr $passed + 1`
 		     ;;
 	       esac
 	    else
 	       case "$i" in 
 		   *-n.js) 
-		     passed=`expr $passed + 1`
 		     ;;
 		   *) 
 		     echo "$i: FAILED! exit code $?"
