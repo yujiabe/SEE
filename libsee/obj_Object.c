@@ -47,6 +47,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * Object objects.

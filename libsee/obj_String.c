@@ -49,6 +49,7 @@
 #include "stringdefs.h"
 #include "array.h"
 #include "regex.h"
+#include "init.h"
 
 #define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #define MIN(a,b)  ((a) < (b) ? (a) : (b))

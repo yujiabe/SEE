@@ -52,6 +52,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "init.h"
 
 #ifndef NDEBUG
 int SEE_Error_debug = 0;

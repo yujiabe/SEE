@@ -56,6 +56,7 @@
 #include "context.h"
 #include "parse.h"
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * Function objects.

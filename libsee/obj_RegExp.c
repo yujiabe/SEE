@@ -51,6 +51,7 @@
 
 #include "regex.h"
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * 15.10 The RegExp object.

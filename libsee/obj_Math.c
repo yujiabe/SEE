@@ -51,6 +51,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * 15.8 The Math object.

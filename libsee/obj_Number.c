@@ -51,6 +51,7 @@
 
 #include "stringdefs.h"
 #include "dtoa.h"
+#include "init.h"
 
 /*
  * 15.7 The Number object.

@@ -59,6 +59,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * 15.9 The Date object.

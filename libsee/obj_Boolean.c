@@ -46,6 +46,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "init.h"
 
 /*
  * 15.6 The Boolean object.

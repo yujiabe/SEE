@@ -58,6 +58,7 @@
 #include "function.h"
 #include "unicode.h"
 #include "dtoa.h"
+#include "init.h"
 
 /*
  * The Global object.
