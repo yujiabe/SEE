@@ -65,14 +65,16 @@ struct SEE_interpreter {
 	void *intern_tab;		/* interned string table */
 	unsigned int random_seed;	/* used by Math.random() */
 	const char *locale;		/* current locale (may be NULL) */
+	int recursion_limit;		/* -1 means don't care */
 
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *);
 };
 
 /* Compatibility flags */
-#define SEE_COMPAT_262_3B	0x01	/* ECMA-262 3rd ed. Annex B */
-#define SEE_COMPAT_EXT1		0x02	/* see1.0 (non-ecma) extensions */
-#define SEE_COMPAT_UNDEFDEF	0x04	/* No ReferenceError on undefined var */
+#define SEE_COMPAT_262_3B	0x0001	/* ECMA-262 3rd ed. Annex B */
+#define SEE_COMPAT_EXT1		0x0002	/* see1.0 (non-ecma) extensions */
+#define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undefined var */
+#define SEE_COMPAT_UTF_UNSAFE	0x0008	/* accept 'valid but insecure' UTF */
 
 void SEE_interpreter_init(struct SEE_interpreter *i);
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
