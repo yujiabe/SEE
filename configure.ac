@@ -282,6 +282,44 @@ AC_CACHE_CHECK([working vsnprintf(0,0,,)], [ac_cv_libc_vsnprintf_works],
 		    [ac_cv_libc_vsnprintf_works=no])])
 
 dnl ------------------------------------------------------------
+dnl IEEE doubles/floats
+dnl
+
+AC_CACHE_CHECK([for 64-bit IEEE754 fp], [ac_cv_cc_ieee754],
+    [AC_TRY_RUN([
+	int main() {
+#if SIZEOF_FLOAT == 8
+	    float 
+#elif SIZEOF_DOUBLE == 8
+	    double 
+#else
+# error "no 64-bit floating point type"
+#endif
+	      fp = 2.7182818284590452354;
+	    unsigned char expected[8] = {
+		0x40, 0x05, 0xbf, 0x0a, 0x8b, 0x14, 0x57, 0x69
+	    }, e;
+	    int i;
+
+	    for (i = 0; i < 8; i++) {
+#ifdef WORDS_BIGENDIAN
+		e = expected[i];
+#else
+		e = expected[7-i];
+#endif
+		if (e != ((unsigned char *)&fp)[i])
+		    exit(1);
+	    }
+	    exit(0);
+	}],
+    [ac_cv_cc_ieee754=yes],
+    [ac_cv_cc_ieee754=no])])
+
+if test x"$ac_cv_cc_ieee754" != x"yes"; then
+    AC_MSG_WARN([SEE's ECMAScript compliance depends on native IEEE754 support])
+fi
+
+dnl ------------------------------------------------------------
 dnl templates for autoheader
 dnl
 
