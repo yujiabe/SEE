@@ -56,8 +56,6 @@ SEE_PrintValue(interp, v, f)
 	struct SEE_value *v;
 	FILE *f;
 {
-	int i;
-
 	if (v == NULL) {
 	    fprintf(f, "NULL");
 	    return;
@@ -76,22 +74,7 @@ SEE_PrintValue(interp, v, f)
 	    fprintf(f, "%.30g", v->u.number);
 	    break;
 	case SEE_STRING:
-	    /* NB Replicates most of SEE_string_literal(). Yuck */
-	    fprintf(f, "\"");
-	    for (i = 0; i < v->u.string->length; i++) {
-		SEE_char_t c = v->u.string->data[i];
-		if (c == '\\') fprintf(f, "\\\\");
-		else if (c == '\"') fprintf(f, "\\\"");
-		else if (c == '\n') fprintf(f, "\\n");
-		else if (c == '\t') fprintf(f, "\\t");
-		else if (c >= ' ' && c <= '~')
-			fputc(c & 0x7f, f);
-		else if (c < 0x100)
-			fprintf(f, "\\x%02x", c);
-		else
-			fprintf(f, "\\u%04x", c);
-	    }
-	    fprintf(f, "\"");
+	    SEE_PrintString(interp, v->u.string, f);
 	    break;
 	case SEE_OBJECT:
 	    SEE_PrintObject(interp, v->u.object, f);
@@ -205,13 +188,29 @@ SEE_PrintString(interp, s, f)
 	struct SEE_string *s;
 	FILE *f;
 {
+	int i;
+
 	if (s == NULL) 
-		fprintf("<NULL>");
+	    fprintf(f, "<NULL>");
 	else {
-		SEE_string_fputs(SEE_string_literal(interp, s), f);
-		fprintf(f, "<%s%s%p>", 
-			s->flags & SEE_STRING_FLAG_INTERNED ? "." : "",
-			s->flags & SEE_STRING_FLAG_STATIC ? "@" : "",
-			s);
+	    /* NB Replicates most of SEE_string_literal(). */
+	    fprintf(f, "\"");
+	    for (i = 0; i < s->length; i++) {
+		SEE_char_t c = s->data[i];
+		if (c == '\\') fprintf(f, "\\\\");
+		else if (c == '\"') fprintf(f, "\\\"");
+		else if (c == '\n') fprintf(f, "\\n");
+		else if (c == '\t') fprintf(f, "\\t");
+		else if (c >= ' ' && c <= '~')
+			fputc(c & 0x7f, f);
+		else if (c < 0x100)
+			fprintf(f, "\\x%02x", c);
+		else
+			fprintf(f, "\\u%04x", c);
+	    }
+	    fprintf(f, "\"<%s%s%p>", 
+		    s->flags & SEE_STRING_FLAG_INTERNED ? "i" : "",
+		    s->flags & SEE_STRING_FLAG_STATIC ? "s" : "",
+		    s);
 	}
 }
