@@ -73,6 +73,7 @@ struct SEE_interpreter {
 #define SEE_COMPAT_EXT1		0x02	/* see1.0 (non-ecma) extensions */
 
 void SEE_interpreter_init(struct SEE_interpreter *i);
+void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
 
 /*
  * This function is called when the interpreter encounters a

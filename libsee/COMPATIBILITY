@@ -1,6 +1,10 @@
 $Id$
 
 This file documents the compatibility flags in <see/interpreter.h>
+and used by SEE_interpreter_init_compat().
+
+Disabling all flags yields a very ECMA-strict interpreter. Enabling
+different flags provides the behaviour listed below.
 
 Flag	Description
 -------	-----------

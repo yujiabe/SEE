@@ -116,6 +116,16 @@ void
 SEE_interpreter_init(interp)
 	struct SEE_interpreter *interp;
 {
+	SEE_interpreter_init_compat(interp, 
+		SEE_COMPAT_262_3B |
+		SEE_COMPAT_EXT1);
+}
+
+void
+SEE_interpreter_init_compat(interp, compat_flags)
+	struct SEE_interpreter *interp;
+	int compat_flags;
+{
 	if (SEE_mem_malloc_hook == NULL) {
 		fprintf(stderr, "SEE_mem_malloc_hook: not configured\n");
 		(*SEE_abort)(interp);
@@ -124,8 +134,7 @@ SEE_interpreter_init(interp)
 	interp->try_context = NULL;
 	interp->try_location = NULL;
 
-	interp->compatibility = SEE_COMPAT_262_3B 
-			      | SEE_COMPAT_EXT1;
+	interp->compatibility = compat_flags;
 	interp->random_seed = (unsigned int)interp ^ (unsigned int)time(0);
 	interp->trace = NULL;
 	interp->traceback = NULL;
