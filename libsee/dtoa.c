@@ -7,7 +7,7 @@
  *
  * The author of this software is David M. Gay.
  *
- * Copyright (c) 1991, 2000 by Lucent Technologies.
+ * Copyright (c) 1991, 2000, 2001 by Lucent Technologies.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose without fee is hereby granted, provided that this entire notice
@@ -22,14 +22,8 @@
  *
  ***************************************************************/
 
-/* Please send bug reports to
-	David M. Gay
-	Bell Laboratories, Room 2C-463
-	600 Mountain Avenue
-	Murray Hill, NJ 07974-0636
-	U.S.A.
-	dmg@bell-labs.com
- */
+/* Please send bug reports to David M. Gay (dmg at acm dot org,
+ * with " at " changed at "@" and " dot " changed to ".").	*/
 
 /* On a machine with IEEE extended-precision registers, it is
  * necessary to specify double-precision (53-bit) rounding precision
@@ -726,7 +720,7 @@ lo0bits
 	if (!(x & 1)) {
 		k++;
 		x >>= 1;
-		if (!x & 1)
+		if (!x)
 			return 32;
 		}
 	*y = x;
@@ -2174,7 +2168,7 @@ strtod
 			else if (!(word0(rv) & Bndry_mask) && !word1(rv)) {
  drop_down:
 				/* boundary case -- decrement exponent */
-#ifdef Sudden_Underflow
+#ifdef Sudden_Underflow /*{{*/
 				L = word0(rv) & Exp_mask;
 #ifdef IBM
 				if (L <  Exp_msk1)
@@ -2187,9 +2181,22 @@ strtod
 #endif /*IBM*/
 					goto undfl;
 				L -= Exp_msk1;
-#else /*Sudden_Underflow*/
+#else /*Sudden_Underflow}{*/
+#ifdef Avoid_Underflow
+				if (scale) {
+					L = word0(rv) & Exp_mask;
+					if (L <= (2*P+1)*Exp_msk1) {
+						if (L > (P+2)*Exp_msk1)
+							/* round even ==> */
+							/* accept rv */
+							break;
+						/* rv = smallest denormal */
+						goto undfl;
+						}
+					}
+#endif /*Avoid_Underflow*/
 				L = (word0(rv) & Exp_mask) - Exp_msk1;
-#endif /*Sudden_Underflow*/
+#endif /*Sudden_Underflow}}*/
 				word0(rv) = L | Bndry_mask1;
 				word1(rv) = 0xffffffff;
 #ifdef IBM
@@ -2281,7 +2288,8 @@ strtod
 #ifdef Avoid_Underflow
 			if (scale && y <= 2*P*Exp_msk1) {
 				if (aadj <= 0x7fffffff) {
-					z = aadj;
+					if ((z = aadj) <= 0)
+						z = 1;
 					aadj = z;
 					aadj1 = dsign ? aadj : -aadj;
 					}
@@ -2586,7 +2594,7 @@ freedtoa(char *s)
 /* dtoa for IEEE arithmetic (dmg): convert double to ASCII string.
  *
  * Inspired by "How to Print Floating-Point Numbers Accurately" by
- * Guy L. Steele, Jr. and Jon L. White [Proc. ACM SIGPLAN '90, pp. 92-101].
+ * Guy L. Steele, Jr. and Jon L. White [Proc. ACM SIGPLAN '90, pp. 112-126].
  *
  * Modifications:
  *	1. Rather than iterating, we use a simple numeric overestimate
