@@ -35,7 +35,7 @@
 <h1>Using the Simple ECMAScript Engine (SEE)</h1>
 
 <p>
-by David Leonard, 2003.
+by David Leonard, 2004.
 </p>
 
 <p>
@@ -116,7 +116,7 @@ Although SEE is essentially self-contained, it does depend on you
 <ul>
  <li> <strong>an IEEE 754 floating point type</strong> 
       Most modern compilers have this, but if you are developing
-      for some old, obscure architecture, you should check.
+      for some obscure architecture, you should check.
  <li> <strong>a garbage-collecting memory allocator</strong>
       The free <a href="#ref-boehm">Boehm gc</a> is highly recommended
       (See also <a href="#mem">&sect;3.1</a>).
@@ -124,7 +124,7 @@ Although SEE is essentially self-contained, it does depend on you
 </p>
 
 <p>
-At install time, SEE uses GNU configure to determine if these
+SEE uses scripts from GNU autoconf to determine if these
 are available, and also to determine other system-dependent
 properties. 
 Host applications should <code>#include &lt;see/see.h&gt;</code> to
@@ -132,8 +132,9 @@ access all the macros and functions prototypes.
 </p>
 
 <p>
-(As a developer you may find the need to edit the header and configure
-files to make SEE compile on your system. I would be interested in hearing what
+(As a developer you may find the need to edit header files and configure
+scripts to make SEE compile on your system. 
+I would be interested in hearing what
 changes were needed so that future releases can supply this automatically
 for other users. Please send mail to <a href="mailto:leonard&#64;users.sourceforge.net.nospam">leonard&#64;users.sourceforge.net.nospam</a>.)
 </p>
@@ -143,34 +144,43 @@ for other users. Please send mail to <a href="mailto:leonard&#64;users.sourcefor
 <p>
 The first step in executing ECMAScript program text with SEE is to create
 yourself an <em>interpreter</em> instance. 
-First, allocate storage for a 
+Each interpreter represents a reusable execution context. When created,
+they are initialised with all the standard ECMAScript objects
+(such as <code class="js">Math</code> and <code=class="js">String</code>).
+</p>
+
+<p>
+First, have your application allocate storage for a 
 <code>struct SEE_interpreter</code> and then call
-<code>SEE_interpreter_init()</code> to initialise it.
+<code>SEE_interpreter_init()</code> to initialise that structure.
 </p>
 
 <pre>
-	struct SEE_interpreter interp_storage;
-
-	SEE_interpreter_init(&interp_storage);
+ void SEE_interpreter_init(struct SEE_interpreter *);
 </pre>
 
 <p>
-A pointer to your initialised <code>SEE_interpreter</code> structure 
-is required for almost every function that SEE provides. 
+A pointer to the initialised <code>SEE_interpreter</code> structure 
+is required for almost every function that SEE provides.
 </p>
 
 <p>
 SEE supports multiple independent interpreter instances.
-For example, in an HTML web browser application, each window may
+This is useful,
+for example, in an HTML web browser application, where each window may
 need its own interpreter instance because the variables
-and bindings to built-in objects can be different and separate in each one.
+and bindings to built-in objects must be different and separate in each one.
 </p>
 
 <p>
-SEE's functions are not thread-safe,
-but multiple interpreters can be run in separate threads.
-Interpreters will remain
-completely independent of each other if you
+SEE's functions are not inherently thread-safe,
+but multiple different interpreters can be safely used by
+different threads. 
+This is because all data used by the library is stored to the
+<code>SEE_interpreter</code> structure; there are no global (mutable)
+data structures.
+Interpreters can remain
+completely independent of each other in this way if you
 <ul>
 <li>never pass an object or mutable string reference from one interpreter 
     to the other, and
@@ -186,6 +196,23 @@ need to arrange that yourself.
 </p>
 
 <p>
+Here is an example where the storage has been allocated on the stack,
+and consequently the interpreter only exists until the function returns.
+</p>
+
+<pre>
+	void
+	example()
+	{
+	    struct SEE_interpreter interp_storage;
+
+	    SEE_interpreter_init(&interp_storage);
+
+	    ...
+	}
+</pre>
+
+<p>
 If SEE encounters an internal error (such as memory exhaustion,
 memory corruption, or a bug), it calls the function pointer
 <code>SEE_abort</code>, 
@@ -196,7 +223,7 @@ early if you want to handle errors more gracefully.
 </p>
 
 <pre>
- void (*SEE_abort)(struct SEE_interpreter *);
+ void (*SEE_abort)(struct SEE_interpreter *interp, const char *msg);
 </pre>
 
 <h2 id="mem">3 Memory management</h2>
@@ -221,16 +248,17 @@ that you can change:
 </pre>
 
 <p>
-If SEE was compiled with Boehm-gc support, these hooks are initialised to
-wrappers around the <code>GC_malloc()</code> and 
-<code>GC_free()</code> functions. 
-Otherwise, they are <code>NULL</code> and your application must 
-initialise them.
+If SEE was compiled with Boehm-gc support, <code>SEE_mem_malloc_hook</code>
+is initialised to point to a wrapper
+around the <code>GC_malloc()</code> function.
+Otherwise, it is initialised as <code>NULL</code> and your application must 
+set it before use.
 </p>
 
 <p>
-If you intend to implement your own allocator, be aware that all of
-these hooks may be called with a NULL argument, indicating unknown context.
+If you intend to implement your own allocator, be aware that any of
+these hooks may be called with a <code>NULL</code> argument,
+indicating unknown context.
 They must not throw exceptions.
 </p>
 
@@ -263,6 +291,7 @@ Three convenient macros allocate storage. They are:
 </ul>
 It is worth familiarizing yourself with the macro definitions to
 see what they do.
+See <code>&lt;see/mem.h&gt;</code> for the definitions.
 </p>
 
 <h3 id="mem2">3.1 On memory allocators</h3>
@@ -273,28 +302,43 @@ Why doesn't it use reference counting?
 </p>
 
 <p>
-I justify SEE's reliance on a garbage collector with the following:
+This subsection is a short diversion on answering this good question.
+I have asked myself the same thing about other applications
+that use garbage collectors.
+I'll justify SEE's reliance on a garbage collector with the following
+reasons:
 <ul>
-<li> Using an alternative
-(strict) memory allocator would have significantly increased the
-development time, run-time performance and code size of the library,
-and so too that of the host application. 
+<li> Using a strict memory allocator (like malloc/free)
+would have significantly increased the
+development time, run-time performance and code size of the library.
+This would in turn affect those properties of the host application. 
+There are various convincing documents that explain why a garbage collector
+is better a better general software engineering choice than (say) explicit
+reference counting. 
+(See <a href="#ref-...">the references</a>.)
 <li> Exceptions (<a href="#try">&sect;4.2</a>)
-could not have been implemented easily with
-<code>longjmp()</code>, because references on the stack would be lost.
+could not have been implemented easily with (fast)
+<code>longjmp()</code>, because references on the stack would
+become memory leaks or introduce too much fragile 'finaly' code.
 <li> The object-prototype model of ECMAScript results in plenty of
 circular references between constructor functions and instances,
 and with recursive function scope chains.
 A reference counting scheme would leak these.
-<li> Decent garbage collectors for C are freely available (and some
+<li> A decent garbage collectors for C is freely available (and some
 good commercial ones exist, too).
+They do nothing to impede development.
+They can often be tuned to meet your 
+application's usage patterns.
 </ul>
 </p>
 
 <h2 id="eval">4 Running programs</h2>
 
 <p>
-You should execute ECMAScript program text using the following general
+SEE's ultimate purpose is to execute user scripts.
+A full script, or a self-contained fragment of script is referred to
+as ECMAScript program text.
+You should execute program text using the following general
 strategy:
 <ol>
  <li> obtain a reference to an (initialised) <code>SEE_interpreter</code>
@@ -314,6 +358,12 @@ strategy:
 </ol>
 </p>
 
+<pre>
+  void SEE_Global_eval(struct SEE_interpreter *interp, 
+                       struct SEE_input *input, 
+                       struct SEE_value *res);
+</pre>
+
 <p>
 The <code>SEE_Global_eval()</code> function is optionally able to
 return the value associated with the last statement executed. 
@@ -322,36 +372,31 @@ value result return pointer given to <code>SEE_Global_eval()</code> may be
 safely given as NULL.
 </p>
 
-<pre>
-  void SEE_Global_eval(struct SEE_interpreter *interp, 
-                       struct SEE_input *input, 
-                       struct SEE_value *res);
-</pre>
+<p>
+Note that program text is parsed and executed in one step with this
+mechanism. If the evaluated text contains function definitions, the
+function-objects created inside the interpreter will contain a
+'precompiled' copy of the function text. This means it is safe
+to destroy the input after it has been passed to 
+<code>SEE_Global_eval()</code>.
+</p>
 
 <h3 id="input">4.1 Inputs</h3>
 
 <p>
-SEE uses character stream sources known as 'inputs' to scan and 
-parse ECMAScript 
-program text. Because the ECMAScript language makes extensive use of Unicode,
-the inputs are a stream of type <code>SEE_unicode_t</code> UCS-4-encoded 
-characters.
+SEE uses Unicode character stream sources known as 'inputs' to consume
+(scan and parse) ECMAScript program text.
+An inputs is a stream of type <code>SEE_unicode_t</code> UCS-4-encoded 
+(32-bit) characters, provided one-at-a-time by an application-supplied
+'get next character' callback function.
 </p>
 
 <p>
-Three constructors for demonstration/testing different kinds of input stream
-are provided. When called, they each create a new <code>SEE_input</code> 
-structure, initialised and ready.
-They are:
-<ul>
-  <li>	<code>SEE_input_file()</code>
-	- reads from a stdio <code>FILE</code> pointer; understands BOMs
-  <li>	<code>SEE_input_utf8()</code>
-	- reads from a null-terminated <code>char</code> array;
-	  assumes ASCII/UTF-8 encoding
-  <li>	<code>SEE_input_string()</code>
-	- reads from a <code>SEE_string</code>; assumes UTF-16 encoding
-</ul>
+The SEE library provides some useful input stream callback
+functions. These are obtained from input stream 'constructor' functions,
+which also double as demonstration code if you care to read the source.
+When called, each constructor create a new <code>SEE_input</code> 
+structure, initialised for reading.
 </p>
 
 <pre>
@@ -363,15 +408,32 @@ They are:
 </pre>
 
 <p>
-If these constructors do not meet your needs, you
+The constructed input streams specialise in different common sources:
+<ul>
+  <li>	<code>SEE_input_file()</code>
+	- streams from a stdio <code>FILE</code> pointer, and
+	  understands Unicode byte-order marks in that file
+  <li>	<code>SEE_input_utf8()</code>
+	- streams the contents of a null-terminated <code>char</code> array, and
+	  assumes 7-bit ASCII or UTF-8 encoding
+  <li>	<code>SEE_input_string()</code>
+	- streams the contents of a <code>SEE_string</code> structure
+	  (which uses UTF-16 encoding)
+</ul>
+</p>
+
+<p>
+If the constructors descibed previously do not meet your needs, you
 are encouraged to develop your own.
 The rest of this section describes the input API in detail.
 </p>
 
+<h4 id="inputapi">4.1.1 Input provider API</h4>
+
 <p>
 If you don't particularly care about Unicode, it is helpful to 
-know that 7-bit ASCII is a direct subset of Unicode, so you can just cast 
-each of your <code>char</code>s to a <code>SEE_unicode_t</code>. 
+know that 7-bit ASCII is a direct subset of Unicode, so you can just pass 
+each of your ASCII <code>char</code>s as a 32-bit <code>SEE_unicode_t</code>. 
 </p>
 
 <p>
@@ -380,7 +442,7 @@ SEE uses a stream API for inputs rather than (say) a
 simple UCS-4 or UTF-8 string API, because Unicode-compliant applications will 
 usually have a much better understanding of the encodings they are using 
 than will SEE. With only a small amount of effort, streams provide this 
-flexibility while avoiding unnecessary duplication or translation of text
+flexibility while avoiding unnecessary duplication or text
 storage.
 </p>
 
@@ -388,8 +450,9 @@ storage.
 Inputs are described by <code>struct SEE_input</code> structures. 
 These are functionally similar to stdio's <code>FILE</code> type, or Java's 
 <code>ByteReader</code> classes. They stream fully-decoded Unicode characters.
-The <code>SEE_input</code> structure maintains
-the input's stream state and provides a pointer to its access methods.
+The <code>SEE_input</code> structure is the focus of the API and maintains
+the input's stream state and provides a pointer to its access (callback)
+methods.
 </p>
 
 <pre>
@@ -413,22 +476,6 @@ It is a pointer to a <code>SEE_inputclass</code> structure. This class structure
 contains function pointers to the two methods <code>next()</code> and 
 <code>close()</code>.
 </p>
-
-<p>Use these convenience macros to call the input methods:</p>
-
-<table>
-<thead>
-<tr><th>Macro</th>
-    <th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>SEE_INPUT_NEXT()</code></td>
-    <td>consume and return the next Unicode character from the stream</td></tr>
-<tr><td><code>SEE_INPUT_CLOSE()</code></td>
-    <td>release any resources obtained by the stream</td></tr>
-</tbody>
-</table>
-
 
 <p>
 The <code>next()</code> method should advance the input pointer, update the
@@ -471,6 +518,29 @@ You are encouraged to read the source code to the three constructors
 listed at the beginning of this section.
 </p>
 
+<h4 id="inputapic">4.1.2 Input client API</h4>
+
+<p>Callers will use these convenience macros to call input methods on a
+constructed input stream, rather than calling through the class structure
+directly:</p>
+
+<pre>
+  SEE_unicode_t SEE_INPUT_NEXT(struct SEE_input *);
+  void SEE_INPUT_CLOSE(struct SEE_input *);
+</pre>
+
+<table>
+<thead>
+<tr><th>Macro</th>
+    <th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SEE_INPUT_NEXT()</code></td>
+    <td>consume and return the next Unicode character from the stream</td></tr>
+<tr><td><code>SEE_INPUT_CLOSE()</code></td>
+    <td>release any resources obtained by the stream</td></tr>
+</tbody>
+</table>
 
 <h3 id="try">4.2 Try-catch contexts</h3>
 
