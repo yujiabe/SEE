@@ -257,7 +257,8 @@ SEE_ToString(interp, val, res)
 			struct SEE_string *s;
 			int sign, k, n, i, exponent;
 
-			a = SEE_dtoa(val->u.number, 1, 31, &n, &sign, &endstr);
+			a = SEE_dtoa(val->u.number, DTOA_MODE_SHORT_SW, 31, 
+				&n, &sign, &endstr);
 			k = endstr - a;
 			s = SEE_string_new(interp, 0);
 			SEE_ASSERT(interp, !sign);

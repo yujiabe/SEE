@@ -433,7 +433,7 @@ number_proto_toFixed(interp, self, thisobj, argc, argv, res)
 	    return;
 	}
 
-	ms = SEE_dtoa(x, 3, f, &n, &sign, &endstr);
+	ms = SEE_dtoa(x, DTOA_MODE_FCVT, f, &n, &sign, &endstr);
         k = endstr - ms;
 
         m = SEE_string_new(interp, 0);
@@ -492,9 +492,9 @@ number_proto_toExponential(interp, self, thisobj, argc, argv, res)
 	}
 
 	if (f)
-		ms = SEE_dtoa(x, 2, f, &n, &sign, &endstr);
+		ms = SEE_dtoa(x, DTOA_MODE_ECVT, f, &n, &sign, &endstr);
 	else
-		ms = SEE_dtoa(x, 1, 31, &n, &sign, &endstr);
+		ms = SEE_dtoa(x, DTOA_MODE_SHORT_SW, 31, &n, &sign, &endstr);
         k = endstr - ms;
 	if (x)
 	    e = n - 1;
@@ -558,7 +558,7 @@ number_proto_toPrecision(interp, self, thisobj, argc, argv, res)
 	s = SEE_string_new(interp, 0);
 	if (x < 0)
 	    SEE_string_addch(s, '-');
-	ms = SEE_dtoa(x, 2, p, &n, &sign, &endstr);
+	ms = SEE_dtoa(x, DTOA_MODE_ECVT, p, &n, &sign, &endstr);
 	k = endstr - ms;
 	if (x)
 	    e = n - 1;
