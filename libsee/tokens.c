@@ -255,15 +255,27 @@ const char *
 SEE_tokenname(token)
 	int token;
 {
-	int i;
 	static char buf[30];
 
-	for (i = 0; i < lengthof(tok_names); i++)
-		if (tok_names[i].token == token)
-			return tok_names[i].name;
-	if (token >= ' ' && token <= '~') 
-		snprintf(buf, sizeof buf, "'%c'", (unsigned char)token);
-	else
-		snprintf(buf, sizeof buf, "token %d", token);
+	SEE_tokenname_buf(token, buf, sizeof buf);
 	return buf;
+}
+
+void
+SEE_tokenname_buf(token, buf, buflen)
+	int token;
+	char *buf;
+	int buflen;
+{
+	int i;
+
+	for (i = 0; i < lengthof(tok_names); i++)
+		if (tok_names[i].token == token) {
+		    snprintf(buf, buflen, "%s", tok_names[i].name);
+		    return;
+		}
+	if (token >= ' ' && token <= '~') 
+		snprintf(buf, buflen, "'%c'", (unsigned char)token);
+	else
+		snprintf(buf, buflen, "token %d", token);
 }

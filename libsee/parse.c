@@ -310,7 +310,8 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 #define EXPECTED(tokstr)				\
     do { 						\
 	    char nexttok[30];				\
-	    strcpy(nexttok, SEE_tokenname(NEXT));	\
+	    SEE_tokenname_buf(NEXT, nexttok, 		\
+		sizeof nexttok);			\
 	    SEE_error_throw_string(			\
 		parser->interpreter,			\
 		parser->interpreter->SyntaxError,	\
