@@ -60,6 +60,51 @@ AC_CHECK_SIZEOF(double)
 AC_TYPE_SIZE_T
 
 dnl ------------------------------------------------------------
+dnl external libraries
+dnl
+
+AC_ARG_WITH(boehm-gc, 
+    AC_HELP_STRING([--with-boehm-gc],
+	[use Boehm-Weiser garbage collector, default=yes]),
+	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
+AC_ARG_WITH(boehm-gc-libdir, 
+    AC_HELP_STRING([--with-boehm-gc-libdir],
+	[path to gc lib, default=PREFIX/lib]),
+	[ac_cv_use_boehmgc_libdir=$withval],
+	[if test x"$prefix" = x"NONE"; then
+	     ac_cv_use_boehmgc_libdir=$ac_default_prefix/lib
+	 else
+	     ac_cv_use_boehmgc_libdir=$prefix/lib
+	 fi])
+AC_ARG_WITH(boehm-gc-incdir, 
+    AC_HELP_STRING([--with-boehm-gc-incdir],
+	[path to gc includes, default=PREFIX/include]),
+	[ac_cv_use_boehmgc_incdir=$withval],
+	[if test x"$prefix" = x"NONE"; then
+	     ac_cv_use_boehmgc_incdir=$ac_default_prefix/include
+	 else
+	     ac_cv_use_boehmgc_incdir=$prefix/include
+	 fi])
+if test x"$ac_cv_use_boehmgc" != x"no"; then
+    test x"$ac_cv_use_boehmgc_libdir" = x"no" || \
+        LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc_libdir}"
+    test x"$ac_cv_use_boehmgc_incdir" = x"no" || \
+        CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc_incdir}"
+    AC_CHECK_HEADERS([gc.h],,,[;])
+    AC_SEARCH_LIBS(GC_malloc, [gc])
+fi
+
+AC_ARG_WITH(readline, 
+    AC_HELP_STRING([--with-readline],
+	[see-shell interactive niceness, default=yes]),
+	[ac_cv_use_readline=$withval], [ac_cv_use_readline=no])
+if test x"$ac_cv_use_readline" != x"no"; then
+    AC_CHECK_HEADERS([readline/readline.h readline.h],,,[;])
+    AC_SEARCH_LIBS(readline, [readline edit])
+fi
+
+
+dnl ------------------------------------------------------------
 dnl std lib functions
 dnl
 
@@ -99,52 +144,7 @@ if test -n "$missing_funcs"; then
 fi
 
 dnl -- functions that have workarounds written for
-AC_CHECK_FUNCS([strdup])
-
-dnl ------------------------------------------------------------
-dnl external libraries
-dnl
-
-AC_ARG_WITH(boehm-gc, 
-    AC_HELP_STRING([--with-boehm-gc],
-	[use Boehm-Weiser garbage collector, default=yes]),
-	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
-AC_ARG_WITH(boehm-gc-libdir, 
-    AC_HELP_STRING([--with-boehm-gc-libdir],
-	[path to gc lib, default=PREFIX/lib]),
-	[ac_cv_use_boehmgc_libdir=$withval],
-	[if test x"$prefix" = x"NONE"; then
-	     ac_cv_use_boehmgc_libdir=$ac_default_prefix/lib
-	 else
-	     ac_cv_use_boehmgc_libdir=$prefix/lib
-	 fi])
-AC_ARG_WITH(boehm-gc-incdir, 
-    AC_HELP_STRING([--with-boehm-gc-incdir],
-	[path to gc includes, default=PREFIX/include]),
-	[ac_cv_use_boehmgc_incdir=$withval],
-	[if test x"$prefix" = x"NONE"; then
-	     ac_cv_use_boehmgc_incdir=$ac_default_prefix/include
-	 else
-	     ac_cv_use_boehmgc_incdir=$prefix/include
-	 fi])
-if test x"$ac_cv_use_boehmgc" != x"no"; then
-    test x"$ac_cv_use_boehmgc_libdir" = x"no" || \
-        LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc_libdir}"
-    test x"$ac_cv_use_boehmgc_incdir" = x"no" || \
-        CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc_incdir}"
-    AC_CHECK_HEADERS([gc.h],,,[;])
-    AC_SEARCH_LIBS(GC_malloc, [gc])
-    AC_CHECK_FUNC(GC_malloc)
-fi
-
-AC_ARG_WITH(readline, 
-    AC_HELP_STRING([--with-readline],
-	[see-shell interactive niceness, default=yes]),
-	[ac_cv_use_readline=$withval], [ac_cv_use_readline=no])
-if test x"$ac_cv_use_readline" != x"no"; then
-    AC_CHECK_HEADERS([readline/readline.h readline.h],,,[;])
-    AC_SEARCH_LIBS(readline, [readline edit])
-fi
+AC_CHECK_FUNCS([strdup readline GC_malloc])
 
 dnl ------------------------------------------------------------
 dnl debugging
