@@ -1,11 +1,13 @@
 
 /*
  * Simple statements to test that the parser is parsing right.
+ * $Id$
  */
 
 var failures = 0;
 var total = 0;
 
+/* Literalise a string for printing purposes */
 function literal(v) {
 	switch (typeof v) {
 	case "string":
@@ -15,6 +17,7 @@ function literal(v) {
 	}
 }
 
+/* Run a test, and check that the result is that expected */
 function test(expr, expected) {
 
 	var result, msg, ok, result_str, expected_str;
@@ -44,6 +47,8 @@ function test(expr, expected) {
 	print(msg);
 	total++;
 }
+
+/* Tests begin here */
 
 /* FutureReservedWord */
 test("abstract", "exception");
@@ -212,8 +217,12 @@ test("'$1,$2'.replace(/(\\$(\\d))/g, '$$1-$1$2')", "$1-$11,$1-$22");
 test("String('ab'.split(/a*?/))", "a,b");
 test("String('ab'.split(/a*/))", ",b");
 
+/* Print a summary of what went right, and what went wrong */
+
 print();
 print(failures + " out of " + total + " failed.");
 
+/* Throw an error on failure */
 if (failures > 0)
 	throw new Error("tests failure");
+
