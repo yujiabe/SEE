@@ -14,6 +14,8 @@ see_shell_static_LDADD=		$(see_shell_LDADD)
 see_shell_static_DEPENDENCIES=	$(see_shell_DEPENDENCIES)
 see_shell_static_LDFLAGS=	 -static
 
+#-- the following DEFS line tries to avoid the -I../include/see
+DEFS = @DEFS@ -I. -I$(srcdir)
 INCLUDES=			-I$(top_builddir)/include \
 				-I$(top_srcdir)/include
 
