@@ -1311,10 +1311,17 @@ upcase(ch)
 	SEE_unicode_t ch;
 {
 	/*
-	 * NOTE see the 'Canonicalize' function defined at the end
+	 * NOTE: see the 'Canonicalize' function defined at the end
 	 * of 15.10.2.8
 	 */
 	/* XXX TODO properly (See also String.toLower et al)  */
+	/*
+	 * This function converts the given character c to uppercase
+	 * in the same way that "c".toUpperCase() would work. However
+	 * the conversion is rejected (and the original c returned) if:
+	 *  - the result of converting to uppercase is a string of length > 1
+	 *  - the result is an ASCII char (0..7f) and c was not ASCII.
+	 */
 	return (ch >= 'a' && ch <= 'z') ? ch - 'a' + 'A' : ch;
 }
 
