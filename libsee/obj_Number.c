@@ -153,12 +153,12 @@ SEE_Number_init(interp)
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	/* 15.7.3.2 Number.MAX_VALUE */
-	SEE_SET_NUMBER(&v, 0x1fffffffffffffp971);	/* XXX uses hex fp constant */
+	SEE_SET_NUMBER(&v, SEE_MaxNumber);
 	SEE_OBJECT_PUT(interp, Number, STR(MAX_VALUE), &v,
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	/* 15.7.3.3 Number.MIN_VALUE */
-	SEE_SET_NUMBER(&v, 0x1p-1074);		/* XXX uses hex fp constant */
+	SEE_SET_NUMBER(&v, SEE_MinNumber);
 	SEE_OBJECT_PUT(interp, Number, STR(MIN_VALUE), &v,
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
