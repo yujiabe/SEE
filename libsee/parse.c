@@ -294,20 +294,27 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 #  define SKIP_DEBUG
 #endif
 
+/* Handy macros for describing syntax errors */
 #define EXPECT(c) EXPECTX(c, SEE_tokenname(c))
-
 #define EXPECTX(c, tokstr)				\
     do { 						\
+	EXPECTX_NOSKIP(c, tokstr);			\
+	SKIP;						\
+    } while (0)
+#define EXPECT_NOSKIP(c) EXPECTX_NOSKIP(c, SEE_tokenname(c))
+#define EXPECTX_NOSKIP(c, tokstr)			\
+    do { 						\
 	if (NEXT != (c)) 				\
+	    EXPECTED(tokstr);				\
+    } while (0)
+#define EXPECTED(tokstr)				\
 	    SEE_error_throw_string(			\
 		parser->interpreter,			\
 		parser->interpreter->SyntaxError,	\
 		error_at(parser, 			\
 		         "expected %s but got %s",	\
 		         tokstr,			\
-		         SEE_tokenname(NEXT)));		\
-	SKIP;						\
-    } while (0)
+		         SEE_tokenname(NEXT)))
 
 #define IMPLICIT_CONTINUE_LABEL		((struct SEE_string *)0x1)
 #define IMPLICIT_BREAK_LABEL		((struct SEE_string *)0x2)
@@ -937,7 +944,7 @@ Literal_parse(parser)
 		SEE_lex_regex(parser->lex);
 		return PARSE(RegularExpressionLiteral);
 	default:
-		ERROR;
+		EXPECTED("null, true, false, number, string, or regex");
 	}
 }
 
@@ -951,8 +958,7 @@ NumericLiteral_parse(parser)
 {
 	struct Literal_node *n;
 
-	if (NEXT != tNUMBER)
-		ERROR;
+	EXPECT_NOSKIP(tNUMBER);
 	n = NEW_NODE(struct Literal_node, &Literal_nodeclass);
 	SEE_VALUE_COPY(&n->value, NEXT_VALUE);
 	SKIP;
@@ -1020,9 +1026,7 @@ StringLiteral_parse(parser)
 {
 	struct StringLiteral_node *n;
 
-	if (NEXT != tSTRING) 
-		ERROR;
-
+	EXPECT_NOSKIP(tSTRING);
 	n = NEW_NODE(struct StringLiteral_node, &StringLiteral_nodeclass);
 	n->string = NEXT_VALUE->u.string;
 	SKIP;
@@ -1427,7 +1431,7 @@ ObjectLiteral_parse(parser)
 		SKIP;
 		break;
 	    default:
-		ERRORm("expected string, identifier or number");
+		EXPECTED("string, identifier or number");
 	    }
 	    EXPECT(':');
 	    (*pairp)->value = PARSE(AssignmentExpression);
@@ -4559,7 +4563,7 @@ Statement_parse(parser)
 		 * is guarded with a lookahead that doesnt include
 		 * tFunction.
 		 */
-		ERROR;
+		ERRORm("function declaration not allowed");
 	case tIDENT:
 		if (lookahead(parser, 1) == ':')
 			return PARSE(LabelledStatement);
@@ -6158,7 +6162,7 @@ SwitchStatement_parse(parser)
 		n->defcase = c;
 		break;
 	    default:
-		ERRORm("expected '}', 'case' or 'default'");
+		EXPECTED("'}', 'case' or 'default'");
 	    }
 	    EXPECT(':');
 	    next = NEXT;
@@ -7015,7 +7019,7 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 		SEE_lex_init(&lex, SEE_input_lookahead(paraminp, 6));
 		parser_init(parser, interp, &lex);
 		formal = PARSE(FormalParameterList);	/* handles "" too */
-		if (NEXT != tEND) ERROR;		/* uses parser var */
+		EXPECT_NOSKIP(tEND);			/* uses parser var */
 	} else
 		formal = NULL;
 
@@ -7030,7 +7034,7 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 	parser->funcdepth++;
 	body = PARSE(FunctionBody);
 	parser->funcdepth--;
-	if (NEXT != tEND) ERROR;
+	EXPECT_NOSKIP(tEND);
 
 	return SEE_function_make(interp, name, formal, body);
 }
