@@ -113,7 +113,7 @@ ECMAScript is the official name for what most people call JavaScript:
      align=right -->
 
 <blockquote cite="#ref-ecma">
-[ECMAscript] is based on several originating technologies, the most well
+[ECMAScript] is based on several originating technologies, the most well
 known being JavaScript (Netscape) and JScript (Microsoft). The language
 was invented by Brendan Eich at Netscape and first appeared in that
 company's Navigator 2.0 browser. It has appeared in all subsequent
@@ -352,7 +352,8 @@ indicating unknown context.
 They must not throw exceptions, but may return <code>NULL</code> on failure.
 </p>
 
-<p>
+<p class="note">
+&#9888; Note:
 Currently, <code>SEE_mem_free_hook</code> is unused,
 although future versions may use it.
 It should be left at its default value, NULL.
@@ -643,12 +644,15 @@ The <code>next()</code> method should advance the input pointer, update the
 SEE's scanner calls <code>next()</code> repeatedly, until
 the <code>eof</code> member becomes true.
 When <code>eof</code> is true, the value of <code>lookahead</code> becomes
-meaningless (but should be set to -1).
+meaningless (but should be set to <code>-1</code>).
+Generally, the stream's constructor will internally call its
+<code>next()</code> function once initially, to 'prime' the lookahead field.
 </p>
 
 <p>
 If the <code>next()</code> method encounters an encoding error, it should 
-return <code>SEE_INPUT_BADCHAR</code> and try to recover. 
+set <code>lookahead</code> to <code>SEE_INPUT_BADCHAR</code> and try to 
+recover. 
 It can throw an exception if it wants to, but SEE does not attempt to 
 handle that: the application or user program will receive it.
 If you don't particularly care about Unicode, it is helpful to 
