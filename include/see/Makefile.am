@@ -11,14 +11,17 @@ pkginclude_HEADERS =	cfunction.h debug.h error.h eval.h input.h	\
 
 # Rather than make our config.h be part of the API, we substitute
 # configure-found values into the public API headers as needed.
+# The perl script inc-subst is generated to perform the '@' substitutions
+# that config.status should perform, but doesn't.
 
 EXTRA_DIST=     error.h.in try.h.in type.h.in
 CLEANFILES=	error.h try.h type.h inc-subst
 
 inc-subst: $(CONFIG_HEADER)
 	$(PERL) -n -e \
-	  'print if s!^#define\s+(\S+)\s+(.+)!s,\\\@$$1\\\@,$$2/* $$1 */,g;!; \
-	   print "s,\@\@,0,g;\n" if eof' < $(CONFIG_HEADER) > inc-subst
+	'print if s!^#define\s+(\S+)\s+(.+)!s,\\\@$$1\\\@,$$2/*$$1*/,g;!; \
+	 print if s:^/\*\s*#undef\s+(\S+)\s*\*/.*:s,\\\@$$1\\\@,0/*!$$1*/,g;:; \
+	' < $(CONFIG_HEADER) > inc-subst
 
 error.h: error.h.in inc-subst
 	$(PERL) -p inc-subst < $(srcdir)/error.h.in > error.h
