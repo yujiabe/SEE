@@ -20,11 +20,13 @@
                    border-right: thin solid black;
                    vertical-align: top;
                  }
-        td       { padding-left: 1ex; padding-right: 1ex; }
+        td       { padding-left: 1ex; padding-right: 1ex;
+		   padding-top: 0.3ex; padding-bottom: 0.3ex;
+		   }
         dl       { margin-left: 4ex; }
         pre      { margin-left: 8ex; }
-        pre i    { color: blue; }
-        pre b    { color: red; }
+        code i, pre i    { color: blue; }
+        code b, pre b    { color: red; }
         ul.toc   { font-size: x-small; }
         code     { white-space: nowrap; }
         /* code,pre { background: #ffe0e0; } */
@@ -35,7 +37,7 @@
         p.misc   { font-size: x-small; color: gray; }
         ul.misc li { font-size: x-small; color: gray; }
         blockquote { font-size: x-small; }
-        p.note  { margin-left: 2ex; font-size: xx-small; }
+        p.note  { margin-left: 2ex; font-size: x-small; }
         dt        { font: bold; }
 // -->
 </style>
@@ -71,6 +73,10 @@ by David Leonard, 2004.
  <li><a href="#conversion">5.1 Value conversion</a>
  <li><a href="#undef">5.2 Undefined, null, boolean and number values</a>
  <li><a href="#string">5.3 String values</a>
+  <ul>
+  <li><a href="#intern">5.3.1 Internalised strings</a>
+  <li><a href="#staticstr">5.3.2 Statically initialised strings</a>
+  </ul>
  </ul>
 <li><a href="#object">6 Objects</a>
  <ul>
@@ -168,10 +174,12 @@ like this:</p>
 <p>Similarly, ECMAScript code is typeset in a sans serif font, like this:</p>
 <pre class="js">window.location = "about:blank";</pre>
 
+<p>Elided code is indicated with an elipsis: <code><i>...</i></code></p>
+
 <h2 id="req">1 Requirements</h2>
 
 <p>
-Compililng SEE requires an ANSI C compiler.
+Compiling SEE requires an ANSI C compiler.
 Although the SEE library is essentially self-contained, it does depend on you
 (the host application developer) providing the following:
 </p>
@@ -381,14 +389,15 @@ reasons:
 </p>
 
 <ul>
-<li> Using a strict memory allocator (like malloc/free)
+<li> Using a strict memory allocator 
+(like <code>malloc()</code> and <code>free()</code>)
 would have significantly increased the
-development time, run-time performance and code size of the library.
+complexity, development time, run-time performance and code size of the library.
 This would in turn affect those properties of the host application. 
 There are various convincing documents that explain why a garbage collector
 is better a better general software engineering choice than (say) explicit
 reference counting. 
-(See <a href="#ref-issues">the issues with garbage collectors</a>.)
+(See the <a href="#ref-issues">Advantages and Disadvantages of Conservative Garbage Collection</a>.)
 <li> Exceptions (<a href="#try">&sect;4.2</a>)
 could not have been implemented easily with (fast)
 <code>longjmp()</code>, because references on the stack would
@@ -454,7 +463,7 @@ to destroy the input after it has been passed to
 
 <h3 id="runxmp">4.1 Example</h3>
 
-<p>Although the rest of this document explains the library in detail,
+<p>Although the rest of this document explains the library API in detail,
 a complete, but simple example of using the SEE interpreter follows:</p>
 
 <pre>#include &lt;see/see.h&gt;
@@ -488,6 +497,8 @@ main()
                         printf("Unexpected answer\n");
         }
 
+        INPUT_CLOSE(input);
+
         <i>/* Catch any exceptions */</i>
         if (SEE_CAUGHT(try_ctxt)) {
                 printf("Unexpected exception\n");
@@ -501,33 +512,27 @@ the garbage collector library, and run, it should respond with:</p>
 
 <pre>The answer is 14.567764</pre>
 
+<p>This works because the value of the last executed statement in the
+<code>program_text</code> is stored in <code>result</code>.
+Calling <code>SEE_Global_eval()</code> is essentially the same 
+as using ECMAScript's built-in <code class="js">eval()</code>
+function.
+</p>
+
 <h3 id="input">4.2 Inputs</h3>
 
 <p>
 SEE uses Unicode character stream sources known as 'inputs' to consume
 (scan and parse) ECMAScript program text.
-An inputs is a stream of type <code>SEE_unicode_t</code> UCS-4-encoded 
-(32-bit) characters, provided one-at-a-time by an application-supplied
+An input is a stream of 32-bit Unicode UCS-4 character.
+The stream is read one-character at a time through its
 'get next character' callback function.
 </p>
 
 <p>
-The SEE library provides some useful input stream callback
-functions. These are obtained from input stream 'constructor' functions,
-which also double as demonstration code if you care to read the source.
-When called, each constructor create a new <code>SEE_input</code> 
-structure, initialised for reading.
-</p>
-
-<pre>struct SEE_input *<dfn>SEE_input_file</dfn>(struct SEE_interpreter *interp, 
-                FILE *f, const char *filename, const char *encoding);
-struct SEE_input *<dfn>SEE_input_string</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s);
-struct SEE_input *<dfn>SEE_input_utf8</dfn>(struct SEE_interpreter *interp,
-                const char *s);</pre>
-
-<p>
-The constructed input streams specialise in different common sources:
+The SEE library provides some useful stream constructors.
+Each constructor create a new <code>SEE_input</code> 
+structure, initialised for reading the source it is supplied.
 </p>
 
 <ul>
@@ -539,23 +544,29 @@ The constructed input streams specialise in different common sources:
           assumes 7-bit ASCII or UTF-8 encoding
   <li>  <code>SEE_input_string()</code>
         - streams the contents of a <code>SEE_string</code> structure
-          (which uses UTF-16 encoding)
+          (which uses UTF-16 encoding, see <a href="#string">&sect;5.3</a>)
 </ul>
 
+<pre>struct SEE_input *<dfn>SEE_input_file</dfn>(struct SEE_interpreter *interp, 
+                FILE *f, const char *filename, const char *encoding);
+struct SEE_input *<dfn>SEE_input_utf8</dfn>(struct SEE_interpreter *interp,
+                const char *s);
+struct SEE_input *<dfn>SEE_input_string</dfn>(struct SEE_interpreter *interp,
+                struct SEE_string *s);</pre>
+
 <p>
-If the constructors descibed previously do not meet your needs, you
-are encouraged to develop your own.
-The rest of this section describes the input API in detail.
+If these constructors do not adequately meet your needs, you
+are encouraged to develop your own. They're quite easy to do if a bit fiddly.
+I recommend you find the source to one of the above and modify it to do what
+you want.
+</p>
+
+<p>
+The rest of this section describes the input API in detail, with a view
+towards custom input streams.
 </p>
 
 <h4 id="inputapi">4.2.1 Input provider API</h4>
-
-<p>
-If you don't particularly care about Unicode, it is helpful to 
-know that 7-bit ASCII is a direct subset of Unicode, so you can just pass 
-each of your ASCII <code>char</code>s as a 32-bit <code>SEE_unicode_t</code>. 
-(See <a href="#ref-unicode">the references</a>.)
-</p>
 
 <p>
 Why streams instead of strings?
@@ -610,6 +621,11 @@ If the <code>next()</code> method encounters an encoding error, it should
 return <code>SEE_INPUT_BADCHAR</code> and try to recover. 
 It can throw an exception if it wants to, but SEE does not attempt to 
 handle that: the application or user program will receive it.
+If you don't particularly care about Unicode, it is helpful to 
+know that 7-bit ASCII is a direct subset of Unicode, so you can just pass 
+each of your ASCII <code>char</code>s as a 32-bit <code>SEE_unicode_t</code>
+masked with <code>0x7f</code>. 
+(See <a href="#ref-unicode">the references</a>.)
 </p>
 
 <p>
@@ -618,6 +634,8 @@ resources acquired during the input stream's construction.
 By convention, SEE will not call the <code>close()</code> method 
 of any application-supplied input. The onus is on the caller to close the
 inputs supplied to SEE library functions.
+For this reason, you should use the 'finally' behaviour described
+in <a href="#try">&sect;4.3</a> to clean up a possibly failed stream.
 </p>
 
 <p>
@@ -720,7 +738,7 @@ If you are not interested in catching exceptions, and only want the
 <pre><b>SEE_TRY</b>(interp, c) {
         do_something();
 }
-do_cleanup();
+do_finally();    <i>/* optional */</i>
 <b>SEE_DEFAULT_CATCH</b>(interp, c);</pre>
 
 <p>The signatures of these macros are:</p>
@@ -733,20 +751,28 @@ void <dfn>SEE_DEFAULT_CATCH</dfn>(struct SEE_interpreter *interp, SEE_try_contex
 <h2 id="value">5 Values</h2>
 
 <p>
-Eventually, the host application will need to pass numbers, strings and 
-complex value objects about through the SEE interpreter to and from the user
-code.
-The ECMAScript language provides for only six value types. They are:
+Eventually, your host application will want to pass numbers, strings and 
+complex value objects about, through the SEE interpreter, to and from the user
+code. This section describes the C interface to ECMAScript values.</p>
+
+<p>
+The ECMAScript language has exactly six types of value. They are:
 </p>
 
 <ul>
- <li><em>undefined</em> - with exactly one value: <code class=js>undefined</code>
- <li><em>null</em>      - with exactly one value: <code class=js>null</code>
- <li><em>boolean</em>   - with exactly two values: <code class=js>true</code>
-                          and <code class=js>false</code>
- <li><em>number</em>    - IEEE 754 64-bit floating point numbers
- <li><em>string</em>    - UTF-16 character arrays of arbitrary length
- <li><em>object</em>    - a reference to a bag of named properties
+<li><em>undefined type</em>
+- with exactly one value: <code class=js>undefined</code>
+<li><em>null type</em>
+- with exactly one value: <code class=js>null</code>
+<li><em>boolean type</em>
+- with exactly two values: <code class=js>true</code>
+and <code class=js>false</code>
+<li><em>number type</em>
+- IEEE 754 64-bit floating point numbers
+<li><em>string type</em>
+- UTF-16 character arrays of arbitrary length
+<li><em>object type</em>
+- a reference to a bag of named properties
 </ul>
 
 <p>
@@ -755,7 +781,7 @@ these types.
 </p>
 
 <pre><dfn>struct SEE_value</dfn> {
-    enum { <i>...</i> }             type;
+    enum { <i>...</i> }            type;
     union {
         SEE_boolean_t       boolean;
         SEE_number_t        number;
@@ -766,8 +792,8 @@ these types.
 };</pre>
 
 <p>
-The first member, <code>type</code>, acts as a discriminator,
-and is usually one of 
+The first member, <code>type</code>, is the discriminator,
+and must be one of the enumerated values
 <code>SEE_UNDEFINED</code>, <code>SEE_NULL</code>, 
 <code>SEE_BOOLEAN</code>, <code>SEE_NUMBER</code>, <code>SEE_STRING</code> or
 <code>SEE_OBJECT</code>.
@@ -775,7 +801,7 @@ and is usually one of
 
 <p>
 Depending on the type,
-you can access the corresponding value of a 
+you can directly access the corresponding value of a 
 <code>SEE_value</code>.
 If the value variable is declared as:
 </p>
@@ -815,8 +841,11 @@ The following table shows which union fields of <code>v.u</code> are valid when:
 <p>
 Two other types (<code>SEE_COMPLETION</code> and <code>SEE_REFERENCE</code>)
 are only used internally to SEE and are not documented here.
-To coerce values into other types, use the utility functions
-describe in <a href="#conversion">&sect;5.1</a>.
+</p>
+
+<p>
+To convert/coerce values into values of a different types, use the 
+utility functions describe in <a href="#conversion">&sect;5.1</a>.
 </p>
 
 <p>
@@ -856,6 +885,15 @@ Instead, extract and copy values into storage using the following macro:
 </p>
 
 <pre>void <dfn>SEE_VALUE_COPY</dfn>(struct SEE_value *dst, struct SEE_value *src);</pre>
+
+<p>
+A simple pitfall to avoid when passing values to SEE functions is to
+use value storage as both a parameter to the function and as the return result
+storage.
+Do not do this.
+It is possible that the function will initialise its return storage before it
+accesses its parameters.
+</p>
 
 <h3 id="conversion">5.1 Value conversion</h3>
 
@@ -1097,18 +1135,72 @@ void <dfn>SEE_string_fputs</dfn>(const struct SEE_string *s, FILE *file);
 int <dfn>SEE_string_cmp</dfn>(const struct SEE_string *s1,
                 const struct SEE_string *s2);</pre>
 
+<h4 id="intern">5.3.1 Internalised strings</h4>
+
 <p>
 If you find yourself comparing strings a lot, you may find it easier to
 compare <em>internalised</em> strings. 
 These are strings that are kept in a fast
 hash table and may be compared equal using pointer equality. 
-The <code>SEE_intern()</code> function returns an internalized (unique) copy of the given string and is very fast on already-interned strings.
+The <code>SEE_intern()</code> function returns an 'internalized' copy of the 
+given string and is very fast on already-interned strings.
 It is worth using in lieu of <code>SEE_string_cmp()</code> if the strings 
-are likely to be intern'ed already. (For example, most property names are.)
+are likely to be intern'ed already. (For example, all property names in
+the standard library are.)
 </p>
 
 <pre>struct SEE_string *<dfn>SEE_intern</dfn>(struct SEE_interpreter *interp,
                 struct SEE_string *s);</pre>
+
+<h4 id="staticstr">5.3.2 Statically initialised strings</h4>
+
+<p>
+SEE supports statically initialised strings.
+If you have a large number of strings to create and use (e.g. properties
+and method names) over many interpreter instances, statically initialised
+strings can save space, and improve performance.
+</p>
+
+<p>
+A statically initialised string, '<code class="js">Hello, world</code>',
+would look like this:
+</p>
+
+<pre><i>/* Example of a statically-initialised UTF-16 string */</i>
+static SEE_char_t hello_world_chars[12] = {
+    'H', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd'
+};
+static struct SEE_string hello_world = {
+    12,                                                <i>/* length */</i>
+    hello_world_chars                                  <i>/* data */</i>
+};</pre>
+
+<p>
+The main problem with static strings is finding an elegant way
+to initialise the strings' content. 
+There is no simple way in ANSI C to have the compiler convert 
+common ASCII strings into UTF-16 arrays.
+The approach taken by SEE in supporting all the standard ECMAScript objects
+and methods, is to generate C program text from a file of
+ASCII strings during the build process.
+</p>
+
+<p>
+If an application wishes to internalise strings <em>across interpreters</em>,
+it must add all its global strings into the global
+intern table before creating any interpreters. This is done by calling
+<code>SEE_intern_global()</code> for each global string.
+</p>
+
+<pre>void <dfn>SEE_intern_global</dfn>(struct SEE_string *str);</pre>
+
+<p>
+When creating global strings, the application can either use
+the static initialisation technique described above, or create
+interpreter-less strings by passing a <code>NULL</code> interpreter pointer
+to the various string creation functions. Such strings should be immediately
+placed into the global intern table.
+</p>
 
 <h2 id="object">6 Objects</h2>
 
@@ -1139,8 +1231,9 @@ All object values are pointers to object instances.
 The pointers are of type <code>struct SEE_object *</code>.
 No object pointer in a <code>SEE_value</code> should ever point to
 <code>NULL</code>.
-It can be convenient to work with <code>struct SEE_object *</code> pointer 
-types directly, instead of using <code>SEE_value</code>.
+I find working with <code>struct SEE_object *</code> pointer 
+types directly, instead of using <code>struct SEE_value</code> to be
+convenient, when I know that I am dealing with objects.
 </p>
 
 <p>
@@ -1151,28 +1244,30 @@ following macros:
 <ul>
 <li><code>SEE_OBJECT_GET()</code>
         - retrieve a named property or return <code class=js>undefined</code>
-          ("<code class=js>o.prop</code>")
+          ('<code class=js>o.prop</code>')
 <li><code>SEE_OBJECT_PUT()</code>
         - create/update a named property
-          ("<code class=js>o.prop = val</code>")
+          ('<code class=js>o.prop = val</code>')
 <li><code>SEE_OBJECT_CANPUT()</code>
         - returns true if the property can be changed
 <li><code>SEE_OBJECT_HASPROPERTY()</code>
         - tests for existence of a property
 <li><code>SEE_OBJECT_DELETE()</code>
         - delete a property; returns true on success 
-          ("<code class=js>delete o.prop</code>")
+          ('<code class=js>delete o.prop</code>')
 <li><code>SEE_OBJECT_DEFAULTVALUE()</code>
         - returns the string or number value associated with the object
 <li><code>SEE_OBJECT_CONSTRUCT()</code>
-        - call object as a constructor ("<code class=js>new o(</code>...<code class=js>)</code>")
+        - call object as a constructor
+	  ('<code class=js>new o(<i>...</i>)</code>')
 <li><code>SEE_OBJECT_CALL()</code>
-        - call object as a function ("<code class=js>o(</code>...<code class=js>)</code>")
+        - call object as a function ('<code class=js>o(<i>...</i>)</code>')
 <li><code>SEE_OBJECT_HASINSTANCE()</code>
         - return true if the objects are related
-          ("<code class=js>x instanceof o</code>")
+          ('<code class=js>x instanceof o</code>')
 <li><code>SEE_OBJECT_ENUMERATOR()</code>
-        - create a property enumerator ("<code class=js>for (i in o)</code> ...")
+        - create a property enumerator
+	  ('<code class=js>for (i in o) <i>...</i></code>')
 </ul>
 
 <pre>void <dfn>SEE_OBJECT_GET</dfn>(struct SEE_interpreter *interp,
@@ -1259,12 +1354,12 @@ flags can be used:
 </tbody>
 </table>
 
-<h2 id="enum">6.2 Property enumerators</h2>
+<h3 id="enum">6.2 Property enumerators</h3>
 
 <p>
 A property enumerator is a mechanism for discovering the properties that
 an object contains. The language exercises this with its
-<code class=js>for (var v in ...)</code> construct.
+<code class=js>for (var v in <i>...</i>)</code> construct.
 The results of the enumeration need not be sorted, nor even
 to be the same order each time. 
 </p>
@@ -1507,7 +1602,7 @@ construction.
 It takes a pointer to the C 
 function, and an integer indicating the expected number of arguments. 
 (The integer becomes the function object's
-"<code class=js>length</code>" property.)
+<code class=js>length</code> property.)
 </p>
 
 <pre>struct SEE_object *<dfn>SEE_cfunction_make</dfn>(struct SEE_interpreter *interp,
@@ -1744,16 +1839,16 @@ The following compatibility flag names may change in the future.
 <th>Behaviour</th>
 </tr>
 
-<tr><td><code>UTF_SAFE</code>
-<td>Treat 'overlong' UTF-8 encodings as invalid unicode characters.
-    This improves security.
+<tr><td><code>UTF_UNSAFE</code>
+<td>Treat 'overlong' UTF-8 encodings as valid unicode characters.
 
 <tr><td><code>UNDEFDEF</code>
 <td>Don't throw a <code class="js">ReferenceError</code>
- when an undefined global property
- is used. This violates step 3 of s8.7.1 of ECMA-262, but it seems
- that so many interpreters are flexible on this point. It was
- a JavaScript 1.5 thing I believe.
+ when an undefined global property is used. 
+ Instead, return the <code class="js">undefined</code> value.
+ This violates step 3 of s8.7.1 of ECMA-262, but it seems
+ that so many interpreters are flexible on this point.
+ It was originally a JavaScript 1.5 thing I believe.
 
 <tr><td><code>262_3B</code>
 <td>
@@ -1780,12 +1875,12 @@ Random extensions:
 	a <code class="js">TypeError</code>.
 
 <li>	the string representation of a bad date will return the string
-	<code class="js">"Invalid Date"</code>,
-	instead of <code class="js">"NaN"</code>.
+	'<code class="js">Invalid Date</code>',
+	instead of '<code class="js">NaN</code>'.
 
 <li>	Calling <code class="js">Date</code> as a constructor 
 	will recognise Netscape-style date strings of the 
-	form <code class="js">"1/1/1999 12:30 AM"</code>.
+	form '<code class="js">1/1/1999 12:30 AM</code>'.
 
 <li>	<code class="js">Function.prototype</code> will not have a
 	<code class="js">prototype</code> property of its own.
@@ -1796,7 +1891,8 @@ Random extensions:
 	do-nothing FunctionDeclaration instead of throwing a
 	<code class="js">TypeError</code>.
 
-<li>	The global object has its [[Prototype]] set to Object.prototype,
+<li>	The global object has its property [[Prototype]] property set to
+	<code class="js">Object.prototype</code>,
 	effectively making all its properties available to the global scope,
 	but having the good side effect of allowing 
 	<code class="js">toString()</code> to
@@ -1814,23 +1910,28 @@ Random extensions:
 	to <code class="js">__proto__</code> are accepted if 
 	they don't cause a cycle.
 
-<li>	Native functions assign themselves a <code class="js">arguments</code>
-	property when
-	called, so that the old idiom of using
-	<code class="js">f.arguments</code> inside the function will work.
+<li>	Native functions assign themselves an
+	<code class="js">arguments</code>
+	property when called, so that the old idiom of using
+	<code class="js">f.arguments</code> inside the function 
+	<code class="js">f</code> will work.
 
-<li>	The <code class="js">arguments</code> objects inside a function
-	have a default-value which is a string representing the arguments.
+<li>	The system-generated <code class="js">arguments</code> object
+	created inside a function has a default-value (a comma-separated
+	string representing the arguments), instead of raising a
+	<code class="js">TypeError</code>. The upshot of this is that
+	<code class="js">arguments</code> can be coerced into a string.
 
 <li>	<code class="js">Array.join(undefined)</code> uses
-	the string <code class="js">"undefined"</code>
-	as the join string instead of <code class="js">","</code>.
+	the string '<code class="js">undefined</code>'
+	as the join string instead of '<code class="js">,</code>'.
 	However when called without arguments will still use
-	<code class="js">","</code>.
+	'<code class="js">,</code>'. (How bizarre.)
 
-<li>	The lexical analyser will treat the sequence
-	<code class="js">&lt;!--</code> much like <code class="js">//</code>,
-	which makes it very useful for use in HTML.
+<li>	The lexical analyser will treat the 4-character sequence
+	'<code class="js">&lt;!--</code>' much like the
+	'<code class="js">//</code>' comment introducer. 
+	This makes it very useful for use with HTML SCRIPT tags.
 </ul>
 
 </table>
@@ -1855,6 +1956,13 @@ void <dfn>SEE_PrintObject</dfn>(struct SEE_interpreter *interp,
 If debugging the library itself, it is worth reading the source code to
 find the debug flag variables that can be turned on by the host 
 application to enable verbose traces during execution.
+</p>
+
+<p>
+Defining the
+<code>NDEBUG</code> preprocessor symbol when building the library
+also disables (slow) internal assertions that would otherwise
+help show up application misuse of the API.
 </p>
 
 <h2 id="ref">References</h2>
