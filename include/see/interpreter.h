@@ -64,6 +64,7 @@ struct SEE_interpreter {
 
 	void *intern_tab;		/* interned string table */
 	unsigned int random_seed;	/* used by Math.random() */
+	const char *locale;		/* current locale (may be NULL) */
 
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *);
 };
@@ -79,6 +80,6 @@ void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
  * This function is called when the interpreter encounters a
  * fatal condition. It should not return. It defaults to calling abort().
  */
-extern void (*SEE_abort)(struct SEE_interpreter *i) SEE_dead;
+extern void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead;
 
 #endif _h_interpreter_
