@@ -401,6 +401,7 @@ main(argc, argv)
 	if (SEE_mem_malloc_hook == NULL)
 		init_dummy_malloc();
 
+	shell_strings();
 	SEE_interpreter_init(&interp);
 
 	while ((ch = getopt(argc, argv, "c:d:f:h:")) != -1)
