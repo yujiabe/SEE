@@ -39,6 +39,7 @@
 #if STDC_HEADERS
 # include <stdio.h>
 # include <math.h>
+# include <string.h>
 #endif
 
 #include <see/mem.h>
@@ -58,7 +59,22 @@
 #define SGN(x)	((x) < 0 ? -1 : +1)
 #define ABS(x)  ((x) < 0 ? -(x) : (x))
 
-char SEE_hexstr[16] = {
+#if !(HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV)
+const union SEE_numeric_literal
+# if WORDS_BIGENDIAN
+ SEE_literal_NaN = { { 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
+ SEE_literal_Inf = { { 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
+ SEE_literal_Max = { { 0x7f, 0xef, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
+ SEE_literal_Min = { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 } };
+# else /* little endian */
+ SEE_literal_NaN = { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f } },
+ SEE_literal_Inf = { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x7f } },
+ SEE_literal_Max = { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f } },
+ SEE_literal_Min = { { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
+# endif /* little endian */
+#endif /* hex_float & constant_nan_div & constant_inf_div */
+
+char SEE_hexstr_lowercase[16] = {
 	'0','1','2','3','4','5','6','7',
 	'8','9','a','b','c','d','e','f'
 };
@@ -87,9 +103,6 @@ SEE_ToBoolean(interp, val, res)
 	struct SEE_value *val, *res;
 {
 	switch (val->type) {
-	default:
-		SEE_error_throw_string(interp, interp->TypeError, 
-			STR(toboolean_bad));
 	case SEE_UNDEFINED:
 	case SEE_NULL:
 		SEE_SET_BOOLEAN(res, 0);
@@ -112,6 +125,9 @@ SEE_ToBoolean(interp, val, res)
 	case SEE_OBJECT:
 		SEE_SET_BOOLEAN(res, 1);
 		break;
+	default:
+		SEE_error_throw_string(interp, interp->TypeError, 
+			STR(toboolean_bad));
 	}
 }
 
@@ -122,9 +138,6 @@ SEE_ToNumber(interp, val, res)
 	struct SEE_value *val, *res;
 {
 	switch (val->type) {
-	default:
-		SEE_error_throw_string(interp, interp->TypeError, 
-			STR(tonumber_bad));
 	case SEE_UNDEFINED:
 		SEE_SET_NUMBER(res, SEE_NaN);
 		break;
@@ -153,6 +166,9 @@ SEE_ToNumber(interp, val, res)
 		SEE_ToNumber(interp, &primitive, res);
 		break;
 	    }
+	default:
+		SEE_error_throw_string(interp, interp->TypeError, 
+			STR(tonumber_bad));
 	}
 }
 
@@ -227,9 +243,6 @@ SEE_ToString(interp, val, res)
 	struct SEE_value *val, *res;
 {
 	switch (val->type) {
-	default:
-		SEE_error_throw_string(interp, interp->TypeError, 
-			STR(tostring_bad));
 	case SEE_UNDEFINED:
 		SEE_SET_STRING(res, STR(undefined));
 		break;
@@ -311,6 +324,9 @@ SEE_ToString(interp, val, res)
 		SEE_ToString(interp, &prim, res);
 		break;
 	    }
+	default:
+		SEE_error_throw_string(interp, interp->TypeError, 
+			STR(tostring_bad));
 	}
 }
 
@@ -324,7 +340,6 @@ SEE_ToObject(interp, val, res)
 	struct SEE_value *arg[1];
 
 	switch (val->type) {
-	default:
 	case SEE_UNDEFINED:
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(toobject_undefined));
@@ -343,6 +358,9 @@ SEE_ToObject(interp, val, res)
 	case SEE_STRING:
 		obj = interp->String;
 		break;
+	default:
+		SEE_error_throw_string(interp, interp->TypeError, 
+			STR(toobject_bad));
 	}
 	arg[0] = val;
 	SEE_OBJECT_CONSTRUCT(interp, obj, obj, 1, arg, res);
