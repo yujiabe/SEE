@@ -8,6 +8,7 @@ AC_CONFIG_FILES([Makefile
 		 include/Makefile
 		 include/see/Makefile
 		 libsee/Makefile 
+		 doc/Makefile 
 		 shell/Makefile
 		 shell/test/Makefile])
 
