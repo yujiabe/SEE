@@ -1,5 +1,8 @@
 $Id$
 
+1.2
+  Removed enumerator 'reset' method (never used)
+
 1.1 [2004-08-15]
   Much improved documentation.
   Global.encodeURI generates uppercase hexadecimal to comply with standard.
