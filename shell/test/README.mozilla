@@ -1,0 +1,28 @@
+
+Developers may be interested in testing SEE against the extremely
+comprehensive Mozilla test suite.
+
+1. Check out the Mozilla test suite 
+
+ Use the following commands to obtain the test files
+
+ $ cvs -d :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot login
+ Password: <empty password: just hit enter>
+ $ cvs -d :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot co mozilla/js/tests
+
+2. Configure the RUN.mozilla script
+
+ Copy the RUN.mozilla script from this directory into mozilla/js/tests/RUN, 
+ then edit it to point to a see-shell executable that you have compiled.
+ Often this is a reference directly into your SEE build directory, namely
+ shell/see-shell.static.
+
+3. Run the RUN script
+
+ Execute the RUN shell script from within mozilla/js/tests/.
+ It writes all its output to $0.out (ie usually RUN.out)
+ It writes progress information to stderr, and errors found to stdout.
+
+Note: Not all test failures necessarily mean an error in SEE. 
+
+$Id$

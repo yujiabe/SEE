@@ -1,0 +1,79 @@
+#!/bin/sh
+# See README.mozilla for information about this script
+# $Id$
+
+#-- **
+#   ** Change the following to point to see-shell or see-shell.static
+#   ** 
+SHELLPROG="$BUILD/shell/see-shell.static -c ext1 -c undefdef"
+
+ulimit -c 0
+ulimit -t 600
+
+#-- return true if the directory is suitable for tests
+isok () {
+    test "$d" != "e4x" -a -f "$d"/shell.js 
+}
+
+#-- scan for tests
+echo 'scanning tests...' >&2
+count=0
+for d in *; do
+    isok "$D" || continue
+    for e in $d/*; do
+	test -d $e || continue
+        for i in $e/*.js; do
+	    test -f "$i" || continue
+	    count=`expr $count + 1`
+	done
+    done
+done
+
+pos=0
+failed=0
+passed=0
+for d in *; do
+    isok "$d" || continue
+    arg="-f $d/shell.js"
+    for e in $d/*; do
+	earg="$arg"
+	test -d $e || continue
+	test -f "$e/shell.js" && earg="$arg -f $e/shell.js"
+        for i in $e/*.js; do
+	    test -f "$i" || continue
+	    pos=`expr $pos + 1`
+	    echo -n "$pos of $count: $failed failed $passed passed remain 
+" >&2
+	    echo ""
+	    echo "** $pos $i **"
+	    echo ""
+	    if $SHELLPROG $earg -f $i 2>&1; then
+	       case "$i" in 
+		  *-n.js) 
+		     echo "$i: FAILED! (should have raised exception)"
+		     failed=`expr $failed + 1`
+		      ;;
+		  *)
+		     passed=`expr $passed + 1`
+		     ;;
+	       esac
+	    else
+	       case "$i" in 
+		   *-n.js) 
+		     passed=`expr $passed + 1`
+		     ;;
+		   *) 
+		     echo "$i: FAILED! exit code $?"
+		     failed=`expr $failed + 1`
+		     ;;
+	       esac
+	    fi
+	done 
+    done
+done | tee $0.out | awk '/^\*/ {name = $0;printed=0;} /FAILED!/ { if (!printed) {printed=1; print name;} print; }'
+
+
+# SO=`tput so`
+# RMSO=`tput rmso`
+# sed -e "s/^exception:/${SO}&${RMSO}/" -e "s/FAILED!/${SO}&${RMSO}/"
+
