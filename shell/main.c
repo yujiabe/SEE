@@ -7,7 +7,9 @@
  * If no files are given, it prompts for javascript code interactively.
  */
 
-#include <see/config.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
 
 #if STDC_HEADERS
 # include <stdio.h>
@@ -30,6 +32,7 @@
 #endif
 
 #include <see/see.h>
+
 #include "shell.h"
 
 static int run_input(struct SEE_interpreter *, struct SEE_input *,
@@ -325,6 +328,22 @@ run_html(interp, filename)
 	fclose(f);
 }
 
+static void *
+dummy_malloc(interp, sz)
+	struct SEE_interpreter *interp;
+	unsigned int sz;
+{
+	return malloc(sz);
+}
+
+static void
+init_dummy_malloc()
+{
+	fprintf(stderr, "WARNING: no garbage collector. "
+			"Using non-release malloc()\n");
+	SEE_mem_malloc_hook = dummy_malloc;
+}
+
 int
 main(argc, argv)
 	int argc;
@@ -334,6 +353,9 @@ main(argc, argv)
 	int ch, error = 0;
 	int do_interactive = 1;
 	char *s;
+
+	if (SEE_mem_malloc_hook == NULL)
+		init_dummy_malloc();
 
 	SEE_interpreter_init(&interp);
 	shell_add_globals(&interp);
