@@ -20,11 +20,11 @@ entire file is parsed as a 'Program' (see the language grammar), and the
 global statements are evaluated.  If an exception during execution of
 the file, it terminates the process (exit 1), otherwise processing continues.
 
-Files specified with -h are loaded as HTML. The HTMl content is copied to
+Files specified with -h are loaded as HTML. The HTML content is copied to
 stdout, except for text found inside <SCRIPT> elements. It is stripped and run
 as ECMAScript (regardless of the LANGUAGE attribute).  Exceptions
 are ignored in HTML files. (Lazy browser behaviour!) There is no support for
-forms or triggers such as 'onLoad'. 
+forms, URL inclusions or triggers such as 'onLoad'. It is very spartan.
 
 If no -f or -h flags are given (or a "-f -" argument is given), an
 interactive prompt is produced, and individual statements are read
