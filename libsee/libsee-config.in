@@ -1,13 +1,22 @@
 #!/bin/sh
 # $Id$
 
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+libdir="@libdir@"
+includedir="@includedir@"
+
 case "$1" in
     --version) 
 	echo "@PACKAGE_NAME@-@PACKAGE_VERSION@" ;;
     --libs)
-	echo "-L@libdir@ -lsee @LDFLAGS@ @LIBS@" ;;
+	echo "-L$libdir -lsee @LDFLAGS@ @LIBS@" ;;
     --cppflags)
-	echo "-I@includedir@" ;;
+	echo "-I$includedir" ;;
+    --prefix)
+	echo "$prefix" ;;
+    --exec-prefix)
+	echo "$exec_prefix" ;;
     *)
 	exec >&2
 	test -z "$1" || echo "unknown flag: $1"
@@ -16,6 +25,8 @@ case "$1" in
 	echo "     --version      - prints <package>-<version>"
 	echo "     --libs         - prints linker flags"
 	echo "     --cppflags     - prints preprocessor flags to use"
+	echo "     --prefix       - prints installation prefix"
+	echo "     --exec-prefix  - prints execution installation prefix"
 	exit 1
 	;;
 esac
