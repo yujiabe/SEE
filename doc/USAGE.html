@@ -1932,6 +1932,11 @@ Random extensions:
 	'<code class="js">&lt;!--</code>' much like the
 	'<code class="js">//</code>' comment introducer. 
 	This makes it very useful for use with HTML SCRIPT tags.
+<li>
+	Calling an empty function is bypassed and returns the constant
+	<code class="js">undefined</code>. This avoids going through the
+	expensive process of extending the scope chain, creating an
+	arguments property etc.
 </ul>
 
 </table>
