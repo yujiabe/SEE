@@ -114,16 +114,22 @@ int SEE_eval_debug = 0;
 struct node;
 struct printer;
 
+typedef void (*visitor_fn)(struct node *, void *);
+
 struct nodeclass {
 	void (*eval)(struct node *, struct context *, struct SEE_value *);
 	void (*fproc)(struct node *, struct context *);
 	void (*print)(struct node *, struct printer *);
+	void (*visit)(struct node *, visitor_fn, void *);
+	int  (*isconst)(struct node *, struct SEE_interpreter *);
 };
 
 struct node {
 	struct nodeclass *nodeclass;
 	struct SEE_throw_location location;
-	int istarget;
+	int istarget : 1;		/* true if node is a jump target */
+	int isconst_valid : 1;		/* true if isconst is valid */
+	int isconst : 1;		/* true if node is a constant eval */
 };
 
 struct label {
@@ -245,6 +251,7 @@ static struct SEE_traceback *traceback_enter(struct SEE_interpreter *,
 static void traceback_leave(struct SEE_interpreter *,
 			struct SEE_traceback *);
 static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
+static void print_hex(struct printer *printer, int i);
 
 /*------------------------------------------------------------
  * macros
@@ -352,17 +359,19 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 
 # define EVAL(n, ctxt, res)				\
     do {						\
-	struct SEE_throw_location * _loc_save =		\
-		(ctxt)->interpreter->try_location;	\
+	struct SEE_throw_location * _loc_save;		\
 	if (SEE_eval_debug) 				\
 	    fprintf(stderr, "eval: %s enter %p\n", 	\
 		__FUNCTION__, n);			\
-	(ctxt)->interpreter->try_location =		\
+	if (ctxt) {					\
+	  _loc_save = (ctxt)->interpreter->try_location;\
+	  (ctxt)->interpreter->try_location =		\
 		&(n)->location;				\
-	if (_loc_save != &(n)->location)		\
+	  if (_loc_save != &(n)->location)		\
 	    trace_event(ctxt);				\
+	}						\
 	(*(n)->nodeclass->eval)(n, ctxt, res);		\
-	if (SEE_eval_debug) { 				\
+	if (SEE_eval_debug && (ctxt)) {			\
 	    fprintf(stderr, 				\
 		"eval: %s leave %p -> %p = ", 		\
 		__FUNCTION__, n, (void *)(res));	\
@@ -370,25 +379,31 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 		stderr);				\
 	    fprintf(stderr, "\n");			\
 	}						\
-	(ctxt)->interpreter->try_location = _loc_save;	\
-	if (_loc_save != &(n)->location)		\
+	if (ctxt) {					\
+	  (ctxt)->interpreter->try_location = _loc_save;\
+	  if (_loc_save != &(n)->location)		\
 	    trace_event(ctxt);				\
+	}						\
     } while (0)
 
 #else /* NDEBUG */
 
 # define EVAL(n, ctxt, res)				\
     do {						\
-	struct SEE_throw_location * _loc_save =		\
-		(ctxt)->interpreter->try_location;	\
-	(ctxt)->interpreter->try_location =		\
+	struct SEE_throw_location * _loc_save;		\
+	if (ctxt) {					\
+	  _loc_save = (ctxt)->interpreter->try_location;\
+	  (ctxt)->interpreter->try_location =		\
 		&(n)->location;				\
-	if ((ctxt)->interpreter->trace)			\
+	  if ((ctxt)->interpreter->trace)		\
 	    trace_event(ctxt);				\
+	}						\
 	(*(n)->nodeclass->eval)(n, ctxt, res);		\
-	(ctxt)->interpreter->try_location = _loc_save;	\
-	if ((ctxt)->interpreter->trace)			\
+	if (ctxt)					\
+	  (ctxt)->interpreter->try_location = _loc_save;\
+	  if ((ctxt)->interpreter->trace)		\
 	    trace_event(ctxt);				\
+	}						\
     } while (0)
 
 #endif /* NDEBUG */
@@ -440,6 +455,24 @@ static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 #define PRINT_CSTRING(s)(*printer->printerclass->print_cstring)(printer, s)
 #define PRINT_CHAR(c)	(*printer->printerclass->print_char)(printer, c)
 #define PRINT_NEWLINE(i)(*printer->printerclass->print_newline)(printer, i)
+
+/*
+ * Visitor
+ */
+#define VISIT(n, v, va)	do {				\
+	if ((n)->nodeclass->visit)			\
+	    (*(n)->nodeclass->visit)(n, v, va);		\
+	(*(v))(n, va);					\
+    } while (0)
+
+/* Evaluate and cache constant nature of a node */
+#define ISCONST(n, interp) 				\
+	((n)->isconst_valid ? (n)->isconst :		\
+	  ((n)->isconst_valid = 1,			\
+	   (n)->isconst =				\
+	    ((n)->nodeclass->isconst  			\
+		? (*(n)->nodeclass->isconst)(n, interp)	\
+		: 0)))
 
 /*------------------------------------------------------------
  * allocators and initialisers
@@ -661,7 +694,7 @@ target_lookup(parser, name, type)
 		if (SEE_parse_debug) 
 		    fprintf(stderr, "L%p\n", t->target);
 #endif
-		((struct node *)t->target)->istarget++;	 /* XXX yuck */
+		((struct node *)t->target)->istarget = 1; /* XXX yuck */
 		return t->target;
 	    }
 #ifndef NDEBUG
@@ -850,6 +883,25 @@ error_at(struct parser *parser, const char *fmt, ...)
 }
 
 /*------------------------------------------------------------
+ * Constant subexpression reduction
+ *
+ *  A subtree is 'constant' iff it
+ *	- has no side-effects; and
+ *	- yields the same result independent of context
+ *  It follows then that a constant subtree can be evaluated using 
+ *  a NULL context. We can perform that eval, and then replace the
+ *  subtree with a node that generates that expression statically.
+ */
+
+static int
+Always_isconst(n, interp)
+	struct Literal_node *n;
+	struct SEE_interpreter *interp;
+{
+	return 1;
+}
+
+/*------------------------------------------------------------
  * Parser
  *
  * each group of grammar productions is ordered:
@@ -917,7 +969,8 @@ Literal_print(n, printer)
 }
 
 static struct nodeclass Literal_nodeclass 
-	= { Literal_eval, 0, Literal_print };
+	= { Literal_eval, 0, Literal_print, 
+	    0, Always_isconst };
 
 static struct node *
 Literal_parse(parser)
@@ -1025,7 +1078,8 @@ StringLiteral_print(n, printer)
 }
 
 static struct nodeclass StringLiteral_nodeclass 
-	= { StringLiteral_eval, 0, StringLiteral_print };
+	= { StringLiteral_eval, 0, StringLiteral_print, 
+	    0, Always_isconst };
 
 static struct node *
 StringLiteral_parse(parser)
@@ -1077,7 +1131,8 @@ RegularExpressionLiteral_print(n, printer)
 }
 
 static struct nodeclass RegularExpressionLiteral_nodeclass = 
-	{ RegularExpressionLiteral_eval, 0, RegularExpressionLiteral_print };
+	{ RegularExpressionLiteral_eval, 0, RegularExpressionLiteral_print,
+	  0, 0 };
 
 static struct node *
 RegularExpressionLiteral_parse(parser)
@@ -1148,7 +1203,7 @@ PrimaryExpression_this_print(n, printer)
 }
 
 static struct nodeclass PrimaryExpression_this_nodeclass =
-	{ PrimaryExpression_this_eval, 0, PrimaryExpression_this_print };
+	{ PrimaryExpression_this_eval, 0, PrimaryExpression_this_print, 0, 0 };
 
 
 struct PrimaryExpression_ident_node {
@@ -1176,7 +1231,8 @@ PrimaryExpression_ident_print(n, printer)
 }
 
 static struct nodeclass PrimaryExpression_ident_nodeclass =
-	{ PrimaryExpression_ident_eval, 0, PrimaryExpression_ident_print };
+	{ PrimaryExpression_ident_eval, 0, PrimaryExpression_ident_print, 
+	  0, 0 };
 
 
 static struct node *
@@ -1300,8 +1356,21 @@ ArrayLiteral_print(n, printer)
 	PRINT_CHAR(']');
 }
 
+static void
+ArrayLiteral_visit(n, v, va)
+	struct ArrayLiteral_node *n;
+	visitor_fn v;
+	void *va;
+{
+	struct ArrayLiteral_element *element;
+
+	for (element = n->first; element; element = element->next)
+		VISIT(element->expr, v, va);
+}
+
 static struct nodeclass ArrayLiteral_nodeclass 
-	= { ArrayLiteral_eval, 0, ArrayLiteral_print };
+	= { ArrayLiteral_eval, 0, ArrayLiteral_print, 
+	    ArrayLiteral_visit, 0 };
 
 static struct node *
 ArrayLiteral_parse(parser)
@@ -1408,8 +1477,21 @@ ObjectLiteral_print(n, printer)
 	PRINT_CHAR('}');
 }
 
+static void
+ObjectLiteral_visit(n, v, va)
+	struct ObjectLiteral_node *n;
+	visitor_fn v;
+	void *va;
+{
+	struct ObjectLiteral_pair *pair;
+
+	for (pair = n->first; pair; pair = pair->next)
+		VISIT(pair->value, v, va);
+}
+
 static struct nodeclass ObjectLiteral_nodeclass = 
-	{ ObjectLiteral_eval, 0, ObjectLiteral_print };
+	{ ObjectLiteral_eval, 0, ObjectLiteral_print,
+	  ObjectLiteral_visit, 0 };
 
 static struct node *
 ObjectLiteral_parse(parser)
@@ -1493,27 +1575,27 @@ ObjectLiteral_parse(parser)
  *
  * NOTE:  The standard grammar is complicated in order to resolve an 
  *        ambiguity in parsing 'new expr ( args )' as either
- *	  '(new  expr)(args)' or as 'new (expr(args))' when, in fact,
- *	  the expression should really be the binary 'new<expr,args>'.
+ *	  '(new  expr)(args)' or as 'new (expr(args))'. In fact, 'new'
+ *	  is acting as both a unary and a binary operator. Yucky.
  *
- *	  Since recursive descent is single-token lookahead, I
- *	  can rewrite the above as the following grammar:
+ *	  Since recursive descent is single-token lookahead, we
+ *	  can rewrite the above as the following equivalent grammar:
  *
  *	MemberExpression
  *	:	PrimaryExpression
- *	|	FunctionExpression		    -- lookahead = tFUNCTION
+ *	|	FunctionExpression		    -- lookahead == tFUNCTION
  *	|	MemberExpression '[' Expression ']'
  *	|	MemberExpression '.' tIDENT
- *	|	tNEW MemberExpression Arguments	    -- lookahead = tNEW
- *	|	tNEW MemberExpression 	            -- lookahead = tNEW
+ *	|	tNEW MemberExpression Arguments	    -- lookahead == tNEW
+ *	|	tNEW MemberExpression 	            -- lookahead == tNEW
  *
  *	LeftHandSideExpression
  *	:	PrimaryExpression
- *	|	FunctionExpression		    -- lookahead = tFUNCTION
+ *	|	FunctionExpression		    -- lookahead == tFUNCTION
  *	|	LeftHandSideExpression '[' Expression ']'
  *	|	LeftHandSideExpression '.' tIDENT
  *	|	LeftHandSideExpression Arguments
- *	|	MemberExpression		    -- lookahead = tNEW
+ *	|	MemberExpression		    -- lookahead == tNEW
  *
  */
 
@@ -1544,6 +1626,31 @@ Arguments_eval(n, context, res)
 }
 
 static void
+Arguments_visit(n, v, va)
+	struct Arguments_node *n;
+	visitor_fn v;
+	void *va;
+{
+	struct Arguments_arg *arg;
+
+	for (arg = n->first; arg; arg = arg->next)
+		VISIT(arg->expr, v, va);
+}
+
+static int
+Arguments_isconst(n, interp)
+	struct Arguments_node *n;
+	struct SEE_interpreter *interp;
+{
+	struct Arguments_arg *arg;
+
+	for (arg = n->first; arg; arg = arg->next)
+		if (!ISCONST(arg->expr, interp))
+			return 0;
+	return 1;
+}
+
+static void
 Arguments_print(n, printer)
 	struct Arguments_node *n;
 	struct printer *printer;
@@ -1562,7 +1669,8 @@ Arguments_print(n, printer)
 }
 
 static struct nodeclass Arguments_nodeclass 
-	= { Arguments_eval, 0, Arguments_print };
+	= { Arguments_eval, 0, Arguments_print, 
+	    Arguments_visit, Arguments_isconst };
 
 static struct Arguments_node *
 Arguments_parse(parser)
@@ -1646,9 +1754,20 @@ MemberExpression_new_print(n, printer)
 		PRINT((struct node *)n->args);
 }
 
+static void
+MemberExpression_new_visit(n, v, va)
+	struct MemberExpression_new_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->mexp, v, va);
+	if (n->args)
+		VISIT((struct node *)n->args, v, va);
+}
+
 static struct nodeclass MemberExpression_new_nodeclass = 
-	{ MemberExpression_new_eval, 0,
-	  MemberExpression_new_print };
+	{ MemberExpression_new_eval, 0, MemberExpression_new_print,
+	  MemberExpression_new_visit, 0 };
 
 
 struct MemberExpression_dot_node {
@@ -1684,8 +1803,18 @@ MemberExpression_dot_print(n, printer)
 	PRINT_CHAR(' ');
 }
 
+static void
+MemberExpression_dot_visit(n, v, va)
+	struct MemberExpression_dot_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->mexp, v, va);
+}
+
 static struct nodeclass MemberExpression_dot_nodeclass
-	= { MemberExpression_dot_eval, 0, MemberExpression_dot_print };
+	= { MemberExpression_dot_eval, 0, MemberExpression_dot_print,
+	    MemberExpression_dot_visit, 0 };
 
 
 struct MemberExpression_bracket_node {
@@ -1723,9 +1852,19 @@ MemberExpression_bracket_print(n, printer)
 	PRINT_CHAR(']');
 }
 
+static void
+MemberExpression_bracket_visit(n, v, va)
+	struct MemberExpression_bracket_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->mexp, v, va);
+	VISIT(n->name, v, va);
+}
+
 static struct nodeclass MemberExpression_bracket_nodeclass
-	= { MemberExpression_bracket_eval, 0,
-	    MemberExpression_bracket_print };
+	= { MemberExpression_bracket_eval, 0, MemberExpression_bracket_print,
+	    MemberExpression_bracket_visit, 0 };
 
 
 static struct node *
@@ -1854,8 +1993,19 @@ CallExpression_print(n, printer)
 	PRINT((struct node *)n->args);
 }
 
+static void
+CallExpression_visit(n, v, va)
+	struct CallExpression_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->exp, v, va);
+	VISIT((struct node *)n->args, v, va);
+}
+
 static struct nodeclass CallExpression_nodeclass
-	= { CallExpression_eval, 0, CallExpression_print };
+	= { CallExpression_eval, 0, CallExpression_print, 
+	    CallExpression_visit, 0 };
 
 static struct node *
 LeftHandSideExpression_parse(parser)
@@ -1936,6 +2086,23 @@ struct Unary_node {
 	struct node *a;
 };
 
+static void
+Unary_visit(n, v, va)
+	struct Unary_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->a, v, va);
+}
+
+static int
+Unary_isconst(n, interp)
+	struct Unary_node *n;
+	struct SEE_interpreter *interp;
+{
+	return ISCONST(n->a, interp);
+}
+
 /* 11.3.1 */
 static void
 PostfixExpression_inc_eval(n, context, res)
@@ -1964,7 +2131,8 @@ PostfixExpression_inc_print(n, printer)
 }
 
 static struct nodeclass PostfixExpression_inc_nodeclass
-	= { PostfixExpression_inc_eval, 0, PostfixExpression_inc_print };
+	= { PostfixExpression_inc_eval, 0, PostfixExpression_inc_print,
+	    Unary_visit, 0 };
 
 
 /* 11.3.2 */
@@ -1995,7 +2163,8 @@ PostfixExpression_dec_print(n, printer)
 }
 
 static struct nodeclass PostfixExpression_dec_nodeclass
-	= { PostfixExpression_dec_eval, 0, PostfixExpression_dec_print };
+	= { PostfixExpression_dec_eval, 0, PostfixExpression_dec_print,
+	    Unary_visit, 0 };
 
 static struct node *
 PostfixExpression_parse(parser)
@@ -2074,7 +2243,8 @@ UnaryExpression_delete_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_delete_nodeclass
-	= { UnaryExpression_delete_eval, 0, UnaryExpression_delete_print };
+	= { UnaryExpression_delete_eval, 0, UnaryExpression_delete_print,
+	    Unary_visit, Unary_isconst };
 
 
 /* 11.4.2 */
@@ -2102,7 +2272,8 @@ UnaryExpression_void_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_void_nodeclass
-	= { UnaryExpression_void_eval, 0, UnaryExpression_void_print };
+	= { UnaryExpression_void_eval, 0, UnaryExpression_void_print,
+	    Unary_visit, Unary_isconst };
 
 
 /* 11.4.3 */
@@ -2145,7 +2316,8 @@ UnaryExpression_typeof_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_typeof_nodeclass
-	= { UnaryExpression_typeof_eval, 0, UnaryExpression_typeof_print };
+	= { UnaryExpression_typeof_eval, 0, UnaryExpression_typeof_print,
+	    Unary_visit, Unary_isconst };
 
 /* 11.4.4 */
 static void
@@ -2175,7 +2347,8 @@ UnaryExpression_preinc_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_preinc_nodeclass
-	= { UnaryExpression_preinc_eval, 0, UnaryExpression_preinc_print };
+	= { UnaryExpression_preinc_eval, 0, UnaryExpression_preinc_print,
+	    Unary_visit, 0 };
 
 
 /* 11.4.5 */
@@ -2206,7 +2379,8 @@ UnaryExpression_predec_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_predec_nodeclass
-	= { UnaryExpression_predec_eval, 0, UnaryExpression_predec_print };
+	= { UnaryExpression_predec_eval, 0, UnaryExpression_predec_print,
+	    Unary_visit, 0 };
 
 
 /* 11.4.6 */
@@ -2234,7 +2408,8 @@ UnaryExpression_plus_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_plus_nodeclass
-	= { UnaryExpression_plus_eval, 0, UnaryExpression_plus_print };
+	= { UnaryExpression_plus_eval, 0, UnaryExpression_plus_print,
+	    Unary_visit, Unary_isconst };
 
 
 /* 11.4.7 */
@@ -2263,7 +2438,8 @@ UnaryExpression_minus_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_minus_nodeclass
-	= { UnaryExpression_minus_eval, 0, UnaryExpression_minus_print };
+	= { UnaryExpression_minus_eval, 0, UnaryExpression_minus_print,
+	    Unary_visit, Unary_isconst };
 
 /* 11.4.8 */
 static void
@@ -2292,7 +2468,8 @@ UnaryExpression_inv_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_inv_nodeclass
-	= { UnaryExpression_inv_eval, 0, UnaryExpression_inv_print };
+	= { UnaryExpression_inv_eval, 0, UnaryExpression_inv_print,
+	    Unary_visit, Unary_isconst };
 
 
 /* 11.4.9 */
@@ -2321,7 +2498,8 @@ UnaryExpression_not_print(n, printer)
 }
 
 static struct nodeclass UnaryExpression_not_nodeclass
-	= { UnaryExpression_not_eval, 0, UnaryExpression_not_print };
+	= { UnaryExpression_not_eval, 0, UnaryExpression_not_print,
+	    Unary_visit, Unary_isconst };
 
 static struct node *
 UnaryExpression_parse(parser)
@@ -2385,6 +2563,24 @@ struct Binary_node {
 	struct node *a, *b;
 };
 
+static void
+Binary_visit(n, v, va)
+	struct Binary_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->a, v, va);
+	VISIT(n->b, v, va);
+}
+
+static int
+Binary_isconst(n, interp)
+	struct Binary_node *n;
+	struct SEE_interpreter *interp;
+{
+	return ISCONST(n->a, interp) && ISCONST(n->b, interp);
+}
+
 /* 11.5.1 */
 static void
 MultiplicativeExpression_mul_common(r2, bn, context, res)
@@ -2427,7 +2623,8 @@ MultiplicativeExpression_mul_print(n, printer)
 
 static struct nodeclass MultiplicativeExpression_mul_nodeclass
 	= { MultiplicativeExpression_mul_eval, 0, 
-	    MultiplicativeExpression_mul_print };
+	    MultiplicativeExpression_mul_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.5.2 */
@@ -2472,7 +2669,8 @@ MultiplicativeExpression_div_print(n, printer)
 
 static struct nodeclass MultiplicativeExpression_div_nodeclass
 	= { MultiplicativeExpression_div_eval, 0, 
-	    MultiplicativeExpression_div_print };
+	    MultiplicativeExpression_div_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.5.3 */
@@ -2517,7 +2715,8 @@ MultiplicativeExpression_mod_print(n, printer)
 
 static struct nodeclass MultiplicativeExpression_mod_nodeclass
 	= { MultiplicativeExpression_mod_eval, 0, 
-	    MultiplicativeExpression_mod_print };
+	    MultiplicativeExpression_mod_print,
+	    Binary_visit, Binary_isconst };
 
 static struct node *
 MultiplicativeExpression_parse(parser)
@@ -2618,7 +2817,8 @@ AdditiveExpression_add_print(n, printer)
 
 static struct nodeclass AdditiveExpression_add_nodeclass
 	= { AdditiveExpression_add_eval, 0, 
-	    AdditiveExpression_add_print };
+	    AdditiveExpression_add_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.6.2 */
@@ -2663,7 +2863,8 @@ AdditiveExpression_sub_print(n, printer)
 
 static struct nodeclass AdditiveExpression_sub_nodeclass
 	= { AdditiveExpression_sub_eval, 0, 
-	    AdditiveExpression_sub_print };
+	    AdditiveExpression_sub_print,
+	    Binary_visit, Binary_isconst };
 
 static struct node *
 AdditiveExpression_parse(parser)
@@ -2750,7 +2951,8 @@ ShiftExpression_lshift_print(n, printer)
 }
 
 static struct nodeclass ShiftExpression_lshift_nodeclass
-	= { ShiftExpression_lshift_eval, 0, ShiftExpression_lshift_print };
+	= { ShiftExpression_lshift_eval, 0, ShiftExpression_lshift_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.7.2 */
@@ -2797,7 +2999,8 @@ ShiftExpression_rshift_print(n, printer)
 }
 
 static struct nodeclass ShiftExpression_rshift_nodeclass
-	= { ShiftExpression_rshift_eval, 0, ShiftExpression_rshift_print };
+	= { ShiftExpression_rshift_eval, 0, ShiftExpression_rshift_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.7.3 */
@@ -2844,7 +3047,8 @@ ShiftExpression_urshift_print(n, printer)
 }
 
 static struct nodeclass ShiftExpression_urshift_nodeclass
-	= { ShiftExpression_urshift_eval, 0, ShiftExpression_urshift_print };
+	= { ShiftExpression_urshift_eval, 0, ShiftExpression_urshift_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -2986,7 +3190,8 @@ RelationalExpression_lt_print(n, printer)
 
 static struct nodeclass RelationalExpression_lt_nodeclass
 	= { RelationalExpression_lt_eval, 0, 
-	    RelationalExpression_lt_print };
+	    RelationalExpression_lt_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.8.2 > */
@@ -3020,7 +3225,8 @@ RelationalExpression_gt_print(n, printer)
 
 static struct nodeclass RelationalExpression_gt_nodeclass
 	= { RelationalExpression_gt_eval, 0, 
-	    RelationalExpression_gt_print };
+	    RelationalExpression_gt_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.8.3 <= */
@@ -3057,7 +3263,8 @@ RelationalExpression_le_print(n, printer)
 
 static struct nodeclass RelationalExpression_le_nodeclass
 	= { RelationalExpression_le_eval, 0, 
-	    RelationalExpression_le_print };
+	    RelationalExpression_le_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.8.4 >= */
@@ -3094,7 +3301,8 @@ RelationalExpression_ge_print(n, printer)
 
 static struct nodeclass RelationalExpression_ge_nodeclass
 	= { RelationalExpression_ge_eval, 0, 
-	    RelationalExpression_ge_print };
+	    RelationalExpression_ge_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.8.6 */
@@ -3135,7 +3343,8 @@ RelationalExpression_instanceof_print(n, printer)
 
 static struct nodeclass RelationalExpression_instanceof_nodeclass
 	= { RelationalExpression_instanceof_eval, 0, 
-	    RelationalExpression_instanceof_print };
+	    RelationalExpression_instanceof_print,
+	    Binary_visit, Binary_isconst };
 
 
 /* 11.8.7 */
@@ -3174,7 +3383,8 @@ RelationalExpression_in_print(n, printer)
 
 static struct nodeclass RelationalExpression_in_nodeclass
 	= { RelationalExpression_in_eval, 0, 
-	    RelationalExpression_in_print };
+	    RelationalExpression_in_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -3372,8 +3582,8 @@ EqualityExpression_eq_print(n, printer)
 }
 
 static struct nodeclass EqualityExpression_eq_nodeclass
-	= { EqualityExpression_eq_eval, 0, 
-	    EqualityExpression_eq_print };
+	= { EqualityExpression_eq_eval, 0, EqualityExpression_eq_print,
+	    Binary_visit, Binary_isconst };
 
 
 static void
@@ -3405,8 +3615,8 @@ EqualityExpression_ne_print(n, printer)
 }
 
 static struct nodeclass EqualityExpression_ne_nodeclass
-	= { EqualityExpression_ne_eval, 0, 
-	    EqualityExpression_ne_print };
+	= { EqualityExpression_ne_eval, 0, EqualityExpression_ne_print,
+	    Binary_visit, Binary_isconst };
 
 
 static void
@@ -3438,8 +3648,8 @@ EqualityExpression_seq_print(n, printer)
 }
 
 static struct nodeclass EqualityExpression_seq_nodeclass
-	= { EqualityExpression_seq_eval, 0, 
-	    EqualityExpression_seq_print };
+	= { EqualityExpression_seq_eval, 0, EqualityExpression_seq_print,
+	    Binary_visit, Binary_isconst };
 
 
 static void
@@ -3472,8 +3682,8 @@ EqualityExpression_sne_print(n, printer)
 }
 
 static struct nodeclass EqualityExpression_sne_nodeclass
-	= { EqualityExpression_sne_eval, 0, 
-	    EqualityExpression_sne_print };
+	= { EqualityExpression_sne_eval, 0, EqualityExpression_sne_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -3568,8 +3778,8 @@ BitwiseANDExpression_print(n, printer)
 }
 
 static struct nodeclass BitwiseANDExpression_nodeclass
-	= { BitwiseANDExpression_eval, 0, 
-	    BitwiseANDExpression_print };
+	= { BitwiseANDExpression_eval, 0, BitwiseANDExpression_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -3645,8 +3855,8 @@ BitwiseXORExpression_print(n, printer)
 }
 
 static struct nodeclass BitwiseXORExpression_nodeclass
-	= { BitwiseXORExpression_eval, 0, 
-	    BitwiseXORExpression_print };
+	= { BitwiseXORExpression_eval, 0, BitwiseXORExpression_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -3722,8 +3932,8 @@ BitwiseORExpression_print(n, printer)
 }
 
 static struct nodeclass BitwiseORExpression_nodeclass
-	= { BitwiseORExpression_eval, 0, 
-	    BitwiseORExpression_print };
+	= { BitwiseORExpression_eval, 0, BitwiseORExpression_print,
+	    Binary_visit, Binary_isconst };
 
 
 static struct node *
@@ -3788,9 +3998,24 @@ LogicalANDExpression_print(n, printer)
 	PRINT(n->b);
 }
 
+static int
+LogicalANDExpression_isconst(n, interp)
+	struct Binary_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->a, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->a, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean ? ISCONST(n->b, interp) : 1;
+	} else
+		return 0;
+}
+
 static struct nodeclass LogicalANDExpression_nodeclass
-	= { LogicalANDExpression_eval, 0, 
-	    LogicalANDExpression_print };
+	= { LogicalANDExpression_eval, 0, LogicalANDExpression_print,
+	    Binary_visit, LogicalANDExpression_isconst };
 
 
 static struct node *
@@ -3853,9 +4078,24 @@ LogicalORExpression_print(n, printer)
 	PRINT(n->b);
 }
 
+static int
+LogicalORExpression_isconst(n, interp)
+	struct Binary_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->a, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->a, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean ? 1: ISCONST(n->b, interp);
+	} else
+		return 0;
+}
+
 static struct nodeclass LogicalORExpression_nodeclass
-	= { LogicalORExpression_eval, 0, 
-	    LogicalORExpression_print };
+	= { LogicalORExpression_eval, 0, LogicalORExpression_print,
+	    Binary_visit, LogicalORExpression_isconst };
 
 
 static struct node *
@@ -3928,9 +4168,37 @@ ConditionalExpression_print(n, printer)
 	PRINT(n->c);
 }
 
+static void
+ConditionalExpression_visit(n, v, va)
+	struct ConditionalExpression_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->a, v, va);
+	VISIT(n->b, v, va);
+	VISIT(n->c, v, va);
+}
+
+static int
+ConditionalExpression_isconst(n, interp)
+	struct ConditionalExpression_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->a, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->a, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean 
+		    ? ISCONST(n->b, interp) 
+		    : ISCONST(n->c, interp);
+	} else
+		return 0;
+}
+
 static struct nodeclass ConditionalExpression_nodeclass
-	= { ConditionalExpression_eval, 0, 
-	    ConditionalExpression_print };
+	= { ConditionalExpression_eval, 0, ConditionalExpression_print,
+	    ConditionalExpression_visit, ConditionalExpression_isconst };
 
 static struct node *
 ConditionalExpression_parse(parser)
@@ -3989,6 +4257,16 @@ struct AssignmentExpression_node {
 };
 
 static void
+AssignmentExpression_visit(n, v, va)
+	struct AssignmentExpression_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->lhs, v, va);
+	VISIT(n->expr, v, va);
+}
+
+static void
 AssignmentExpression_simple_eval(n, context, res)
 	struct AssignmentExpression_node *n;
 	struct context *context;
@@ -4015,7 +4293,8 @@ AssignmentExpression_simple_print(n, printer)
 
 static struct nodeclass AssignmentExpression_simple_nodeclass
 	= { AssignmentExpression_simple_eval, 0, 
-	    AssignmentExpression_simple_print };
+	    AssignmentExpression_simple_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4047,7 +4326,8 @@ AssignmentExpression_muleq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_muleq_nodeclass
 	= { AssignmentExpression_muleq_eval, 0, 
-	    AssignmentExpression_muleq_print };
+	    AssignmentExpression_muleq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4079,7 +4359,8 @@ AssignmentExpression_diveq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_diveq_nodeclass
 	= { AssignmentExpression_diveq_eval, 0, 
-	    AssignmentExpression_diveq_print };
+	    AssignmentExpression_diveq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4111,7 +4392,8 @@ AssignmentExpression_modeq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_modeq_nodeclass
 	= { AssignmentExpression_modeq_eval, 0, 
-	    AssignmentExpression_modeq_print };
+	    AssignmentExpression_modeq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4143,7 +4425,8 @@ AssignmentExpression_addeq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_addeq_nodeclass
 	= { AssignmentExpression_addeq_eval, 0, 
-	    AssignmentExpression_addeq_print };
+	    AssignmentExpression_addeq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4175,7 +4458,8 @@ AssignmentExpression_subeq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_subeq_nodeclass
 	= { AssignmentExpression_subeq_eval, 0, 
-	    AssignmentExpression_subeq_print };
+	    AssignmentExpression_subeq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4208,7 +4492,8 @@ AssignmentExpression_lshifteq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_lshifteq_nodeclass
 	= { AssignmentExpression_lshifteq_eval, 0, 
-	    AssignmentExpression_lshifteq_print };
+	    AssignmentExpression_lshifteq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4241,7 +4526,8 @@ AssignmentExpression_rshifteq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_rshifteq_nodeclass
 	= { AssignmentExpression_rshifteq_eval, 0, 
-	    AssignmentExpression_rshifteq_print };
+	    AssignmentExpression_rshifteq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4275,7 +4561,8 @@ AssignmentExpression_urshifteq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_urshifteq_nodeclass
 	= { AssignmentExpression_urshifteq_eval, 0, 
-	    AssignmentExpression_urshifteq_print };
+	    AssignmentExpression_urshifteq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4307,7 +4594,8 @@ AssignmentExpression_andeq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_andeq_nodeclass
 	= { AssignmentExpression_andeq_eval, 0, 
-	    AssignmentExpression_andeq_print };
+	    AssignmentExpression_andeq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4339,7 +4627,8 @@ AssignmentExpression_xoreq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_xoreq_nodeclass
 	= { AssignmentExpression_xoreq_eval, 0, 
-	    AssignmentExpression_xoreq_print };
+	    AssignmentExpression_xoreq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 /* 11.13.2 */
@@ -4371,7 +4660,8 @@ AssignmentExpression_oreq_print(n, printer)
 
 static struct nodeclass AssignmentExpression_oreq_nodeclass
 	= { AssignmentExpression_oreq_eval, 0, 
-	    AssignmentExpression_oreq_print };
+	    AssignmentExpression_oreq_print,
+	    AssignmentExpression_visit, 0 };
 
 
 static struct node *
@@ -4481,8 +4771,9 @@ Expression_comma_print(n, printer)
 }
 
 static struct nodeclass Expression_comma_nodeclass
-	= { Expression_comma_eval, 0, 
-	    Expression_comma_print };
+	= { Expression_comma_eval, 0, Expression_comma_print,
+	    Binary_visit, Binary_isconst };
+
 
 static struct node *
 Expression_parse(parser)
@@ -4611,8 +4902,8 @@ Block_empty_print(n, printer)
 }
 
 static struct nodeclass Block_empty_nodeclass
-	= { Block_empty_eval, 0, 
-	    Block_empty_print };
+	= { Block_empty_eval, 0, Block_empty_print,
+	    0, Always_isconst };
 
 static struct node *
 Block_parse(parser)
@@ -4667,8 +4958,8 @@ StatementList_print(n, printer)
 }
 
 static struct nodeclass StatementList_nodeclass
-	= { StatementList_eval, 0, 
-	    StatementList_print };
+	= { StatementList_eval, 0, StatementList_print,
+	    Binary_visit, Binary_isconst };
 
 static struct node *
 StatementList_parse(parser)
@@ -4752,8 +5043,8 @@ VariableStatement_print(n, printer)
 }
 
 static struct nodeclass VariableStatement_nodeclass
-	= { VariableStatement_eval, 0,
-	    VariableStatement_print };
+	= { VariableStatement_eval, 0, VariableStatement_print,
+	    Unary_visit, 0 };
 
 static struct node *
 VariableStatement_parse(parser)
@@ -4795,8 +5086,8 @@ VariableDeclarationList_print(n, printer)
 }
 
 static struct nodeclass VariableDeclarationList_nodeclass
-	= { VariableDeclarationList_eval, 0,
-	    VariableDeclarationList_print };
+	= { VariableDeclarationList_eval, 0, VariableDeclarationList_print,
+	    Binary_visit, 0 };
 
 static struct node *
 VariableDeclarationList_parse(parser)
@@ -4862,9 +5153,19 @@ VariableDeclaration_print(n, printer)
 	}
 }
 
+static void
+VariableDeclaration_visit(n, v, va)
+	struct VariableDeclaration_node *n;
+	visitor_fn v;
+	void *va;
+{
+	if (n->init)
+		VISIT(n->init, v, va);
+}
+
 static struct nodeclass VariableDeclaration_nodeclass
-	= { VariableDeclaration_eval, 0, 
-	    VariableDeclaration_print };
+	= { VariableDeclaration_eval, 0, VariableDeclaration_print,
+	    VariableDeclaration_visit, 0 };
 
 
 static struct node *
@@ -4921,8 +5222,8 @@ EmptyStatement_print(n, printer)
 }
 
 static struct nodeclass EmptyStatement_nodeclass
-	= { EmptyStatement_eval, 0, 
-	    EmptyStatement_print };
+	= { EmptyStatement_eval, 0, EmptyStatement_print,
+	    0, Always_isconst };
 
 static struct node *
 EmptyStatement_parse(parser)
@@ -4966,8 +5267,8 @@ ExpressionStatement_print(n, printer)
 }
 
 static struct nodeclass ExpressionStatement_nodeclass
-	= { ExpressionStatement_eval, 0, 
-	    ExpressionStatement_print };
+	= { ExpressionStatement_eval, 0, ExpressionStatement_print,
+	    Unary_visit, Unary_isconst };
 
 static struct node *
 ExpressionStatement_parse(parser)
@@ -5032,9 +5333,34 @@ IfStatement_if_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+IfStatement_if_visit(n, v, va)
+	struct IfStatement_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->cond, v, va);
+	VISIT(n->btrue, v, va);
+}
+
+static int
+IfStatement_if_isconst(n, interp)
+	struct IfStatement_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->cond, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->cond, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean ? ISCONST(n->btrue, interp) : 1;
+	} else
+		return 0;
+}
+
 static struct nodeclass IfStatement_if_nodeclass
-	= { IfStatement_if_eval, 0, 
-	    IfStatement_if_print };
+	= { IfStatement_if_eval, 0, IfStatement_if_print,
+	    IfStatement_if_visit, IfStatement_if_isconst };
 
 static void
 IfStatement_ifthen_eval(n, context, res)
@@ -5075,9 +5401,37 @@ IfStatement_ifthen_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+IfStatement_ifthen_visit(n, v, va)
+	struct IfStatement_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->cond, v, va);
+	VISIT(n->btrue, v, va);
+	VISIT(n->bfalse, v, va);
+}
+
+static int
+IfStatement_ifthen_isconst(n, interp)
+	struct IfStatement_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->cond, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->cond, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean 
+		    ? ISCONST(n->btrue, interp) 
+		    : ISCONST(n->bfalse, interp);
+	} else
+		return 0;
+}
+
 static struct nodeclass IfStatement_ifthen_nodeclass
-	= { IfStatement_ifthen_eval, 0, 
-	    IfStatement_ifthen_print };
+	= { IfStatement_ifthen_eval, 0, IfStatement_ifthen_print,
+	    IfStatement_ifthen_visit, IfStatement_ifthen_isconst };
 
 static struct node *
 IfStatement_parse(parser)
@@ -5140,6 +5494,17 @@ struct IterationStatement_while_node {
 };
 
 static void
+print_label(printer, node)
+	struct printer *printer;
+	void *node;
+{
+	PRINT_CHAR('L');
+	print_hex(printer, (int)node);
+	PRINT_CHAR(':');
+	PRINT_CHAR(' ');
+}
+
+static void
 IterationStatement_dowhile_eval(n, context, res)
 	struct IterationStatement_while_node *n;
 	struct context *context;
@@ -5171,31 +5536,6 @@ step2:	EVAL(n->body, context, res);
 }
 
 static void
-print_hex(printer, i)
-	struct printer *printer;
-	int i;
-{
-	if (i >= 0x10)
-		print_hex(printer, i >> 4);
-	i = i & 0xf;
-	if (i < 0xa)
-		PRINT_CHAR('0' + i);
-	else
-		PRINT_CHAR('a' + (i-0xa));
-}
-
-static void
-print_label(printer, node)
-	struct printer *printer;
-	void *node;
-{
-	PRINT_CHAR('L');
-	print_hex(printer, (int)node);
-	PRINT_CHAR(':');
-	PRINT_CHAR(' ');
-}
-
-static void
 IterationStatement_dowhile_print(n, printer)
 	struct IterationStatement_while_node *n;
 	struct printer *printer;
@@ -5217,9 +5557,29 @@ IterationStatement_dowhile_print(n, printer)
 	PRINT_NEWLINE(0);
 }
 
+static void
+IterationStatement_while_visit(n, v, va)
+        struct IterationStatement_while_node *n;
+	visitor_fn v;
+	void *va;
+{
+	VISIT(n->cond, v, va);
+	VISIT(n->body, v, va);
+}
+
+static int
+IterationStatement_dowhile_isconst(n, interp)
+        struct IterationStatement_while_node *n;
+	struct SEE_interpreter *interp;
+{
+	return ISCONST(n->body, interp) && ISCONST(n->cond, interp);
+}
+
 static struct nodeclass IterationStatement_dowhile_nodeclass
 	= { IterationStatement_dowhile_eval, 0, 
-	    IterationStatement_dowhile_print };
+	    IterationStatement_dowhile_print,
+	    IterationStatement_while_visit,
+	    IterationStatement_dowhile_isconst };
 
 
 static void
@@ -5274,9 +5634,26 @@ IterationStatement_while_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static int
+IterationStatement_while_isconst(n, interp)
+	struct IterationStatement_while_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (ISCONST(n->cond, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->cond, (struct context *)NULL, &r1);
+		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean ? ISCONST(n->body, interp) : 1;
+	} else
+		return 0;
+}
+
 static struct nodeclass IterationStatement_while_nodeclass
 	= { IterationStatement_while_eval, 0, 
-	    IterationStatement_while_print };
+	    IterationStatement_while_print,
+	    IterationStatement_while_visit,
+	    IterationStatement_while_isconst };
 
 
 struct IterationStatement_for_node {
@@ -5346,6 +5723,18 @@ IterationStatement_for_print(n, printer)
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
+}
+
+static void
+IterationStatement_for_visit(n, v, va)
+	struct IterationStatement_for_node *n;
+	visitor_fn v;
+	void *va;
+{
+	if (n->init) VISIT(n->init, v, va);
+	if (n->cond) VISIT(n->cond, v, va);
+	if (n->incr) VISIT(n->incr, v, va);
+	VISIT(n->body, v, va);
 }
 
 static struct nodeclass IterationStatement_for_nodeclass
@@ -7179,6 +7568,15 @@ printer_print_node(printer, n)
 	struct node *n;
 {
 	(*(n)->nodeclass->print)(n, printer);
+}
+
+static void
+print_hex(printer, i)
+	struct printer *printer;
+	int i;
+{
+	if (i >= 16) print_hex(printer, i >> 4);
+	PRINT_CHAR(SEE_hexstr_lowercase[i & 0xf]);
 }
 
 /*------------------------------------------------------------
