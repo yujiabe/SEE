@@ -3,12 +3,12 @@
 
 #
 # This file contains the string constants that are used to
-# generate UCS-16 string constants at compile time. See the
+# generate UTF-16 string constants at compile time. See the
 # Makefile and string.pl for more details. 
 #
-# Each line is a string definition of the form
+# Each line in this file is a string definition of the form
 #	name = "some text"
-# or, more simply just the name by itself which is shorthand for name="name".
+# or, more simply just the 'name' by itself which is shorthand for name="name".
 #
 # The resulting string constants are accessed using the macro STR(name),
 # which is defined in the generated stringdefs.h header file.
@@ -311,9 +311,9 @@ broken_literal = "line break in string literal"
 escaped_lit_nl = "escaped line break in string literal"
 invalid_esc_x =	 "invalid \\x escape"
 invalid_esc_u =	 "invalid \\u escape"
-hex_literal_detritis = "unexpected characters after hex literal"
-oct_literal_detritis = "unexpected characters after octal literal"
-dec_literal_detritis = "unexpected characters after decimal literal"
+hex_literal_detritus = "unexpected characters after hex literal"
+oct_literal_detritus = "unexpected characters after octal literal"
+dec_literal_detritus = "unexpected characters after decimal literal"
 number_too_long = "number too long"
 eof_in_c_comment = "EOF inside /* comment"
 eof_in_regex = "EOF inside regular expression"

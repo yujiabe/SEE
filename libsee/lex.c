@@ -469,13 +469,13 @@ NumericLiteral(lex)
 	    if (!ATEOF && (NEXT == 'x' || NEXT == 'X')) {
 		SKIP;
 		if (ATEOF || !is_HexDigit(NEXT))
-		    SYNTAX_ERROR(STR(hex_literal_detritis));
+		    SYNTAX_ERROR(STR(hex_literal_detritus));
 		while (!ATEOF && is_HexDigit(NEXT)) {
 		    SEE_string_addch(s, NEXT);
 		    SKIP;
 		}
 		if (!ATEOF && is_IdentifierStart(lex))
-		    SYNTAX_ERROR(STR(hex_literal_detritis));
+		    SYNTAX_ERROR(STR(hex_literal_detritus));
 		e = 1;
 		for (i = 0; i < s->length; i++) {
 		    n += e * HexValue(s->data[s->length - i - 1]);
@@ -504,11 +504,11 @@ NumericLiteral(lex)
 		n = 0;
 		for (i = 1; i < s->length; i++) {
 		    if (s->data[i] > '7')
-			SYNTAX_ERROR(STR(oct_literal_detritis));
+			SYNTAX_ERROR(STR(oct_literal_detritus));
 		    n = n * 8 + s->data[i] - '0';
 		}
 		if (!ATEOF && is_IdentifierStart(lex))
-		    SYNTAX_ERROR(STR(oct_literal_detritis));
+		    SYNTAX_ERROR(STR(oct_literal_detritus));
 		SEE_SET_NUMBER(&lex->value, n);
 		return tNUMBER;
 	}
@@ -545,7 +545,7 @@ NumericLiteral(lex)
 		SKIP;
 	    }
 	    if (!seendigit)
-		SYNTAX_ERROR(STR(dec_literal_detritis));
+		SYNTAX_ERROR(STR(dec_literal_detritus));
 	}
 
 	numbuf = SEE_ALLOCA(s->length + 1, char);
@@ -555,7 +555,7 @@ NumericLiteral(lex)
 	endstr = NULL;
 	n = SEE_strtod(numbuf, &endstr);
 	if (!endstr || *endstr) 		/* impossible condition? */
-		SYNTAX_ERROR(STR(dec_literal_detritis));
+		SYNTAX_ERROR(STR(dec_literal_detritus));
 	SEE_SET_NUMBER(&lex->value, n);
 	return tNUMBER;
 }
