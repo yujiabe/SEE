@@ -92,6 +92,7 @@ find(interp, o, p)
 	struct SEE_property **x;
 	struct SEE_string *ip;
 
+	SEE_ASSERT(interp, p != NULL);
 	ip = SEE_intern(interp, p);
 	x = &n->properties[hashfn(ip)];
 	while (*x && (*x)->name != ip)
@@ -117,8 +118,8 @@ SEE_native_get(interp, o, p, res)
 	if (SEE_native_debug) {
 	    fprintf(stderr, "native_get: o=");
 	    SEE_PrintObject(interp, o, stderr);
-	    fprintf(stderr, " .");
-	    SEE_string_fputs(ip, stderr);
+	    fprintf(stderr, " ip=");
+	    SEE_PrintString(interp, ip, stderr);
 	    if (*x) { 
 		fprintf(stderr, " -> ");
 		SEE_PrintValue(interp, &(*x)->value, stderr);
@@ -205,8 +206,8 @@ SEE_native_put(interp, o, p, val, attr)
 	if (SEE_native_debug) {
 	    fprintf(stderr, "native_put: o=");
 	    SEE_PrintObject(interp, o, stderr);
-	    fprintf(stderr, " .");
-	    SEE_string_fputs(ip, stderr);
+	    fprintf(stderr, " ip=");
+	    SEE_PrintString(interp, ip, stderr);
 	    fprintf(stderr, " <- ");
 	    SEE_PrintValue(interp, val, stderr);
 	    fprintf(stderr, "\n");
@@ -255,6 +256,13 @@ SEE_native_hasownproperty(interp, o, p)
 	struct SEE_property **x;
 
 	x = find(interp, o, p);
+#ifndef NDEBUG
+	if (SEE_native_debug) {
+	    fprintf(stderr, "hasownprop: p=", p);
+	    SEE_PrintString(interp, p, stderr);
+	    fprintf(stderr, " -> %p\n", *x);
+	}
+#endif
 	return *x ? 1 : 0;
 }
 
