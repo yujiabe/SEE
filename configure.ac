@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
 AC_INIT
-AM_INIT_AUTOMAKE(see, 1.0)
+AM_INIT_AUTOMAKE(see, 1.1)
 AM_CONFIG_HEADER(include/see/config.h)
 AC_CONFIG_FILES([Makefile
 		 include/Makefile
@@ -213,6 +213,40 @@ AC_CACHE_CHECK([for constant Inf], [ac_cv_cc_constant_Inf_div],
 test $ac_cv_cc_constant_Inf_div = yes && AC_DEFINE(HAVE_CONSTANT_INF_DIV)
 
 dnl
+dnl Hexadecimal floating point constants are ANSI, but are not supported
+dnl everywhere it seems.
+dnl
+
+AC_CACHE_CHECK([for hex float constants], [ac_cv_cc_constant_hex_float],
+	[AC_TRY_RUN([#if SIZEOF_FLOAT == 8
+		      float 
+		     #elif SIZEOF_DOUBLE == 8
+		      double
+		     #else
+		     # error "no 64-bit floating point type"
+		     #endif
+		        number = 0x1p3;
+		     int main() { exit( number == 8 ? 0:1 ); }
+		     ],
+		    [ac_cv_cc_constant_hex_float=yes],
+		    [ac_cv_cc_constant_hex_float=no])])
+test $ac_cv_cc_constant_hex_float = yes && AC_DEFINE(HAVE_CONSTANT_HEX_FLOAT)
+
+dnl
+dnl GNU-style variadic macros
+dnl
+
+AC_CACHE_CHECK([for variadic macros], [ac_cv_cc_variadic_macros],
+	[AC_TRY_RUN([
+#define f(a, b...) g(a, 5 , ## b)
+int g(v, w, x, y, z) int v,w,x,y,z; { return v*w*x*y*z; }
+int main() { exit( f(2,3,7,9) == 2*3*5*7*9 ? 0 : 1 ); }
+		     ],
+		    [ac_cv_cc_variadic_macros=yes],
+		    [ac_cv_cc_variadic_macros=no])])
+test $ac_cv_cc_variadic_macros = yes && AC_DEFINE(HAVE_VARIADIC_MACROS)
+
+dnl
 dnl setjmp/longjmp
 dnl
 
@@ -336,6 +370,10 @@ AH_TEMPLATE([HAVE_CONSTANT_INF_DIV],
 	    [Define if compiler can inline the expression 1.0/0.0 as constant])
 AH_TEMPLATE([HAVE_CONSTANT_NAN_DIV],
 	    [Define if compiler can inline the expression 0.0/0.0 as constant])
+AH_TEMPLATE([HAVE_CONSTANT_HEX_FLOAT],
+	    [Define if compiler can handle ANSI hex fp constants like '0x1p3'])
+AH_TEMPLATE([HAVE_VARIADIC_MACROS],
+	    [Does preprocessor have GNU-style variadic macros])
 AH_TEMPLATE([HAVE_LONGJMP],
 	    [Define if longjmp()/setjmp() are functional])
 AH_TEMPLATE([HAVE__LONGJMP],
