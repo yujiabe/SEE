@@ -48,8 +48,7 @@
 
 #if !HAVE_ALLOCA
 char *
-SEE_alloca(sz)
-	unsigned int
+SEE_alloca(unsigned int sz)
 {
 	return (*SEE_mem_malloc_hook)((struct SEE_interpreter *)0, sz);
 }
