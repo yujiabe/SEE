@@ -122,3 +122,9 @@ SEE_throw()
 	 * give the compiler a chance at making safer code.)
 	 */
 }
+
+void
+longjmperror()
+{
+	(*SEE_abort)(NULL);
+}
