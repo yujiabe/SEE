@@ -39,12 +39,14 @@
 #if STDC_HEADERS
 # include <stdio.h>
 # include <stdlib.h>
+# include <string.h>
 #endif
 
 #include <see/mem.h>
 #include <see/string.h>
 #include <see/type.h>
 #include <see/input.h>
+#include <see/interpreter.h>
 
 #include "unicode.h"
 
@@ -261,9 +263,11 @@ utf8_next(inp)
 {
 	struct input_file *inpf = (struct input_file *)inp;
 	SEE_unicode_t next, c;
-	int ch, i;
+	int ch, bytes, i;
 
 	static unsigned char mask[] = { 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+	static SEE_unicode_t safe[] = { 0, 0x80, 0x800, 0x10000, 0x200000,
+						0x4000000, 0x80000000 };
 
 	/* RFC 2279 */
 	next = inpf->inp.lookahead;
@@ -273,12 +277,12 @@ utf8_next(inp)
 	} else if ((ch & 0x80) == 0) {
 		inpf->inp.lookahead = ch;
 	} else {
-		for (i = 1; i < 6; i++)
-		    if ((ch & mask[i]) == mask[i-1])
+		for (bytes = 1; bytes < 6; bytes++)
+		    if ((ch & mask[bytes]) == mask[bytes-1])
 			break;
-		if (i < 6) {
-		    c = (ch & ~mask[i]);
-		    while (i--) {
+		if (bytes < 6) {
+		    c = (ch & ~mask[bytes]);
+		    for (i = 0; i < bytes; i++) {
 			ch = getbyte(inpf);
 			if (ch == EOF) {
 			    inpf->inp.eof = 1;
@@ -287,6 +291,10 @@ utf8_next(inp)
 			c = (c << 6) | (ch & 0x3f);
 		    }
 		    if (c > _UNICODE_MAX)
+			c = SEE_INPUT_BADCHAR;
+		    else if (c < safe[bytes] && 
+		    	    !(inpf->inp.interpreter->compatibility &
+		                             SEE_COMPAT_UTF_UNSAFE))
 			c = SEE_INPUT_BADCHAR;
 		} else
 		    c = SEE_INPUT_BADCHAR;

@@ -43,12 +43,15 @@
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/input.h>
+#include <see/interpreter.h>
 #include "unicode.h"
 
 /*
- * An input for UTF8 encoded C strings.
+ * An input for UTF8 encoded C strings. (i.e. nul-terminated byte arrays)
  *
- * Used when the host application wants to execute some literal code.
+ * Useful when the host application wants to execute some literal code
+ * which is either 7-bit ASCII or UTF-8. A byte order mark is not expected.
+ * NOTE: Any (say) Latin-1 encodings have to be converted to UTF-8 first!
  * Ref: RFC2279
  */
 
@@ -73,8 +76,10 @@ input_utf8_next(inp)
 {
 	struct input_utf8 *inpu = (struct input_utf8 *)inp;
 	SEE_unicode_t next, c;
-	int i, j;
+	int i, j, bytes;
 	static unsigned char mask[] = { 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+	static SEE_unicode_t safe[] = { 0, 0x80, 0x800, 0x10000, 0x200000, 
+					0x4000000, 0x80000000 };
 
 	next = inpu->inp.lookahead;
 
@@ -88,12 +93,12 @@ input_utf8_next(inp)
 		inpu->inp.lookahead = *inpu->s++;
 		inpu->inp.eof = 0;
 	} else {
-		for (i = 1; i < 6; i++)
-		    if ((*inpu->s & mask[i]) == mask[i - 1])
+		for (bytes = 1; bytes < 6; bytes++)
+		    if ((*inpu->s & mask[bytes]) == mask[bytes - 1])
 			break;
-		if (i < 6) {
-		    c = *inpu->s++ & ~mask[i];
-		    for (j = 0; i--; j++) {
+		if (bytes < 6) {
+		    c = *inpu->s++ & ~mask[bytes];
+		    for (i = bytes, j = 0; i--; j++) {
 			if ((*inpu->s & 0xc0) != 0x80) {
 			     goto bad;
 			}
@@ -101,8 +106,13 @@ input_utf8_next(inp)
 		    }
 		    if (c > _UNICODE_MAX)
 			    inpu->inp.lookahead = SEE_INPUT_BADCHAR;
+		    else if (c < safe[bytes] && 
+		        !(inpu->inp.interpreter->compatibility & 
+			 SEE_COMPAT_UTF_UNSAFE))
+			    inpu->inp.lookahead = SEE_INPUT_BADCHAR;
 		    else
 			    inpu->inp.lookahead = c;
+
 		    inpu->inp.eof = 0;
 		} else {
 		bad:
