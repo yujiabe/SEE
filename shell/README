@@ -2,25 +2,29 @@
 SEE SHELL
 
 This is an ECMAScript shell program used to test and demonstrate 
-the SEE run-time library. It reads ECMAScript input and executes
-it. It also has a simplistic 'HTML' mode where it will pre-process
-a HTML document a little bit like a browser would.
+the SEE run-time library. It reads ECMAScript files and executes
+them. It includes a simplistic 'HTML' mode where it will pre-process
+a HTML document a little bit like a browser would. It also provides
+an interactive (prompted) mode.
 
-Usage:
+
+Usage
+-----
 	shell [-d<debugflags>] [-f file] [-h htmlfile] 
 
 The '-f file' and '-h htmlfile' options can be specified multiple times.
-Each time they are specified, the given file is loaded and run.
+Each time they are specified, the given files are loaded and run.
 
 Files specified with -f are loaded and run as pure ECMAScript. The
 entire file is parsed as a 'Program' (see the language grammar), and the
-global statements are evaluated.  An exception in the file terminate
-the process (exit 1), otherwise it continues.
+global statements are evaluated.  If an exception during execution of
+the file, it terminates the process (exit 1), otherwise processing continues.
 
 Files specified with -h are loaded as HTML. The HTMl content is copied to
-stdout, except all text found inside <SCRIPT> elements are stripped and run
+stdout, except for text found inside <SCRIPT> elements. It is stripped and run
 as ECMAScript (regardless of the LANGUAGE attribute).  Exceptions
-are ignored in HTML files. (Lazy browser behaviour!)
+are ignored in HTML files. (Lazy browser behaviour!) There is no support for
+forms or triggers such as 'onLoad'. 
 
 If no -f or -h flags are given (or a "-f -" argument is given), an
 interactive prompt is produced, and individual statements are read
@@ -28,6 +32,27 @@ from standard input until EOF.
 
 NOTE: The command line arguments were chosen to be compatible with
 the perl script used with Mozilla/spidermonkey's test suite.
+
+
+Shell-provided objects and functions
+------------------------------------
+
+Besides the standard environment required by ECMA-262,
+the shell provides a couple of objects useful for testing.
+
+ print       - a function object which takes one
+               string argument and prints it, followed
+               by a newline.
+ version     - an undefined value, used to satisfy some tests.
+
+In HTML mode the following objects are provided:
+
+ document            - a simple Object with some properties:
+ document.write      - a function to print a string to stdout
+ document.navigator  - a simple Object used as a placeholder
+ document.userAgent  - "SEE-shell (see-1.0)" or similar
+ document.window     - a reference to the Global object
+
 
 David Leonard
 
