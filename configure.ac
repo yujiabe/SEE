@@ -8,7 +8,8 @@ AC_CONFIG_FILES([Makefile
 		 include/Makefile
 		 include/see/Makefile
 		 libsee/Makefile 
-		 shell/Makefile])
+		 shell/Makefile
+		 shell/test/Makefile])
 
 dnl ------------------------------------------------------------
 dnl programs required
@@ -249,6 +250,36 @@ if test $ac_cv_cc__longjmp_works = no -a \
         $ac_cv_cc_longjmp_works = no; then
 		AC_MSG_ERROR([cannot find working setjmp()/longjmp()])
 fi
+
+dnl
+dnl check that vsnprintf works
+dnl
+
+AC_CACHE_CHECK([working vsnprintf(0,0,,)], [ac_cv_libc_vsnprintf_works],
+	[AC_TRY_RUN([#include <stdio.h>
+		     #include <stdarg.h>
+
+		     int a(fmt, ap)
+			const char *fmt;
+			va_list ap;
+		     {
+			return vsnprintf(0,0,fmt,ap);
+		     }
+		     int b(char *fmt, ...)
+		     {
+			va_list ap;
+			int ret;
+			va_start(ap, fmt);
+			ret = a(fmt, ap);
+			va_end(ap);
+			return ret;
+		     }
+		     int main() {
+			int ret = b("test %s", "string");
+			exit( ret == 11 ? 0 : 1);
+		     }],
+		    [ac_cv_libc_vsnprintf_works=yes],
+		    [ac_cv_libc_vsnprintf_works=no])])
 
 dnl ------------------------------------------------------------
 dnl templates for autoheader
