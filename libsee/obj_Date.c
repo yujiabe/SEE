@@ -638,9 +638,15 @@ now(interp)
 	struct timeval tv;
 	SEE_number_t t;
 
+#if HAVE_GETTIMEOFDAY
 	if (gettimeofday(&tv, NULL) < 0)
 		SEE_error_throw_sys(interp, interp->Error, "gettimeofday");
 	t = (tv.tv_sec + tv.tv_usec * 1e-6) * msPerSecond;
+#else
+# warning "don't know how to get system time; using constant 0:00 Jan 1, 1970"
+	/* XXX should fix this */
+	t = 0;
+#endif
 	return TimeClip(t);
 }
 
