@@ -483,10 +483,17 @@ math_random(interp, self, thisobj, argc, argv, res)
 {
 	unsigned int rval;
 
-	/*
-	 * XXX fixme: not all hosts have rand_r().
-	 */
+#if HAVE_RAND_R
 	rval = rand_r(&interp->random_seed);
+#else
+	/* XXX this is not thread safe */
+	static int srand_initialised = 0;
+	if (!srand_initialised) {
+		srand_initialised++;
+		srand(interp->random_seed);
+	}
+	rval = rand();
+#endif
 	SEE_SET_NUMBER(res, (SEE_number_t)rval / RAND_MAX);
 }
 
