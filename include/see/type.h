@@ -71,7 +71,7 @@ typedef float SEE_number_t;
 #define SEE_NUMBER_IS_DOUBLE 1
 typedef double SEE_number_t;
 #else
-# error "cannot provide type for SEE_number_t"
+# error "cannot provide 64-bit IEEE-754 type for SEE_number_t"
 #endif
 
 typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
@@ -88,17 +88,24 @@ typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 #endif
 
 /* numeric constant for NaN */
-#if HAVE_CONSTANT_NAN_DIV
-# define SEE_NaN		((SEE_number_t) 0.0 / 0.0)
+#if HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV
+# define SEE_NaN		((SEE_number_t) (0.0 / 0.0))
+# define SEE_Infinity		((SEE_number_t) (1.0 / 0.0))
+# define SEE_MinNumber		((SEE_number_t) 0x1p-1074)
+# define SEE_MaxNumber		((SEE_number_t) 0x1fffffffffffffp971)
+#else
+/* Defined in value.o */
+extern const union SEE_numeric_literal {
+	SEE_number_t    n;
+	unsigned char   c[8];
+} SEE_literal_NaN, SEE_literal_Inf, SEE_literal_Max, SEE_literal_Min;
+# define SEE_NaN		(SEE_literal_NaN.n)
+# define SEE_Infinity		(SEE_literal_Inf.n)
+# define SEE_MinNumber		(SEE_literal_Min.n)
+# define SEE_MaxNumber		(SEE_literal_Max.n)
 #endif
 
-/* numeric constant for Infinity */
-#if HAVE_CONSTANT_INF_DIV
-# define SEE_Infinity	((SEE_number_t) 1.0 / 0.0)   /* use HUGE_VAL instead? */
-#endif
-
-/* on-stack allocation */
-
+/* On-stack allocation */
 #ifndef __GNUC__
 # if HAVE_ALLOCA_H
 #  include <alloca.h>
@@ -106,10 +113,10 @@ typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 #  ifdef _AIX
 #   pragma alloca
 #  else
-#   ifndef alloca /* predefined by HP cc +Olibcalls */
+#   ifndef alloca 		/* predefined by HP cc +Olibcalls */
 #    ifndef HAVE_ALLOCA
-      char *SEE_alloca();
-#     define alloca SEE_alloca
+      char *SEE_alloca(/* unsigned int */);
+#     define alloca SEE_alloca	/* use gc memory as last resort */
 #    endif
 #   endif
 #  endif
