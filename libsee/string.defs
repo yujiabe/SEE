@@ -33,6 +33,7 @@ in_not_object = "'in' target is not an object"
 no_hasinstance = "object does not support 'instanceof'"
 bad_lvalue = "cannot assign to value"
 regex_syntax_error = "bad regular expression"
+recursion_limit_reached = "recursion limit reached"
 error
 
 #
@@ -50,6 +51,7 @@ previous_definition = "previous definition"
 #
 toobject_undefined =	"Cannot use undefined as an object"
 toobject_null =		"Cannot use null as an object"
+toobject_bad =		"Cannot convert the value into an object"
 toboolean_bad =		"Cannot convert the value into a boolean"
 tonumber_bad =		"Cannot convert the value into a number"
 tostring_bad =		"Cannot convert the value into a string"
@@ -403,3 +405,4 @@ __parent__
 cfunction_body1 = "function "
 cfunction_body2 = "() { /* built-in "
 cfunction_body3 = " */ }"
+
