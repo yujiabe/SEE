@@ -61,6 +61,8 @@ struct SEE_value {
 	} u;
 };
 
+#define SEE_VALUE_TYPE(v)	((v)->type)
+
 #if SEE_NUMBER_IS_FLOAT
 # define SEE_NUMBER_ISNAN(v)    isnanf((v)->u.number)
 # define SEE_NUMBER_ISPINF(v)   (isinff((v)->u.number) && (v)->u.number > 0)
@@ -79,39 +81,39 @@ struct SEE_value {
 	memcpy(dst, src, sizeof (struct SEE_value))
 
 #define SEE_SET_UNDEFINED(v)			\
-	(v)->type = SEE_UNDEFINED
+	SEE_VALUE_TYPE(v) = SEE_UNDEFINED
 
 #define SEE_SET_NULL(v)				\
-	(v)->type = SEE_NULL
+	SEE_VALUE_TYPE(v) = SEE_NULL
 
 #define SEE_SET_BOOLEAN(v, b) 			\
     do {					\
-	(v)->type = SEE_BOOLEAN;		\
+	SEE_VALUE_TYPE(v) = SEE_BOOLEAN;	\
 	(v)->u.boolean = (b);			\
     } while (0)
 
 #define SEE_SET_NUMBER(v, n) 			\
     do {					\
-	(v)->type = SEE_NUMBER;			\
+	SEE_VALUE_TYPE(v) = SEE_NUMBER;		\
 	(v)->u.number = (n);			\
     } while (0)
 
 #define SEE_SET_STRING(v, s)			\
     do {					\
-	(v)->type = SEE_STRING;			\
+	SEE_VALUE_TYPE(v) = SEE_STRING;		\
 	(v)->u.string = (s);			\
     } while (0)
 
 #define SEE_SET_OBJECT(v, o)			\
     do {					\
-	(v)->type = SEE_OBJECT;			\
+	SEE_VALUE_TYPE(v) = SEE_OBJECT;		\
 	(v)->u.object = (o);			\
     } while (0)
 
 /* Return completion - NB: 'val' must NOT be on the stack */
 #define SEE_SET_COMPLETION(v, typ, val, tgt)	\
     do {					\
-	(v)->type = SEE_COMPLETION;		\
+	SEE_VALUE_TYPE(v) = SEE_COMPLETION;	\
 	(v)->u.completion.type = (typ);		\
 	(v)->u.completion.value = (val);	\
 	(v)->u.completion.target = (tgt);	\
@@ -119,7 +121,7 @@ struct SEE_value {
 
 #define SEE_SET_REFERENCE(v, b, p)		\
     do {					\
-	(v)->type = SEE_REFERENCE;		\
+	SEE_VALUE_TYPE(v) = SEE_REFERENCE;	\
 	(v)->u.reference.base = (b);		\
 	(v)->u.reference.property = (p);	\
     } while (0)

@@ -66,6 +66,8 @@ typedef unsigned long	  SEE_uint32_t;
 typedef signed int	  SEE_int64_t;
 # elif @SIZEOF_SIGNED_LONG@ == 8
 typedef signed long	  SEE_int64_t;
+# elif @SIZEOF_SIGNED_LONGLONG@ == 8
+typedef signed LONGLONG   SEE_int64_t;
 # elif @SIZEOF_SIGNED_LONG_LONG@ == 8
 typedef signed long long  SEE_int64_t;
 # else
@@ -77,6 +79,8 @@ typedef signed long long  SEE_int64_t;
 typedef unsigned int	  SEE_uint64_t;
 # elif @SIZEOF_UNSIGNED_LONG@ == 8
 typedef unsigned long	  SEE_uint64_t;
+# elif @SIZEOF_UNSIGNED_LONGLONG@ == 8
+typedef unsigned LONGLONG  SEE_uint64_t;
 # elif @SIZEOF_UNSIGNED_LONG_LONG@ == 8
 typedef unsigned long long SEE_uint64_t;
 # else
