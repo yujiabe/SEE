@@ -12,7 +12,7 @@ malloc().  Run configure with the '--help' argument to see switches
 on how to configure it for boehm-gc.
 
 Documentation for development using the SEE library can be found in
-USAGE.html.  The 'see-shell' program doubles as an example and
+doc/USAGE.html.  The 'see-shell' program doubles as an example and
 demonstration of how the library is intended to be used.
 
 I hope someone finds this useful. Please send bug reports back to me
