@@ -231,9 +231,12 @@ SEE_string_concat(interp, a, b)
 
 /* 
  * Convert a UTF-16 string to UTF-8 and write to a stdio file.
+ * Returns 0 on success, like fputs().
+ * Returns EOF on write error, like fputs().
+ * Throws exception on conversion error, unlike fputs().
  * Ref: RFC2279, RFC2781
  */
-void
+int
 SEE_string_fputs(s, f)
 	const struct SEE_string *s;
 	FILE *f;
@@ -242,17 +245,19 @@ SEE_string_fputs(s, f)
 	SEE_char_t ch, ch2;
 	struct SEE_interpreter *interp = s->interpreter;
 
+#define OUTPUT(c) do { if (fputc(c, f) == EOF) goto error; } while (0)
+
 	for (i = 0; i < s->length; i++) {
 		ch = s->data[i];
 		if ((ch & 0xff80) == 0) 
-		    fputc(ch & 0x7f, f);
+		    OUTPUT(ch & 0x7f);
 		else if ((ch & 0xf800) == 0) {
-		    fputc(0xc0 | ((ch >> 6) & 0x1f), f);
-		    fputc(0x80 | (ch & 0x3f), f);
+		    OUTPUT(0xc0 | ((ch >> 6) & 0x1f));
+		    OUTPUT(0x80 | (ch & 0x3f));
 		} else if ((ch & 0xfc00) != 0xd800) {
-		    fputc(0xe0 | ((ch >> 12) & 0x0f), f);
-		    fputc(0x80 | ((ch >> 6) & 0x3f), f);
-		    fputc(0x80 | (ch & 0x3f), f);
+		    OUTPUT(0xe0 | ((ch >> 12) & 0x0f));
+		    OUTPUT(0x80 | ((ch >> 6) & 0x3f));
+		    OUTPUT(0x80 | (ch & 0x3f));
 		} else {
 		    if (i == s->length - 1)
 			SEE_error_throw_string(interp, interp->Error, 
@@ -262,13 +267,16 @@ SEE_string_fputs(s, f)
 			SEE_error_throw_string(interp, interp->Error, 
 				STR(bad_utf16_string));
 		    ch = (ch & 0x03ff) + 0x0040;
-		    fputc(0xf0 | ((ch >> 8) & 0x07), f);
-		    fputc(0x80 | ((ch >> 2) & 0x3f), f);
-		    fputc(0x80 | ((ch & 0x3) << 4) |
-				 ((ch2 & 0x03c0) >> 6), f);
-		    fputc(0x80 | (ch2 & 0x3f), f);
+		    OUTPUT(0xf0 | ((ch >> 8) & 0x07));
+		    OUTPUT(0x80 | ((ch >> 2) & 0x3f));
+		    OUTPUT(0x80 | ((ch & 0x3) << 4) |
+				 ((ch2 & 0x03c0) >> 6));
+		    OUTPUT(0x80 | (ch2 & 0x3f));
 		}
 	}
+	return 0;
+    error:
+	return EOF;
 }
 
 /*
@@ -368,7 +376,9 @@ SEE_string_new(interp, space)
 	return (struct SEE_string *)ss;
 }
 
-/* Return a fully escaped string literal, suitable for lexical analysis */
+/**
+ * Fully escapes a string literal, suitable for lexical analysis
+ */
 struct SEE_string *
 SEE_string_literal(interp, s)
 	struct SEE_interpreter *interp;
@@ -410,19 +420,19 @@ SEE_string_literal(interp, s)
 				break;
 	    default:
 		if (c >= 0x20 && c < 0x7f)
-			SEE_string_addch(lit, c);
+		    SEE_string_addch(lit, c);
 		else if (c < 0x100) {
-			SEE_string_addch(lit, '\\');
-			SEE_string_addch(lit, 'x');
-			SEE_string_addch(lit, SEE_hexstr[(c >> 4) & 0xf]);
-			SEE_string_addch(lit, SEE_hexstr[c & 0xf]);
+		    SEE_string_addch(lit, '\\');
+		    SEE_string_addch(lit, 'x');
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
 		} else {
-			SEE_string_addch(lit, '\\');
-			SEE_string_addch(lit, 'u');
-			SEE_string_addch(lit, SEE_hexstr[(c >> 12) & 0xf]);
-			SEE_string_addch(lit, SEE_hexstr[(c >> 8) & 0xf]);
-			SEE_string_addch(lit, SEE_hexstr[(c >> 4) & 0xf]);
-			SEE_string_addch(lit, SEE_hexstr[c & 0xf]);
+		    SEE_string_addch(lit, '\\');
+		    SEE_string_addch(lit, 'u');
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >>12) & 0xf]);
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 8) & 0xf]);
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
+		    SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
 		}
 	    }
 	}

@@ -46,7 +46,7 @@ struct SEE_stringclass {
 void	SEE_string_addch(struct SEE_string *s, SEE_char_t ch);
 void	SEE_string_append(struct SEE_string *s, const struct SEE_string *sffx);
 void	SEE_string_append_int(struct SEE_string *s, int i);
-void	SEE_string_fputs(const struct SEE_string *s, FILE *file);
+int	SEE_string_fputs(const struct SEE_string *s, FILE *file);
 int	SEE_string_cmp(const struct SEE_string *s1,
 			  const struct SEE_string *s2);
 
