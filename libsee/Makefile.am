@@ -10,27 +10,28 @@ libsee_la_SOURCES= cfunction.c context.c debug.c dtoa.c enumerate.c	\
                    obj_Date.c obj_Error.c obj_Function.c obj_Global.c	\
                    obj_Math.c obj_Number.c obj_Object.c obj_RegExp.c	\
                    obj_String.c parse.c regex.c string.c stringdefs.c	\
-                   tokens.c try.c unicode.c value.c			\
-		   string.defs string.pl
+                   tokens.c try.c unicode.c value.c			
 
 noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
-                   function.h lex.h parse.h regex.h tokens.h unicode.h
+                   function.h lex.h parse.h regex.h tokens.h unicode.h	\
+		   stringdefs.h stringdefs.inc				\
+		   string.defs string.pl
 
 libsee_la_LIBADD=  @LTLIBOBJS@ @LTALLOCA@ -lgc -lm
 
-INCLUDES=	   -I$(top_builddir)/include
+INCLUDES=	   -I$(top_builddir)/include -I$(top_srcdir)/include
 
-BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 
 PERL=		   @PERL@
+
+
+BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 
 stringdefs.inc: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl c $(srcdir)/string.defs >$@
 stringdefs.h: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl h $(srcdir)/string.defs >$@
-
-## the unicode generation is not distributed; this is for developers
 unicode.c:
 	@echo "unicode.c should be built prior to distribution!"
-	cd $(top_srcdir)/unicode && ${MAKE}
+	cd $(top_builddir)/unicode && ${MAKE}
 

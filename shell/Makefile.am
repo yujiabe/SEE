@@ -14,7 +14,8 @@ see_shell_static_LDADD=		$(see_shell_LDADD)
 see_shell_static_DEPENDENCIES=	$(see_shell_DEPENDENCIES)
 see_shell_static_LDFLAGS=	 -static
 
-INCLUDES=			-I$(top_builddir)/include
+INCLUDES=			-I$(top_builddir)/include \
+				-I$(top_srcdir)/include
 
 EXTRA_DIST=			README
 
