@@ -33,8 +33,7 @@ static void print_fn(struct SEE_interpreter *,
         struct SEE_object *, struct SEE_object *, int,
 	struct SEE_value **, struct SEE_value *);
 
-/* Internalise constant application strings for our convenience */
-
+/* Internalised constant strings for my convenience */
 static struct SEE_string *s_print;
 static struct SEE_string *s_version;
 static struct SEE_string *s_document;
@@ -42,8 +41,13 @@ static struct SEE_string *s_write;
 static struct SEE_string *s_navigator;
 static struct SEE_string *s_userAgent;
 static struct SEE_string *s_window;
-       struct SEE_string *s_interactive;
+struct SEE_string *s_interactive;
 
+/*
+ * Adds useful symbols into the interpreter's internal symbol table. 
+ * This speeds up access to the symbols and lets us use UTF-16 strings
+ * natively when populating the object space.
+ */
 void
 shell_strings()
 {
@@ -74,6 +78,10 @@ shell_strings()
 	SEE_intern_global(s_interactive = &S_interactive);
 }
 
+/*
+ * A print function that prints a string argument to stdout.
+ * A newline is printed at the end.
+ */
 static void
 print_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
@@ -86,12 +94,16 @@ print_fn(interp, self, thisobj, argc, argv, res)
         if (argc) {
                 SEE_ToString(interp, argv[0], &v);
                 SEE_string_fputs(v.u.string, stdout);
-		printf("\n");
-		fflush(stdout);
         }
+	printf("\n");
+	fflush(stdout);
         SEE_SET_UNDEFINED(res);
 }
 
+/*
+ * Adds global symbols 'print' and 'version' to the interpreter.
+ * 'print' is a function and 'version' will be the undefined value.
+ */
 void
 shell_add_globals(interp)
 	struct SEE_interpreter *interp;
@@ -107,6 +119,10 @@ shell_add_globals(interp)
 	SEE_OBJECT_PUT(interp, interp->Global, s_version, &v, 0);
 }
 
+/*
+ * A write function that prints its output to stdout.
+ * No newline is appended.
+ */
 static void
 document_write(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
@@ -124,6 +140,13 @@ document_write(interp, self, thisobj, argc, argv, res)
         SEE_SET_UNDEFINED(res);
 }
 
+/*
+ * Adds the following variables to emulate a browser environment:
+ *   document             - dummy object
+ *   document.write       - function to print strings
+ *   navigator            - dummy object
+ *   navigator.userAgent  - dummy string identifier for the SEE shell
+ */
 void
 shell_add_document(interp)
 	struct SEE_interpreter *interp;
@@ -131,22 +154,27 @@ shell_add_document(interp)
 	struct SEE_object *obj, *document, *navigator;
 	struct SEE_value v;
 
+	/* Create a dummy 'document' object. Add it to the global space */
 	document = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, document);
 	SEE_OBJECT_PUT(interp, interp->Global, s_document, &v, 0);
 
+	/* Create a 'write' method and attach to 'document'. */
 	obj = SEE_cfunction_make(interp, document_write, s_write, 1);
 	SEE_SET_OBJECT(&v, obj);
 	SEE_OBJECT_PUT(interp, document, s_write, &v, 0);
 
+	/* Create a 'navigator' object and attach to the global space */
 	navigator = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, navigator);
 	SEE_OBJECT_PUT(interp, interp->Global, s_navigator, &v, 0);
 
+	/* Create a string and attach as 'navigator.userAgent' */
 	SEE_SET_STRING(&v, SEE_string_sprintf(interp, 
 		"SEE-shell (" PACKAGE "-" VERSION ")" ));
 	SEE_OBJECT_PUT(interp, navigator, s_userAgent, &v, 0);
 
+	/* Create a dummy 'window' object */
 	SEE_SET_OBJECT(&v, interp->Global);
 	SEE_OBJECT_PUT(interp, interp->Global, s_window, &v, 0);
 }

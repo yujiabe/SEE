@@ -32,10 +32,31 @@ from standard input until EOF.
 
 The -c flag adds flags to the compatibility field of the interpreter.
 Each occurrence of the -c flag bitwise-ors its integer argument into the
-flag. This option should occur early.
+flag. The value may also be an identifier, optionally prefixed with 'no'.
+These identifiers are documented in detail in USAGE.html:
+
+    sgmlcom     - treat SGML comments in program text as normal comments
+    utf_unsafe  - pass through invalid UTF-8 characters without error
+    undefdef    - return undefined for unknown names instead of throwing
+    262_3b      - provide the optional functions in section 3B of standard
+    ext1        - enable local SEE extension set number 1
+
 
 NOTE: The command line arguments were chosen to be compatible with
 the perl script used with Mozilla/spidermonkey's test suite.
+
+The debug flags for -d only make sense if you are debugging the engine,
+although the trace option (-dT) can be useful. The flags are:
+
+    -dE         - debug the error constructors
+    -dT         - enable call tracing
+    -dc         - debug context and symbol scope operations
+    -de         - debug exception try/catch
+    -dl         - debug the lexical analysis stage
+    -dn         - debug the native object module interface
+    -dp         - debug the parsing stage
+    -dr         - debug regular expression processing
+    -dv         - debug the evaluation stage
 
 
 Shell-provided objects and functions

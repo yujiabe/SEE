@@ -45,7 +45,11 @@ static void debug(struct SEE_interpreter *, char);
 static void trace(struct SEE_interpreter *, struct SEE_throw_location *);
 static void run_html(struct SEE_interpreter *, char *);
 
-/* Enables the debugging flag given by c. */
+/* 
+ * Enables the debugging flag given by character c.
+ * This relies on the SEE library having been compiled with 
+ * debugging support (the default).
+ */
 static void
 debug(interp, c)
 	struct SEE_interpreter *interp;
@@ -58,22 +62,27 @@ debug(interp, c)
 	SEE_context_debug, SEE_regex_debug;
 
 	switch (c) {
-	case 'n': SEE_native_debug = 1; break;
 	case 'E': SEE_Error_debug = 1; break;
-	case 'l': SEE_lex_debug = 1; break;
-	case 'p': SEE_parse_debug = 1; break;
-	case 'v': SEE_eval_debug = 1; break;
-	case 'e': SEE_error_debug = 1; break;
-	case 'c': SEE_context_debug = 1; break;
-	case 'r': SEE_regex_debug = 1; break;
 	case 'T': interp->trace = trace; break;
+	case 'c': SEE_context_debug = 1; break;
+	case 'e': SEE_error_debug = 1; break;
+	case 'l': SEE_lex_debug = 1; break;
+	case 'n': SEE_native_debug = 1; break;
+	case 'p': SEE_parse_debug = 1; break;
+	case 'r': SEE_regex_debug = 1; break;
+	case 'v': SEE_eval_debug = 1; break;
 	default:
 		fprintf(stderr, "unknown debug flag '%c'", c);
 	}
 #endif
 }
 
-/* Trace function callback: just prints current location to stderr */
+/*
+ * Trace function callback: prints current location to stderr.
+ * This function is called when the -dT flag is given to enable
+ * tracing. It is called by the parser at each evaluation step in
+ * the program parse tree.
+ */
 static void
 trace(interp, loc)
 	struct SEE_interpreter *interp;
@@ -92,6 +101,12 @@ trace(interp, loc)
 /*
  * Runs the input given by inp, printing any exceptions
  * to stderr.
+ * This function first establishes a local exception catch context.
+ * Next, it passes the unicode input provider ('inp') to the generic
+ * evaluation procedure SEE_Global_eval which executes the program
+ * text in the ECMAScript global context. This function also examines
+ * the result of the evaluation, being careful to print out exceptions
+ * correctly.
  */
 static int
 run_input(interp, inp, res)
@@ -135,6 +150,8 @@ run_input(interp, inp, res)
 
 /*
  * Opens the file and runs the contents as if ECMAScript code.
+ * This function converts a local file into a unicode input stream,
+ * and then calls run_input() above.
  */
 static int
 run_file(interp, filename)
@@ -165,6 +182,7 @@ run_file(interp, filename)
 #if !HAVE_READLINE
 
 #if !HAVE_STRDUP
+/* Duplicates a string using dynamically allocated memory. */
 static char *
 strdup(s)
 	const char *s;
@@ -177,8 +195,8 @@ strdup(s)
 #endif /* !HAVE_STRDUP */
 
 /*
- * Reads a line of text from the user.
- * (A simple replacement for GNU readline)
+ * Reads a line of prompted text from the user.
+ * This is a simple replacement for GNU readline.
  */
 static char *
 readline(prompt)
@@ -202,7 +220,10 @@ readline(prompt)
 
 /*
  * Reads lines of ECMAscript from the user
- * and runs each one in the same interpreter.
+ * and runs each entered line in the one interpreter instance.
+ * This function implements the 'command-prompt' loop. Each line
+ * of text typed in is converted to a unicode input stream, and
+ * sent to the run_input() function above.
  */
 static void
 run_interactive(interp)
@@ -243,8 +264,17 @@ run_interactive(interp)
 	}
 }
 
+/* Convert a character to uppercase */
+#undef toupper
 #define toupper(c) 	(((c) >= 'a' && (c) <= 'z') ? (c)-'a'+'A' : (c))
 
+/*
+ * Runs script elements in a HTML file.
+ * This function opens a text file, assuming it to be HTML. It copies
+ * the HTML verbatim until it finds a <SCRIPT> tag. At that point, it
+ * reads and executes the text up to the closing </SCRIPT> tag. Further
+ * HTML text read is also copied to standard output.
+ */
 static void
 run_html(interp, filename)
 	struct SEE_interpreter *interp;
@@ -325,6 +355,13 @@ run_html(interp, filename)
 	fclose(f);
 }
 
+/*
+ * A dummy garbage collecting memory allocator.
+ * This allocator uses the non-reclaiming system allocator.
+ * This configuration is provided here for programs that wish to
+ * test the Simple ECMAScript Engine against a non-reclaiming
+ * memory allocator. All memory is released only when the process exits.
+ */
 static void *
 dummy_malloc(interp, sz)
 	struct SEE_interpreter *interp;
@@ -333,6 +370,7 @@ dummy_malloc(interp, sz)
 	return malloc(sz);
 }
 
+/* Initialise SEE to use a non-reclaiming memory allocator. */
 static void
 init_dummy_malloc()
 {
@@ -341,10 +379,21 @@ init_dummy_malloc()
 	SEE_mem_malloc_hook = dummy_malloc;
 }
 
-/* Convert a compatability flag name into an integer bit-flag */
+/*
+ * Convert a compatability flag name into an integer bit-flag.
+ * The following compatbility flags are understood (see the documentation
+ * for more details). They may be prefixed with 'no' to turn them off.
+ *
+ *  sgmlcom      - treat SGML comments in program text as normal comments
+ *  utf_unsafe   - pass through invalid UTF-8 characters without error
+ *  undefdef     - return undefined for unknown names instead of throwing
+ *  262_3b       - provide the optional functions in section 3B of standard
+ *  ext1         - enable local SEE extension set number 1
+ */
 static int
-compatvalue(name)
+compatvalue(name, compatibility)
 	const char *name;
+	int *compatibility;
 {
 	static struct { const char *name; int flag; } names[] = {
 		{ "sgmlcom",	SEE_COMPAT_SGMLCOM },
@@ -354,27 +403,31 @@ compatvalue(name)
 		{ "ext1",	SEE_COMPAT_EXT1 },
 	};
 	int i;
+	int no = 0;
+	int bit = 0;
 
-	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
-		if (strcmp(name, names[i].name) == 0)
-			return names[i].flag;
-	if (name[0] >= '0' && name[0] <= '9')
-		return atoi(name);
-	fprintf(stderr, "WARNING: unknown compatability flag '%s'\n", name);
-	return 0;
-}
-
-/* Initialise the interpreter if it hasn't been already */
-static void
-initinterp(interp, initializedp, compatibility)
-	struct SEE_interpreter *interp;
-	int *initializedp;
-	int compatibility;
-{
-	if (!*initializedp) {
-		SEE_interpreter_init_compat(interp, compatibility);
-		*initializedp = 1;
+	if (name[0] == 'n' && name[1] == 'o') {
+		name += 2;
+		no = 1;
 	}
+	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
+		if (strcmp(name, names[i].name) == 0) {
+			bit = names[i].flag;
+			break;
+		}
+	if (name[0] >= '0' && name[0] <= '9')
+		bit = atoi(name);
+	else if (bit == 0) {
+		fprintf(stderr, "WARNING: unknown compatability flag '%s'\n",
+		    name);
+		return -1;
+	}
+
+	if (no)
+		*compatibility &= ~bit;
+	else
+		*compatibility |= bit;
+	return 0;
 }
 
 int
@@ -387,23 +440,24 @@ main(argc, argv)
 	int do_interactive = 1;
 	int globals_added = 0;
 	int document_added = 0;
-	int initialised = 0;
 	int compatibility = 0;
 	char *s;
 
+	/* Initialise memory allocator only if default is not available */
 	if (SEE_mem_malloc_hook == NULL)
 		init_dummy_malloc();
 
+	/* Initialise the shell's global strings */
 	shell_strings();
+
+	/* Initialise our interpreter */
 	SEE_interpreter_init(&interp);
 
-	while ((ch = getopt(argc, argv, "c:d:f:h:")) != -1)
+	while (!error && (ch = getopt(argc, argv, "c:d:f:h:")) != -1)
 	    switch (ch) {
 	    case 'c':
-		if (initialised)
-		    fprintf(stderr, "late -c flag ignored\n");
-		else
-		    compatibility |= compatvalue(optarg);
+		if (compatvalue(optarg, &compatibility) == -1)
+		    error = 1;
 		break;
 	    case 'd':
 		if (*optarg == '*')
@@ -412,7 +466,6 @@ main(argc, argv)
 		    debug(&interp, *s);
 		break;
 	    case 'f':
-		initinterp(&interp, &initialised, compatibility);
 		if (!globals_added) {
 		    shell_add_globals(&interp);
 		    globals_added = 1;
@@ -422,7 +475,6 @@ main(argc, argv)
 			exit(1);
 		break;
 	    case 'h':
-		initinterp(&interp, &initialised, compatibility);
 		interp.compatibility |= SEE_COMPAT_SGMLCOM;
 		if (!document_added) {
 		    shell_add_document(&interp);
@@ -440,13 +492,12 @@ main(argc, argv)
 	    error = 1;
 
 	if (error) {
-	    fprintf(stderr, "usage: %s [-c flag] [-d[nElpvecr]] "
+	    fprintf(stderr, "usage: %s [-c flag] [-d[ETcelnprv]] "
 				      "[-f file] [-h file]\n", argv[0]);
 	    exit(1);
 	}
 
 	if (do_interactive) {
-	    initinterp(&interp, &initialised, compatibility);
 	    if (!globals_added)
 		shell_add_globals(&interp);
 	    run_interactive(&interp);
