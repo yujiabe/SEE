@@ -11,9 +11,8 @@
                    position: relative; 
                    left: 10%; 
 		   width: 80%; }
-        table    { border: thin solid black;
-                   border-collapse: collapse;
-                   }
+        table    { border-collapse: collapse; }
+        table tr { border: thin solid black; }
         table th { background: #f0f0f0;
                    border-bottom: thin solid black; }
         table th, table td { 
@@ -117,7 +116,7 @@ Internet Explorer 3.0.
 <p>
 SEE [almost] fully complies with ECMAScript Edition 3,
 and to JavaScript 1.5.
-It has "compatibility modes" that allow it to run scripts
+It has compatibility modes that allow it to run scripts
 developed under earlier versions of JavaScript, Microsoft's JScript and
 LiveScript.
 </p>
@@ -155,7 +154,7 @@ write host function objects.
 <h3 id="type">Document conventions</h3>
 
 <p>
-I will use the phrase "host application" to mean your application, or
+I will use the phrase <q>host application</q> to mean your application, or
 any application that uses the SEE runtime environment auxillary to
 some primary purpose.
 Examples of a host application are web browsers and
@@ -202,6 +201,11 @@ are available, and also to determine other system-dependent
 properties. 
 Host applications should <code>#include &lt;see/see.h&gt;</code> to
 access all the macros and functions prototypes.
+</p>
+
+<p class="note">
+&#9888; Note:
+A future release of SEE will use IBM's ICU library for Unicode support.
 </p>
 
 <p>
@@ -409,7 +413,7 @@ become memory leaks or introduce too much fragile 'finaly' code.
 circular references between constructor functions and instances,
 and with recursive function scope chains.
 A reference counting scheme would leak these.
-<li> A decent garbage collectors for C is freely available (and some
+<li> A decent garbage collector for C is freely available (and some
 good commercial ones exist, too).
 They do nothing to impede development.
 They can often be tuned to meet your 
@@ -825,9 +829,11 @@ The following table shows which union fields of <code>v.u</code> are valid when:
 </thead>
 <tbody>
 <tr>    <td><code>SEE_UNDEFINED</code></td>
-        <td>n/a</td>                                    </tr>
+        <td>n/a</td>
+	<td></td>					</tr>
 <tr>    <td><code>SEE_NULL</code></td>
-        <td>n/a</td>                                    </tr>
+        <td>n/a</td>
+	<td></td>					</tr>
 <tr>    <td><code>SEE_BOOLEAN</code></td>
         <td><code>v.u.boolean</code></td>
         <td><code>SEE_boolean_t</code></td>             </tr>
@@ -1462,12 +1468,13 @@ provides the object's behaviour. The class structure looks like this:
 <p>
 The application generally provides this structure in static storage, as
 most of its members are function pointers or strings known at compile time.
-A member marked "optional" should be set to <code>NULL</code> if it is
+A member marked <i>optional</i> should be set to <code>NULL</code> if it is
 meaningless.
 </p>
 
 <p>
-The "mandatory" object methods (<code>Get</code>, <code>Put</code>, etc.)
+The object methods marked <i>mandatory</i>
+(<code>Get</code>, <code>Put</code>, etc.)
 are never <code>NULL</code>, and should provide the precise behaviours 
 that SEE expects on native objects.
 These behaviours are fully described in the 
@@ -1888,7 +1895,8 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	property will return an object-unique string, instead of throwing
 	a <code class="js">TypeError</code>.
 
-<li>	the string representation of a bad date will return the string
+<li>	the string representation of a bad date 
+	(i.e. '<code class="js">new Date(NaN)</code>') will return the string
 	'<code class="js">Invalid Date</code>',
 	instead of '<code class="js">NaN</code>'.
 
@@ -1913,10 +1921,10 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	work anywhere.
 
 <li>	Calling <code class="js">eval()</code> with a 
-	<code class="js">this</code> different to the global object runs
-	its contents with the scope and variable object set to
+	<code class="js">this</code> different to the global object executes
+	its contents with the scope and variable object always set to
 	<code class="js">this</code>
-	(instead of inheriting the caller's context).
+	(instead of inheriting the caller's context as per the standard).
 
 <li>	Native objects synthesize a property called
 	<code class="js">__proto__</code> with the same
