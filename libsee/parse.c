@@ -359,7 +359,7 @@ static void print_hex(struct printer *printer, int i);
 
 # define EVAL(n, ctxt, res)				\
     do {						\
-	struct SEE_throw_location * _loc_save;		\
+	struct SEE_throw_location * _loc_save = NULL;	\
 	if (SEE_eval_debug) 				\
 	    fprintf(stderr, "eval: %s enter %p\n", 	\
 		__FUNCTION__, n);			\
@@ -390,7 +390,7 @@ static void print_hex(struct printer *printer, int i);
 
 # define EVAL(n, ctxt, res)				\
     do {						\
-	struct SEE_throw_location * _loc_save;		\
+	struct SEE_throw_location * _loc_save = NULL;	\
 	if (ctxt) {					\
 	  _loc_save = (ctxt)->interpreter->try_location;\
 	  (ctxt)->interpreter->try_location =		\
@@ -455,6 +455,11 @@ static void print_hex(struct printer *printer, int i);
 #define PRINT_CSTRING(s)(*printer->printerclass->print_cstring)(printer, s)
 #define PRINT_CHAR(c)	(*printer->printerclass->print_char)(printer, c)
 #define PRINT_NEWLINE(i)(*printer->printerclass->print_newline)(printer, i)
+#define PRINTP(n) do {					\
+	PRINT_CHAR('(');				\
+	PRINT(n);					\
+	PRINT_CHAR(')');				\
+    } while (0)
 
 /*
  * Visitor
@@ -1663,7 +1668,7 @@ Arguments_print(n, printer)
 			PRINT_CHAR(',');
 			PRINT_CHAR(' ');
 		}
-		PRINT(arg->expr);
+		PRINTP(arg->expr);
 	}
 	PRINT_CHAR(')');
 }
@@ -1749,7 +1754,7 @@ MemberExpression_new_print(n, printer)
 {
 	PRINT_STRING(STR(new));
 	PRINT_CHAR(' ');
-	PRINT(n->mexp);
+	PRINTP(n->mexp);
 	if (n->args)
 		PRINT((struct node *)n->args);
 }
@@ -1797,7 +1802,7 @@ MemberExpression_dot_print(n, printer)
 	struct MemberExpression_dot_node *n;
 	struct printer *printer;
 {
-	PRINT(n->mexp);
+	PRINTP(n->mexp);
 	PRINT_CHAR('.');
 	PRINT_STRING(n->name);
 	PRINT_CHAR(' ');
@@ -1846,7 +1851,7 @@ MemberExpression_bracket_print(n, printer)
 	struct MemberExpression_bracket_node *n;
 	struct printer *printer;
 {
-	PRINT(n->mexp);
+	PRINTP(n->mexp);
 	PRINT_CHAR('[');
 	PRINT(n->name);
 	PRINT_CHAR(']');
@@ -1989,7 +1994,7 @@ CallExpression_print(n, printer)
 	struct CallExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->exp);
+	PRINTP(n->exp);
 	PRINT((struct node *)n->args);
 }
 
@@ -2124,7 +2129,7 @@ PostfixExpression_inc_print(n, printer)
 	struct Unary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('+');
 	PRINT_CHAR('+');
 	PRINT_CHAR(' ');
@@ -2156,7 +2161,7 @@ PostfixExpression_dec_print(n, printer)
 	struct Unary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('-');
 	PRINT_CHAR('-');
 	PRINT_CHAR(' ');
@@ -2239,7 +2244,7 @@ UnaryExpression_delete_print(n, printer)
 {
 	PRINT_STRING(STR(delete));
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_delete_nodeclass
@@ -2268,7 +2273,7 @@ UnaryExpression_void_print(n, printer)
 {
 	PRINT_STRING(STR(void));
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_void_nodeclass
@@ -2312,7 +2317,7 @@ UnaryExpression_typeof_print(n, printer)
 {
 	PRINT_STRING(STR(typeof));
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_typeof_nodeclass
@@ -2343,7 +2348,7 @@ UnaryExpression_preinc_print(n, printer)
 	PRINT_CHAR('+');
 	PRINT_CHAR('+');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_preinc_nodeclass
@@ -2375,7 +2380,7 @@ UnaryExpression_predec_print(n, printer)
 	PRINT_CHAR('-');
 	PRINT_CHAR('-');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_predec_nodeclass
@@ -2404,7 +2409,7 @@ UnaryExpression_plus_print(n, printer)
 {
 	PRINT_CHAR('+');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_plus_nodeclass
@@ -2434,7 +2439,7 @@ UnaryExpression_minus_print(n, printer)
 {
 	PRINT_CHAR('-');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_minus_nodeclass
@@ -2464,7 +2469,7 @@ UnaryExpression_inv_print(n, printer)
 {
 	PRINT_CHAR('~');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_inv_nodeclass
@@ -2494,7 +2499,7 @@ UnaryExpression_not_print(n, printer)
 {
 	PRINT_CHAR('!');
 	PRINT_CHAR(' ');
-	PRINT(n->a);
+	PRINTP(n->a);
 }
 
 static struct nodeclass UnaryExpression_not_nodeclass
@@ -2615,10 +2620,10 @@ MultiplicativeExpression_mul_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('*');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass MultiplicativeExpression_mul_nodeclass
@@ -2661,10 +2666,10 @@ MultiplicativeExpression_div_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('/');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass MultiplicativeExpression_div_nodeclass
@@ -2707,10 +2712,10 @@ MultiplicativeExpression_mod_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('%');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass MultiplicativeExpression_mod_nodeclass
@@ -2809,10 +2814,10 @@ AdditiveExpression_add_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('+');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass AdditiveExpression_add_nodeclass
@@ -2855,10 +2860,10 @@ AdditiveExpression_sub_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('-');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass AdditiveExpression_sub_nodeclass
@@ -2943,11 +2948,11 @@ ShiftExpression_lshift_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('<');
 	PRINT_CHAR('<');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass ShiftExpression_lshift_nodeclass
@@ -2991,11 +2996,11 @@ ShiftExpression_rshift_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass ShiftExpression_rshift_nodeclass
@@ -3038,12 +3043,12 @@ ShiftExpression_urshift_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass ShiftExpression_urshift_nodeclass
@@ -3182,10 +3187,10 @@ RelationalExpression_lt_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('<');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_lt_nodeclass
@@ -3217,10 +3222,10 @@ RelationalExpression_gt_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('>');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_gt_nodeclass
@@ -3254,11 +3259,11 @@ RelationalExpression_le_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('<');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_le_nodeclass
@@ -3292,11 +3297,11 @@ RelationalExpression_ge_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('>');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_ge_nodeclass
@@ -3335,10 +3340,10 @@ RelationalExpression_instanceof_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_STRING(STR(instanceof));
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_instanceof_nodeclass
@@ -3375,10 +3380,10 @@ RelationalExpression_in_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_STRING(STR(in));
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass RelationalExpression_in_nodeclass
@@ -3574,11 +3579,11 @@ EqualityExpression_eq_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('=');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass EqualityExpression_eq_nodeclass
@@ -3607,11 +3612,11 @@ EqualityExpression_ne_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('!');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass EqualityExpression_ne_nodeclass
@@ -3639,12 +3644,12 @@ EqualityExpression_seq_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('=');
 	PRINT_CHAR('=');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass EqualityExpression_seq_nodeclass
@@ -3673,12 +3678,12 @@ EqualityExpression_sne_print(n, printer)
 	struct printer *printer;
 	struct Binary_node *n;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('!');
 	PRINT_CHAR('=');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass EqualityExpression_sne_nodeclass
@@ -3771,10 +3776,10 @@ BitwiseANDExpression_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('&');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass BitwiseANDExpression_nodeclass
@@ -3848,10 +3853,10 @@ BitwiseXORExpression_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('^');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass BitwiseXORExpression_nodeclass
@@ -3925,10 +3930,10 @@ BitwiseORExpression_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('|');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static struct nodeclass BitwiseORExpression_nodeclass
@@ -3991,11 +3996,11 @@ LogicalANDExpression_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('&');
 	PRINT_CHAR('&');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static int
@@ -4071,11 +4076,11 @@ LogicalORExpression_print(n, printer)
 	struct Binary_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('|');
 	PRINT_CHAR('|');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 }
 
 static int
@@ -4159,13 +4164,13 @@ ConditionalExpression_print(n, printer)
 	struct ConditionalExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->a);
+	PRINTP(n->a);
 	PRINT_CHAR('?');
 	PRINT_CHAR(' ');
-	PRINT(n->b);
+	PRINTP(n->b);
 	PRINT_CHAR(':');
 	PRINT_CHAR(' ');
-	PRINT(n->c);
+	PRINTP(n->c);
 }
 
 static void
@@ -4285,10 +4290,10 @@ AssignmentExpression_simple_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_simple_nodeclass
@@ -4317,11 +4322,11 @@ AssignmentExpression_muleq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('*');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_muleq_nodeclass
@@ -4350,11 +4355,11 @@ AssignmentExpression_diveq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('/');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_diveq_nodeclass
@@ -4383,11 +4388,11 @@ AssignmentExpression_modeq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('%');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_modeq_nodeclass
@@ -4416,11 +4421,11 @@ AssignmentExpression_addeq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('+');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_addeq_nodeclass
@@ -4449,11 +4454,11 @@ AssignmentExpression_subeq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('-');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_subeq_nodeclass
@@ -4482,12 +4487,12 @@ AssignmentExpression_lshifteq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('<');
 	PRINT_CHAR('<');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_lshifteq_nodeclass
@@ -4516,12 +4521,12 @@ AssignmentExpression_rshifteq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_rshifteq_nodeclass
@@ -4550,13 +4555,13 @@ AssignmentExpression_urshifteq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR('>');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_urshifteq_nodeclass
@@ -4585,11 +4590,11 @@ AssignmentExpression_andeq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('&');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_andeq_nodeclass
@@ -4618,11 +4623,11 @@ AssignmentExpression_xoreq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('^');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_xoreq_nodeclass
@@ -4651,11 +4656,11 @@ AssignmentExpression_oreq_print(n, printer)
 	struct AssignmentExpression_node *n;
 	struct printer *printer;
 {
-	PRINT(n->lhs);
+	PRINTP(n->lhs);
 	PRINT_CHAR('|');
 	PRINT_CHAR('=');
 	PRINT_CHAR(' ');
-	PRINT(n->expr);
+	PRINTP(n->expr);
 }
 
 static struct nodeclass AssignmentExpression_oreq_nodeclass
