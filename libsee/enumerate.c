@@ -36,6 +36,10 @@
 # include <see/config.h>
 #endif
 
+#if HAVE_STDC_HEADERS
+# include <stdlib.h>
+#endif
+
 #include <see/string.h>
 #include <see/object.h>
 #include <see/mem.h>
