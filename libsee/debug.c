@@ -46,6 +46,7 @@
 #include <see/string.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+#include "function.h"
 
 /*
  * Print the contents of a value, without raising an exception
@@ -212,5 +213,46 @@ SEE_PrintString(interp, s, f)
 		    s->flags & SEE_STRING_FLAG_INTERNED ? "i" : "",
 		    s->flags & SEE_STRING_FLAG_STATIC ? "s" : "",
 		    s);
+	}
+}
+
+void
+SEE_PrintTraceback(interp, f)
+	struct SEE_interpreter *interp;
+	FILE *f;
+{
+	struct SEE_traceback *tb;
+	struct SEE_string *locstr, *fname;
+	struct SEE_object *fo;
+
+	if (!interp->traceback)
+		return;
+	fprintf(f, "traceback:\n");
+	for (tb = interp->traceback; tb; tb = tb->prev) {
+		locstr = SEE_location_string(interp, tb->call_location);
+		fprintf(f, "\t");
+		SEE_string_fputs(locstr, f);
+		fo = tb->callee;
+		if (fo == NULL)
+		    fprintf(f, "?");
+		else if (tb->call_type == SEE_CALLTYPE_CONSTRUCT) {
+		    fprintf(f, "new ");
+		    if (fo->objectclass->Class != NULL)
+			SEE_string_fputs(fo->objectclass->Class, f);
+		    else
+			fprintf(f, "?");
+		} else if (tb->call_type == SEE_CALLTYPE_CALL) {
+		    fprintf(f, "call ");
+		   /* if (fo == interp->Global_eval)
+			fprintf(f, "eval()");
+		    else */
+		    if ((fname = SEE_function_getname(interp, fo))) {
+		        SEE_string_fputs(fname, f); 
+			fprintf(f, "()");
+		    } else 
+		        fprintf(f, "<anonymous function>");
+		} else
+		    SEE_PrintObject(interp, fo, f);
+		fprintf(f, "\n");
 	}
 }
