@@ -345,7 +345,11 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 			    SEE_number_t d;
 			    nf *= radix;
 			    if (i == MAXPREC - 1) {
+#if HAVE_RINT
 				    d = rint(nf);
+#else /* !HAVE_RINT */
+				    d = floor(nf + 0.5);
+#endif /* !HAVE_RINT */
 			    } else {
 				    d = floor(nf);
 				    nf -= d;
