@@ -75,37 +75,38 @@ files to find the precise definitions and arguments of each function or macro.
 <h2 id="toc">Table of contents</h2>
 
 <ul class="toc">
-<li><a href="#req">Requirements</a>
-<li><a href="#interp">Creating interpreters</a>
-<li><a href="#mem">Memory management</a>
+<li><a href="#req">1 Requirements</a>
+<li><a href="#interp">2 Creating interpreters</a>
+<li><a href="#mem">3 Memory management</a>
  <ul>
- <li><a href="#mem2">On memory allocators</a>
+ <li><a href="#mem2">3.1 On memory allocators</a>
  </ul>
-<li><a href="#eval">Running programs</a>
+<li><a href="#eval">4 Running programs</a>
  <ul>
- <li><a href="#input">Inputs</a>
- <li><a href="#try">Try-catch contexts</a>
+ <li><a href="#input">4.1 Inputs</a>
+ <li><a href="#try">4.2 Try-catch contexts</a>
  </ul>
-<li><a href="#value">Values</a>
+<li><a href="#value">5 Values</a>
  <ul>
- <li><a href="#conversion">Value conversion</a>
- <li><a href="#undef">Undefined, null, boolean and number values</a>
- <li><a href="#string">String values</a>
+ <li><a href="#conversion">5.1 Value conversion</a>
+ <li><a href="#undef">5.2 Undefined, null, boolean and number values</a>
+ <li><a href="#string">5.3 String values</a>
  </ul>
-<li><a href="#object">Objects</a>
+<li><a href="#object">6 Objects</a>
  <ul>
- <li><a href="#objclient">Object values, and the object client interface</a>
- <li><a href="#objimpl">The object implementation interface</a>
- <li><a href="#native">Native objects</a>
- <li><a href="#cfunction">C Function objects</a>
- <li><a href="#function">User function objects</a>
- <li><a href="#error">Errors and Error objects</a>
+ <li><a href="#objclient">6.1 Object values, and the object client interface</a>
+ <li><a href="#enum">6.2 Property enumerators</a>
+ <li><a href="#objimpl">6.3 The object implementation interface</a>
+ <li><a href="#native">6.4 Native objects</a>
+ <li><a href="#cfunction">6.5 C function objects</a>
+ <li><a href="#function">6.6 User function objects</a>
+ <li><a href="#error">6.7 Errors and Error objects</a>
  </ul>
- <li><a href="#debug">Debugging facilities</a>
+ <li><a href="#debug">7 Debugging facilities</a>
  <li><a href="#ref">References</a>
 </ul>
 
-<h2 id="req">Requirements</h2>
+<h2 id="req">1 Requirements</h2>
 
 <p>
 SEE is written completely in ANSI C.
@@ -116,9 +117,9 @@ Although SEE is essentially self-contained, it does depend on you
       Most modern compilers have this, but if you are developing
       for some old, obscure architecture, you should check.
  <li> <strong>a garbage-collecting memory allocator</strong>
-      The free Boehm gc is highly recommended. See the
-      <a href="#ref">references</a> for how to get it, and also
-      see the section on <a href="#mem">memory management</a>.
+      The free Boehm gc is highly recommended
+      (See <a href="#mem">&sect;3.1</a> and the
+      <a href="#ref">references</a>).
 </ul>
 </p>
 
@@ -131,21 +132,27 @@ access all the macros and functions prototypes.
 </p>
 
 <p>
-(The developer may find they need to edit the header files to make
-SEE work for their system. I would be interested in hearing what
+(As a developer you may find the need to edit the header and configure
+files to make SEE compile on your system. I would be interested in hearing what
 changes were needed so that future releases can supply this automatically
-for other users.)
+for other users. Please send mail to <a href="mailto:leonard&#64;users.sourceforge.net.nospam">leonard&#64;users.sourceforge.net.nospam</a>.)
 </p>
 
-<h2 id="interp">Creating interpreters</h2>
+<h2 id="interp">2 Creating interpreters</h2>
 
 <p>
-The first step in running an ECMAScript program with SEE is to create
-an <em>interpreter</em> instance. 
+The first step in executing ECMAScript program text with SEE is to create
+yourself an <em>interpreter</em> instance. 
 First, allocate storage for a 
 <code>struct SEE_interpreter</code> and then call
 <code>SEE_interpreter_init()</code> to initialise it.
 </p>
+
+<pre>
+	struct SEE_interpreter interp_storage;
+
+	SEE_interpreter_init(&interp_storage);
+</pre>
 
 <p>
 A pointer to your initialised <code>SEE_interpreter</code> structure 
@@ -153,22 +160,29 @@ is required for almost every function that SEE provides.
 </p>
 
 <p>
-SEE supports multiple interpreter instances. For example, in HTML web 
-browsers, each window needs its own interpreter instance as the variables
+SEE supports multiple independent interpreter instances.
+For example, in an HTML web browser application, each window may
+need its own interpreter instance because the variables
 and bindings to built-in objects can be different and separate in each one.
 </p>
 
 <p>
-SEE does not support the sharing of object instances across interpreter
-instances. SEE's functions are not thread-safe, but if the memory allocator 
-is thread-safe then separate threads can use separate interpreters 
-without conflict: SEE treats its static storage as read-only.
+SEE's functions are not thread-safe,
+but multiple interpreters can be run in separate threads.
+Interpreters will remain
+completely independent of each other if you
+<ul>
+<li>never pass an object or mutable string reference from one interpreter 
+    to the other, and
+<li>use a thread-safe (or interpreter-dependent) memory allocator.
+</ul>
 </p>
 
 <p>
-There is no mechanism for explicitly deallocating an initialised
-interpreter; instead, SEE expects the garbage collector to reclaim all
-unreferenced storage.
+There is no mechanism for explicitly destroying an initialised
+interpreter; instead, SEE relies on the garbage collector to reclaim all
+unreferenced storage. If you want finalization semantics, you will
+need to arrange that yourself.
 </p>
 
 <p>
@@ -180,9 +194,10 @@ global variable initially points to a function that calls
 the C library function <code>abort()</code>.
 </p>
 
-<h2 id="mem">Memory management</h2>
+<h2 id="mem">3 Memory management</h2>
 
 <p>
+SEE expects a garbage collecting memory allocator.
 It is strongly recommended that the host application use the same memory 
 management as SEE. SEE provides 'hook' function pointers that the host 
 application can initialise for this purpose. These pointers must be set up 
@@ -190,7 +205,8 @@ before any interpreter instances are created.
 </p>
 
 <p>
-SEE manages memory by calling the following function pointers:
+SEE manages memory by calling through the following function pointers,
+that you can change:
 </p>
 
 <pre>
@@ -203,25 +219,32 @@ SEE manages memory by calling the following function pointers:
 If SEE was compiled with Boehm-gc support, these hooks are initialised to
 wrappers around the <code>GC_malloc()</code> and 
 <code>GC_free()</code> functions. 
-Otherwise, the application must initialise them.
-(If you intend to implement these, be aware that they may be called
-with a NULL argument, indicating unknown context.)
+Otherwise, they are <code>NULL</code> and your application must 
+initialise them.
 </p>
 
 <p>
-If SEE detects a memory allocation function returning NULL, it will call the
-function pointer <code>SEE_mem_exhausted_hook</code>, which defaults 
-to a function that calls <code>SEE_abort</code>.
+If you intend to implement your own allocator, be aware that all of
+these hooks may be called with a NULL argument, indicating unknown context.
+They must not throw exceptions.
 </p>
 
 <p>
-Currently, SEE never uses <code>SEE_mem_free_hook</code>,
+If SEE detects a memory allocation function returning NULL, it will 
+interpret this as an out-of-memory condition and call the
+function pointer <code>SEE_mem_exhausted_hook</code>. It defaults 
+to a function that simply calls <code>SEE_abort</code>. 
+Your application may prefer to handle this more gracefully.
+</p>
+
+<p>
+Currently, SEE never calls <code>SEE_mem_free_hook</code>,
 although future versions may use it.
 It may be safely left at its default value, NULL.
 </p>
 
 <p>
-SEE provides three convenient macros for allocating storage. They are:
+Three convenient macros allocate storage. They are:
 <ul>
 <li><code>SEE_NEW(interp, type)</code> 
 	- allocate structure storage returning a pointer of type 
@@ -233,57 +256,55 @@ SEE provides three convenient macros for allocating storage. They are:
 	- allocate an array of element storage on the stack returning a 
 	  pointer of type <code>type *</code>
 </ul>
+It is worth familiarizing yourself with the macro definitions to
+see what they do.
 </p>
 
-<h3 id="mem2">On memory allocators</h3>
+<h3 id="mem2">3.1 On memory allocators</h3>
 
 <p>
-Memory allocators can be controversial; as a developer you will understand
-your application's memory requirments and limitations better than anyone.
-Developers not familiar with garbage collectors are often concerned that
-using them in their application will result in something somehow substandard.
-This section tries to address that concern.
-</p>
-
-<p>
-SEE was designed for use with a garbage
-collector, partly because the ECMAScript language specification implies it,
-but mainly because using an alternative
-(strict) memory allocator would overly penalize the
-development time, run-time performance and code size of the library
-(and consequently of the host application). A range of very good, sometimes
-freely available garbage-collecting allocators exist for the C language
-on a wide range of platforms. Arguments can be made that garbage collecting
-allocators have much improved runtime performance and overhead than any 
-scheme that manage storage explicitly.
+Why is SEE so dependent on a garbage collector?
+Why doesn't it use reference counting?
 </p>
 
 <p>
-That said, it would be a straightforward (albeit tedious) exercise to 
-convert most of SEE to use (say) a reference-counting memory allocator: all 
-functions would need to handle exceptions, so as to explicitly deallocate 
-acquired references and dispose of temporary values on the stack; the 
-<code>SEE_string</code> management code would need to carefully track 
-segment sharing; and careful management would be required to handle
-the unavoidable reference cycles involving object constructors and their
-prototype objects, as well as cycles occuring in recursive function scope 
-chains. This is not trivial. Using a garbage collecting allocator is heaps
-easier!
+I justify SEE's reliance on a garbage collector with the following:
+<ul>
+<li> Using an alternative
+(strict) memory allocator would have significantly increased the
+development time, run-time performance and code size of the library,
+and so too that of the host application. 
+<li> Exceptions (<a href="#try">&sect;4.2</a>)
+could not have been implemented easily with
+<code>longjmp()</code>, because references on the stack would be lost.
+<li> The object-prototype model of ECMAScript results in plenty of
+circular references between constructor functions and instances,
+and with recursive function scope chains.
+A reference counting scheme would leak these.
+<li> Decent garbage collectors for C are freely available (and some
+good commercial ones exists, too).
+</ul>
 </p>
 
-<h2 id="eval">Running programs</h2>
+<h2 id="eval">4 Running programs</h2>
 
 <p>
-The general strategy for invoking ECMAScript program text is as follows:
+You should execute ECMAScript program text using the following general
+strategy:
 <ol>
- <li> obtain an initialised <code>SEE_interpreter</code> structure;
- <li> construct a <code>SEE_input</code> stream that can transport the 
-      ECMAScript program text to SEE;
- <li> establish a try-catch context;
+ <li> obtain a reference to an (initialised) <code>SEE_interpreter</code>
+	(<a href="#interp">&sect;2</a>);
+ <li> construct a <code>SEE_input</code> character stream to transport the 
+      ECMAScript program text to SEE
+	(<a href="#input">&sect;4.1</a>);
+ <li> establish a try-catch context
+	(<a href="#try">&sect;4.2</a>);
  <li> call the function <code>SEE_Global_eval()</code> to parse and
       evaluate the stream;
- <li> handle any exceptions caught in the try-catch context;
+ <li> handle any exceptions caught in the try-catch context
+	(<a href="#try">&sect;4.2</a>);
  <li> optionally examine the value result returned
+	(<a href="#value">&sect;5</a>);
 </ol>
 </p>
 
@@ -295,7 +316,7 @@ value result return pointer given to <code>SEE_Global_eval()</code> may be
 safely given as NULL.
 </p>
 
-<h3 id="input">Inputs</h3>
+<h3 id="input">4.1 Inputs</h3>
 
 <p>
 SEE uses 'inputs' as character stream sources to scan and parse ECMAScript 
@@ -416,7 +437,7 @@ constructors suitable for their own application, based on these examples.
 </p>
 
 
-<h3 id="try">Try-catch contexts</h3>
+<h3 id="try">4.2 Try-catch contexts</h3>
 
 <p>
 SEE's exceptions are implemented using C's 
@@ -490,7 +511,7 @@ If you are not interested in catching exceptions, and only want the
 	<b>SEE_DEFAULT_CATCH</b>(interp, c);
 </pre>
 
-<h2 id="value">Values</h2>
+<h2 id="value">5 Values</h2>
 
 <p>
 Eventually, the host application will need to pass numbers, strings and 
@@ -607,7 +628,7 @@ by instead following the better-known idiom of <code>memcpy()</code>, and
 placing the destination first.
 </p>
 
-<h3 id="conversion">Value conversion</h3>
+<h3 id="conversion">5.1 Value conversion</h3>
 
 <p>
 The ECMAScript language specification provides for conversion functions
@@ -636,7 +657,7 @@ into values of a known type:
 </ul>
 </p>
 
-<h3 id="undef">Undefined, null, boolean and number values</h3>
+<h3 id="undef">5.2 Undefined, null, boolean and number values</h3>
 
 <p>
 The undefined and null types have exactly one implied value each, namely
@@ -686,7 +707,7 @@ for integers:
 </ul>
 </p>
 
-<h3 id="string">String values</h3>
+<h3 id="string">5.3 String values</h3>
 
 <p>
 String values are pointers to SEE_string structures, that hold UTF-16 strings.
@@ -759,8 +780,9 @@ modified, and the garbage collector can cope with it.
 All strings in SEE use UTF-16 encoding, meaning that in some cases
 you may need to be aware of Unicode surrogate characters. If the host
 application really needs (say) UCS-4 strings, you will need to write your
-own conversion function. (I suggest using the implementation of 
-<code>SEE_input_string()</code> as the basis for such a converter).
+own conversion function. Use the implementation of 
+<code>SEE_input_string()</code> (<a href="#input">&sect;4.1</a>) as 
+the basis for such a converter.
 </p>
 
 <p>
@@ -795,12 +817,13 @@ so it is worth using over <code>SEE_string_cmp()</code> if the strings
 are likely to be intern'ed already. (Most property names are.)
 </p>
 
-<h2 id="object">Objects</h2>
+<h2 id="object">6 Objects</h2>
 
 <p>
 ECMAScript uses a prototype-inheritance object model with simple named
 properties. More information on the object model can be found in the 
 ECMA-262 standard, and in other JavaScript references.
+(See <a href="#ref">references</a>.)
 </p>
 
 <p>
@@ -815,7 +838,7 @@ can use to make their own objects visible (the 'implementation interface').
 </p>
 
 
-<h3 id="objclient">Object values, and the object client interface</h3>
+<h3 id="objclient">6.1 Object values, and the object client interface</h3>
 
 <p>
 All object values are pointers to object instances. The pointers are of type
@@ -892,15 +915,23 @@ flags can be used:
 </tbody>
 </table>
 
+<h2 id="enum">6.2 Property enumerators</h2>
+
 <p>
-A property enumerator is a pointer to a <code>struct SEE_enum</code>,
-that allows sequential access to the (enumerable) properties of the object. 
-The order of the enumeration is not guaranteed to be sorted, or even to 
-be the same each time. Once a pointer to a <code>struct SEE_enum</code>
-is obtained, the following macros can be used to allow access it:
+A property enumerator is a mechanism for discovering the properties that
+an object contains. The language needs this to implement the
+<code>for(var v in ...)</code> construct.
+The results of the enumeration need not be guaranteed to be sorted, or even
+to be the same order each time. 
+</p>
+
+<p>
+An object's Enumerator method returns an <i>enumerator</i> which is a
+pointer to a <code>struct SEE_enum</code>.
+Once obtained, the following macros can be used to access it:
 <ul>
  <li><code>SEE_ENUM_NEXT()</code>
-	- return a pointer to a property name, or NULL 
+	- return a pointer to a property name string, or NULL 
           when the properties have been exhausted.
  <li><code>SEE_ENUM_RESET()</code>
 	- rewind the enumerator to the start again
@@ -908,14 +939,14 @@ is obtained, the following macros can be used to allow access it:
 </p>
 
 <p>
-Enumerators will become unstable if the properties of the underlying
-object change during enumeration. The recommended strategy is to create your
-own private list of property names and discard the enumerator before 
-attempting to modify the object.
+Enumerators can become unstable if the properties of the underlying
+object change during enumeration. A suggested strategy for the caller
+is to create a private list of the desired property names and discard 
+the enumerator before attempting to modify the object.
 </p>
 
 
-<h3 id="objimpl">The object implementation interface</h3>
+<h3 id="objimpl">6.3 The object implementation interface</h3>
 
 <p>
 A host application usually wishes to expose its own objects to the
@@ -946,13 +977,16 @@ state. For example, <code class=js>Number</code> objects could be defined as:
 </pre>
 
 <p>
-and pointers to a <code>struct number_object</code> can be cast to 
+Keeping the <code>object</code> part at the top of the 
+<code>number_object</code>structure means that pointers of type
+<code>struct number_object *</code> can be easily cast to and from
 <code>struct SEE_object *</code>.
 </p>
 
 <p>
-The <code>objectclass</code> field of a <code>struct SEE_object</code> 
-points to a <code>struct SEE_objectclass</code>:
+The <code>object.objectclass</code> field must be initialised to
+point to a <code>struct SEE_objectclass</code> that provides the
+object's behaviour:
 </p>
 
 <pre>
@@ -972,19 +1006,21 @@ points to a <code>struct SEE_objectclass</code>:
 </pre>
 
 <p>
-The members of this structure are function pointers.
-Use the various <code>SEE_OBJECT_*</code> convenience macros to call them.
-A member marked "optional" may be set to NULL, in which case
-a sensible default action is taken.
+The members of the class structure are all function pointers.
+Instead of dereferencing these to call them,
+use the various <code>SEE_OBJECT_*</code> convenience macros.
+A member marked "optional" above may be set to NULL, in which case
+SEE takes a sensible default action.
 </p>
 
 <p>
-The host application typically constructs one instance of a 
-<code>SEE_objectclass</code>, and provides implementations for the 
-mandatory object methods <code>Get</code>, <code>Put</code>, etc.
-SEE expects a precise behaviour from these methods.
-The behaviours are fully described in the 
-ECMA-262 standard, but can be summarised as follows:
+The host application typically supplies a static instance of an 
+<code>SEE_objectclass</code> for each kind of special object that
+it provides.
+The mandatory object methods (<code>Get</code>, <code>Put</code>, ...)
+should be supplied to provide the precise behaviour that SEE expects.
+These behaviours are fully described in the 
+ECMA-262 standard, but can be summarised in the following table:
 </p>
 
 <table>
@@ -1038,6 +1074,8 @@ this list:
 <p>
 The <code>Prototype</code> field can either be set to the interpreter's 
 <code>Object_prototype</code>, to NULL, or even to some other object.
+If you choose to use NULL, it is recommended you provide a 
+<code>toString()</code> method.
 </p>
 
 <p>
@@ -1056,7 +1094,7 @@ application can access it through the <code>Global</code> member of the
 </p>
 
 
-<h3 id="native">Native objects</h3>
+<h3 id="native">6.4 Native objects</h3>
 
 <p>
 SEE provides support for a special kind of object class called <em>native 
@@ -1101,7 +1139,7 @@ from method implementations:
 </p>
 
 
-<h3 id="cfunction">C Function objects</h3>
+<h3 id="cfunction">6.5 C function objects</h3>
 
 <p>
 Often, a host application wishes to provide a callable function to the
@@ -1190,7 +1228,7 @@ if it uses it.
 </p>
 
 
-<h3 id="function">User function objects</h3>
+<h3 id="function">6.6 User function objects</h3>
 
 <p>
 Occasionally, a host application will wish to take some user text and 
@@ -1223,7 +1261,7 @@ The returned function object may be called with the
 </p>
 
 
-<h3 id="error">Errors and Error objects</h3>
+<h3 id="error">6.7 Errors and Error objects</h3>
 
 <p>
 Host applications sometimes need to convey errors to ECMAScript programs.
@@ -1289,7 +1327,7 @@ host applications can create their own error constructor object with the
 of the same name should be created per interpreter.
 </p>
 
-<h2 id="debug">Debugging facilities</h2>
+<h2 id="debug">7 Debugging facilities</h2>
 
 <p>
 The SEE library contains various debugging facilities, that are
