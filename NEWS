@@ -3,9 +3,10 @@ $Id$
 1.2
   Corrected embarrasing stringdefs build problem
   Adhere more closely to GNU software standards (but still BSD licence)
-  Look for boehm gc in libdir, instead of prefix/lib
+  Configure change: --with-boehm-gc=[yes|no|prefix]
   Removed enumerator 'reset' method (never used)
   Removed see/config.h from install
+  Added libsee-config script
 
 1.1 [2004-08-15]
   Much improved documentation.

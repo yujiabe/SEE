@@ -73,21 +73,13 @@ AC_ARG_WITH(boehm-gc,
     AC_HELP_STRING([--with-boehm-gc],
 	[use Boehm-Weiser garbage collector, default=yes]),
 	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
-AC_ARG_WITH(boehm-gc-libdir, 
-    AC_HELP_STRING([--with-boehm-gc-libdir],
-	[path to gc lib, default=LIBDIR]),
-	[ac_cv_use_boehmgc_libdir=$withval],
-	[ac_cv_use_boehmgc_libdir=$libdir])
-AC_ARG_WITH(boehm-gc-incdir, 
-    AC_HELP_STRING([--with-boehm-gc-incdir],
-	[path to gc includes, default=INCLUDEDIR]),
-	[ac_cv_use_boehmgc_incdir=$withval],
-	[ac_cv_use_boehmgc_incdir=$includedir])
 if test x"$ac_cv_use_boehmgc" != x"no"; then
-    test x"$ac_cv_use_boehmgc_libdir" = x"no" || \
-        LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc_libdir}"
-    test x"$ac_cv_use_boehmgc_incdir" = x"no" || \
-        CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc_incdir}"
+    case "$ac_cv_use_boehmgc" in 
+     yes|no) : ;;
+     *) LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc}/lib"
+        CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc}/include"
+	;;
+    esac
     AC_CHECK_HEADERS([gc.h],,,[;])
     AC_SEARCH_LIBS(GC_malloc, [gc])
 fi
