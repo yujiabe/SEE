@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #endif
 
-#include <see/types.h>
+#include <see/type.h>
 
 #if defined(__i386__)
 #   define IEEE_8087
