@@ -386,7 +386,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 	int i, hasdigits;
 
 	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_NUMBER(res, SEE_NaN);
 		return;
 	}
 	SEE_ToString(interp, argv[0], &v);
@@ -477,7 +477,7 @@ global_isNaN(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 
 	if (argc < 1)
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_BOOLEAN(res, 1);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
 		SEE_SET_BOOLEAN(res, SEE_NUMBER_ISNAN(&v));
@@ -496,7 +496,7 @@ global_isFinite(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 
 	if (argc < 1)
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_BOOLEAN(res, 0);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
 		SEE_SET_BOOLEAN(res, SEE_NUMBER_ISFINITE(&v));
@@ -788,11 +788,11 @@ global_escape(interp, self, thisobj, argc, argv, res)
 		? SEE_hexstr_uppercase : SEE_hexstr_lowercase;
 
 	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_STRING(res, STR(undefined));
 		return;
 	}
-
 	SEE_ToString(interp, argv[0], &v);
+
 	s = v.u.string;
 	r = SEE_string_new(interp, 0);
 	for (i = 0; i < s->length; i++) {
@@ -829,7 +829,7 @@ global_unescape(interp, self, thisobj, argc, argv, res)
 	int i;
 
 	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_STRING(res, STR(undefined));
 		return;
 	}
 
