@@ -55,10 +55,11 @@
 #include "stringdefs.h"
 #include "dtoa.h"
 
-/* These constants should be optimized by the compiler */
-#define SGN(x)	((x) < 0 ? -1 : +1)
-#define ABS(x)  ((x) < 0 ? -(x) : (x))
+/*
+ * Value type-converters and some numeric constants.
+ */
 
+/* IEEE-754 constants, only if we can't do them as constant macros in value.h */
 #if !(HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV)
 const union SEE_numeric_literal
 # if WORDS_BIGENDIAN
@@ -74,11 +75,11 @@ const union SEE_numeric_literal
 # endif /* little endian */
 #endif /* hex_float & constant_nan_div & constant_inf_div */
 
+/* Convenience array for generating hexadecimal numbers */
 char SEE_hexstr_lowercase[16] = {
 	'0','1','2','3','4','5','6','7',
 	'8','9','a','b','c','d','e','f'
 };
-
 char SEE_hexstr_uppercase[16] = {
 	'0','1','2','3','4','5','6','7',
 	'8','9','A','B','C','D','E','F'
@@ -184,7 +185,9 @@ SEE_ToInteger(interp, val, res)
 	else if (SEE_NUMBER_ISINF(res) || res->u.number == 0.0)
 		; /* nothing */
 	else
-		res->u.number = SGN(res->u.number) * floor(ABS(res->u.number));
+		res->u.number = copysign(floor(copysign(res->u.number, +1)),
+				  	 res->u.number);
+
 }
 
 /* 9.5 */
