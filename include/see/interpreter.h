@@ -91,4 +91,4 @@ void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
  */
 extern void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead;
 
-#endif _SEE_h_interpreter_
+#endif /* _SEE_h_interpreter_ */

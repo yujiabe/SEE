@@ -16,4 +16,4 @@ struct SEE_object *SEE_Function_new(struct SEE_interpreter *i,
 	struct SEE_string *name, struct SEE_input *param_input, 
 	struct SEE_input *body_input);
 
-#endif _SEE_h_eval
+#endif /* _SEE_h_eval */
