@@ -187,7 +187,7 @@ object_construct(interp, self, thisobj, argc, argv, res)
 	struct SEE_object *obj;
 
 	if (argc) {
-		if (argv[0]->type == SEE_OBJECT) {
+		if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT) {
 			/*
 			 * TODO optional step 4 - handling host objects.
 			 * Should we add a hook into the objectclass structure
@@ -197,9 +197,9 @@ object_construct(interp, self, thisobj, argc, argv, res)
 			SEE_SET_OBJECT(res, argv[0]->u.object);
 			return;
 		}
-		if (argv[0]->type == SEE_STRING ||
-		    argv[0]->type == SEE_BOOLEAN ||
-		    argv[0]->type == SEE_NUMBER)
+		if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_STRING ||
+		    SEE_VALUE_GET_TYPE(argv[0]) == SEE_BOOLEAN ||
+		    SEE_VALUE_GET_TYPE(argv[0]) == SEE_NUMBER)
 		{
 			SEE_ToObject(interp, argv[0], res);
 			return;
@@ -296,7 +296,7 @@ object_proto_isPrototypeOf(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_object *v;
 
-	if (argc == 0 || argv[0]->type != SEE_OBJECT) {
+	if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) != SEE_OBJECT) {
 		SEE_SET_BOOLEAN(res, 0);
 		return;
 	}

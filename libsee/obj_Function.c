@@ -416,12 +416,12 @@ function_inst_hasinstance(interp, f, vval)
 	struct SEE_object *v, *o;
 	struct SEE_value oval;
 
-	if (vval->type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(vval) != SEE_OBJECT)
 		return 0;
 	v = vval->u.object;
 
 	SEE_OBJECT_GET(interp, f, STR(prototype), &oval);
-	if (oval.type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&oval) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(internal_error)); /* XXX prototype not an object */
 	o = oval.u.object;
@@ -553,12 +553,12 @@ function_inst_construct(interp, self, thisobj, argc, argv, res)
 	r1->objectclass = &inst_inst_class;
 
 	SEE_OBJECT_GET(interp, self, STR(prototype), &r3);
-	if (r3.type == SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&r3) == SEE_OBJECT)
 	    r1->Prototype = r3.u.object;
 	else
 	    r1->Prototype = interp->Object_prototype;
 	SEE_OBJECT_CALL(interp, self, r1, argc, argv, res);
-	if (res->type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 		SEE_SET_OBJECT(res, r1);
 }
 
@@ -656,20 +656,20 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(not_callable));
 
-	if (argc < 1 || argv[0]->type == SEE_UNDEFINED ||
-			argv[0]->type == SEE_NULL)
+	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED ||
+			SEE_VALUE_GET_TYPE(argv[0]) == SEE_NULL)
 		thisarg = interp->Global;
 	else {
 		SEE_ToObject(interp, argv[0], &v);
 		thisarg = v.u.object;
 	}
 
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED ||
-			argv[1]->type == SEE_NULL)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED ||
+			SEE_VALUE_GET_TYPE(argv[1]) == SEE_NULL)
 	{
 	    the_argc = 0;
 	    the_args = NULL;
-	} else if (argv[1]->type == SEE_OBJECT && 
+	} else if (SEE_VALUE_GET_TYPE(argv[1]) == SEE_OBJECT && 
 	    (argv[1]->u.object->objectclass == &arguments_class ||
 	     SEE_is_Array(argv[1]->u.object)))
 	{
@@ -708,8 +708,8 @@ function_proto_call(interp, self, thisobj, argc, argv, res)
 	if (!SEE_OBJECT_HAS_CALL(thisobj))
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(bad_arg));
-	if (argc < 1 || argv[0]->type == SEE_NULL ||
-	    argv[0]->type == SEE_UNDEFINED)
+	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_NULL ||
+	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED)
 		SEE_SET_OBJECT(&thisv, interp->Global);
 	else
 		SEE_ToObject(interp, argv[0], &thisv);

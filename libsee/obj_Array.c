@@ -335,7 +335,7 @@ array_construct(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t length;
 	struct SEE_string *s = NULL;
 
-	if (argc == 1 && argv[0]->type == SEE_NUMBER) {
+	if (argc == 1 && SEE_VALUE_GET_TYPE(argv[0]) == SEE_NUMBER) {
 	    length = SEE_ToUint32(interp, argv[0]);
 	    if (argv[0]->u.number != length)
 		SEE_error_throw_string(interp, interp->RangeError, 
@@ -395,16 +395,16 @@ array_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 		    SEE_string_append(s, separator);
 		intstr(interp, &n, i);
 		SEE_OBJECT_GET(interp, thisobj, n, &r6);
-		if (!(r6.type == SEE_UNDEFINED || r6.type == SEE_NULL)) {
+		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
 		    SEE_ToObject(interp, &r6, &r7);
 		    SEE_OBJECT_GET(interp, r7.u.object, STR(toLocaleString),&v);
-		    if (v.type != SEE_OBJECT ||
+		    if (SEE_VALUE_GET_TYPE(&v) != SEE_OBJECT ||
 				!SEE_OBJECT_HAS_CALL(v.u.object))
 			SEE_error_throw_string(interp, interp->TypeError,
 			    STR(toLocaleString_notfunc));
 		    SEE_OBJECT_CALL(interp, v.u.object, r7.u.object, 
 			0, NULL, &v);
-		    if (v.type != SEE_STRING)
+		    if (SEE_VALUE_GET_TYPE(&v) != SEE_STRING)
 			SEE_error_throw_string(interp, interp->TypeError,
 			    STR(toLocaleString_notstring));
 		    SEE_string_append(s, v.u.string);
@@ -435,7 +435,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	E = &thisv;
 	i = 0;
 	for(;;) {
-	    if (E->type == SEE_OBJECT && SEE_is_Array(E->u.object)) {
+	    if (SEE_VALUE_GET_TYPE(E) == SEE_OBJECT && SEE_is_Array(E->u.object)) {
 		struct array_object *Ea = (struct array_object *)E->u.object;
 		for (k = 0; k < Ea->length; k++) {
 		    intstr(interp, &ns, k);
@@ -478,7 +478,7 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 		use_comma = (argc == 0);
 	else 
 		/* strict E262-3 behaviour: */
-		use_comma = (argc == 0 || argv[0]->type == SEE_UNDEFINED);
+		use_comma = (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED);
 
 	if (use_comma)
 		separator = STR(comma);
@@ -494,7 +494,7 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 		    SEE_string_append(s, separator);
 		intstr(interp, &n, i);
 		SEE_OBJECT_GET(interp, thisobj, n, &r6);
-		if (!(r6.type == SEE_UNDEFINED || r6.type == SEE_NULL)) {
+		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
 		    SEE_ToString(interp, &r6, &r7);
 		    SEE_string_append(s, r7.u.string);
 		}
@@ -659,7 +659,7 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 	SEE_ToInteger(interp, argv[0], &v);
 	r5 = (v.u.number < 0) ? MAX(r3 + v.u.number, 0)
 			      : MIN(v.u.number, r3);
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 		r8 = r3;
 	else {
 	    SEE_ToInteger(interp, argv[1], &v);
@@ -696,15 +696,15 @@ SortCompare(interp, x, y, cmpfn)
 	if (!x && !y)   return 0;
 	if (!x)		return 1;
 	if (!y)		return -1;
-	if (x->type == SEE_UNDEFINED && y->type == SEE_UNDEFINED) return 0;
-	if (x->type == SEE_UNDEFINED) return 1;
-	if (y->type == SEE_UNDEFINED) return -1;
+	if (SEE_VALUE_GET_TYPE(x) == SEE_UNDEFINED && SEE_VALUE_GET_TYPE(y) == SEE_UNDEFINED) return 0;
+	if (SEE_VALUE_GET_TYPE(x) == SEE_UNDEFINED) return 1;
+	if (SEE_VALUE_GET_TYPE(y) == SEE_UNDEFINED) return -1;
 	if (cmpfn) {
 		struct SEE_value vn, *arg[2];
 		arg[0] = x;
 		arg[1] = y;
 		SEE_OBJECT_CALL(interp, cmpfn, cmpfn, 2, arg, &vn);
-		if (vn.type != SEE_NUMBER || SEE_NUMBER_ISNAN(&vn)) 
+		if (SEE_VALUE_GET_TYPE(&vn) != SEE_NUMBER || SEE_NUMBER_ISNAN(&vn)) 
 		    SEE_error_throw_string(interp, interp->TypeError,
 			STR(array_sort_error));
 		if (vn.u.number < 0) return -1;
@@ -816,9 +816,9 @@ array_proto_sort(interp, self, thisobj, argc, argv, res)
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
 
-	if (argc < 1 || argv[0]->type == SEE_UNDEFINED)
+	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED)
 		cmpfn = NULL;
-	else if (argv[0]->type == SEE_OBJECT &&
+	else if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 		 SEE_OBJECT_HAS_CALL(argv[0]->u.object))
 		cmpfn = argv[0]->u.object;
 	else

@@ -335,7 +335,7 @@ object_to_string(interp, o)
 	struct SEE_value ov, sv;
 	SEE_SET_OBJECT(&ov, o);
 	SEE_ToString(interp, &ov, &sv);
-	SEE_ASSERT(interp, sv.type == SEE_STRING);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&sv) == SEE_STRING);
 	return sv.u.string;
 }
 
@@ -421,7 +421,7 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 	slen = s->length;
 	SEE_ToString(interp, argv[0], &vss);
 	sslen = vss.u.string->length;
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 		position = 0;
 	else {
 		SEE_ToInteger(interp, argv[1], &vi);
@@ -464,7 +464,7 @@ string_proto_lastIndexOf(interp, self, thisobj, argc, argv, res)
 	ss = vss.u.string;
 	sslen = ss->length;
 
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
             position = slen + 1;
 	else {
 	    SEE_ToNumber(interp, argv[1], &vposition);
@@ -527,7 +527,7 @@ regexp_arg(interp, vp)
 {
 	struct SEE_value *args[1], v;
 
-	if (vp->type == SEE_OBJECT &&
+	if (SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT &&
 	    SEE_is_RegExp(vp->u.object))
 		return vp->u.object;
 	args[0] = vp;
@@ -559,12 +559,12 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 
 	/* fetch the regexp's exec method */
 	SEE_OBJECT_GET(interp, regexp, STR(exec), &v);
-	SEE_ASSERT(interp, v.type == SEE_OBJECT);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT);
 	reexec = v.u.object;
 
 	/* fetch its global property */
 	SEE_OBJECT_GET(interp, regexp, STR(global), &v);
-	SEE_ASSERT(interp, v.type == SEE_BOOLEAN);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_BOOLEAN);
 	global = v.u.boolean;
 
 	/* s = String(this) */
@@ -592,12 +592,12 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    SEE_SET_STRING(&v, s);
 		    vp = &v; vpv[0] = vp;
 		    SEE_OBJECT_CALL(interp, reexec, regexp, 1, vpv, &vres);
-		    if (vres.type == SEE_NULL)
+		    if (SEE_VALUE_GET_TYPE(&vres) == SEE_NULL)
 			break;
-		    SEE_ASSERT(interp, vres.type == SEE_OBJECT && 
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
 			SEE_is_Array(vres.u.object));
 		    SEE_OBJECT_GET(interp, vres.u.object, STR(zero_digit), &v);
-		    SEE_ASSERT(interp, v.type == SEE_STRING);
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
 
 		    /* a[n] = result string */
 		    nstr->length = 0;
@@ -607,7 +607,7 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    if (v.u.string->length == 0) {
 			/* Increment the index by one if it matched empty */
 			SEE_OBJECT_GET(interp, regexp, STR(lastIndex), &v);
-			SEE_ASSERT(interp, v.type == SEE_NUMBER);
+			SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
 			v.u.number += 1;
 			SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 		    }
@@ -638,7 +638,7 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 
 	/* get the match string */
 	SEE_OBJECT_GET(interp, a, STR(zero_digit), &v);
-	SEE_ASSERT(interp, v.type == SEE_STRING);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
 	ms = v.u.string;
 
 	/* Copy the intermediate characters we missed */
@@ -647,7 +647,7 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 		SEE_string_addch(out, source->data[i]);
 	*previndexp = index + ms->length;
 
-	if (replacev->type == SEE_OBJECT) {
+	if (SEE_VALUE_GET_TYPE(replacev) == SEE_OBJECT) {
 	    struct SEE_value **av, *vp;
 	    av = SEE_ALLOCA(ncaps + 2, struct SEE_value *);
 	    vp = SEE_ALLOCA(ncaps + 2, struct SEE_value);
@@ -715,8 +715,8 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 
 		/* fetch the captured substring */
 		SEE_OBJECT_GET(interp, a, ns, &v);
-		if (v.type != SEE_UNDEFINED) {
-		    SEE_ASSERT(interp, v.type == SEE_STRING);
+		if (SEE_VALUE_GET_TYPE(&v) != SEE_UNDEFINED) {
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
 		    SEE_string_append(out, v.u.string);
 		}
 		i = j;
@@ -753,7 +753,7 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 	if (argc < 1) {
 		SEE_SET_STRING(&replv, STR(empty_string));
 		replacev = &replv;
-	} else if (argv[1]->type == SEE_OBJECT &&
+	} else if (SEE_VALUE_GET_TYPE(argv[1]) == SEE_OBJECT &&
 		   SEE_OBJECT_HAS_CALL(argv[1]->u.object))
 		replacev = argv[1];
 	else {
@@ -763,12 +763,12 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 
 	/* fetch the regexp's exec method */
 	SEE_OBJECT_GET(interp, regexp, STR(exec), &v);
-	SEE_ASSERT(interp, v.type == SEE_OBJECT);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT);
 	reexec = v.u.object;
 
 	/* fetch its global property */
 	SEE_OBJECT_GET(interp, regexp, STR(global), &v);
-	SEE_ASSERT(interp, v.type == SEE_BOOLEAN);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_BOOLEAN);
 	global = v.u.boolean;
 
 	/* s = String(this) */
@@ -778,8 +778,8 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 		SEE_SET_STRING(&v, s);
 		vp = &v; vpv[0] = vp;
 		SEE_OBJECT_CALL(interp, reexec, regexp, 1, vpv, &v2);
-		if (v2.type != SEE_NULL) {
-		    SEE_ASSERT(interp, v2.type == SEE_OBJECT
+		if (SEE_VALUE_GET_TYPE(&v2) != SEE_NULL) {
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v2) == SEE_OBJECT
 			&& SEE_is_Array(v2.u.object));
 		    out = SEE_string_new(interp, 0);
 		    replace_helper(interp, &previndex, out, v2.u.object,
@@ -797,14 +797,14 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 		    SEE_SET_STRING(&v, s);
 		    vp = &v; vpv[0] = vp;
 		    SEE_OBJECT_CALL(interp, reexec, regexp, 1, vpv, &vres);
-		    if (vres.type == SEE_NULL)
+		    if (SEE_VALUE_GET_TYPE(&vres) == SEE_NULL)
 			break;
 
-		    SEE_ASSERT(interp, vres.type == SEE_OBJECT && 
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
 			SEE_is_Array(vres.u.object));
 
 		    SEE_OBJECT_GET(interp, vres.u.object, STR(zero_digit), &v);
-		    SEE_ASSERT(interp, v.type == SEE_STRING);
+		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
 
 		    if (v.u.string->length != 0) {
 		        if (out == NULL) 
@@ -814,7 +814,7 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 		    } else {
 			/* Increment the index by one if it matched empty */
 			SEE_OBJECT_GET(interp, regexp, STR(lastIndex), &v);
-			SEE_ASSERT(interp, v.type == SEE_NUMBER);
+			SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
 			v.u.number += 1;
 			SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 		    }
@@ -888,7 +888,7 @@ string_proto_slice(interp, self, thisobj, argc, argv, res)
 
 	s = object_to_string(interp, thisobj);
 	SEE_ToInteger(interp, argv[0], &vs);
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    SEE_SET_NUMBER(&ve, s->length);
 	else
 	    SEE_ToInteger(interp, argv[1], &ve);
@@ -922,7 +922,7 @@ SplitMatch(interp, R, S, q, captures)
 {
 	int r, s, i;
 
-	if (R->type != SEE_OBJECT) {
+	if (SEE_VALUE_GET_TYPE(R) != SEE_OBJECT) {
 	    r = R->u.string->length;
 	    s = S->length;
 	    if (q + r > s) return 0;
@@ -956,17 +956,17 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 /*2*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
 		0, NULL, res);
 	A = res->u.object;
-/*3*/	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+/*3*/	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 		lim = 0xffffffff;
 	else
 		lim = SEE_ToUint32(interp, argv[1]);
 /*4*/	s = S->length;
 /*5*/	p = 0;
-/*6*/	if (argc < 1 || argv[0]->type == SEE_UNDEFINED) {
+/*6*/	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED) {
 	    SEE_SET_UNDEFINED(&separatorv);
 	    R = &separatorv;
 	    ncap = 0;
-	} else if (argv[0]->type == SEE_OBJECT &&
+	} else if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 		   SEE_is_RegExp(argv[0]->u.object)) {
 	    R = argv[0];
 	    ncap = SEE_RegExp_count_captures(interp, R->u.object);
@@ -978,7 +978,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	if (ncap)
 		captures = SEE_ALLOCA(ncap, struct capture);
 /*7*/	if (lim == 0) return;
-/*8*/	if (R->type == SEE_UNDEFINED) goto step33;
+/*8*/	if (SEE_VALUE_GET_TYPE(R) == SEE_UNDEFINED) goto step33;
 /*9*/	if (s == 0) goto step31;
 step10:	q = p;
 step11:	if (q == s) goto step28;
@@ -1033,7 +1033,7 @@ string_proto_substring(interp, self, thisobj, argc, argv, res)
 	s = object_to_string(interp, thisobj);
 	SEE_ToInteger(interp, argv[0], &v);
 	a = MIN(MAX(v.u.number, 0), s->length);
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    b = s->length;
 	else {
 	    SEE_ToInteger(interp, argv[1], &v);
@@ -1071,7 +1071,7 @@ string_proto_substr(interp, self, thisobj, argc, argv, res)
 		start = MAX(s->length + v.u.number, 0);
 	else
 		start = MIN(v.u.number, s->length);
-	if (argc < 2 || argv[1]->type == SEE_UNDEFINED)
+	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    len = s->length - start;
 	else {
 	    SEE_ToInteger(interp, argv[1], &v);

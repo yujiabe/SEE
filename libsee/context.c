@@ -76,7 +76,7 @@ SEE_context_lookup(context, ident, res)
 #endif
 
 	    if (SEE_OBJECT_HASPROPERTY(interp, scope->obj, ident)) {
-		SEE_SET_REFERENCE(res, scope->obj, ident);
+		_SEE_SET_REFERENCE(res, scope->obj, ident);
 #ifndef NDEBUG
 	        if (SEE_context_debug) {
 		    fprintf(stderr, "context_lookup: found '");
@@ -98,7 +98,7 @@ SEE_context_lookup(context, ident, res)
 	}
 #endif
 
-	SEE_SET_REFERENCE(res, NULL, ident);
+	_SEE_SET_REFERENCE(res, NULL, ident);
 }
 
 /*

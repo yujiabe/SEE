@@ -253,11 +253,11 @@ error_proto_toString(interp, self, thisobj, argc, argv, res)
 #endif
 
 	s = SEE_string_new(interp, 0);
-	if (name.type == SEE_STRING) 
+	if (SEE_VALUE_GET_TYPE(&name) == SEE_STRING) 
 	    SEE_string_append(s, name.u.string);
 	else
 	    SEE_string_append(s, STR(Error));
-	if (message.type == SEE_STRING && message.u.string->length > 0) {
+	if (SEE_VALUE_GET_TYPE(&message) == SEE_STRING && message.u.string->length > 0) {
 	    SEE_string_addch(s, ':');
 	    SEE_string_addch(s, ' ');
 	    SEE_string_append(s, message.u.string);
@@ -297,7 +297,7 @@ error_construct(interp, self, thisobj, argc, argv, res)
 	}
 #endif
 
-	if (protov.type == SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&protov) == SEE_OBJECT)
 		proto = protov.u.object;
 	else
 		proto = NULL;			/* XXX should abort? */
@@ -305,7 +305,7 @@ error_construct(interp, self, thisobj, argc, argv, res)
 	obj = SEE_NEW(interp, struct SEE_native);
 	SEE_native_init(obj, interp, &error_inst_class, proto);
 
-	if (argc > 0 && argv[0]->type != SEE_UNDEFINED) {
+	if (argc > 0 && SEE_VALUE_GET_TYPE(argv[0]) != SEE_UNDEFINED) {
 	    SEE_ToString(interp, argv[0], &msg);
 	    SEE_OBJECT_PUT(interp, (struct SEE_object *)obj, STR(message),
 		    &msg, SEE_ATTR_DEFAULT);

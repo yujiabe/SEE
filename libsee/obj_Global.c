@@ -940,7 +940,7 @@ SEE_Global_eval(interp, inp, res)
 	SEE_SET_UNDEFINED(&cres);
 	SEE_eval_functionbody(f, &context, &cres);
 
-	if (cres.type != SEE_COMPLETION)
+	if (SEE_VALUE_GET_TYPE(&cres) != SEE_COMPLETION)
 		SEE_error_throw_string(interp, interp->Error, 
 			STR(internal_error));
 	if (cres.u.completion.type != SEE_NORMAL)
@@ -951,7 +951,7 @@ SEE_Global_eval(interp, inp, res)
 	if (res) {
 	    if (!v)
 		SEE_SET_UNDEFINED(res);
-	    else if (v->type == SEE_REFERENCE) {
+	    else if (SEE_VALUE_GET_TYPE(v) == SEE_REFERENCE) {
 		/* GetValue */
 		if (v->u.reference.base == NULL)
 		    SEE_SET_UNDEFINED(res);

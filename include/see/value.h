@@ -14,7 +14,7 @@
 
 #include <see/type.h>
 
-/* define NULL now as a pointer, not as ansi C's (0) */
+/* if not defined, define NULL as a pointer, not as ANSI C's (0) */
 #ifndef NULL
 #define NULL	((void *)0)
 #endif
@@ -23,11 +23,6 @@ struct SEE_object;
 struct SEE_string;
 struct SEE_value;
 struct SEE_interpreter;
-
-struct SEE_reference {
-	struct SEE_object *base;
-	struct SEE_string *property;
-};
 
 /* Value types */
 enum SEE_type {
@@ -41,7 +36,14 @@ enum SEE_type {
 	SEE_COMPLETION			/* internat type (8.9) */
 };
 
-struct SEE_completion {
+/* This structure is not part of the public API and may change */
+struct _SEE_reference {
+	struct SEE_object *base;
+	struct SEE_string *property;
+};
+
+/* This structure is not part of the public API and may change */
+struct _SEE_completion {
 	struct SEE_value *value;
 	void *target;
 	enum { SEE_NORMAL, SEE_BREAK, SEE_CONTINUE, 
@@ -50,81 +52,96 @@ struct SEE_completion {
 
 /* Value storage */
 struct SEE_value {
-	enum SEE_type		      type;
+	enum SEE_type		      _type;
 	union {
 		SEE_number_t	      number;
 		SEE_boolean_t	      boolean;
 		struct SEE_object    *object;
 		struct SEE_string    *string;
-		struct SEE_reference  reference;
-		struct SEE_completion completion;
+		/* The following members are not part of the public API */
+		struct _SEE_reference  reference;
+		struct _SEE_completion completion;
+		void *_padding[4];
 	} u;
 };
 
-#define SEE_VALUE_TYPE(v)	((v)->type)
-
-#if SEE_NUMBER_IS_FLOAT
-# define SEE_NUMBER_ISNAN(v)    isnanf((v)->u.number)
-# define SEE_NUMBER_ISPINF(v)   (isinff((v)->u.number) && (v)->u.number > 0)
-# define SEE_NUMBER_ISNINF(v)   (isinff((v)->u.number) && (v)->u.number < 0)
-# define SEE_NUMBER_ISINF(v)    isinff((v)->u.number)
-# define SEE_NUMBER_ISFINITE(v) finitef((v)->u.number)
-#elif SEE_NUMBER_IS_DOUBLE
-# define SEE_NUMBER_ISNAN(v)    isnan((v)->u.number)
-# define SEE_NUMBER_ISPINF(v)   (isinf((v)->u.number) && (v)->u.number > 0)
-# define SEE_NUMBER_ISNINF(v)   (isinf((v)->u.number) && (v)->u.number < 0)
-# define SEE_NUMBER_ISINF(v)    isinf((v)->u.number)
-# define SEE_NUMBER_ISFINITE(v) finite((v)->u.number)
-#endif
-
+/* Copy between value storages */
 #define SEE_VALUE_COPY(dst, src)		\
 	memcpy(dst, src, sizeof (struct SEE_value))
 
+/* Obtain the value's type */
+#define SEE_VALUE_GET_TYPE(v)	((v)->_type)
+
+/* This macro is not part of the public API and may change */
+#define _SEE_VALUE_SET_TYPE(v, t)		\
+	(v)->_type = t
+
+/* Fill a value storage with the undefined value */
 #define SEE_SET_UNDEFINED(v)			\
-	SEE_VALUE_TYPE(v) = SEE_UNDEFINED
+	_SEE_VALUE_SET_TYPE(v, SEE_UNDEFINED)
 
+/* Fill a value storage with the null value */
 #define SEE_SET_NULL(v)				\
-	SEE_VALUE_TYPE(v) = SEE_NULL
+	_SEE_VALUE_SET_TYPE(v, SEE_NULL)
 
+/* Fill a value storage with a boolean value */
 #define SEE_SET_BOOLEAN(v, b) 			\
     do {					\
-	SEE_VALUE_TYPE(v) = SEE_BOOLEAN;	\
+	_SEE_VALUE_SET_TYPE(v, SEE_BOOLEAN);	\
 	(v)->u.boolean = (b);			\
     } while (0)
 
+/* Fill a value storage with a numeric value */
 #define SEE_SET_NUMBER(v, n) 			\
     do {					\
-	SEE_VALUE_TYPE(v) = SEE_NUMBER;		\
+	_SEE_VALUE_SET_TYPE(v, SEE_NUMBER);	\
 	(v)->u.number = (n);			\
     } while (0)
 
+/* Fill a value storage with a pointer to a string */
 #define SEE_SET_STRING(v, s)			\
     do {					\
-	SEE_VALUE_TYPE(v) = SEE_STRING;		\
+	_SEE_VALUE_SET_TYPE(v, SEE_STRING);	\
 	(v)->u.string = (s);			\
     } while (0)
 
+/* Fill a value storage with a pointer to an object */
 #define SEE_SET_OBJECT(v, o)			\
     do {					\
-	SEE_VALUE_TYPE(v) = SEE_OBJECT;		\
+	_SEE_VALUE_SET_TYPE(v, SEE_OBJECT);	\
 	(v)->u.object = (o);			\
     } while (0)
 
-/* Return completion - NB: 'val' must NOT be on the stack */
-#define SEE_SET_COMPLETION(v, typ, val, tgt)	\
+/* This macro is not part of the public API and may change */
+#define _SEE_SET_REFERENCE(v, b, p)		\
     do {					\
-	SEE_VALUE_TYPE(v) = SEE_COMPLETION;	\
+	_SEE_VALUE_SET_TYPE(v, SEE_REFERENCE);	\
+	(v)->u.reference.base = (b);		\
+	(v)->u.reference.property = (p);	\
+    } while (0)
+
+/* This macro is not part of the public API and may change */
+/* NB: 'val' must NOT be on the stack */
+#define _SEE_SET_COMPLETION(v, typ, val, tgt)	\
+    do {					\
+	_SEE_VALUE_SET_TYPE(v, SEE_COMPLETION);	\
 	(v)->u.completion.type = (typ);		\
 	(v)->u.completion.value = (val);	\
 	(v)->u.completion.target = (tgt);	\
     } while (0)
 
-#define SEE_SET_REFERENCE(v, b, p)		\
-    do {					\
-	SEE_VALUE_TYPE(v) = SEE_REFERENCE;	\
-	(v)->u.reference.base = (b);		\
-	(v)->u.reference.property = (p);	\
-    } while (0)
+/* Convenience macros for numbers */
+#if SEE_NUMBER_IS_FLOAT
+# define SEE_NUMBER_ISNAN(v)    isnanf((v)->u.number)
+# define SEE_NUMBER_ISINF(v)    isinff((v)->u.number)
+# define SEE_NUMBER_ISFINITE(v) finitef((v)->u.number)
+#elif SEE_NUMBER_IS_DOUBLE
+# define SEE_NUMBER_ISNAN(v)    isnan((v)->u.number)
+# define SEE_NUMBER_ISINF(v)    isinf((v)->u.number)
+# define SEE_NUMBER_ISFINITE(v) finite((v)->u.number)
+#endif
+#define SEE_NUMBER_ISPINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number > 0)
+#define SEE_NUMBER_ISNINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number < 0)
 
 /* Converters */
 void SEE_ToPrimitive(struct SEE_interpreter *i,

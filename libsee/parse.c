@@ -825,7 +825,7 @@ GetValue(context, v, res)
 {
 	struct SEE_interpreter *interp = context->interpreter;
 
-	if (v->type != SEE_REFERENCE) {
+	if (SEE_VALUE_GET_TYPE(v) != SEE_REFERENCE) {
 		if (v != res)
 			SEE_VALUE_COPY(res, v);
 		return;
@@ -851,7 +851,7 @@ PutValue(context, v, w)
 	struct SEE_interpreter *interp = context->interpreter;
 	struct SEE_object *target;
 
-	if (v->type != SEE_REFERENCE)
+	if (SEE_VALUE_GET_TYPE(v) != SEE_REFERENCE)
 		SEE_error_throw_string(interp, interp->ReferenceError,
 		    STR(bad_lvalue));
 	target = v->u.reference.base;
@@ -954,7 +954,7 @@ Literal_print(n, printer)
 {
 	struct SEE_value str;
 
-	switch (n->value.type) {
+	switch (SEE_VALUE_GET_TYPE(&n->value)) {
 	case SEE_BOOLEAN:
 		PRINT_STRING(n->value.u.boolean
 			? STR(true)
@@ -1735,7 +1735,7 @@ MemberExpression_new_eval(n, context, res)
 		argc = 0;
 		argv = NULL;
 	}
-	if (r2.type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&r2) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(new_not_an_object));
 	if (!SEE_OBJECT_HAS_CONSTRUCT(r2.u.object))
@@ -1794,7 +1794,7 @@ MemberExpression_dot_eval(n, context, res)
 	EVAL(n->mexp, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToObject(interp, &r2, &r5);
-	SEE_SET_REFERENCE(res, r5.u.object, n->name);
+	_SEE_SET_REFERENCE(res, r5.u.object, n->name);
 }
 
 static void
@@ -1843,7 +1843,7 @@ MemberExpression_bracket_eval(n, context, res)
 	GetValue(context, &r3, &r4);
 	SEE_ToObject(interp, &r2, &r5);
 	SEE_ToString(interp, &r4, &r6);
-	SEE_SET_REFERENCE(res, r5.u.object, r6.u.string);
+	_SEE_SET_REFERENCE(res, r5.u.object, r6.u.string);
 }
 
 static void
@@ -1958,16 +1958,16 @@ CallExpression_eval(n, context, res)
 	} else 
 		argv = NULL;
 	GetValue(context, &r1, &r3);
-	if (r3.type == SEE_UNDEFINED)		/* nonstandard */
+	if (SEE_VALUE_GET_TYPE(&r3) == SEE_UNDEFINED)		/* nonstandard */
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(no_such_function));
-	if (r3.type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&r3) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(not_a_function));
 	if (!SEE_OBJECT_HAS_CALL(r3.u.object))
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(not_callable));
-	if (r1.type == SEE_REFERENCE)
+	if (SEE_VALUE_GET_TYPE(&r1) == SEE_REFERENCE)
 		r6 = r1.u.reference.base;
 	else
 		r6 = NULL;
@@ -2222,7 +2222,7 @@ UnaryExpression_delete_eval(n, context, res)
 	struct SEE_interpreter *interp = context->interpreter;
 
 	EVAL(n->a, context, &r1);
-	if (r1.type != SEE_REFERENCE) {
+	if (SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE) {
 		SEE_SET_BOOLEAN(res, 0);
 		return;
 	}
@@ -2292,10 +2292,10 @@ UnaryExpression_typeof_eval(n, context, res)
 	struct SEE_string *s;
 
 	EVAL(n->a, context, &r1);
-	if (r1.type == SEE_REFERENCE && r1.u.reference.base == NULL) 
+	if (SEE_VALUE_GET_TYPE(&r1) == SEE_REFERENCE && r1.u.reference.base == NULL) 
 		SEE_SET_STRING(res, STR(undefined));
 	GetValue(context, &r1, &r4);
-	switch (r4.type) {
+	switch (SEE_VALUE_GET_TYPE(&r4)) {
 	case SEE_UNDEFINED:	s = STR(undefined); break;
 	case SEE_NULL:		s = STR(object); break;
 	case SEE_BOOLEAN:	s = STR(boolean); break;
@@ -2781,7 +2781,7 @@ AdditiveExpression_add_common(r2, bn, context, res)
 	GetValue(context, &r3, &r4);
 	SEE_ToPrimitive(context->interpreter, r2, NULL, &r5);
 	SEE_ToPrimitive(context->interpreter, &r4, NULL, &r6);
-	if (!(r5.type == SEE_STRING || r6.type == SEE_STRING)) {
+	if (!(SEE_VALUE_GET_TYPE(&r5) == SEE_STRING || SEE_VALUE_GET_TYPE(&r6) == SEE_STRING)) {
 		SEE_ToNumber(context->interpreter, &r5, &r8);
 		SEE_ToNumber(context->interpreter, &r6, &r9);
 		SEE_SET_NUMBER(res, r8.u.number + r9.u.number);
@@ -3131,7 +3131,7 @@ RelationalExpression_sub(interp, x, y, res)
 
 	SEE_ToPrimitive(interp, x, &hint, &r1);
 	SEE_ToPrimitive(interp, y, &hint, &r2);
-	if (!(r1.type == SEE_STRING && r2.type == SEE_STRING)) {
+	if (!(SEE_VALUE_GET_TYPE(&r1) == SEE_STRING && SEE_VALUE_GET_TYPE(&r2) == SEE_STRING)) {
 	    SEE_ToNumber(interp, &r1, &r4);
 	    SEE_ToNumber(interp, &r2, &r5);
 	    if (SEE_NUMBER_ISNAN(&r4) || SEE_NUMBER_ISNAN(&r5))
@@ -3178,7 +3178,7 @@ RelationalExpression_lt_eval(n, context, res)
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
 	RelationalExpression_sub(context->interpreter, &r2, &r4, res);
-	if (res->type == SEE_UNDEFINED)
+	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
 
@@ -3213,7 +3213,7 @@ RelationalExpression_gt_eval(n, context, res)
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
 	RelationalExpression_sub(context->interpreter, &r4, &r2, res);
-	if (res->type == SEE_UNDEFINED)
+	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
 
@@ -3248,7 +3248,7 @@ RelationalExpression_le_eval(n, context, res)
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
 	RelationalExpression_sub(context->interpreter, &r4, &r2, &r5);
-	if (r5.type == SEE_UNDEFINED)
+	if (SEE_VALUE_GET_TYPE(&r5) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 	else
 		SEE_SET_BOOLEAN(res, !r5.u.boolean);
@@ -3286,7 +3286,7 @@ RelationalExpression_ge_eval(n, context, res)
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
 	RelationalExpression_sub(context->interpreter, &r2, &r4, &r5);
-	if (r5.type == SEE_UNDEFINED)
+	if (SEE_VALUE_GET_TYPE(&r5) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 	else
 		SEE_SET_BOOLEAN(res, !r5.u.boolean);
@@ -3325,7 +3325,7 @@ RelationalExpression_instanceof_eval(n, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	if (r4.type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&r4) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(instanceof_not_object));
 	if (!SEE_OBJECT_HAS_HASINSTANCE(r4.u.object))
@@ -3367,7 +3367,7 @@ RelationalExpression_in_eval(n, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	if (r4.type != SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(&r4) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(in_not_object));
 	SEE_ToString(interp, &r2, &r6);
@@ -3465,9 +3465,10 @@ EqualityExpression_eq(interp, x, y, res)
 	struct SEE_value *x, *y, *res;
 {
 	struct SEE_value tmp;
+	int xtype, ytype;
 
-	if (x->type == y->type)
-	    switch (x->type) {
+	if (SEE_VALUE_GET_TYPE(x) == SEE_VALUE_GET_TYPE(y))
+	    switch (SEE_VALUE_GET_TYPE(x)) {
 	    case SEE_UNDEFINED:
 	    case SEE_NULL:
 		SEE_SET_BOOLEAN(res, 1);
@@ -3492,28 +3493,30 @@ EqualityExpression_eq(interp, x, y, res)
 		SEE_error_throw_string(interp, interp->Error,
 			STR(internal_error));
 	    }
-	if (x->type == SEE_NULL && y->type == SEE_UNDEFINED)
+	xtype = SEE_VALUE_GET_TYPE(x);
+	ytype = SEE_VALUE_GET_TYPE(y);
+	if (xtype == SEE_NULL && ytype == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 1);
-	else if (x->type == SEE_UNDEFINED && y->type == SEE_NULL)
+	else if (xtype == SEE_UNDEFINED && ytype == SEE_NULL)
 		SEE_SET_BOOLEAN(res, 1);
-	else if (x->type == SEE_NUMBER && y->type == SEE_STRING) {
+	else if (xtype == SEE_NUMBER && ytype == SEE_STRING) {
 		SEE_ToNumber(interp, y, &tmp);
 		EqualityExpression_eq(interp, x, &tmp, res);
-	} else if (x->type == SEE_STRING && y->type == SEE_NUMBER) {
+	} else if (xtype == SEE_STRING && ytype == SEE_NUMBER) {
 		SEE_ToNumber(interp, x, &tmp);
 		EqualityExpression_eq(interp, &tmp, y, res);
-	} else if (x->type == SEE_BOOLEAN) {
+	} else if (xtype == SEE_BOOLEAN) {
 		SEE_ToNumber(interp, x, &tmp);
 		EqualityExpression_eq(interp, &tmp, y, res);
-	} else if (y->type == SEE_BOOLEAN) {
+	} else if (ytype == SEE_BOOLEAN) {
 		SEE_ToNumber(interp, y, &tmp);
 		EqualityExpression_eq(interp, x, &tmp, res);
-	} else if ((x->type == SEE_STRING || x->type == SEE_NUMBER) &&
-		    y->type == SEE_OBJECT) {
+	} else if ((xtype == SEE_STRING || xtype == SEE_NUMBER) &&
+		    ytype == SEE_OBJECT) {
 		SEE_ToPrimitive(interp, y, x, &tmp);
 		EqualityExpression_eq(interp, x, &tmp, res);
-	} else if ((y->type == SEE_STRING || y->type == SEE_NUMBER) &&
-		    x->type == SEE_OBJECT) {
+	} else if ((ytype == SEE_STRING || ytype == SEE_NUMBER) &&
+		    xtype == SEE_OBJECT) {
 		SEE_ToPrimitive(interp, x, y, &tmp);
 		EqualityExpression_eq(interp, &tmp, y, res);
 	} else
@@ -3528,10 +3531,10 @@ EqualityExpression_seq(context, x, y, res)
 	struct context *context;
 	struct SEE_value *x, *y, *res;
 {
-	if (x->type != y->type)
+	if (SEE_VALUE_GET_TYPE(x) != SEE_VALUE_GET_TYPE(y))
 	    SEE_SET_BOOLEAN(res, 0);
 	else
-	    switch (x->type) {
+	    switch (SEE_VALUE_GET_TYPE(x)) {
 	    case SEE_UNDEFINED:
 		SEE_SET_BOOLEAN(res, 1);
 		break;
@@ -4011,7 +4014,7 @@ LogicalANDExpression_isconst(n, interp)
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->a, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? ISCONST(n->b, interp) : 1;
 	} else
@@ -4091,7 +4094,7 @@ LogicalORExpression_isconst(n, interp)
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->a, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? 1: ISCONST(n->b, interp);
 	} else
@@ -4192,7 +4195,7 @@ ConditionalExpression_isconst(n, interp)
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->a, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
 		    ? ISCONST(n->b, interp) 
@@ -4894,7 +4897,7 @@ Block_empty_eval(n, context, res)
 	struct context *context;
 	struct SEE_value *res;
 {
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 }
 
 static void
@@ -5032,7 +5035,7 @@ VariableStatement_eval(n, context, res)
 {
 	struct SEE_value v;
 	EVAL(n->a, context, &v);
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 }
 
 static void
@@ -5214,7 +5217,7 @@ EmptyStatement_eval(n, context, res)
 	struct context *context;
 	struct SEE_value *res;
 {
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 }
 
 static void
@@ -5258,7 +5261,7 @@ ExpressionStatement_eval(n, context, res)
 {
 	struct SEE_value *v = SEE_NEW(context->interpreter, struct SEE_value);
 	EVAL(n->a, context, v);
-	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -5320,7 +5323,7 @@ IfStatement_eval(n, context, res)
 	else if (n->bfalse)
 		EVAL(n->bfalse, context, res);
 	else
-		SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+		_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 }
 
 static void
@@ -5368,7 +5371,7 @@ IfStatement_isconst(n, interp)
 	if (ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->cond, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
 		    ? ISCONST(n->btrue, interp) 
@@ -5469,7 +5472,7 @@ step2:	EVAL(n->body, context, res);
 	if (res->u.completion.type == SEE_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
-	    SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 	    return;
 	}
 	if (res->u.completion.type != SEE_NORMAL)
@@ -5479,7 +5482,7 @@ step2:	EVAL(n->body, context, res);
 	SEE_ToBoolean(context->interpreter, &r8, &r9);
 	if (r9.u.boolean)
 		goto step2;
-	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -5542,7 +5545,7 @@ IterationStatement_while_eval(n, context, res)
 	GetValue(context, &r2, &r3);
 	SEE_ToBoolean(context->interpreter, &r3, &r4);
 	if (!r4.u.boolean) {
-	    SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 	    return;
 	}
 	EVAL(n->body, context, res);
@@ -5554,7 +5557,7 @@ IterationStatement_while_eval(n, context, res)
 	if (res->u.completion.type == SEE_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
-	    SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 	    return;
 	}
 	if (res->u.completion.type != SEE_NORMAL)
@@ -5589,7 +5592,7 @@ IterationStatement_while_isconst(n, interp)
 	if (ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->cond, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? ISCONST(n->body, interp) : 1;
 	} else
@@ -5644,7 +5647,7 @@ step15: if (n->incr) {
 	    GetValue(context, &r16, &r17);	/* r17 not used */
 	}
 	goto step5;
-step19:	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+step19:	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -5721,7 +5724,7 @@ step13: if (n->incr) {
 	    GetValue(context, &r14, &r15); 		/* value not used */
 	}
 	goto step3;
-step17:	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+step17:	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -5799,7 +5802,7 @@ IterationStatement_forin_eval(n, context, res)
 	    if (res->u.completion.type != SEE_NORMAL)
 		    return;
 	}
-	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -5867,7 +5870,7 @@ IterationStatement_forvarin_eval(n, context, res)
 	    if (res->u.completion.type != SEE_NORMAL)
 		    return;
 	}
-	SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 }
 
 static void
@@ -6052,7 +6055,7 @@ ContinueStatement_eval(n, context, res)
 	struct context *context;
 	struct SEE_value *res;
 {
-	SEE_SET_COMPLETION(res, SEE_CONTINUE, NULL, n->target);
+	_SEE_SET_COMPLETION(res, SEE_CONTINUE, NULL, n->target);
 }
 
 static void
@@ -6119,7 +6122,7 @@ BreakStatement_eval(n, context, res)
 	struct context *context;
 	struct SEE_value *res;
 {
-	SEE_SET_COMPLETION(res, SEE_BREAK, NULL, n->target);
+	_SEE_SET_COMPLETION(res, SEE_BREAK, NULL, n->target);
 }
 
 static void
@@ -6191,7 +6194,7 @@ ReturnStatement_eval(n, context, res)
 	EVAL(n->expr, context, &r2);
 	v = SEE_NEW(context->interpreter, struct SEE_value);
 	GetValue(context, &r2, v);
-	SEE_SET_COMPLETION(res, SEE_RETURN, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_RETURN, v, NULL);
 }
 
 static void
@@ -6219,7 +6222,7 @@ ReturnStatement_undef_eval(n, context, res)
 {
 	static struct SEE_value undef = { SEE_UNDEFINED };
 
-	SEE_SET_COMPLETION(res, SEE_RETURN, &undef, NULL);
+	_SEE_SET_COMPLETION(res, SEE_RETURN, &undef, NULL);
 }
 
 static void
@@ -6400,7 +6403,7 @@ SwitchStatement_caseblock(n, context, input, res)
 	}
 	if (!c)
 	    c = n->defcase;	/* can be NULL, meaning no default */
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 	for (; c; c = c->next) {
 	    if (c->body)
 		EVAL(c->body, context, res);
@@ -6424,7 +6427,7 @@ SwitchStatement_eval(n, context, res)
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
 		v = res->u.completion.value;
-		SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+		_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
 	}
 }
 
@@ -6656,7 +6659,7 @@ TryStatement_catch(n, context, C, res)
 	if (SEE_CAUGHT(ctxt)) {
 	    tcp = SEE_NEW(interp, struct SEE_value);
 	    SEE_VALUE_COPY(tcp, SEE_CAUGHT(ctxt));
-	    SEE_SET_COMPLETION(res, SEE_THROW, tcp, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_THROW, tcp, NULL);
 	}
 }
 
@@ -6713,7 +6716,7 @@ TryStatement_finally_eval(n, context, res)
 	SEE_TRY(context->interpreter, ctxt)
 	    EVAL(n->block, context, res);
 	if (SEE_CAUGHT(ctxt))
-	    SEE_SET_COMPLETION(res, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
+	    _SEE_SET_COMPLETION(res, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
 	EVAL(n->bfinally, context, &r2);
 	if (r2.u.completion.type != SEE_NORMAL)	 /* for break, return etc */
 	    SEE_VALUE_COPY(res, &r2);
@@ -6757,10 +6760,10 @@ TryStatement_catchfinally_eval(n, context, res)
 	SEE_TRY(interp, ctxt)
 /*1*/	    EVAL(n->block, context, &r1);
 	if (SEE_CAUGHT(ctxt)) 
-	    SEE_SET_COMPLETION(&r1, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
+	    _SEE_SET_COMPLETION(&r1, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
 
 /*2*/	C = &r1;
-	SEE_ASSERT(interp, C->type == SEE_COMPLETION);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(C) == SEE_COMPLETION);
 
 /*3*/	if (C->u.completion.type == SEE_THROW) {
 /*4*/	    TryStatement_catch(n, context, C->u.completion.value, &r4);
@@ -6772,13 +6775,13 @@ TryStatement_catchfinally_eval(n, context, res)
 	SEE_TRY(interp, ctxt2)
 /*6*/	    EVAL(n->bfinally, context, &r6);
 	if (SEE_CAUGHT(ctxt2))
-	    SEE_SET_COMPLETION(&r6, SEE_THROW, SEE_CAUGHT(ctxt2), NULL);
+	    _SEE_SET_COMPLETION(&r6, SEE_THROW, SEE_CAUGHT(ctxt2), NULL);
 
 	if (r6.u.completion.type != SEE_NORMAL)
 		retv = C;
 	else
 		retv = &r6;
-	SEE_ASSERT(interp, retv->type == SEE_COMPLETION);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(retv) == SEE_COMPLETION);
 		
 	if (retv->u.completion.type == SEE_THROW)
 	    SEE_THROW(interp, retv->u.completion.value);
@@ -6916,7 +6919,7 @@ FunctionDeclaration_eval(n, context, res)
 	struct context *context;
 	struct SEE_value *res;
 {
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL); /* 14 */
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL); /* 14 */
 }
 #endif
 
@@ -7209,7 +7212,7 @@ SourceElements_eval(n, context, res)
 	 * so, why bother. We just run the non-functiondecl statements
 	 * instead. It's equivalent.
 	 */
-	SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 	for (e = n->statements; e; e = e->next) {
 		EVAL(e->node, context, res);
 		if (res->u.completion.type != SEE_NORMAL)
@@ -7707,7 +7710,7 @@ eval(context, thisobj, argc, argv, res)
 		SEE_SET_UNDEFINED(res);
 		return;
 	}
-	if (argv[0]->type != SEE_STRING) {
+	if (SEE_VALUE_GET_TYPE(argv[0]) != SEE_STRING) {
 		SEE_VALUE_COPY(res, argv[0]);
 		return;
 	}
@@ -7745,7 +7748,7 @@ eval(context, thisobj, argc, argv, res)
 	/* Evaluate the statement */
 	SEE_eval_functionbody(f, &evalcontext, &v);
 
-	if (v.type != SEE_COMPLETION || v.u.completion.type != SEE_NORMAL) {
+	if (SEE_VALUE_GET_TYPE(&v) != SEE_COMPLETION || v.u.completion.type != SEE_NORMAL) {
 	    /* XXX spec bug: what if the eval did a 'return'? */
 #ifndef NDEBUG
 	    fprintf(stderr, "eval'd string returned ");
@@ -7779,7 +7782,7 @@ SEE_compare(interp, x, y)
 	if (v.u.boolean)
 		return 0;
 	RelationalExpression_sub(interp, x, y, &v);
-	if (res->type == SEE_UNDEFINED || !v.u.boolean)
+	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED || !v.u.boolean)
 		return 1;
 	else
 		return -1;

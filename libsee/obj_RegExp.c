@@ -203,18 +203,18 @@ regexp_construct(interp, self, thisobj, argc, argv, res)
 		interp->RegExp_prototype);
 
 	if (argc > 0 && 
-	    argv[0]->type == SEE_OBJECT &&
+	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 	    argv[0]->u.object->objectclass == &regexp_inst_class)
 	{
 	    struct regexp_object *rs = 
 	        (struct regexp_object *)argv[0]->u.object;
-	    if (!(argc < 2 || argv[1]->type == SEE_UNDEFINED))
+	    if (!(argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(regexp_bad_string));
 	    ro->source = rs->source;
 	    ro->flags = rs->flags;
 	} else {
-	    if (argc < 1 || argv[0]->type == SEE_UNDEFINED)
+	    if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED)
 		ro->source = STR(empty_string);
 	    else {
 		SEE_ToString(interp, argv[0], &v);
@@ -273,9 +273,9 @@ regexp_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	if (argc > 1 && 
-	    argv[0]->type == SEE_OBJECT &&
+	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 	    argv[0]->u.object->objectclass == &regexp_inst_class &&
-	    (argc < 2 || argv[1]->type == SEE_UNDEFINED))
+	    (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
 		SEE_SET_OBJECT(res, argv[0]->u.object);
 	else
 		SEE_OBJECT_CONSTRUCT(interp, self, thisobj, argc, argv, res);
@@ -415,7 +415,7 @@ regexp_proto_test(interp, self, thisobj, argc, argv, res)
 	 * way (see steps 1 and 3 of s11.9.3).
 	 */
 	regexp_proto_exec(interp, self, thisobj, argc, argv, &v);
-	SEE_SET_BOOLEAN(res, v.type == SEE_NULL);
+	SEE_SET_BOOLEAN(res, SEE_VALUE_GET_TYPE(&v) == SEE_NULL);
 }
 
 /* 15.10.6.4 RegExp.prototype.toString() */

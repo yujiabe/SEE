@@ -418,7 +418,7 @@ number_proto_toFixed(interp, self, thisobj, argc, argv, res)
 	char *ms, *endstr;
 	int f, sign, n, i, k;
 
-	if (argc > 0 && argv[0]->type != SEE_UNDEFINED) {
+	if (argc > 0 && SEE_VALUE_GET_TYPE(argv[0]) != SEE_UNDEFINED) {
 	    SEE_ToInteger(interp, argv[0], &v);
 	    if (v.u.number < 0 || v.u.number > 20 || SEE_NUMBER_ISNAN(&v))
 		SEE_error_throw(interp, interp->RangeError, "%f", v.u.number);
@@ -476,7 +476,7 @@ number_proto_toExponential(interp, self, thisobj, argc, argv, res)
 	char *ms, *endstr;
 	int e, f, n, i, k, sign;
 
-	if (argc > 0 && argv[0]->type != SEE_UNDEFINED) {
+	if (argc > 0 && SEE_VALUE_GET_TYPE(argv[0]) != SEE_UNDEFINED) {
 	    SEE_ToInteger(interp, argv[0], &v);
 	    if (v.u.number < 0 || v.u.number > 20 || SEE_NUMBER_ISNAN(&v))
 		SEE_error_throw(interp, interp->RangeError, "%f", v.u.number);
@@ -544,7 +544,7 @@ number_proto_toPrecision(interp, self, thisobj, argc, argv, res)
 
 	SEE_SET_NUMBER(&v, x);
 	if (argc < 1 || 
-		argv[0]->type == SEE_UNDEFINED || 
+		SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED || 
 		!SEE_NUMBER_ISFINITE(&v))
 	{
 	    SEE_ToString(interp, &v, res);

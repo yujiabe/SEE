@@ -1723,5 +1723,6 @@ optimize_regex(interp, regex)
 	 * (nothing here yet)
 	 *
 	 * possible optimisations include branch short-cuts,
+	 * and compiling the p-code to native machine instructions.
 	 */
 }

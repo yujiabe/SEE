@@ -515,7 +515,7 @@ main()
                 SEE_Global_eval(interp, input, &result);
 
                 <i>/* Print the result */</i>
-                if (result.type == SEE_NUMBER)
+                if (SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER)
                         printf("The answer is %f\n", result.u.number);
                 else
                         printf("Unexpected answer\n");
@@ -807,7 +807,7 @@ these types.
 </p>
 
 <pre><dfn id="struct_SEE_value">struct SEE_value</dfn> {
-    enum { <i>...</i> }            type;
+    enum { <i>...</i> }            _type;
     union {
         SEE_boolean_t       boolean;
         SEE_number_t        number;
@@ -818,12 +818,16 @@ these types.
 };</pre>
 
 <p>
-The first member, <code>type</code>, is the discriminator,
+The first member, <code>_type</code>, is the discriminator,
 and must be one of the enumerated values
 <code>SEE_UNDEFINED</code>, <code>SEE_NULL</code>, 
 <code>SEE_BOOLEAN</code>, <code>SEE_NUMBER</code>, <code>SEE_STRING</code> or
 <code>SEE_OBJECT</code>.
+You should access the <code>_type</code> member using the 
+<code>SEE_VALUE_GET_TYPE()</code> macro.
 </p>
+
+<pre>enum { <i>...</i> } <dfn id="SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</dfn>(struct SEE_value *value);</pre>
 
 <p>
 Depending on the type,
@@ -841,7 +845,7 @@ The following table shows when the union fields of <code>v.u</code> are valid:
 
 <table>
 <thead>
-<tr>    <th><code>v.type</code></th>
+<tr>    <th><code>SEE_VALUE_GET_TYPE(&v)</code></th>
         <th>Valid member</th>
         <th>Member's type</th>  </tr>
 </thead>
@@ -878,7 +882,7 @@ utility functions describe in <a href="#conversion">&sect;5.1</a>.
 
 <p>
 To create new values in <code>struct SEE_value</code> structures, 
-use the following initialisation macros. They first set the <code>type</code> 
+use the following initialisation macros. They first set the <code>_type</code> 
 field and then copy the second parameter into the appropriate union field.
 It is fine to use a local variable for a <code>struct SEE_value</code>,
 because the garbage collector can see what is being used from the stack.
@@ -2123,6 +2127,7 @@ help show up application misuse of the API.
 <a href="#SEE_TRY">SEE_TRY</a><br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
+<a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>
 </table>
 
 <hr>

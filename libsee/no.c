@@ -107,11 +107,11 @@ SEE_no_defaultvalue(interp, o, hint, res)
 {
 	SEE_error_throw_string(interp, interp->TypeError, 
 		(hint &&
-		 hint->type == SEE_OBJECT &&
+		 SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT &&
 		 hint->u.object == interp->String) 
 			? STR(defaultvalue_string_bad) :
 		(hint &&
-		 hint->type == SEE_OBJECT &&
+		 SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT &&
 		 hint->u.object == interp->Number) 
 			? STR(defaultvalue_number_bad) :
 		STR(defaultvalue_no_bad));

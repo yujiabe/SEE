@@ -166,7 +166,7 @@ SEE_native_put(interp, o, p, val, attr)
 	struct SEE_property **x;
 	struct SEE_string *ip = SEE_intern(interp, p);
 
-	SEE_ASSERT(interp, val->type != SEE_REFERENCE);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
 
 	/*
 	 * Note: supply a non-zero attr implies that
@@ -176,7 +176,7 @@ SEE_native_put(interp, o, p, val, attr)
 	 */
 	if ((interp->compatibility & SEE_COMPAT_EXT1) && ip == STR(__proto__)) {
 		struct SEE_object *po;
-		if (val->type != SEE_OBJECT)
+		if (SEE_VALUE_GET_TYPE(val) != SEE_OBJECT)
 			SEE_error_throw_string(interp, interp->TypeError, 
 				STR(internal_error));
 		/* Check for recursive prototype */
@@ -310,13 +310,13 @@ SEE_native_defaultvalue(interp, o, hint, res)
 
 	if (!hint)
 		effective_hint = interp->Number;
-	else if (hint->type == SEE_OBJECT && 
+	else if (SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT && 
 	    hint->u.object == interp->String)
 		effective_hint = interp->String;
-	else if (hint->type == SEE_OBJECT &&
+	else if (SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT &&
 	    hint->u.object == interp->Number)
 		effective_hint = interp->Number;
-	else if (hint->type == SEE_OBJECT &&
+	else if (SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT &&
 	    hint->u.object == interp->Date)
 		effective_hint = interp->String;
 	else 
@@ -324,15 +324,15 @@ SEE_native_defaultvalue(interp, o, hint, res)
 
 	if (effective_hint == interp->String) {
 		SEE_OBJECT_GET(interp, o, STR(toString), &v);
-		if (v.type == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
-			if (res->type != SEE_OBJECT)
+			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		SEE_OBJECT_GET(interp, o, STR(valueOf), &v);
-		if (v.type == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
-			if (res->type != SEE_OBJECT)
+			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		if (interp->compatibility & SEE_COMPAT_EXT1)
@@ -343,15 +343,15 @@ SEE_native_defaultvalue(interp, o, hint, res)
 				STR(defaultvalue_string_bad));
 	} else {
 		SEE_OBJECT_GET(interp, o, STR(valueOf), &v);
-		if (v.type == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
-			if (res->type != SEE_OBJECT)
+			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		SEE_OBJECT_GET(interp, o, STR(toString), &v);
-		if (v.type == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
-			if (res->type != SEE_OBJECT)
+			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		if (interp->compatibility & SEE_COMPAT_EXT1)

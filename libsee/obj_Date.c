@@ -978,7 +978,7 @@ date_construct(interp, self, thisobj, argc, argv, res)
 	else if (argc == 1) {
 		SEE_SET_OBJECT(&hint, interp->Number);
 		SEE_ToPrimitive(interp, argv[0], &hint, &v);
-		if (v.type != SEE_STRING) {
+		if (SEE_VALUE_GET_TYPE(&v) != SEE_STRING) {
 		    SEE_ToNumber(interp, &v, &w);
 		    t = TimeClip(w.u.number);
 		} else  {

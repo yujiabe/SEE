@@ -89,7 +89,7 @@ SEE_ToPrimitive(interp, val, type, res)
 	struct SEE_interpreter *interp;
 	struct SEE_value *val, *type, *res;
 {
-	if (val->type == SEE_OBJECT)
+	if (SEE_VALUE_GET_TYPE(val) == SEE_OBJECT)
 		SEE_OBJECT_DEFAULTVALUE(interp, val->u.object, type, res);
 	else
 		SEE_VALUE_COPY(res, val);
@@ -101,7 +101,7 @@ SEE_ToBoolean(interp, val, res)
 	struct SEE_interpreter *interp;
 	struct SEE_value *val, *res;
 {
-	switch (val->type) {
+	switch (SEE_VALUE_GET_TYPE(val)) {
 	case SEE_UNDEFINED:
 	case SEE_NULL:
 		SEE_SET_BOOLEAN(res, 0);
@@ -136,7 +136,7 @@ SEE_ToNumber(interp, val, res)
 	struct SEE_interpreter *interp;
 	struct SEE_value *val, *res;
 {
-	switch (val->type) {
+	switch (SEE_VALUE_GET_TYPE(val)) {
 	case SEE_UNDEFINED:
 		SEE_SET_NUMBER(res, SEE_NaN);
 		break;
@@ -243,7 +243,7 @@ SEE_ToString(interp, val, res)
 	struct SEE_interpreter *interp;
 	struct SEE_value *val, *res;
 {
-	switch (val->type) {
+	switch (SEE_VALUE_GET_TYPE(val)) {
 	case SEE_UNDEFINED:
 		SEE_SET_STRING(res, STR(undefined));
 		break;
@@ -340,7 +340,7 @@ SEE_ToObject(interp, val, res)
 	struct SEE_object *obj;
 	struct SEE_value *arg[1];
 
-	switch (val->type) {
+	switch (SEE_VALUE_GET_TYPE(val)) {
 	case SEE_UNDEFINED:
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(toobject_undefined));

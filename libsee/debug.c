@@ -61,7 +61,7 @@ SEE_PrintValue(interp, v, f)
 	    fprintf(f, "NULL");
 	    return;
 	}
-	switch (v->type) {
+	switch (SEE_VALUE_GET_TYPE(v)) {
 	case SEE_UNDEFINED:
 	    fprintf(f, "undefined");
 	    break;
@@ -122,7 +122,7 @@ SEE_PrintValue(interp, v, f)
 	    }
 	    break;
 	default:
-	    fprintf(f, "<BAD value %d>", v->type);
+	    fprintf(f, "<BAD value %d>", SEE_VALUE_GET_TYPE(v));
 	}
 }
 
