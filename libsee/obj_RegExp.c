@@ -228,7 +228,7 @@ regexp_construct(interp, self, thisobj, argc, argv, res)
 		    case 'g':  ro->flags |= FLAG_GLOBAL; break;
 		    case 'i':  ro->flags |= FLAG_IGNORECASE; break;
 		    case 'm':  ro->flags |= FLAG_MULTILINE; break;
-		    default:	/* ignore unknown flags */
+		    default: break; /* ignore unknown flags */
 		    }
 	    }
 	}
