@@ -72,7 +72,7 @@ debug(interp, c)
 	case 'r': SEE_regex_debug = 1; break;
 	case 'v': SEE_eval_debug = 1; break;
 	default:
-		fprintf(stderr, "unknown debug flag '%c'", c);
+		fprintf(stderr, "unknown debug flag '%c'\n", c);
 	}
 #endif
 }
@@ -493,8 +493,12 @@ main(argc, argv)
 	    error = 1;
 
 	if (error) {
-	    fprintf(stderr, "usage: %s [-c flag] [-d[ETcelnprv]] "
-				      "[-f file] [-h file]\n", argv[0]);
+	    fprintf(stderr, "usage: %s [-c flag] "
+#ifndef NDEBUG
+				      "[-d[ETcelnprv]] "
+#endif
+				      "[-f file.js | -h file.html]...\n",
+			argv[0]);
 	    exit(1);
 	}
 
