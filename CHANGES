@@ -1,6 +1,6 @@
 $Id$
 
-1.1 [<date>] ** NEXT RELEASE: **
+1.1 [2004-08-15]
   Much improved documentation.
   Global.encodeURI generates uppercase hexadecimal to comply with standard.
   Implied literal '[' and '-' in regexs now conforms to standard.
@@ -16,6 +16,8 @@ $Id$
   Empty functions optimised.
   Better syntax error messages
   Traceback-printing utility function
+  bugfix: 'printed' expressions now have disambiguating parentheses
+  bugfix: separate build directory support
 
 1.0 [2003-12-03]
   Initial public release
