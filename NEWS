@@ -4,9 +4,16 @@ $Id$
   Corrected embarrasing stringdefs build problem
   Adhere more closely to GNU software standards (but still BSD licence)
   Configure change: --with-boehm-gc=[yes|no|prefix]
+  Added SEE_VALUE_GET_TYPE() for cleaner API
+  Added support for timeofday when building under Windows.
   Removed enumerator 'reset' method (never used)
+  Prefixed some non-public API members with underscores.
   Removed see/config.h from install
+  Better documentation for the see-shell; simplified, extra features.
   Added libsee-config script
+  Fixed octal parsing bug in parseInt
+  Fixed undefined arg bugs with escape, unescape, isNaN, isFinite
+  Fixed bug scanning /*/*/ as comment
 
 1.1 [2004-08-15]
   Much improved documentation.

@@ -19,10 +19,12 @@ please work with configure.ac primarily.
 RELEASE STEPS
 
 1. Update Changelog by running 'cvs2cl'
-2. Make sure that the package is configured (autoreconf --install)
+2. Make sure that the package is configured (autoreconf --force --install)
 3. Create a temporary build dir (e.g. /tmp/b), cd there and run
    the configure script from the check-out directory.
-4. Ensure you run 'make distcheck'
+4. Run 'make distcheck' in that directory.
+5. Use /tmp/b/see-*.tar.gz as the distfile
+6. Update information at freshmeat.net.
 
 $Id$
 
