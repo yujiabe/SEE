@@ -4,10 +4,11 @@ DEVELOPER NOTES
 1. After checking this out from CVS, you will first need to initialise
 the build environment with the following commands:
 
-	$ aclocal
-	$ autoheader
-	$ autoconf
-	$ automake -v -a --foreign
+	$ aclocal && \
+	  autoheader && \
+	  libtoolize --copy && \
+	  autoconf && \
+	  automake -v -a --foreign --copy
 
 You'll also find that you need libtool installed, and probably the
 boehm-gc package.
