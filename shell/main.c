@@ -204,7 +204,7 @@ readline(prompt)
 	while (len && (ret[len-1] == '\n' || ret[len-1] == '\r'))
 		len--;
 	ret[len] = '\0';
-	return strdup(ret);
+	return (char *)strdup(ret);
 }
 
 #endif /* !HAVE_READLINE */
@@ -349,6 +349,40 @@ init_dummy_malloc()
 	SEE_mem_malloc_hook = dummy_malloc;
 }
 
+/* Convert a compatability flag name into an integer bit-flag */
+static int
+compatvalue(name)
+	const char *name;
+{
+	static struct { const char *name; int flag; } names[] = {
+		{ "undefdef",	SEE_COMPAT_UNDEFDEF },
+		{ "262_3b",	SEE_COMPAT_262_3B },
+		{ "ext1",	SEE_COMPAT_EXT1 },
+	};
+	int i;
+
+	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
+		if (strcmp(name, names[i].name) == 0)
+			return names[i].flag;
+	if (name[0] >= '0' && name[0] <= '9')
+		return atoi(name);
+	fprintf(stderr, "WARNING: unknown compatability flag '%s'\n", name);
+	return 0;
+}
+
+/* Initialise the interpreter if it hasn't been already */
+static void
+initinterp(interp, initializedp, compatibility)
+	struct SEE_interpreter *interp;
+	int *initializedp;
+	int compatibility;
+{
+	if (!*initializedp) {
+		SEE_interpreter_init_compat(interp, compatibility);
+		*initializedp = 1;
+	}
+}
+
 int
 main(argc, argv)
 	int argc;
@@ -359,6 +393,8 @@ main(argc, argv)
 	int do_interactive = 1;
 	int globals_added = 0;
 	int document_added = 0;
+	int initialised = 0;
+	int compatibility = 0;
 	char *s;
 
 	if (SEE_mem_malloc_hook == NULL)
@@ -366,23 +402,22 @@ main(argc, argv)
 
 	SEE_interpreter_init(&interp);
 
-	while ((ch = getopt(argc, argv, "d:h:f:")) != -1)
+	while ((ch = getopt(argc, argv, "c:d:f:h:")) != -1)
 	    switch (ch) {
+	    case 'c':
+		if (initialised)
+		    fprintf(stderr, "late -c flag ignored\n");
+		else
+		    compatibility |= compatvalue(optarg);
+		break;
 	    case 'd':
 		if (*optarg == '*')
 		    optarg = "nElpvecr";
 		for (s = optarg; *s; s++)
 		    debug(&interp, *s);
 		break;
-	    case 'h':
-		if (!document_added) {
-		    shell_add_document(&interp);
-		    document_added = 1;
-		}
-		do_interactive = 0;
-		run_html(&interp, optarg);
-		break;
 	    case 'f':
+		initinterp(&interp, &initialised, compatibility);
 		if (!globals_added) {
 		    shell_add_globals(&interp);
 		    globals_added = 1;
@@ -391,15 +426,26 @@ main(argc, argv)
 		if (!run_file(&interp, optarg))
 			exit(1);
 		break;
+	    case 'h':
+		initinterp(&interp, &initialised, compatibility);
+		if (!document_added) {
+		    shell_add_document(&interp);
+		    document_added = 1;
+		}
+		do_interactive = 0;
+		run_html(&interp, optarg);
+		break;
 	    default:
 		error = 1;
 	    }
 	if (error) {
-	    fprintf(stderr, "usage: %s [-d[nElpvecr]] [-f file] [-h file]\n", argv[0]);
+	    fprintf(stderr, "usage: %s [-c flag] [-d[nElpvecr]] "
+				      "[-f file] [-h file]\n", argv[0]);
 	    exit(1);
 	}
 
 	if (do_interactive) {
+	    initinterp(&interp, &initialised, compatibility);
 	    if (!globals_added)
 		shell_add_globals(&interp);
 	    run_interactive(&interp);

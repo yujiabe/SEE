@@ -10,7 +10,7 @@ an interactive (prompted) mode.
 
 Usage
 -----
-	shell [-d<debugflags>] [-f file] [-h htmlfile] 
+	shell [-d<debugflags>] [-c value] [-f file] [-h htmlfile] 
 
 The '-f file' and '-h htmlfile' options can be specified multiple times.
 Each time they are specified, the given files are loaded and run.
@@ -29,6 +29,10 @@ forms, URL inclusions or triggers such as 'onLoad'. It is very spartan.
 If no -f or -h flags are given (or a "-f -" argument is given), an
 interactive prompt is produced, and individual statements are read
 from standard input until EOF.
+
+The -c flag adds flags to the compatibility field of the interpreter.
+Each occurrence of the -c flag bitwise-ors its integer argument into the
+flag. This option should occur early.
 
 NOTE: The command line arguments were chosen to be compatible with
 the perl script used with Mozilla/spidermonkey's test suite.
