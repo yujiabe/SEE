@@ -131,7 +131,6 @@ dnl -- functions that we *need* (i.e. don't have workarounds for):
 AC_CHECK_FUNCS([copysign rint \
 		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
 		snprintf vsnprintf \
-		getopt \
 		abort memcpy memset \
 		qsort strcmp strerror],,
 	       [missing_funcs="$missing_funcs $ac_func"])
@@ -141,9 +140,9 @@ if test -n "$missing_funcs"; then
 fi
 
 dnl -- functions that have workarounds written for
-AC_CHECK_FUNCS([strdup GC_malloc \
+AC_CHECK_FUNCS([strdup GC_malloc getopt \
 		gettimeofday GetSystemTimeAsFileTime time \
-		getopt])
+		])
 
 dnl ------------------------------------------------------------
 dnl miscellanea
