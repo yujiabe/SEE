@@ -109,6 +109,9 @@ for the popular ECMAScript language.
 ECMAScript is the official name for what most people call JavaScript:
 </p>
 
+<!-- img src="http://www.itconversations.com/assets/gifs/eich.gif" 
+     align=right -->
+
 <blockquote cite="#ref-ecma">
 [ECMAscript] is based on several originating technologies, the most well
 known being JavaScript (Netscape) and JScript (Microsoft). The language
@@ -1623,6 +1626,16 @@ from method implementations:
   <li><code>SEE_native_enumerator()</code>
 </ul>
 
+<p>
+It is very important that you initialize the <code>native</code>
+field when constructing your host object.
+Do this using the <code>SEE_native_init()</code> function.
+</p>
+
+<pre>void <dfn id="SEE_native_init">SEE_native_init</dfn>(struct SEE_native *obj, struct SEE_interpreter *i,
+                const struct SEE_objectclass *obj_class, 
+		struct SEE_object *prototype);</pre>
+
 <h3 id="cfunction">6.5 C function objects</h3>
 
 <p>
@@ -2080,6 +2093,7 @@ help show up application misuse of the API.
 <a href="#SEE_mem_malloc_hook">SEE_mem_malloc_hook</a><br>
 <a href="#SEE_NaN">SEE_NaN</a><br>
 <a href="#struct_SEE_native">SEE_native</a> struct<br>
+<a href="#SEE_native_init">SEE_native_init</a><br>
 <a href="#SEE_NEW">SEE_NEW</a><br>
 <a href="#SEE_NEW_ARRAY">SEE_NEW_ARRAY</a><br>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
@@ -2090,8 +2104,8 @@ help show up application misuse of the API.
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
-<a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
 <td>
+<a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
 <a href="#SEE_OBJECT_CONSTRUCT">SEE_OBJECT_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_DEFAULTVALUE">SEE_OBJECT_DEFAULTVALUE</a><br>
 <a href="#SEE_OBJECT_DELETE">SEE_OBJECT_DELETE</a><br>
@@ -2111,8 +2125,8 @@ help show up application misuse of the API.
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
-<a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <td>
+<a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
 <a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
@@ -2132,8 +2146,8 @@ help show up application misuse of the API.
 <a href="#SEE_ToBoolean">SEE_ToBoolean</a><br>
 <a href="#SEE_ToInt32">SEE_ToInt32</a><br>
 <a href="#SEE_ToInteger">SEE_ToInteger</a><br>
-<a href="#SEE_ToNumber">SEE_ToNumber</a><br>
 <td>
+<a href="#SEE_ToNumber">SEE_ToNumber</a><br>
 <a href="#SEE_ToObject">SEE_ToObject</a><br>
 <a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <a href="#SEE_ToString">SEE_ToString</a><br>
