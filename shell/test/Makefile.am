@@ -18,6 +18,6 @@ EXTRA_DIST=	test.sh grammar.js
 
 test: test.sh
 	rm -f $@
-	sed -e 's,@top_builddir@,$(top_builddir),g' \
-	    -e 's,@srcdir@,$(srcdir),g' < $(srcdir)/test.sh > $@
+	sed -e 's,=top_builddir=,$(top_builddir),g' \
+	    -e 's,=srcdir=,$(srcdir),g' < $(srcdir)/test.sh > $@
 	chmod +x $@
