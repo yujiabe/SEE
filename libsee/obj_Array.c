@@ -67,7 +67,6 @@ struct array_object {
 
 static void intstr_p(struct SEE_string *, SEE_uint32_t);
 static void intstr(struct SEE_interpreter *,struct SEE_string **, SEE_uint32_t);
-static int toint(struct SEE_string *, SEE_uint32_t *);
 static void array_init(struct array_object *, struct SEE_interpreter *,
 	SEE_uint32_t);
 static void array_construct(struct SEE_interpreter *, struct SEE_object *,
@@ -109,6 +108,8 @@ static int  array_hasproperty(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
 static int  array_delete(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
+static struct SEE_enum *array_enumerator(struct SEE_interpreter *,
+	struct SEE_object *);
 
 /* object class for Array constructor */
 static struct SEE_objectclass array_const_class = {
@@ -199,15 +200,15 @@ SEE_Array_init(interp)
 	PUTFUNC(unshift, 1)			/* 15.4.4.13 */
 }
 
-#define MAX_INDEX	(4294967295UL)
+#define MAX_ARRAY_INDEX	(4294967295UL)
 
 /*
  * Helper function that returns true if the string
  * is an integer property less than 2^32-1 (4294967295), and stores
  * the integer value in the given pointer. Don't allow leading zeroes.
  */
-static int
-toint(s, ip)
+int
+SEE_to_array_index(s, ip)
 	struct SEE_string *s;
 	SEE_uint32_t *ip;
 {
@@ -223,8 +224,9 @@ toint(s, ip)
 	    if (s->data[i] < '0' || s->data[i] > '9')
 		return 0;
 	    digit = s->data[i] - '0';
-	    if (n > (MAX_INDEX / 10) ||
-	        (n == (MAX_INDEX / 10) && digit >= (MAX_INDEX % 10)))
+	    if (n > (MAX_ARRAY_INDEX / 10) ||
+	        (n == (MAX_ARRAY_INDEX / 10) && 
+		 digit >= (MAX_ARRAY_INDEX % 10)))
 		    return 0;
 	    n = n * 10 + digit;
 	}
@@ -971,7 +973,7 @@ array_setlength(interp, ao, val)
 	if (ao->length > newlen) {
 	    e = SEE_OBJECT_ENUMERATOR(interp, (struct SEE_object *)&ao->native);
 	    while ((s = SEE_ENUM_NEXT(interp, e, &flags))) 
-		if (toint(s, &i) && i >= newlen) {
+		if (SEE_to_array_index(s, &i) && i >= newlen) {
 		    name = SEE_NEW(interp, struct name);
 		    name->s = s;
 		    name->next = names;
@@ -1014,7 +1016,7 @@ array_put(interp, o, p, val, attr)
 	    array_setlength(interp, ao, val);
 	else {
 	    SEE_native_put(interp, o, p, val, attr);
-	    if (toint(p, &i))
+	    if (SEE_to_array_index(p, &i))
 		if (i >= ao->length)
 		    ao->length = i + 1;
 	}

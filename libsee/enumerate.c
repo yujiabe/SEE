@@ -40,11 +40,13 @@
 # include <stdlib.h>
 #endif
 
+#include <see/interpreter.h>
 #include <see/string.h>
 #include <see/object.h>
 #include <see/mem.h>
 
 #include "enumerate.h"
+#include "array.h"
 
 /*
  * Enumeration of an object's properties
@@ -75,6 +77,11 @@ struct propname_list {
 	struct propname_list *next;
 	int dontenum, depth;
 };
+
+static int make_list(struct SEE_interpreter *, struct SEE_object *,
+	int, struct propname_list **);
+static int property_cmp(const struct SEE_string *, const struct SEE_string *);
+static int slist_cmp(void *, void *);
 
 /*
  * Add the property names of the local object to the property name list.
@@ -109,22 +116,36 @@ make_list(interp, o, depth, head)
 }
 
 /*
- * property name comparison function, used when sorting
+ * Property name comparison function.
  */
 static int
-slist_cmp(a, b)
+slist_cmp_nice(a, b)
+	void *a, *b;
+{
+	struct propname_list **sa = (struct propname_list **)a;
+	struct propname_list **sb = (struct propname_list **)b;
+	if ((*sa)->name != (*sb)->name) {
+		SEE_uint32_t ai, bi;
+		if (SEE_to_array_index((*sa)->name, &ai) &&
+		    SEE_to_array_index((*sb)->name, &bi))
+			return ai - bi;
+		return SEE_string_cmp((*sa)->name, (*sb)->name);
+	}
+	return (*sa)->depth - (*sb)->depth;
+}
+
+/*
+ * Property name comparison function. Uses property addresses 
+ * in memory to order.
+ */
+static int
+slist_cmp_fast(a, b)
 	void *a, *b;
 {
 	struct propname_list **sa = (struct propname_list **)a;
 	struct propname_list **sb = (struct propname_list **)b;
 	if ((*sa)->name != (*sb)->name)
 		return (int)(*sa)->name - (int)(*sb)->name;
-		 /*
-		  * NB If lexicographically ordered enumerations are 
-		  * required, just change the above into a call to
-		  * SEE_string_cmp(). (The standard does not require
-		  * any particular ordering though.) 
-		  */
 	return (*sa)->depth - (*sb)->depth;
 }
 
@@ -152,7 +173,10 @@ SEE_enumerate(interp, o)
 	slist = SEE_ALLOCA(count, struct propname_list *);
 	for (sp = slist; head; head = head->next)
 		*sp++ = head;
-	qsort(slist, count, sizeof slist[0], slist_cmp);
+	qsort(slist, count, sizeof slist[0], 
+	    interp->compatibility & SEE_COMPAT_EXT1
+		? slist_cmp_nice
+		: slist_cmp_fast);
 
 	/*
 	 * Remove duplicate names from the array; also
