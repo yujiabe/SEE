@@ -6,7 +6,7 @@
 
 /*
  * The lexical analyser returns the next syntactic token from
- * the stream.
+ * the input stream.
  */
 
 #include <see/value.h>
