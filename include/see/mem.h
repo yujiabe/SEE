@@ -5,7 +5,6 @@
 #define _h_mem_
 
 #include "type.h"
-#include <stdlib.h>
 
 struct SEE_interpreter;
 

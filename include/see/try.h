@@ -35,17 +35,35 @@
  * The signatures for the macros are:
  *
  *   struct SEE_value * SEE_CAUGHT(SEE_try_context_t);
- *   void               SEE_THROW(struct SEE_interpreter *, struct SEE_valuet *);
- *   void               SEE_DEFAULT_CATCH(SEE_interpreter *, SEE_try_context_t);
+ *   void               SEE_THROW(struct SEE_interpreter *, struct SEE_valuet *)
+ *   void               SEE_DEFAULT_CATCH(SEE_interpreter *, SEE_try_context_t)
  *
  */
 
-#include <setjmp.h>
+#include "config.h"
 #include "type.h"
 #include "value.h"
 
 /*
- * Macros
+ * Determine which setjmp/longjmp interface to use
+ */
+
+#if HAVE__LONGJMP
+# include <setjmp.h>
+# define _SEE_LONGJMP(buf, val)	_longjmp(buf, val)
+# define _SEE_SETJMP(buf)	_setjmp(buf)
+# define _SEE_JMPBUF		jmp_buf
+#elif HAVE_LONGJMP
+# include <setjmp.h>
+# define _SEE_LONGJMP(buf, val)	longjmp(buf, val)
+# define _SEE_SETJMP(buf)	setjmp(buf)
+# define _SEE_JMPBUF		jmp_buf
+#else
+# error "need longjmp/setjmp"
+#endif
+
+/*
+ * Exception handling macros
  */
 
 #define SEE_TRY(interp, c) 					\
@@ -54,7 +72,7 @@
 		 (c).interpreter = (interp),			\
 		 SEE_SET_NULL(&(c).thrown),			\
 		 (c).done = 0;					\
-		 !(c).done && (_setjmp(				\
+		 !(c).done && (_SEE_SETJMP(			\
 		    ((struct SEE_try_context *)&(c))->env) 	\
 		   ? ((c).interpreter->try_context = 		\
 		     (c).previous, 0)   			\
@@ -81,7 +99,7 @@
 		(interp)->try_context->throw_file = _file;	\
 		(interp)->try_context->throw_line = _line;	\
 		SEE_throw();	/* debugger hook */		\
-		_longjmp(((struct SEE_try_context *)		\
+		_SEE_LONGJMP(((struct SEE_try_context *)	\
 		      (interp)->try_context)->env, 1);		\
 		/* NOTREACHED */				\
 	    } while (0)
@@ -108,7 +126,7 @@ struct SEE_try_context {
 	volatile struct SEE_try_context *previous; /* try chain */
 	struct SEE_value thrown;		/* what was thrown during try */
 	int done;				/* true if try completed */
-	jmp_buf env;				/* setjmp storage */
+	_SEE_JMPBUF env;			/* setjmp storage */
 	const char *throw_file;			/* (debugging) */
 	int throw_line;				/* (debugging) */
 };

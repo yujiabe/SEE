@@ -10,9 +10,13 @@
  * references or string references.
  */
 
-#include <math.h>
+#if STDC_HEADERS
+# include <math.h>
+#endif
+
 #include "type.h"
 
+/* define NULL now as a pointer, not as ansi C's (0) */
 #ifndef NULL
 #define NULL	((void *)0)
 #endif
@@ -59,11 +63,19 @@ struct SEE_value {
 	} u;
 };
 
-#define SEE_NUMBER_ISNAN(v)    isnan((v)->u.number)
-#define SEE_NUMBER_ISPINF(v)   (isinf((v)->u.number) && (v)->u.number > 0)
-#define SEE_NUMBER_ISNINF(v)   (isinf((v)->u.number) && (v)->u.number < 0)
-#define SEE_NUMBER_ISINF(v)    isinf((v)->u.number)
-#define SEE_NUMBER_ISFINITE(v) finite((v)->u.number)
+#if SEE_NUMBER_IS_FLOAT
+# define SEE_NUMBER_ISNAN(v)    isnanf((v)->u.number)
+# define SEE_NUMBER_ISPINF(v)   (isinff((v)->u.number) && (v)->u.number > 0)
+# define SEE_NUMBER_ISNINF(v)   (isinff((v)->u.number) && (v)->u.number < 0)
+# define SEE_NUMBER_ISINF(v)    isinff((v)->u.number)
+# define SEE_NUMBER_ISFINITE(v) finitef((v)->u.number)
+#elif SEE_NUMBER_IS_DOUBLE
+# define SEE_NUMBER_ISNAN(v)    isnan((v)->u.number)
+# define SEE_NUMBER_ISPINF(v)   (isinf((v)->u.number) && (v)->u.number > 0)
+# define SEE_NUMBER_ISNINF(v)   (isinf((v)->u.number) && (v)->u.number < 0)
+# define SEE_NUMBER_ISINF(v)    isinf((v)->u.number)
+# define SEE_NUMBER_ISFINITE(v) finite((v)->u.number)
+#endif
 
 #define SEE_VALUE_COPY(dst, src)		\
 	memcpy(dst, src, sizeof (struct SEE_value))

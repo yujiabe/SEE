@@ -10,6 +10,8 @@
 extern "C" {
 #endif /* C++ */
 
+#include "config.h"
+
 #include "type.h"
 #include "value.h"
 #include "object.h"

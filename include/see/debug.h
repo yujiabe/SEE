@@ -4,7 +4,12 @@
 #ifndef _h_debug_
 #define _h_debug_
 
+#include "config.h"
+
+#if STDC_HEADERS
 #include <stdio.h>
+#endif
+
 struct SEE_value;
 struct SEE_object;
 struct SEE_interpreter;

@@ -14,8 +14,13 @@
  * There is no mechanism for disposing of strings 
  */
 
+#include "config.h"
+
+#if STDC_HEADERS
 #include <stdio.h>
 #include <stdarg.h>
+#endif
+
 #include "type.h"
 
 struct SEE_stringclass;

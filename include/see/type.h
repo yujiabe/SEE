@@ -8,8 +8,7 @@
  * Machine-dependent types and definitions
  */
 
-#include <stdlib.h>
-#include <sys/types.h>
+#include "config.h"
 
 /* 16-bit unsigned integer */
 #if SIZEOF_UNSIGNED_SHORT == 2
@@ -66,8 +65,10 @@ typedef unsigned long long SEE_uint64_t;
 
 /* 64-bit floating point */
 #if SIZEOF_FLOAT == 8
+#define SEE_NUMBER_IS_FLOAT 1
 typedef float SEE_number_t;
-#elif SIZEOF_DOUBLE == 4
+#elif SIZEOF_DOUBLE == 8
+#define SEE_NUMBER_IS_DOUBLE 1
 typedef double SEE_number_t;
 #else
 # error "cannot provide type for SEE_number_t"
@@ -75,15 +76,26 @@ typedef double SEE_number_t;
 
 typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
 
+/* derived types */
 typedef SEE_uint16_t	  SEE_char_t;     /* UTF-16 encoding */
 typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 
-/* an attribute indicating which functions never return. (can be empty) */
-#define SEE_dead	__attribute__((__noreturn__))
+/* an attribute indicating which functions never return */
+#if HAVE_ATTRIBUTE_NORETURN
+# define SEE_dead	__attribute__((__noreturn__))
+#else
+# define SEE_dead	/* nothing */
+#endif
 
-/* numeric constants */
-#define SEE_Infinity	((SEE_number_t) 1.0 / 0.0)   /* use HUGE_VAL instead? */
-#define SEE_NaN		((SEE_number_t) 0.0 / 0.0)
+/* numeric constant for NaN */
+#if HAVE_CONSTANT_NAN_DIV
+# define SEE_NaN		((SEE_number_t) 0.0 / 0.0)
+#endif
+
+/* numeric constant for Infinity */
+#if HAVE_CONSTANT_INF_DIV
+# define SEE_Infinity	((SEE_number_t) 1.0 / 0.0)   /* use HUGE_VAL instead? */
+#endif
 
 /* on-stack allocation */
 #define SEE_ALLOCA(n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)

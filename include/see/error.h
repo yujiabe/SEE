@@ -4,6 +4,7 @@
 #ifndef _h_error_
 #define _h_error_
 
+#include "config.h"
 #include "type.h"
 #include "native.h"
 
