@@ -1,0 +1,39 @@
+$Id$
+
+Things to do
+
+* add a visitor pattern to the AST
+* do a proper Canonicalize - use ICU?
+* do a proper upper/lower conversion for unicode
+* write a HOWTO to show common reqts like adding to Global or getting a var
+* split parse.c up into the three parts of the grammar
+* start work on JIT
+* write a cfunction builder, eg:
+	SEE_attach_method(interp, obj, "name", "tsi", func); 
+	where the format string (t=this, i=int, s=string, b=bool, etc) shows
+	how to arrange the (int) arguments to func(...).
+* implement all compatibility stuff
+    some resources at: http://www.swtech.com/script/javascript/diff/
+    http://members.ozemail.com.au/~enigman/javascript/js_faq.html
+    http://web.archive.org/web/20011014100919/http://www.webcoder.com/reference/2/
+
+    JavaScript1.0->1.1 
+	http://wp.netscape.com/eng/mozilla/3.0/handbook/javascript/newfunc.htm
+		- new operators: typeof void
+		- new objects: Array Boolean Function Number
+		- new methods:
+			Array.join(separator)
+			Array.reverse()
+			Array.sort(comparefunc)
+			String.split([separator])
+			Object.valueOf()
+		- new properties:
+			?.constructor
+			?.prototype
+			Number.MAX_VALUE
+			Number.MIN_VALUE
+			Number.NaN
+			Number.NEGATIVE_INFINITY
+			Number.POSITIVE_INFINITY
+
+		
