@@ -1164,21 +1164,12 @@ CharacterClass_parse(recontext)
 	    SKIP;
 	}
 
-	/* Compatibility with unix regex */
-	if ((recontext->interpreter->compatibility & SEE_COMPAT_EXT1) &&
-	    !ATEOF && NEXT == ']')
-	{
-	    CC_ADDCHAR(c, ']');
-	    SKIP;
-	}
-
 	while (!ATEOF && NEXT != ']') {
 	    a = ClassAtom_parse(recontext);
 	    if (!ATEOF && NEXT == '-') {
 		SKIP;
-		/* Compatibility with unix regex */
-		if ((recontext->interpreter->compatibility & SEE_COMPAT_EXT1) &&
-		    !ATEOF && NEXT == ']')
+		/* Treat '-' literally if at end of ClassRanges 15.10.2.16 */
+		if (!ATEOF && NEXT == ']')
 		{
 			CC_ADDCHAR(a, '-');
 			goto out;

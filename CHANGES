@@ -2,7 +2,8 @@ $Id$
 
 <next release and change info goes here>
 1.1 [<date>]
-  Global.encodeURI generates uppercase hexadecimal to comply with std
+  Global.encodeURI generates uppercase hexadecimal to comply with std.
+  Implied literal '[' and '-' in regexs now conforms to std, no EXT1.
 
 1.0 [2003-12-03]
   Initial public release

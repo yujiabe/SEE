@@ -55,9 +55,5 @@ EXT1	Native functions assign themselves the "arguments" property when
 EXT1	The arguments objects have a default value which is a string
 	representing the arguments.
 
-EXT1	In regular expressions character classes, treat as literals the chars
-	']' placed first, and '-' when placed last.
-	ie: /[^]Aa-zB-]/ == /[^\]Aa-zB\-]/.
-
 EXT1	Array.join(undefined) uses "undefined" as a join string instead of ",".
 
