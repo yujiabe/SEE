@@ -5,6 +5,9 @@ This is a library that provides an ECMAScript (JavaScript) run-time
 environment. Running configure and compiling in the normal way should
 provide the library 'libsee.a' and a test application 'see-shell'.
 
+	$ configure -C
+	$ gmake
+
 Developer documentation for using the library can be found in USAGE.html.
 The 'see-shell' program is a additional example that demonstrates how
 the library is intended to be used.
