@@ -61,6 +61,11 @@ static void *malloc_gc(struct SEE_interpreter *, unsigned int);
 # define INITIAL_FREE		NULL
 #endif /* !HAVE_GC_MALLOC */
 
+/*
+ * Application-visible memory allocator hooks.
+ * Changing these will allow an application to wrap memory allocation
+ * and handle out-of-memory conditions.
+ */
 void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
 		= INITIAL_MALLOC;
 void (*SEE_mem_free_hook)(struct SEE_interpreter *, void *) 
@@ -69,7 +74,7 @@ void (*SEE_mem_exhausted_hook)(struct SEE_interpreter *) SEE_dead
 		= memory_exhausted;
 
 /*------------------------------------------------------------
- * Simple ehaustion strategy
+ * Simple exhaustion handling strategy: abort!
  */
 
 static void
@@ -97,11 +102,11 @@ malloc_gc(interp, size)
 #endif /* HAVE_GC_MALLOC */
 
 /*------------------------------------------------------------
- * wrappers around memory allocators that check for failur
+ * Wrappers around memory allocators that check for failure
  */
 
-/*
- * Called to allocate size bytes of garbage-collected storage
+/**
+ * Allocates size bytes of garbage-collected storage.
  */
 void *
 SEE_malloc(interp, size)
@@ -120,7 +125,10 @@ SEE_malloc(interp, size)
 
 /*
  * Called when we *know* that previously allocated storage
- * can be released. NOT RECOMMENDED TO BE USED.
+ * can be released. 
+ *
+ *   *** NOT RECOMMENDED TO BE USED ***
+ *
  * (Much better is to allocate temp storage on the stack with SEE_ALLOCA().)
  */
 void
