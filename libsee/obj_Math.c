@@ -58,8 +58,8 @@
  */
 
 #define SET_NO_RESULT(res)	SEE_SET_NUMBER(res, SEE_NaN)
-#define IS_NEGZERO(n)		(!(n) && copysign(1.0,n) < 0)
-#define IS_POSZERO(n)		(!(n) && copysign(1.0,n) > 0)
+#define IS_NEGZERO(n)		((n) == 0 && copysign(1.0,n) < 0)
+#define IS_POSZERO(n)		((n) == 0 && copysign(1.0,n) > 0)
 
 static void math_abs(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *,
@@ -298,9 +298,9 @@ math_atan2(interp, self, thisobj, argc, argv, res)
 		 * the case where x is -0
 		 */
 		if (IS_POSZERO(y) && IS_NEGZERO(x))
-			SEE_SET_NUMBER(res, M_PI_2);
+			SEE_SET_NUMBER(res, +M_PI);
 		else if (IS_NEGZERO(y) && IS_NEGZERO(x))
-			SEE_SET_NUMBER(res, -M_PI_2);
+			SEE_SET_NUMBER(res, -M_PI);
 		else
 			SEE_SET_NUMBER(res, atan2(y, x));
 	}
@@ -356,7 +356,10 @@ math_exp(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, exp(v.u.number));
+		if (SEE_NUMBER_ISINF(&v))
+			SEE_SET_NUMBER(res, v.u.number < 0 ? 0 : SEE_Infinity);
+		else
+			SEE_SET_NUMBER(res, exp(v.u.number));
 	}
 }
 
@@ -414,7 +417,8 @@ math_max(interp, self, thisobj, argc, argv, res)
 	    SEE_ToNumber(interp, argv[i], res);
 	    if (SEE_NUMBER_ISNAN(res))
 		return;
-	    if (i == 0 || res->u.number > maxnum)
+	    if (i == 0 || res->u.number > maxnum ||
+	        (res->u.number == 0 && IS_NEGZERO(maxnum)))
 		maxnum = res->u.number;
 	}
 	SEE_SET_NUMBER(res, maxnum);
@@ -435,7 +439,8 @@ math_min(interp, self, thisobj, argc, argv, res)
 	    SEE_ToNumber(interp, argv[i], res);
 	    if (SEE_NUMBER_ISNAN(res))
 		return;
-	    if (i == 0 || res->u.number < minnum)
+	    if (i == 0 || res->u.number < minnum ||
+	        (minnum == 0 && IS_NEGZERO(res->u.number)))
 		minnum = res->u.number;
 	}
 	SEE_SET_NUMBER(res, minnum);
@@ -457,7 +462,11 @@ math_pow(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[0], &v1);
 		SEE_ToNumber(interp, argv[1], &v2);
 
-		if (v1.u.number == 0 && v2.u.number < 0) 
+		if (IS_NEGZERO(v1.u.number) && v2.u.number < 0) 
+			SEE_SET_NUMBER(res, 
+			     copysign(fmod(v2.u.number,2), +1) == 1 
+				? -SEE_Infinity : SEE_Infinity); 
+		else if (v1.u.number == 0 && v2.u.number < 0) 
 			SEE_SET_NUMBER(res, copysign(SEE_Infinity,v1.u.number));
 		else
 			SEE_SET_NUMBER(res, pow(v1.u.number, v2.u.number));
