@@ -9,6 +9,13 @@ different flags provides the behaviour listed below.
 Flag	Description
 -------	-----------
 
+** Backward behaviour compatibility **
+
+UNDEFDEF Don't throw a ReferenceError when an undefined global property
+	 is used. This violates step 3 of s8.7.1 of ECMA-262, but it seems
+	 that so many interpreters are flexible on this point. It was
+	 a JavaScript 1.5 thing I believe.
+
 ** ECMA-262-3 Appendix B **
 
 262_3B	Date.toGMTString() is defined, and made equivalent to toUTCString()

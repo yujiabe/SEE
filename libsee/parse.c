@@ -777,10 +777,15 @@ GetValue(context, v, res)
 			SEE_VALUE_COPY(res, v);
 		return;
 	}
-	if (v->u.reference.base == NULL)
-		SEE_error_throw_string(interp, interp->ReferenceError, 
+	if (v->u.reference.base == NULL) {
+		if (interp->compatibility & SEE_COMPAT_UNDEFDEF)
+		    SEE_SET_UNDEFINED(res);
+		else
+		    SEE_error_throw_string(interp, interp->ReferenceError, 
 			v->u.reference.property);
-	SEE_OBJECT_GET(interp, v->u.reference.base, v->u.reference.property, res);
+	} else
+		SEE_OBJECT_GET(interp, v->u.reference.base, 
+		    v->u.reference.property, res);
 }
 
 /* 8.7.2 */

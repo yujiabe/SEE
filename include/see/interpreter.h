@@ -72,6 +72,7 @@ struct SEE_interpreter {
 /* Compatibility flags */
 #define SEE_COMPAT_262_3B	0x01	/* ECMA-262 3rd ed. Annex B */
 #define SEE_COMPAT_EXT1		0x02	/* see1.0 (non-ecma) extensions */
+#define SEE_COMPAT_UNDEFDEF	0x04	/* No ReferenceError on undefined var */
 
 void SEE_interpreter_init(struct SEE_interpreter *i);
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
