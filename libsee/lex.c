@@ -309,12 +309,17 @@ Punctuator(lex)
 			for (j = 0; j < len; j++)
 				if (t->identifier[j] != op[j])
 					goto out;
-			if (t->token == tSGMLCOMMENT)
-				return SGMLComment(lex);
+			if (t->token == tSGMLCOMMENT) {
+				if (interp->compatibility & SEE_COMPAT_EXT1)
+					return SGMLComment(lex);
+				else
+					goto out;
+			}
 			for (j = 0; j < len; j++)
 				SKIP;
 			return t->token;
 	   out:
+			/* continue */ ;
 		}
 
 	/*
