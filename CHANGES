@@ -1,9 +1,21 @@
 $Id$
 
-<next release and change info goes here>
-1.1 [<date>]
-  Global.encodeURI generates uppercase hexadecimal to comply with std.
-  Implied literal '[' and '-' in regexs now conforms to std, no EXT1.
+1.1 [<date>] ** NEXT RELEASE: **
+  Much improved documentation.
+  Global.encodeURI generates uppercase hexadecimal to comply with standard.
+  Implied literal '[' and '-' in regexs now conforms to standard.
+  SGML comments are now part of compatibility mode. 
+  Array.prototype.concat correctly updates this.length.
+  UTF-8 decoding now treats 'unsafe' sequences as illegal. (This
+    violates an obscure part of the standard, but improves security.)
+  Function recursion limits capability
+  ToObject throws a better exception message in pathological cases
+  Per-interpreter locales.
+  See-shell now has a -c option to set the compatibility flags dynamically.
+  Application static strings can be intern'd across multiple interpreters.
+  Empty functions optimised.
+  Better syntax error messages
+  Traceback-printing utility function
 
 1.0 [2003-12-03]
   Initial public release

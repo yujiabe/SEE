@@ -6,9 +6,11 @@ the build environment with the following commands:
 
 	$ aclocal && \
 	  autoheader && \
-	  libtoolize --copy && \
+	  libtoolize --copy --force && \
+	  automake -v -a --foreign --copy && \
 	  autoconf && \
-	  automake -v -a --foreign --copy
+	  :
+	$ sh configure CFLAGS="-Wall -ggdb -O2"
 
 You'll also find that you need libtool installed, and probably the
 boehm-gc package.

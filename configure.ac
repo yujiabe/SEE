@@ -1,7 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $Id$
 
-AC_INIT
+AC_INIT(see, 1.1, leonard@users.sourceforge.net)
+AC_PREREQ(2.52)
+AC_REVISION(`$Id$')
 AM_INIT_AUTOMAKE(see, 1.1)
 AM_CONFIG_HEADER(include/see/config.h)
 AC_CONFIG_FILES([Makefile
@@ -39,6 +40,9 @@ AC_HEADER_TIME
 dnl (alloca.h needs to know about these headers)
 AC_CHECK_HEADERS([errno.h string.h stdlib.h],,,[;])
 
+dnl (These make finding integer sizes simpler)
+AC_CHECK_HEADERS([stdint.h inttypes.h],,,[;])
+
 dnl ------------------------------------------------------------
 dnl C compiler features
 dnl
@@ -55,6 +59,7 @@ AC_CHECK_SIZEOF(signed long)
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(signed long long)
 AC_CHECK_SIZEOF(unsigned long long)
+
 AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
 
@@ -101,7 +106,9 @@ AC_ARG_WITH(readline,
 	[ac_cv_use_readline=$withval], [ac_cv_use_readline=no])
 if test x"$ac_cv_use_readline" != x"no"; then
     AC_CHECK_HEADERS([readline/readline.h readline.h],,,[;])
+    AC_SEARCH_LIBS(tgoto, [termcap termlib curses ncurses])
     AC_SEARCH_LIBS(readline, [readline edit])
+    AC_CHECK_FUNC(readline)
 fi
 
 
@@ -145,19 +152,7 @@ if test -n "$missing_funcs"; then
 fi
 
 dnl -- functions that have workarounds written for
-AC_CHECK_FUNCS([strdup readline GC_malloc])
-
-dnl ------------------------------------------------------------
-dnl debugging
-dnl
-
-AC_ARG_ENABLE(debug,
-    AC_HELP_STRING([--enable-debug],
-	[include debugging code, default=yes]),
-	[ac_cv_enable_debug=$withval], [ac_cv_enable_debug=yes])
-if test x"$ac_cv_enable_debug" = x"no"; then
-    AC_DEFINE(NDEBUG)
-fi
+AC_CHECK_FUNCS([strdup GC_malloc])
 
 dnl ------------------------------------------------------------
 dnl miscellanea
@@ -251,7 +246,7 @@ dnl setjmp/longjmp
 dnl
 
 AC_CHECK_HEADERS([setjmp.h],,,[;])
-AC_CACHE_CHECK([working _longjmp()], [ac_cv_cc__longjmp_works],
+AC_CACHE_CHECK([for working _longjmp()], [ac_cv_cc__longjmp_works],
 	[AC_TRY_RUN([#include <setjmp.h>
 		     int main () {
 			jmp_buf b; volatile int c = 0;
@@ -266,7 +261,7 @@ AC_CACHE_CHECK([working _longjmp()], [ac_cv_cc__longjmp_works],
 		    [ac_cv_cc__longjmp_works=no])])
 test $ac_cv_cc__longjmp_works = yes && AC_DEFINE(HAVE__LONGJMP)
 
-AC_CACHE_CHECK([working longjmp()], [ac_cv_cc_longjmp_works],
+AC_CACHE_CHECK([for working longjmp()], [ac_cv_cc_longjmp_works],
 	[AC_TRY_RUN([#include <setjmp.h>
 		     int main () {
 			jmp_buf b; volatile int c = 0;
@@ -290,7 +285,7 @@ dnl
 dnl check that vsnprintf works
 dnl
 
-AC_CACHE_CHECK([working vsnprintf(0,0,,)], [ac_cv_libc_vsnprintf_works],
+AC_CACHE_CHECK([for working vsnprintf(0,0,,)], [ac_cv_libc_vsnprintf_works],
 	[AC_TRY_RUN([#include <stdio.h>
 		     #include <stdarg.h>
 
@@ -362,35 +357,24 @@ AH_TOP([#ifndef _SEE_h_config_
 #define _SEE_h_config_])
 AH_BOTTOM([#endif /* _SEE_h_config_ */])
 
-AH_TEMPLATE([NDEBUG], 
-	    [Define to disable and remove all debugging code])
 AH_TEMPLATE([HAVE_ATTRIBUTE_NORETURN], 
-	    [Define if the compiler understands __attribute__((__noreturn__))])
+	    [Define if your compiler understands __attribute__((__noreturn__))])
 AH_TEMPLATE([HAVE_CONSTANT_INF_DIV],
-	    [Define if compiler can inline the expression 1.0/0.0 as constant])
+	    [Define if your compiler treats the expression 1.0/0.0 as constant])
 AH_TEMPLATE([HAVE_CONSTANT_NAN_DIV],
-	    [Define if compiler can inline the expression 0.0/0.0 as constant])
+	    [Define if your compiler treats the expression 0.0/0.0 as constant])
 AH_TEMPLATE([HAVE_CONSTANT_HEX_FLOAT],
-	    [Define if compiler can handle ANSI hex fp constants like '0x1p3'])
+	    [Define if your compiler handles ANSI hex fp constants like '0x1p3'])
 AH_TEMPLATE([HAVE_VARIADIC_MACROS],
-	    [Does preprocessor have GNU-style variadic macros])
+	    [Define if your preprocessor understands GNU-style variadic macros])
 AH_TEMPLATE([HAVE_LONGJMP],
-	    [Define if longjmp()/setjmp() are functional])
+	    [Define if you have working longjmp() and setjmp() functions])
 AH_TEMPLATE([HAVE__LONGJMP],
-	    [Define if _longjmp()/_setjmp() are functional])
+	    [Define if you have working _longjmp() and _setjmp() functions])
 
 dnl ------------------------------------------------------------
 dnl finalisation
 dnl
-
-dnl
-dnl libtool+automake substitutions
-dnl
-
-AC_CONFIG_COMMANDS_PRE([LTLIBOBJS=`echo "$LIBOBJS" | sed 's/\.o/\.lo/g'`
-			AC_SUBST(LTLIBOBJS)
-			LTALLOCA=`echo "$ALLOCA" | sed 's/\.o/\.lo/g'`
-			AC_SUBST(LTALLOCA)])
 
 AC_OUTPUT
 
