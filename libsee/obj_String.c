@@ -333,7 +333,10 @@ object_to_string(interp, o)
 	struct SEE_object *o;
 {
 	struct SEE_value ov, sv;
-	SEE_SET_OBJECT(&ov, o);
+	if (o == NULL)
+		SEE_SET_NULL(&ov);
+	else
+		SEE_SET_OBJECT(&ov, o);
 	SEE_ToString(interp, &ov, &sv);
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&sv) == SEE_STRING);
 	return sv.u.string;
@@ -411,15 +414,14 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s;
 	struct SEE_value vss, vi;
 	int position, k, sslen, slen;
-
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
 		
 	s = object_to_string(interp, thisobj);
 	slen = s->length;
-	SEE_ToString(interp, argv[0], &vss);
+
+	if (argc < 1)
+		SEE_SET_STRING(&vss, STR(undefined));
+	else
+		SEE_ToString(interp, argv[0], &vss);
 	sslen = vss.u.string->length;
 	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 		position = 0;
@@ -451,16 +453,14 @@ string_proto_lastIndexOf(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s, *ss;
 	struct SEE_value vss, vposition, v;
 	int k, sslen, slen, position;
-
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
 		
 	s = object_to_string(interp, thisobj);
 	slen = s->length;
 
-	SEE_ToString(interp, argv[0], &vss);
+	if (argc < 1)
+	    SEE_SET_STRING(&vss, STR(undefined));
+	else
+	    SEE_ToString(interp, argv[0], &vss);
 	ss = vss.u.string;
 	sslen = ss->length;
 
@@ -507,13 +507,11 @@ string_proto_localeCompare(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s1, *s2;
 	struct SEE_value v2;
 
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
-
 	s1 = object_to_string(interp, thisobj);
-	SEE_ToString(interp, argv[1], &v2);
+	if (argc < 1) 
+	    SEE_SET_STRING(&v2, STR(undefined));
+	else
+	    SEE_ToString(interp, argv[1], &v2);
 	s2 = v2.u.string;
 
 	SEE_SET_NUMBER(res, SEE_string_cmp(s1, s2));
@@ -527,13 +525,19 @@ regexp_arg(interp, vp)
 {
 	struct SEE_value *args[1], v;
 
-	if (SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT &&
+	if (vp == NULL) {
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp,
+			0, NULL, &v);
+		return v.u.object;
+	} else if (SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT &&
 	    SEE_is_RegExp(vp->u.object))
 		return vp->u.object;
-	args[0] = vp;
-	SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp,
-		1, args, &v);
-	return v.u.object;
+	else {
+		args[0] = vp;
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp,
+			1, args, &v);
+		return v.u.object;
+	}
 }
 
 /* 15.5.4.10 String.prototype.match() */
@@ -550,12 +554,7 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 	SEE_boolean_t global;
 	int n;
 	
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
-
-	regexp = regexp_arg(interp, argv[0]);
+	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 
 	/* fetch the regexp's exec method */
 	SEE_OBJECT_GET(interp, regexp, STR(exec), &v);
@@ -741,16 +740,11 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 	int ncaps;
 	int previndex = 0;
 	
-	if (argc < 2) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
-
-	regexp = regexp_arg(interp, argv[0]);
+	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 	ncaps = SEE_RegExp_count_captures(interp, regexp);
 
 	/* Convert the replace arg to a string or callable function */
-	if (argc < 1) {
+	if (argc < 2) {
 		SEE_SET_STRING(&replv, STR(empty_string));
 		replacev = &replv;
 	} else if (SEE_VALUE_GET_TYPE(argv[1]) == SEE_OBJECT &&
@@ -845,13 +839,8 @@ string_proto_search(interp, self, thisobj, argc, argv, res)
 	struct capture *captures;
 	int index;
 
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
-
 	s = object_to_string(interp, thisobj);
-	regexp = regexp_arg(interp, argv[0]);
+	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 	ncaps = SEE_RegExp_count_captures(interp, regexp);
 	captures = SEE_ALLOCA(ncaps, struct capture);
 
@@ -881,13 +870,11 @@ string_proto_slice(interp, self, thisobj, argc, argv, res)
 	struct SEE_value vs, ve;
 	int start, end, len;
 
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
-
 	s = object_to_string(interp, thisobj);
-	SEE_ToInteger(interp, argv[0], &vs);
+	if (argc < 1)
+	    SEE_SET_NUMBER(&vs, 0);
+	else
+	    SEE_ToInteger(interp, argv[0], &vs);
 	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    SEE_SET_NUMBER(&ve, s->length);
 	else
@@ -1026,18 +1013,26 @@ string_proto_substring(interp, self, thisobj, argc, argv, res)
 	int a, b, start, end, len;
 	struct SEE_value v;
 
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
 	s = object_to_string(interp, thisobj);
-	SEE_ToInteger(interp, argv[0], &v);
-	a = MIN(MAX(v.u.number, 0), s->length);
-	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
+	if (argc < 1)
+	    a = 0;
+	else {
+	    SEE_ToInteger(interp, argv[0], &v);
+	    if (SEE_NUMBER_ISNAN(&v))
+		a = 0;
+	    else
+		a = MIN(MAX(v.u.number, 0), s->length);
+	}
+	if (argc < 2)
+	    b = s->length;
+	else if (SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    b = s->length;
 	else {
 	    SEE_ToInteger(interp, argv[1], &v);
-	    b = MIN(MAX(v.u.number, 0), s->length);
+	    if (SEE_NUMBER_ISNAN(&v))
+		b = 0;
+	    else
+		b = MIN(MAX(v.u.number, 0), s->length);
 	}
 	start = MIN(a,b);
 	end = MAX(a,b);
@@ -1061,12 +1056,11 @@ string_proto_substr(interp, self, thisobj, argc, argv, res)
 	int start, len;
 	struct SEE_value v;
 
-	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
-		return;
-	}
 	s = object_to_string(interp, thisobj);
-	SEE_ToInteger(interp, argv[0], &v);
+	if (argc < 1)
+	    SEE_SET_NUMBER(&v, 0);
+	else
+	    SEE_ToInteger(interp, argv[0], &v);
 	if (v.u.number < 0)
 		start = MAX(s->length + v.u.number, 0);
 	else
