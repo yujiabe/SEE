@@ -114,13 +114,13 @@ int SEE_eval_debug = 0;
 struct node;
 struct printer;
 
-typedef void (*visitor_fn)(struct node *, void *);
+typedef void (*visitor_fn_t)(struct node *, void *);
 
 struct nodeclass {
 	void (*eval)(struct node *, struct context *, struct SEE_value *);
 	void (*fproc)(struct node *, struct context *);
 	void (*print)(struct node *, struct printer *);
-	void (*visit)(struct node *, visitor_fn, void *);
+	void (*visit)(struct node *, visitor_fn_t, void *);
 	int  (*isconst)(struct node *, struct SEE_interpreter *);
 };
 
@@ -1359,7 +1359,7 @@ ArrayLiteral_print(n, printer)
 static void
 ArrayLiteral_visit(n, v, va)
 	struct ArrayLiteral_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	struct ArrayLiteral_element *element;
@@ -1480,7 +1480,7 @@ ObjectLiteral_print(n, printer)
 static void
 ObjectLiteral_visit(n, v, va)
 	struct ObjectLiteral_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	struct ObjectLiteral_pair *pair;
@@ -1628,7 +1628,7 @@ Arguments_eval(n, context, res)
 static void
 Arguments_visit(n, v, va)
 	struct Arguments_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	struct Arguments_arg *arg;
@@ -1757,7 +1757,7 @@ MemberExpression_new_print(n, printer)
 static void
 MemberExpression_new_visit(n, v, va)
 	struct MemberExpression_new_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->mexp, v, va);
@@ -1806,7 +1806,7 @@ MemberExpression_dot_print(n, printer)
 static void
 MemberExpression_dot_visit(n, v, va)
 	struct MemberExpression_dot_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->mexp, v, va);
@@ -1855,7 +1855,7 @@ MemberExpression_bracket_print(n, printer)
 static void
 MemberExpression_bracket_visit(n, v, va)
 	struct MemberExpression_bracket_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->mexp, v, va);
@@ -1996,7 +1996,7 @@ CallExpression_print(n, printer)
 static void
 CallExpression_visit(n, v, va)
 	struct CallExpression_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->exp, v, va);
@@ -2089,7 +2089,7 @@ struct Unary_node {
 static void
 Unary_visit(n, v, va)
 	struct Unary_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->a, v, va);
@@ -2566,7 +2566,7 @@ struct Binary_node {
 static void
 Binary_visit(n, v, va)
 	struct Binary_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->a, v, va);
@@ -4171,7 +4171,7 @@ ConditionalExpression_print(n, printer)
 static void
 ConditionalExpression_visit(n, v, va)
 	struct ConditionalExpression_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->a, v, va);
@@ -4259,7 +4259,7 @@ struct AssignmentExpression_node {
 static void
 AssignmentExpression_visit(n, v, va)
 	struct AssignmentExpression_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->lhs, v, va);
@@ -5156,7 +5156,7 @@ VariableDeclaration_print(n, printer)
 static void
 VariableDeclaration_visit(n, v, va)
 	struct VariableDeclaration_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	if (n->init)
@@ -5301,7 +5301,7 @@ struct IfStatement_node {
 
 /* 12.5 */
 static void
-IfStatement_if_eval(n, context, res)
+IfStatement_eval(n, context, res)
 	struct IfStatement_node *n;
 	struct context *context;
 	struct SEE_value *res;
@@ -5312,74 +5312,14 @@ IfStatement_if_eval(n, context, res)
 	SEE_ToBoolean(context->interpreter, &r2, &r3);
 	if (r3.u.boolean)
 		EVAL(n->btrue, context, res);
-	else 
+	else if (n->bfalse)
+		EVAL(n->bfalse, context, res);
+	else
 		SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
 }
 
 static void
-IfStatement_if_print(n, printer)
-	struct IfStatement_node *n;
-	struct printer *printer;
-{
-	PRINT_STRING(STR(if));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->cond);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->btrue);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-
-static void
-IfStatement_if_visit(n, v, va)
-	struct IfStatement_node *n;
-	visitor_fn v;
-	void *va;
-{
-	VISIT(n->cond, v, va);
-	VISIT(n->btrue, v, va);
-}
-
-static int
-IfStatement_if_isconst(n, interp)
-	struct IfStatement_node *n;
-	struct SEE_interpreter *interp;
-{
-	if (ISCONST(n->cond, interp)) {
-		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct context *)NULL, &r1);
-		SEE_ASSERT(interp, r1.type != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean ? ISCONST(n->btrue, interp) : 1;
-	} else
-		return 0;
-}
-
-static struct nodeclass IfStatement_if_nodeclass
-	= { IfStatement_if_eval, 0, IfStatement_if_print,
-	    IfStatement_if_visit, IfStatement_if_isconst };
-
-static void
-IfStatement_ifthen_eval(n, context, res)
-	struct IfStatement_node *n;
-	struct context *context;
-	struct SEE_value *res;
-{
-	struct SEE_value r1, r2, r3;
-	EVAL(n->cond, context, &r1);
-	GetValue(context, &r1, &r2);
-	SEE_ToBoolean(context->interpreter, &r2, &r3);
-	if (r3.u.boolean)
-		EVAL(n->btrue, context, res);
-	else 
-		EVAL(n->bfalse, context, res);
-}
-
-static void
-IfStatement_ifthen_print(n, printer)
+IfStatement_print(n, printer)
 	struct IfStatement_node *n;
 	struct printer *printer;
 {
@@ -5393,27 +5333,30 @@ IfStatement_ifthen_print(n, printer)
 	PRINT(n->btrue);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(else));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
-	PRINT(n->bfalse);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
+	if (n->bfalse) {
+	    PRINT_STRING(STR(else));
+	    PRINT_CHAR('{');
+	    PRINT_NEWLINE(+1);
+	    PRINT(n->bfalse);
+	    PRINT_CHAR('}');
+	    PRINT_NEWLINE(-1);
+	}
 }
 
 static void
-IfStatement_ifthen_visit(n, v, va)
+IfStatement_visit(n, v, va)
 	struct IfStatement_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->cond, v, va);
 	VISIT(n->btrue, v, va);
-	VISIT(n->bfalse, v, va);
+	if (n->bfalse)
+	    VISIT(n->bfalse, v, va);
 }
 
 static int
-IfStatement_ifthen_isconst(n, interp)
+IfStatement_isconst(n, interp)
 	struct IfStatement_node *n;
 	struct SEE_interpreter *interp;
 {
@@ -5424,14 +5367,14 @@ IfStatement_ifthen_isconst(n, interp)
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
 		    ? ISCONST(n->btrue, interp) 
-		    : ISCONST(n->bfalse, interp);
+		    : (n->bfalse ? ISCONST(n->bfalse, interp) : 1);
 	} else
 		return 0;
 }
 
-static struct nodeclass IfStatement_ifthen_nodeclass
-	= { IfStatement_ifthen_eval, 0, IfStatement_ifthen_print,
-	    IfStatement_ifthen_visit, IfStatement_ifthen_isconst };
+static struct nodeclass IfStatement_nodeclass
+	= { IfStatement_eval, 0, IfStatement_print,
+	    IfStatement_visit, IfStatement_isconst };
 
 static struct node *
 IfStatement_parse(parser)
@@ -5441,7 +5384,7 @@ IfStatement_parse(parser)
 	struct IfStatement_node *n;
 
 	target_push(parser, NULL, 0);
-	n = NEW_NODE(struct IfStatement_node, &IfStatement_if_nodeclass);
+	n = NEW_NODE(struct IfStatement_node, &IfStatement_nodeclass);
 	EXPECT(tIF);
 	EXPECT('(');
 	cond = PARSE(Expression);
@@ -5451,7 +5394,6 @@ IfStatement_parse(parser)
 		bfalse = NULL;
 	else {
 		SKIP; /* 'else' */
-		n->node.nodeclass = &IfStatement_ifthen_nodeclass;
 		bfalse = PARSE(Statement);
 	}
 	n->cond = cond;
@@ -5560,7 +5502,7 @@ IterationStatement_dowhile_print(n, printer)
 static void
 IterationStatement_while_visit(n, v, va)
         struct IterationStatement_while_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	VISIT(n->cond, v, va);
@@ -5728,7 +5670,7 @@ IterationStatement_for_print(n, printer)
 static void
 IterationStatement_for_visit(n, v, va)
 	struct IterationStatement_for_node *n;
-	visitor_fn v;
+	visitor_fn_t v;
 	void *va;
 {
 	if (n->init) VISIT(n->init, v, va);
