@@ -8,10 +8,14 @@
  */
 
 #include <stdio.h>
-#include <err.h>
-#include <see/see.h>
+
+#if HAVE_LIBREADLINE
 #include <readline/readline.h>
+#endif
+
+#include <see/see.h>
 #include "shell.h"
+
 
 static int run_input(struct SEE_interpreter *, struct SEE_input *,
 	struct SEE_value *);
@@ -44,7 +48,7 @@ debug(interp, c)
 	case 'r': SEE_regex_debug = 1; break;
 	case 'T': interp->trace = trace; break;
 	default:
-		warnx("unknown debug flag '%c'", c);
+		fprintf(stderr, "unknown debug flag '%c'", c);
 	}
 #endif
 }
@@ -145,12 +149,13 @@ run_file(interp, filename)
 	return ok;
 }
 
+#if !HAVE_LIBREADLINE
 /*
  * Reads a line of text from the user.
  * (A simple replacement for GNU readline)
  */
 static char *
-_readline(prompt)
+readline(prompt)
 	char *prompt;
 {
 	char buf[1024], *ret;
@@ -166,6 +171,7 @@ _readline(prompt)
 	ret[len] = '\0';
 	return strdup(ret);
 }
+#endif
 
 /*
  * Reads lines of ECMAscript from the user
