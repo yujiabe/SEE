@@ -4,12 +4,16 @@
 #
 # This file contains the string constants that are used to
 # generate UCS-16 string constants at compile time. See the
-# Makefile and string.pl for more details.
+# Makefile and string.pl for more details. 
 #
-# The resulting constants are accessed using the macro STR()
-# from the stringdefs.h header file.
+# Each line is a string definition of the form
+#	name = "some text"
+# or, more simply just the name by itself which is shorthand for name="name".
 #
-# NB: If language internationalisation is ever needed, this might
+# The resulting string constants are accessed using the macro STR(name),
+# which is defined in the generated stringdefs.h header file.
+#
+# NB: If language internationalisation is ever needed, this could
 # be the right place to do most of it.
 #
 
