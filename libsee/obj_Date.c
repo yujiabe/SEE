@@ -51,6 +51,10 @@
 # endif
 #endif
 
+#if HAVE_WINDOWS_H
+#  include <windows.h>
+#endif
+
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/value.h>
@@ -638,18 +642,33 @@ static SEE_number_t
 now(interp)
 	struct SEE_interpreter *interp;
 {
-	struct timeval tv;
 	SEE_number_t t;
 
-#if HAVE_GETTIMEOFDAY
+#if HAVE_GETSYSTEMTIMEASFILETIME
+	LONGLONG ft;
+	GetSystemTimeAsFileTime((FILETIME *)&ft);
+	/*
+	 * Shift from 1601 to 1970 timebase, and convert to msec. See also
+	 * http://msdn.microsoft.com/library/default.asp?url=/library/
+	 *  en-us/sysinfo/base/converting_a_time_t_value_to_a_file_time.asp
+	 */
+	t = (ft - 116444736000000000) / 10000;
+
+#elif HAVE_GETTIMEOFDAY
+	struct timeval tv;
 	if (gettimeofday(&tv, NULL) < 0)
 		SEE_error_throw_sys(interp, interp->Error, "gettimeofday");
 	t = (tv.tv_sec + tv.tv_usec * 1e-6) * msPerSecond;
+
+#elif HAVE_TIME
+	/* Lose millisecond precision. */
+	t = time(0) * 1000;
+
 #else
 # warning "don't know how to get system time; using constant 0:00 Jan 1, 1970"
-	/* XXX should fix this */
 	t = 0;
 #endif
+
 	return TimeClip(t);
 }
 

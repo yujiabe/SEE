@@ -43,6 +43,9 @@ AC_CHECK_HEADERS([errno.h string.h stdlib.h],,,[;])
 dnl (These make finding integer sizes simpler)
 AC_CHECK_HEADERS([stdint.h inttypes.h],,,[;])
 
+dnl (This is for some windows compat)
+AC_CHECK_HEADERS([windows.h getopt.h],,,[;])
+
 dnl ------------------------------------------------------------
 dnl C compiler features
 dnl
@@ -59,6 +62,8 @@ AC_CHECK_SIZEOF(signed long)
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(signed long long)
 AC_CHECK_SIZEOF(unsigned long long)
+AC_CHECK_SIZEOF(signed LONGLONG)
+AC_CHECK_SIZEOF(unsigned LONGLONG)
 
 AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
@@ -126,7 +131,7 @@ AC_CHECK_FUNCS([copysign rint \
 		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
 		snprintf vsnprintf rand_r \
 		getopt \
-		gettimeofday abort memcpy memset \
+		abort memcpy memset \
 		qsort strcmp strerror],,
 	       [missing_funcs="$missing_funcs $ac_func"])
  
@@ -135,7 +140,9 @@ if test -n "$missing_funcs"; then
 fi
 
 dnl -- functions that have workarounds written for
-AC_CHECK_FUNCS([strdup GC_malloc])
+AC_CHECK_FUNCS([strdup GC_malloc \
+		gettimeofday GetSystemTimeAsFileTime time \
+		getopt])
 
 dnl ------------------------------------------------------------
 dnl miscellanea
