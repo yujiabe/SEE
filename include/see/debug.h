@@ -4,7 +4,7 @@
 #ifndef _SEE_h_debug_
 #define _SEE_h_debug_
 
-#include "config.h"
+#include <see/config.h>
 
 #if STDC_HEADERS
 #include <stdio.h>

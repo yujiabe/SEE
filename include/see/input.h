@@ -19,7 +19,7 @@
  *
  */
 
-#include "config.h"
+#include <see/config.h>
 
 #if STDC_HEADERS
 #include <stdio.h>

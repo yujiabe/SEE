@@ -8,7 +8,7 @@
  * Machine-dependent types and definitions
  */
 
-#include "config.h"
+#include <see/config.h>
 
 #if HAVE_INTTYPES_H
 # include <inttypes.h>

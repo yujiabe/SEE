@@ -4,7 +4,7 @@
 #ifndef _SEE_h_error_
 #define _SEE_h_error_
 
-#include "config.h"
+#include <see/config.h>
 #include "type.h"
 #include "native.h"
 

@@ -4,7 +4,7 @@
 #ifndef _SEE_h_interpreter_
 #define _SEE_h_interpreter_
 
-#include "config.h"
+#include <see/config.h>
 #include "type.h"
 
 struct SEE_object;
