@@ -572,6 +572,7 @@ CommentDiv(lex)
 	if (lookahead_len >= 2 && lookahead[0] == '/' && lookahead[1] == '*') {
 		int starprev = 0, contains_newline = 0;
 		SKIP;
+		SKIP;
 		while (!ATEOF) {
 			if (starprev && NEXT == '/') {
 			    CONSUME('/');
