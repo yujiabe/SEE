@@ -63,9 +63,6 @@ SEE_context_lookup(context, ident, res)
 	struct SEE_scope *scope;
 	struct SEE_interpreter *interp = context->interpreter;
 
-	res->type = SEE_REFERENCE;
-	res->u.reference.property = ident;
-
 	for (scope = context->scope; scope; scope = scope->next) {
 
 #ifndef NDEBUG
@@ -79,18 +76,16 @@ SEE_context_lookup(context, ident, res)
 #endif
 
 	    if (SEE_OBJECT_HASPROPERTY(interp, scope->obj, ident)) {
-		res->u.reference.base = scope->obj;
-
+		SEE_SET_REFERENCE(res, scope->obj, ident);
 #ifndef NDEBUG
-	    if (SEE_context_debug) {
-		fprintf(stderr, "context_lookup: found '");
-		SEE_string_fputs(ident, stderr);
-		fprintf(stderr, "' in ");
-		SEE_PrintObject(context->interpreter, scope->obj, stderr);
-		fprintf(stderr, "\n");
-	    }
+	        if (SEE_context_debug) {
+		    fprintf(stderr, "context_lookup: found '");
+		    SEE_string_fputs(ident, stderr);
+		    fprintf(stderr, "' in ");
+		    SEE_PrintObject(context->interpreter, scope->obj, stderr);
+		    fprintf(stderr, "\n");
+	        }
 #endif
-
 		return;
 	    }
 	}
@@ -103,7 +98,7 @@ SEE_context_lookup(context, ident, res)
 	}
 #endif
 
-	res->u.reference.base = NULL;
+	SEE_SET_REFERENCE(res, NULL, ident);
 }
 
 /*
