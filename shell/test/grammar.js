@@ -214,3 +214,6 @@ test("String('ab'.split(/a*/))", ",b");
 
 print();
 print(failures + " out of " + total + " failed.");
+
+if (failures > 0)
+	throw new Error("tests failure");
