@@ -10,23 +10,21 @@
 extern "C" {
 #endif /* C++ */
 
-#include <see/config.h>
-
-#include "type.h"
-#include "value.h"
-#include "object.h"
-#include "native.h"
-#include "cfunction.h"
-#include "debug.h"
-#include "eval.h"
-#include "error.h"
-#include "input.h"
-#include "intern.h"
-#include "interpreter.h"
-#include "mem.h"
-#include "no.h"
-#include "string.h"
-#include "try.h"
+#include <see/type.h>
+#include <see/value.h>
+#include <see/object.h>
+#include <see/native.h>
+#include <see/cfunction.h>
+#include <see/debug.h>
+#include <see/eval.h>
+#include <see/error.h>
+#include <see/input.h>
+#include <see/intern.h>
+#include <see/interpreter.h>
+#include <see/mem.h>
+#include <see/no.h>
+#include <see/string.h>
+#include <see/try.h>
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@
 /* $Id$ */
 
 #if HAVE_CONFIG_H
-# include <see/config.h>
+# include <config.h>
 #endif
 
 #include <see/type.h>
@@ -117,13 +117,6 @@ SEE_no_defaultvalue(interp, o, hint, res)
 		STR(defaultvalue_no_bad));
 }
 
-static void
-no_enum_reset(interp, e)
-	struct SEE_interpreter *interp;
-	struct SEE_enum *e;
-{
-}
-
 static struct SEE_string *
 no_enum_next(interp, e, dd)
 	struct SEE_interpreter *interp;
@@ -134,7 +127,7 @@ no_enum_next(interp, e, dd)
 }
 
 static struct SEE_enumclass no_enumclass = {
-	no_enum_reset,
+	0,
 	no_enum_next
 };
 

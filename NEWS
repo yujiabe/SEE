@@ -1,7 +1,11 @@
 $Id$
 
 1.2
+  Corrected embarrasing stringdefs build problem
+  Adhere more closely to GNU software standards (but still BSD licence)
+  Look for boehm gc in libdir, instead of prefix/lib
   Removed enumerator 'reset' method (never used)
+  Removed see/config.h from install
 
 1.1 [2004-08-15]
   Much improved documentation.

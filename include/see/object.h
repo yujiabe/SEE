@@ -99,7 +99,7 @@ struct SEE_object {
 #define SEE_ATTR_INTERNAL   0x08
 
 struct SEE_enumclass {
-	void (*reset)(struct SEE_interpreter *i, struct SEE_enum *e);
+	void *unused; /* XXX Leftover from deprecated reset method */
 	struct SEE_string *(*next)(struct SEE_interpreter *i,
 			struct SEE_enum *e, int *flags_return);
 };
@@ -108,7 +108,6 @@ struct SEE_enum {
 	struct SEE_enumclass *enumclass;
 };
 
-#define SEE_ENUM_RESET(i,e)    ((e)->enumclass->reset)(i,e)
 #define SEE_ENUM_NEXT(i,e,dep) ((e)->enumclass->next)(i,e,dep)
 
 /*

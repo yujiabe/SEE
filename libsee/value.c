@@ -33,7 +33,7 @@
 /* $Id$ */
 
 #if HAVE_CONFIG_H
-# include <see/config.h>
+# include <config.h>
 #endif
 
 #if STDC_HEADERS
@@ -59,8 +59,7 @@
  * Value type-converters and some numeric constants.
  */
 
-/* IEEE-754 constants, only if we can't do them as constant macros in value.h */
-#if !(HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV)
+/* IEEE-754 constants, always defined, regardless of constant macros */
 const union SEE_numeric_literal
 # if WORDS_BIGENDIAN
  SEE_literal_NaN = { { 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
@@ -73,7 +72,6 @@ const union SEE_numeric_literal
  SEE_literal_Max = { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f } },
  SEE_literal_Min = { { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
 # endif /* little endian */
-#endif /* hex_float & constant_nan_div & constant_inf_div */
 
 /* Convenience array for generating hexadecimal numbers */
 char SEE_hexstr_lowercase[16] = {

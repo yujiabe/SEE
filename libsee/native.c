@@ -33,7 +33,7 @@
 /* $Id$ */
 
 #if HAVE_CONFIG_H
-# include <see/config.h>
+# include <config.h>
 #endif
 
 #include <see/native.h>
@@ -415,7 +415,7 @@ native_enum_next(interp, e, dont_enump)
 }
 
 static struct SEE_enumclass native_enumclass = {
-	native_enum_reset,
+	0,
 	native_enum_next
 };
 

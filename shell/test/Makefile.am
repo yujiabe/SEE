@@ -15,6 +15,7 @@
 TESTS =	test
 
 EXTRA_DIST=	test.sh grammar.js
+EXTRA_CLEAN=	test
 
 test: test.sh
 	rm -f $@

@@ -11,8 +11,8 @@
  * property access.
  */
 
-#include "value.h"
-#include "object.h"
+#include <see/value.h>
+#include <see/object.h>
 
 #define SEE_ATTR_DEFAULT	(SEE_ATTR_DONTENUM)	/* (see section 15) */
 #define SEE_ATTR_LENGTH		(SEE_ATTR_READONLY |	\

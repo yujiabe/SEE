@@ -19,13 +19,9 @@
  *
  */
 
-#include <see/config.h>
-
-#if STDC_HEADERS
 #include <stdio.h>
-#endif
 
-#include "type.h"
+#include <see/type.h>
 
 struct SEE_input;
 struct SEE_string;

@@ -40,20 +40,19 @@
  *
  */
 
-#include <see/config.h>
-#include "type.h"
-#include "value.h"
+#include <see/type.h>
+#include <see/value.h>
 
 /*
  * Determine which setjmp/longjmp interface to use
  */
 
-#if HAVE__LONGJMP
+#if @HAVE__LONGJMP@
 # include <setjmp.h>
 # define _SEE_LONGJMP(buf, val)	_longjmp(buf, val)
 # define _SEE_SETJMP(buf)	_setjmp(buf)
 # define _SEE_JMPBUF		jmp_buf
-#elif HAVE_LONGJMP
+#elif @HAVE_LONGJMP@
 # include <setjmp.h>
 # define _SEE_LONGJMP(buf, val)	longjmp(buf, val)
 # define _SEE_SETJMP(buf)	setjmp(buf)

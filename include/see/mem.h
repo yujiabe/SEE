@@ -4,7 +4,7 @@
 #ifndef _SEE_h_mem_
 #define _SEE_h_mem_
 
-#include "type.h"
+#include <see/type.h>
 
 struct SEE_interpreter;
 

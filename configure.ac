@@ -1,10 +1,10 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(see, 1.1, leonard@users.sourceforge.net)
+AC_INIT(see, 1.2, [dleonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION(`$Id$')
-AM_INIT_AUTOMAKE(see, 1.1)
-AM_CONFIG_HEADER(include/see/config.h)
+AM_INIT_AUTOMAKE
+AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_FILES([Makefile
 		 include/Makefile
 		 include/see/Makefile
@@ -34,7 +34,7 @@ dnl ------------------------------------------------------------
 dnl C headers
 dnl
 
-AC_STDC_HEADERS
+AC_HEADER_STDC
 AC_HEADER_TIME
 
 dnl (alloca.h needs to know about these headers)
@@ -75,22 +75,14 @@ AC_ARG_WITH(boehm-gc,
 	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
 AC_ARG_WITH(boehm-gc-libdir, 
     AC_HELP_STRING([--with-boehm-gc-libdir],
-	[path to gc lib, default=PREFIX/lib]),
+	[path to gc lib, default=LIBDIR]),
 	[ac_cv_use_boehmgc_libdir=$withval],
-	[if test x"$prefix" = x"NONE"; then
-	     ac_cv_use_boehmgc_libdir=$ac_default_prefix/lib
-	 else
-	     ac_cv_use_boehmgc_libdir=$prefix/lib
-	 fi])
+	[ac_cv_use_boehmgc_libdir=$libdir])
 AC_ARG_WITH(boehm-gc-incdir, 
     AC_HELP_STRING([--with-boehm-gc-incdir],
-	[path to gc includes, default=PREFIX/include]),
+	[path to gc includes, default=INCLUDEDIR]),
 	[ac_cv_use_boehmgc_incdir=$withval],
-	[if test x"$prefix" = x"NONE"; then
-	     ac_cv_use_boehmgc_incdir=$ac_default_prefix/include
-	 else
-	     ac_cv_use_boehmgc_incdir=$prefix/include
-	 fi])
+	[ac_cv_use_boehmgc_incdir=$includedir])
 if test x"$ac_cv_use_boehmgc" != x"no"; then
     test x"$ac_cv_use_boehmgc_libdir" = x"no" || \
         LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc_libdir}"
@@ -117,7 +109,6 @@ dnl std lib functions
 dnl
 
 AC_FUNC_ALLOCA
-AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 
 AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within

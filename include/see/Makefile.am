@@ -1,9 +1,28 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
+PERL=@PERL@
+
+BUILT_SOURCES =         error.h try.h type.h
 pkginclude_HEADERS =	cfunction.h debug.h error.h eval.h input.h	\
                         intern.h interpreter.h mem.h native.h no.h	\
                         object.h see.h string.h try.h type.h value.h
 
-install-data-local:
-	$(INSTALL_DATA) config.h $(pkgincludedir)/config.h
+
+# Rather than make our config.h be part of the API, we substitute
+# configure-found values into the public API headers as needed.
+
+EXTRA_DIST=     error.h.in try.h.in type.h.in
+CLEANFILES=	error.h try.h type.h inc-subst
+
+inc-subst: $(CONFIG_HEADER)
+	$(PERL) -n -e \
+	  'print if s!^#define\s+(\S+)\s+(.+)!s,\\\@$$1\\\@,$$2/* $$1 */,g;!; \
+	   print "s,\@\@,0,g;\n" if eof' < $(CONFIG_HEADER) > inc-subst
+
+error.h: error.h.in inc-subst
+	$(PERL) -p inc-subst < $(srcdir)/error.h.in > error.h
+try.h: try.h.in inc-subst
+	$(PERL) -p inc-subst < $(srcdir)/try.h.in > try.h
+type.h: type.h.in inc-subst
+	$(PERL) -p inc-subst < $(srcdir)/type.h.in > type.h

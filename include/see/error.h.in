@@ -4,9 +4,8 @@
 #ifndef _SEE_h_error_
 #define _SEE_h_error_
 
-#include <see/config.h>
-#include "type.h"
-#include "native.h"
+#include <see/type.h>
+#include <see/native.h>
 
 struct SEE_object;
 struct SEE_string;
@@ -42,7 +41,7 @@ struct SEE_object * SEE_Error_make(struct SEE_interpreter *i,
 	 SEE_error__throw_string(i, o, 0, 0, s)
 #endif
 
-#if HAVE_VARIADIC_MACROS
+#if @HAVE_VARIADIC_MACROS@
 # ifndef NDEBUG
 #  define SEE_error_throw(i, o, fmt, arg...) \
 	  SEE_error__throw(i, o, __FILE__, __LINE__, fmt , ## arg)

@@ -10,11 +10,9 @@
  * references or string references.
  */
 
-#if STDC_HEADERS
-# include <math.h>
-#endif
+#include <math.h>
 
-#include "type.h"
+#include <see/type.h>
 
 /* define NULL now as a pointer, not as ansi C's (0) */
 #ifndef NULL

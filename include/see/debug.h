@@ -4,11 +4,7 @@
 #ifndef _SEE_h_debug_
 #define _SEE_h_debug_
 
-#include <see/config.h>
-
-#if STDC_HEADERS
 #include <stdio.h>
-#endif
 
 struct SEE_value;
 struct SEE_object;

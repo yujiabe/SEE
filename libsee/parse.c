@@ -69,7 +69,7 @@
  */
 
 #if HAVE_CONFIG_H
-# include <see/config.h>
+# include <config.h>
 #endif
 
 #if STDC_HEADERS

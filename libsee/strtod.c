@@ -33,7 +33,7 @@
 /* $Id$ */
 
 #ifdef HAVE_CONFIG_H
-# include <see/config.h>
+# include <config.h>
 #endif
 
 #include "dtoa.h"

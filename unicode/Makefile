@@ -24,7 +24,7 @@ unicode.c: gen genZscodes copyright ${UDATA}
 	cp $@ ${srcdir}/../libsee/unicode.c
 
 #
-# I used this to analyze the best factoring ratio for the tables.
+# I used this rule to analyze the best factoring ratio for the tables.
 # The best values have since been hard coded.
 #
 analyse: gen
@@ -37,9 +37,9 @@ analyse: gen
 # Get the latest unicode tables
 #
 UnicodeData.txt:
-	ftp http://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+	wget http://www.unicode.org/Public/UNIDATA/UnicodeData.txt
 SpecialCasing.txt:
-	ftp http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt
+	wget http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt
 
 clean:
 	rm -f unicode.c gen

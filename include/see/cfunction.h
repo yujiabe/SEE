@@ -4,7 +4,7 @@
 #ifndef _SEE_h_cfunction_
 #define _SEE_h_cfunction_
 
-#include "object.h"
+#include <see/object.h>
 
 struct SEE_interpeter;
 struct SEE_string;
