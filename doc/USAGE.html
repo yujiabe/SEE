@@ -311,9 +311,9 @@ SEE manages memory by calling through the following function pointers,
 that you can change:
 </p>
 
-<pre>void* (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
-void  (*<dfn id="SEE_mem_free_hook">SEE_mem_free_hook</dfn>)(struct SEE_interpreter *interp, void *ptr);
-void  (*<dfn id="SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</dfn>)(struct SEE_interpreter *interp);</pre>
+<pre>void * (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
+void   (*<dfn id="SEE_mem_free_hook">SEE_mem_free_hook</dfn>)(struct SEE_interpreter *interp, void *ptr);
+void   (*<dfn id="SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</dfn>)(struct SEE_interpreter *interp);</pre>
 
 <p>
 If SEE was compiled with Boehm-gc support, <code>SEE_mem_malloc_hook</code>
@@ -351,9 +351,9 @@ returning a pointer of given type
 - allocate storage for an array on the stack (see <code>alloca()</code>)
 </ul>
 
-<pre>T *<dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
-T *<dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
-T *<dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(int length, type T);</pre>
+<pre>T * <dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
+T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
+T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(int length, type T);</pre>
 
 <p>An usage example is:</p>
 <pre>char *buffer = SEE_NEW_ARRAY(interp, char, 30);</pre>
@@ -485,7 +485,7 @@ main()
         SEE_interpreter_init(&interp_storage);
         interp = &interp_storage;
 
-        <i>/* Create a stream to feed in the program text */</i>
+        <i>/* Create an input stream that provides program text */</i>
         input = SEE_input_utf8(interp, program_text);
 
         <i>/* Establish an exception context */</i>
@@ -997,7 +997,7 @@ Numbers (and other values) may be converted to integers using the functions
 <code>SEE_ToUint16()</code>.
 </p>
 
-<pre>SEE_int32_t <dfn id="SEE_ToInt32">SEE_ToInt32</dfn>(struct SEE_interpreter *interp, struct SEE_value *val);
+<pre>SEE_int32_t  <dfn id="SEE_ToInt32">SEE_ToInt32</dfn>(struct SEE_interpreter *interp, struct SEE_value *val);
 SEE_uint32_t <dfn id="SEE_ToUint32">SEE_ToUint32</dfn>(struct SEE_interpreter *interp, struct SEE_value *val);
 SEE_uint16_t <dfn id="SEE_ToUint16">SEE_ToUint16</dfn>(struct SEE_interpreter *interp, struct SEE_value *val);</pre>
 
@@ -1462,14 +1462,16 @@ provides the object's behaviour. The class structure looks like this:
 <p>
 The application generally provides this structure in static storage, as
 most of its members are function pointers or strings known at compile time.
-A member marked "optional" above may be set to <code>NULL</code>.
+A member marked "optional" should be set to <code>NULL</code> if it is
+meaningless.
 </p>
 
 <p>
-The mandatory object methods (<code>Get</code>, <code>Put</code>, etc.)
-should provide the precise behaviours that SEE expects on native objects.
+The "mandatory" object methods (<code>Get</code>, <code>Put</code>, etc.)
+are never <code>NULL</code>, and should provide the precise behaviours 
+that SEE expects on native objects.
 These behaviours are fully described in the 
-ECMA-262 standard, but can be summarised in the following table:
+ECMA-262 standard, and are summarised in the following table:
 </p>
 
 <table>
@@ -1987,6 +1989,7 @@ help show up application misuse of the API.
 <ul>
 <li id="ref-ecma"><a href="http://ecma-international.org/publications/files/ecma-st/Ecma-262.pdf">ECMA-262, ECMAScript language specification</a>, 3rd edition, December 1999.
 <li id="ref-boehm"><a href="http://www.hpl.hp.com/personal/Hans_Boehm/gc/">The Boehm-Weiser garbage collection package for C and C++</a>, accessed March 2004
+<!-- <li id="ref-gc"><a href="http://www.iecc.com/gclist/GC-faq.html">GC-LIST FAQ</a>, accessed April 2004 -->
 <li id="ref-utf16">Hoffman et al., <a href="http://www.ietf.org/rfc/rfc2781.txt">UTF-16, an encoding of ISO 10646</a> [RFC 2781], February 2000
 <li id="ref-issues">Boehm, <a href="http://www.hpl.hp.com/personal/Hans_Boehm/gc/issues.html">Advantages and Disadvantages of Conservative Garbage Collection</a>, accessed March 2004
 <li id="ref-unicode">Unicode Inc., <a href="http://www.unicode.org/versions/enumeratedversions.html#Unicode_2_1_9">Unicode 2.1.9</a>, April 1999
