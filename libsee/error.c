@@ -32,10 +32,18 @@
  */
 /* $Id$ */
 
+#if STDC_HEADERS
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <errno.h>
+#endif
+
+#if HAVE_ERRNO_H
+# include <errno.h>
+#else
+extern int errno;
+#endif
+
 #include <see/value.h>
 #include <see/object.h>
 #include <see/interpreter.h>
@@ -43,6 +51,7 @@
 #include <see/mem.h>
 #include <see/error.h>
 #include <see/string.h>
+
 #include "stringdefs.h"
 
 #ifndef NDEBUG
@@ -126,7 +135,11 @@ error_throw(interp, obj, errval, filename, lineno, fmt, ap)
 	if (fmt) {
 	    s = SEE_string_vsprintf(interp, fmt, ap);
 	    if (errval != -1) {
+#if HAVE_STRERROR
 		t = SEE_string_sprintf(interp, ": %s", strerror(errval));
+#else
+		t = SEE_string_sprintf(interp, ": error %d", errval);
+#endif
 		SEE_string_append(s, t);
 	    }
 	} else

@@ -1,7 +1,6 @@
-
-This file documents the compatibility flags in <see/interpreter.h>
 $Id$
 
+This file documents the compatibility flags in <see/interpreter.h>
 
 Flag	Description
 -------	-----------

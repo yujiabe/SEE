@@ -32,6 +32,10 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #include <see/mem.h>
 #include <see/value.h>
 #include <see/string.h>
@@ -41,6 +45,7 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/debug.h>
+
 #include "stringdefs.h"
 #include "array.h"
 #include "regex.h"

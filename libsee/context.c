@@ -32,11 +32,16 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #include <see/object.h>
 #include <see/value.h>
 #include <see/native.h>
 #include <see/debug.h>
 #include <see/string.h>
+
 #include "context.h"
 
 #ifndef NDEBUG

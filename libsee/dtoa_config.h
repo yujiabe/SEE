@@ -5,9 +5,12 @@
  * Configuration directives for dtoa when used by SEE
  */
 
+#if STDC_HEADERS
 #include <float.h>
 #include <stdlib.h>
-#include <sys/types.h>
+#endif
+
+#include <see/types.h>
 
 #if defined(__i386__)
 #   define IEEE_8087
@@ -23,15 +26,20 @@
 
 /* #define IBM for IBM mainframe-style floating-point arithmetic. */
 
-#define Long	int32_t
-#define ULong	u_int32_t
-#define LLong	int64_t
-#define ULLong	u_int64_t
+/* Use the types determined from <see/types.h> */
+#define Long	SEE_int32_t
+#define ULong	SEE_uint32_t
+#define LLong	SEE_int64_t
+#define ULLong	SEE_uint64_t
 
+#if HAVE_MALLOC
 #define MALLOC	malloc
+#endif
 
 #define NO_ERRNO
 #define IEEE_Arith
+
+/* Note that <see/config.h> will define 'const' as empty if it is unusable */
 #define CONST	const
 
 /* #define No_leftright to omit left-right logic in fast floating-point */
@@ -50,6 +58,7 @@
 /* #define USE_LOCALE to use the current locale's decimal_point value. */
 /* #define SET_INEXACT if IEEE arithmetic is being used and extra */
 
+/* Translate these symbols for SEE-only use */
 #define strtod		SEE_strtod
 #define dtoa		SEE_dtoa
 #define freedtoa	SEE_freedtoa

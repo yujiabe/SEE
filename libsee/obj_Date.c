@@ -32,9 +32,22 @@
  */
 /* $Id$ */
 
-#include <math.h>
-#include <time.h>
-#include <sys/time.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+# include <math.h>
+#endif
+
+#if TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/value.h>
@@ -44,6 +57,7 @@
 #include <see/cfunction.h>
 #include <see/error.h>
 #include <see/interpreter.h>
+
 #include "stringdefs.h"
 
 /*

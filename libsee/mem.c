@@ -32,13 +32,27 @@
  */
 /* $Id$ */
 
-#include <stdlib.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdlib.h>
+#endif
+
 #include <see/mem.h>
 #include <see/interpreter.h>
 
+/*
+ * This module provides an interface abstraction for the memory
+ * allocator. If configured properly, the default allocator is
+ * the Boehm-GC collector. An application could see if a default
+ * exists by testing (SEE_mem_malloc_hook != NULL).
+ */
+
 static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
-#if defined(HAVE_GC)
+#if defined(HAVE_LIBGC)
 static void *gc_malloc(struct SEE_interpreter *, unsigned int);
 # define INITIAL_MALLOC		gc_malloc
 # define INITIAL_FREE		NULL
@@ -66,11 +80,10 @@ memory_exhausted(interp)
 	(*SEE_abort)(interp);
 }
 
+#if defined HAVE_LIBGC
 /*------------------------------------------------------------
  * Boehm-GC wrapper
  */
-
-#if defined HAVE_GC
 
 #include "gc.h"
 
@@ -81,7 +94,7 @@ gc_malloc(interp, size)
 {
 	return GC_malloc(size);
 }
-#endif
+#endif /* HAVE_LIBGC */
 
 /*------------------------------------------------------------
  * wrappers around memory allocators that check for failur

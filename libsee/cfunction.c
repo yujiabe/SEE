@@ -32,7 +32,14 @@
  */
 /* $Id$ */
 
-#include <stdio.h>   
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>   
+#endif
+
 #include <see/see.h>
 #include <see/value.h>
 #include <see/mem.h>
@@ -42,6 +49,7 @@
 #include <see/no.h>
 #include <see/cfunction.h>
 #include <see/interpreter.h>
+
 #include "stringdefs.h"
 
 /*

@@ -32,6 +32,10 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #include <see/native.h>
 #include <see/string.h>
 #include <see/intern.h>
@@ -39,6 +43,7 @@
 #include <see/error.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+
 #include "stringdefs.h"
 
 static struct SEE_property **find(struct SEE_interpreter *,

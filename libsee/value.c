@@ -32,8 +32,15 @@
  */
 /* $Id$ */
 
-#include <stdio.h>
-#include <math.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>
+# include <math.h>
+#endif
+
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/value.h>
@@ -42,6 +49,7 @@
 #include <see/input.h>
 #include <see/error.h>
 #include <see/interpreter.h>
+
 #include "lex.h"
 #include "stringdefs.h"
 #include "dtoa.h"

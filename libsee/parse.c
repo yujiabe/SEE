@@ -68,8 +68,15 @@
  *
  */
 
-#include <stdio.h>
-#include <math.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>
+/*# include <math.h> */
+#endif
+
 #include <see/mem.h>
 #include <see/string.h>
 #include <see/value.h>
@@ -82,6 +89,7 @@
 #include <see/error.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+
 #include "lex.h"
 #include "context.h"
 #include "parse.h"

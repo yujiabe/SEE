@@ -32,9 +32,14 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #include <see/string.h>
 #include <see/object.h>
 #include <see/mem.h>
+
 #include "enumerate.h"
 
 /*

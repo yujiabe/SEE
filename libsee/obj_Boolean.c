@@ -32,6 +32,10 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #include <see/mem.h>
 #include <see/value.h>
 #include <see/string.h>
@@ -40,6 +44,7 @@
 #include <see/cfunction.h>
 #include <see/error.h>
 #include <see/interpreter.h>
+
 #include "stringdefs.h"
 
 /*

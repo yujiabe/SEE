@@ -32,12 +32,20 @@
  */
 /* $Id$ */
 
-#include <stdio.h>
-#include <stdlib.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>
+# include <stdlib.h>
+#endif
+
 #include <see/mem.h>
 #include <see/string.h>
 #include <see/type.h>
 #include <see/input.h>
+
 #include "unicode.h"
 
 /*

@@ -32,7 +32,11 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
 
+#if !HAVE_MEMCMP
 /* ANSI memcmp() for systems that don't have it. */
 int
 memcmp(a, b, n)
@@ -46,3 +50,4 @@ memcmp(a, b, n)
 			break;
 	return diff;
 }
+#endif

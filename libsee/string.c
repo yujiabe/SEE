@@ -32,8 +32,15 @@
  */
 /* $Id$ */
 
-#include <stdio.h>
-#include <stdarg.h>
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>
+# include <stdarg.h>
+#endif
+
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/string.h>
@@ -41,6 +48,7 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/value.h>
+
 #include "stringdefs.h"
 
 static struct SEE_stringclass fixed_stringclass = {
