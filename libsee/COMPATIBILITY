@@ -41,9 +41,6 @@ EXT1	The global object has its [[Prototype]] set to Object.prototype,
 	but having the good side effect of allowing 'toString()' to
 	work anywhere.
 
-EXT1	Global's URI and URL escaping and encoding routines generate uppercase 
-	hexadecimal characters instead of lowercase.
-
 EXT1	Calling eval() with a 'this' different to the global object runs
 	its contents with the scope and variable object set to 'this'
 	(instead of inheriting the caller's context).

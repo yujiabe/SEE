@@ -1,6 +1,8 @@
 $Id$
 
 <next release and change info goes here>
+1.1 [<date>]
+  Global.encodeURI generates uppercase hexadecimal to comply with std
 
 1.0 [2003-12-03]
   Initial public release

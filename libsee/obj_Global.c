@@ -507,8 +507,7 @@ AddEscape(interp, R, i)
 	struct SEE_string *R;
 	unsigned char i;
 {
-	char *hexstr = (interp->compatibility & SEE_COMPAT_EXT1) 
-		? SEE_hexstr_uppercase : SEE_hexstr;
+	char *hexstr = SEE_hexstr_uppercase;
 
 	SEE_string_addch(R, '%');
 	SEE_string_addch(R, hexstr[(i >> 4) & 0xf]);
