@@ -1844,7 +1844,7 @@ The following compatibility flag names may change in the future.
 <th>Behaviour</th>
 </tr>
 
-<tr><td><code>UTF_UNSAFE</code>
+<tr><td><code>SEE_COMPAT_UTF_UNSAFE</code>
 <td>Treat 'overlong' UTF-8 encodings as valid unicode characters.
 
 <tr><td><code>UNDEFDEF</code>
@@ -1855,7 +1855,7 @@ The following compatibility flag names may change in the future.
  that so many interpreters are flexible on this point.
  It was originally a JavaScript 1.5 thing I believe.
 
-<tr><td><code>262_3B</code>
+<tr><td><code>SEE_COMPAT_262_3B</code>
 <td>
 Enable optional features in ECMA-262 ed3 Appendix B:
 <ul>
@@ -1865,7 +1865,14 @@ Enable optional features in ECMA-262 ed3 Appendix B:
 <li><code class="js">String.substr()</code> is defined
 </ul>
 
-<tr><td><code>EXT1</code>
+<tr><td><code>SEE_COMPAT_SGMLCOM</code>
+<td>
+	The lexical analyser will treat the 4-character sequence
+	'<code class="js">&lt;!--</code>' much like the
+	'<code class="js">//</code>' comment introducer. 
+	This is useful in HTML SCRIPT elements.
+
+<tr><td><code>SEE_COMPAT_EXT1</code>
 <td>
 Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 <ul>
@@ -1933,10 +1940,6 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	However when called without arguments will still use
 	'<code class="js">,</code>'. (How bizarre.)
 
-<li>	The lexical analyser will treat the 4-character sequence
-	'<code class="js">&lt;!--</code>' much like the
-	'<code class="js">//</code>' comment introducer. 
-	This makes it very useful for use with HTML SCRIPT tags.
 <li>
 	Calling an empty function will not bypass the expensive 
 	process of extending the scope chain, creating an arguments 
@@ -1953,7 +1956,8 @@ omitted if it is compiled with the <code>NDEBUG</code> preprocessor define.
 </p>
 
 <p>
-Most useful to the application developer are these two functions:
+These functions are intended for the developer to use while application 
+debugging, and not for general use.
 </p>
 
 <pre>void <dfn id="SEE_PrintValue">SEE_PrintValue</dfn>(struct SEE_interpreter *interp, 
@@ -1961,7 +1965,9 @@ Most useful to the application developer are these two functions:
 void <dfn id="SEE_PrintObject">SEE_PrintObject</dfn>(struct SEE_interpreter *interp, 
                 struct SEE_object *obj, FILE *file);
 void <dfn id="SEE_PrintString">SEE_PrintString</dfn>(struct SEE_interpreter *interp, 
-                struct SEE_string *str, FILE *file);</pre>
+                struct SEE_string *str, FILE *file);
+void <dfn id="SEE_PrintTraceback">SEE_PrintTraceback</dfn>(struct SEE_interpreter *interp, 
+                FILE *file);</pre>
 
 <p>
 If debugging the library itself, it is worth reading the source code to
@@ -2046,14 +2052,15 @@ help show up application misuse of the API.
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
+<a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
 <a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
-<a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <td>
+<a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
 <a href="#SEE_string_addch">SEE_string_addch</a><br>
 <a href="#SEE_string_append">SEE_string_append</a><br>
@@ -2073,8 +2080,8 @@ help show up application misuse of the API.
 <a href="#SEE_ToInteger">SEE_ToInteger</a><br>
 <a href="#SEE_ToNumber">SEE_ToNumber</a><br>
 <a href="#SEE_ToObject">SEE_ToObject</a><br>
-<a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <td>
+<a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <a href="#SEE_ToString">SEE_ToString</a><br>
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
