@@ -108,10 +108,15 @@ void SEE_RegExp_init(struct SEE_interpreter *);
 void SEE_String_alloc(struct SEE_interpreter *);
 void SEE_String_init(struct SEE_interpreter *);
 
-static void interpreter_abort(struct SEE_interpreter *i) SEE_dead;
+static void interpreter_abort(struct SEE_interpreter *i, const char *) SEE_dead;
 
-void (*SEE_abort)(struct SEE_interpreter *i) SEE_dead = interpreter_abort;
-
+/**
+ * The
+ * .Fn SEE_interpreter_init
+ * function (re)initialises the interpreter structure pointed to by
+ * .Fa interp
+ * using default compatibility flags.
+ */
 void
 SEE_interpreter_init(interp)
 	struct SEE_interpreter *interp;
@@ -121,15 +126,24 @@ SEE_interpreter_init(interp)
 		SEE_COMPAT_EXT1);
 }
 
+/**
+ * The
+ * .Fn SEE_interpreter_init_compat
+ * function (re)initialises the interpreter structure pointed to by
+ * .Fa interp ,
+ * using the bitwise-OR of the flags in
+ * .Fa compat_flags .
+ * The compatibility flags are documented in the
+ * file
+ * .Pa COMPATIBILITY .
+ */
 void
 SEE_interpreter_init_compat(interp, compat_flags)
 	struct SEE_interpreter *interp;
 	int compat_flags;
 {
-	if (SEE_mem_malloc_hook == NULL) {
-		fprintf(stderr, "SEE_mem_malloc_hook: not configured\n");
-		(*SEE_abort)(interp);
-	}
+	if (SEE_mem_malloc_hook == NULL)
+		(*SEE_abort)(interp, "SEE_mem_malloc_hook is NULL");
 
 	interp->try_context = NULL;
 	interp->try_location = NULL;
@@ -138,6 +152,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	interp->random_seed = (unsigned int)interp ^ (unsigned int)time(0);
 	interp->trace = NULL;
 	interp->traceback = NULL;
+	interp->locale = NULL;
 
 	/* Allocate object storage first, since dependencies are complex */
 	SEE_Array_alloc(interp);
@@ -170,10 +185,25 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_Function_init(interp);
 }
 
-/* Handle a fatal interpreter fault. */
+/**
+ * The
+ * .Fv SEE_abort
+ * global variable points to a non-returning function that is called
+ * when the interpreter detects a fatal error. It defaults to a function
+ * that writes a message to stderr and then calls
+ * .Xr abort 3 .
+ * It should be set by the application if more graceful handling is
+ * required.
+ */
+void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead =
+	interpreter_abort;
+
 static void
-interpreter_abort(i)
+interpreter_abort(i, msg)
 	struct SEE_interpreter *i;		/* may be NULL */
+	const char *msg;
 {
+	if (msg)
+	    fprintf(stderr, "fatal error: %s\n", msg);
 	abort();
 }
