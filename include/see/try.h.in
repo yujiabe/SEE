@@ -90,8 +90,8 @@
 #define SEE__THROW(interp, v, _file, _line)			\
 	    do {						\
 		if (!(interp)->try_context)			\
-			SEE_throw_abort(interp, __FILE__, 	\
-				__LINE__);			\
+			SEE_throw_abort(interp, v, _file, 	\
+				_line);	\
 		SEE_VALUE_COPY((struct SEE_value *)		\
 			&(interp)->try_context->thrown, 	\
 			(struct SEE_value *)v);			\
@@ -107,7 +107,8 @@
 #define SEE_DEFAULT_CATCH(interp, c)				\
 	    do {						\
 		if (!(c).done) 					\
-		    SEE__THROW(interp, &(c).thrown,		\
+		    SEE__THROW(interp, 				\
+			    (struct SEE_value *)&(c).thrown,	\
 			    (c).throw_file, (c).throw_line);	\
 	    } while (0)
 
@@ -133,7 +134,8 @@ struct SEE_try_context {
 typedef struct SEE_try_context volatile SEE_try_context_t; 
 
 struct SEE_interpreter;
-void	SEE_throw_abort(struct SEE_interpreter *, const char *, int) SEE_dead;
+void	SEE_throw_abort(struct SEE_interpreter *, const struct SEE_value *,
+		const char *, int) SEE_dead;
 struct SEE_string *SEE_location_string(struct SEE_interpreter *i,
 		struct SEE_throw_location *loc);
 
