@@ -15,13 +15,15 @@ libsee_la_SOURCES= cfunction.c context.c debug.c dtoa.c enumerate.c	\
 noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
                    function.h lex.h parse.h regex.h tokens.h unicode.h
 
-libsee_la_LIBADD=  @LTLIBOBJS@ @LTALLOCA@ -lgc -lm
+libsee_la_LIBADD=  @LIBOBJS@ @ALLOCA@ -lgc -lm
 
 EXTRA_DIST=	   string.pl string.defs
 BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 PERL=		   @PERL@
 
-#-- the following DEFS line tries to avoid the -I../include/see
+#-- the following DEFS/INCLUDES avoids including -I../include/see
+#   yet allows us to keep config.h there, and stops <string.h> from
+#   being an ambiguous #include.
 DEFS = @DEFS@ -I. -I$(srcdir)
 INCLUDES=	   -I$(top_builddir)/include -I$(top_srcdir)/include
 
