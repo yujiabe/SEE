@@ -52,7 +52,8 @@
 #include "stringdefs.h"
 
 /*
- * A function is an internal object that is shared by Function instances.
+ * A function is an internal object that embodies executable code, and
+ * can be shared between Function instances.
  * The terminology used in the standard is to say that Function instances
  * which share the same 'function' (but may have different scope), and
  * have all their non-internal properties linked, are "joined". (13.1.2)
@@ -148,6 +149,9 @@ SEE_function_make(interp, name, params, body)
 			STR(arguments), &v, SEE_ATTR_DONTDELETE | 
 			SEE_ATTR_READONLY | SEE_ATTR_DONTENUM);
 	}
+
+	/* Check if the function body is empty */
+	f->is_empty = SEE_functionbody_isempty(interp, f);
 
 	return f;
 }
