@@ -352,14 +352,14 @@ main(argc, argv)
 	struct SEE_interpreter interp;
 	int ch, error = 0;
 	int do_interactive = 1;
+	int globals_added = 0;
+	int document_added = 0;
 	char *s;
 
 	if (SEE_mem_malloc_hook == NULL)
 		init_dummy_malloc();
 
 	SEE_interpreter_init(&interp);
-	shell_add_globals(&interp);
-	shell_add_document(&interp);
 
 	while ((ch = getopt(argc, argv, "d:h:f:")) != -1)
 	    switch (ch) {
@@ -370,10 +370,18 @@ main(argc, argv)
 		    debug(&interp, *s);
 		break;
 	    case 'h':
+		if (!document_added) {
+		    shell_add_document(&interp);
+		    document_added = 1;
+		}
 		do_interactive = 0;
 		run_html(&interp, optarg);
 		break;
 	    case 'f':
+		if (!globals_added) {
+		    shell_add_globals(&interp);
+		    globals_added = 1;
+		}
 		do_interactive = 0;
 		if (!run_file(&interp, optarg))
 			exit(1);
@@ -386,8 +394,11 @@ main(argc, argv)
 	    exit(1);
 	}
 
-	if (do_interactive)
+	if (do_interactive) {
+	    if (!globals_added)
+		shell_add_globals(&interp);
 	    run_interactive(&interp);
+	}
 
 	exit(0);
 }
