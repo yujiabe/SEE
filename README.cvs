@@ -1,0 +1,11 @@
+
+DEVELOPER NOTES
+
+After checking out this from CVS, you will need to build
+the configure and makefiles from the top level with:
+
+	$ automake -v -a --foreign
+
+If there are problems with old versions of libtool not finding
+configure.ac, make a symbolic from configure.in to configure.ac.
+(This may cause automake to whine slightly, but it is okay.)
