@@ -286,8 +286,8 @@ SEE_Function_init(interp)
 		SEE_ATTR_DEFAULT);
 								/* 15.3.4.1 */
 
-	Function->objectclass = &function_const_class;
-	Function->Prototype = Function_prototype;		/* 15.3.3 */
+	SEE_native_init((struct SEE_native *)Function, interp,	/* 15.3.3 */
+		    &function_const_class, Function_prototype);
 
 	SEE_SET_NUMBER(&v, 1);
 	SEE_OBJECT_PUT(interp, Function, STR(length), &v, 

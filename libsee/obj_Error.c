@@ -131,10 +131,9 @@ init_error(interp, name, constructor, proto_proto)
 	SEE_SET_STRING(&v, name);
 	SEE_OBJECT_PUT(interp, proto, STR(message), &v, SEE_ATTR_DEFAULT);
 
-	constructor->objectclass = &error_const_class;
-
 	/* 15.11.7.7 and 15.11.3 */
-	constructor->Prototype = interp->Function_prototype;
+	SEE_native_init((struct SEE_native *)constructor, interp, 
+	    &error_const_class, interp->Function_prototype);
 
 	/* 15.11.3 Error.length = 1 */
 	SEE_SET_NUMBER(&v, 1);

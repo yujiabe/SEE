@@ -6515,6 +6515,7 @@ SwitchStatement_parse(parser)
 	    else
 		c->body = NULL;
 	}
+	*cp = NULL;
 	EXPECT('}');
 	target_pop(parser, n);
 	return (struct node *)n;
