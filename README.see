@@ -22,5 +22,12 @@ at <http://freshmeat.net/projects/see/> and made available at
 
 David Leonard, 2004.
 
+
+Directory organisation:
+  doc/		- Documentation
+  libsee/	- Library source
+  include/see	- Public header files
+  shell/	- Demo/test program 'see-shell'
+
 $Id$
 
