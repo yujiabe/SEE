@@ -2,7 +2,7 @@
 ## $Id$
 
 bin_PROGRAMS=			see-shell
-see_shell_SOURCES=		main.c shell.c
+see_shell_SOURCES=		main.c shell.c getopt.c
 noinst_HEADERS=			shell.h
 see_shell_LDADD=		$(top_builddir)/libsee/libsee.la
 see_shell_DEPENDENCIES=		$(top_builddir)/libsee/libsee.la

@@ -25,6 +25,12 @@
 # include <getopt.h>
 #endif
 
+#if !HAVE_GETOPT
+int getopt(int, char *const [], const char *);
+extern char *optarg;
+extern int optind;
+#endif
+
 #if HAVE_READLINE_H
 # include <readline.h>
 #else
