@@ -37,17 +37,36 @@ struct SEE_object * SEE_Error_make(struct SEE_interpreter *i,
 #ifndef NDEBUG
 # define SEE_error_throw_string(i, o, s) \
 	 SEE_error__throw_string(i, o, __FILE__, __LINE__, s)
-# define SEE_error_throw(i, o, fmt, arg...) \
-	 SEE_error__throw(i, o, __FILE__, __LINE__, fmt , ## arg)
-# define SEE_error_throw_sys(i, o, fmt, arg...) \
-	 SEE_error__throw_sys(i, o, __FILE__, __LINE__, fmt , ## arg)
 #else
 # define SEE_error_throw_string(i, o, s) \
 	 SEE_error__throw_string(i, o, 0, 0, s)
-# define SEE_error_throw(i, o, fmt, arg...) \
-	 SEE_error__throw(i, o, 0, 0, fmt , ## arg)
-# define SEE_error_throw_sys(i, o, fmt, arg...) \
-	 SEE_error__throw_sys(i, o, 0, 0, fmt , ## arg)
+#endif
+
+#if HAVE_VARIADIC_MACROS
+# ifndef NDEBUG
+#  define SEE_error_throw(i, o, fmt, arg...) \
+	  SEE_error__throw(i, o, __FILE__, __LINE__, fmt , ## arg)
+#  define SEE_error_throw_sys(i, o, fmt, arg...) \
+	  SEE_error__throw_sys(i, o, __FILE__, __LINE__, fmt , ## arg)
+# else
+#  define SEE_error_throw(i, o, fmt, arg...) \
+	  SEE_error__throw(i, o, 0, 0, fmt , ## arg)
+#  define SEE_error_throw_sys(i, o, fmt, arg...) \
+	  SEE_error__throw_sys(i, o, 0, 0, fmt , ## arg)
+# endif
+#else
+/*
+ * Without variadic macros, we cannot insert file and line
+ * information into a call to an intercepted variadic function call.
+ */
+void SEE_error__throw0(struct SEE_interpreter *i,
+			struct SEE_object *errorobj, 
+			const char *fmt, ...) SEE_dead;
+void SEE_error__throw_sys0(struct SEE_interpreter *i,
+			struct SEE_object *errorobj, 
+			const char *fmt, ...) SEE_dead;
+# define SEE_error_throw SEE_error__throw0
+# define SEE_error_throw_sys SEE_error__throw_sys0
 #endif
 
 /*

@@ -103,7 +103,7 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 #ifndef NDEBUG
 	if (SEE_error_debug) {
 	    fprintf(stderr, "throwing object %p from %s:%d\n",
-	    res.u.object, filename, lineno);
+	    res.u.object, filename ? filename : "unknown", lineno);
 	}
 #endif
 
@@ -164,6 +164,19 @@ SEE_error__throw(struct SEE_interpreter *interp, struct SEE_object *obj,
 	va_end(ap);
 }
 
+#if !HAVE_VARIADIC_MACROS
+void
+SEE_error__throw0(struct SEE_interpreter *interp, struct SEE_object *obj,
+	const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	error_throw(interp, obj, -1, NULL, 0, fmt, ap);
+	va_end(ap);
+}
+#endif
+
 /*
  * Throw an error, with the given message appending ':' and the
  * system error message. (See manual page for 'errno')
@@ -180,3 +193,16 @@ SEE_error__throw_sys(struct SEE_interpreter *interp, struct SEE_object *obj,
 	va_end(ap);
 }
 
+#if !HAVE_VARIADIC_MACROS
+void
+SEE_error__throw_sys0(struct SEE_interpreter *interp, struct SEE_object *obj,
+	const char *fmt, ...)
+{
+	va_list ap;
+	int errval = errno;
+
+	va_start(ap, fmt);
+	error_throw(interp, obj, errval, NULL, 0, fmt, ap);
+	va_end(ap);
+}
+#endif
