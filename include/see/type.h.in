@@ -109,22 +109,23 @@ typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 # define SEE_dead	/* nothing */
 #endif
 
-/* numeric constant for NaN */
-extern const union SEE_numeric_literal {
-	SEE_number_t    n;
-	unsigned char   c[8];
-} SEE_literal_NaN, SEE_literal_Inf, SEE_literal_Max, SEE_literal_Min;
+/* IEEE-754 constants defined in value.o */
+extern const unsigned char 
+	SEE_literal_NaN[8],
+	SEE_literal_Inf[8],
+	SEE_literal_Max[8],
+	SEE_literal_Min[8];
+
 #if HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV
 # define SEE_NaN		((SEE_number_t) (0.0 / 0.0))
 # define SEE_Infinity		((SEE_number_t) (1.0 / 0.0))
 # define SEE_MinNumber		((SEE_number_t) 0x1p-1074)
 # define SEE_MaxNumber		((SEE_number_t) 0x1fffffffffffffp971)
 #else
-/* Defined in value.o */
-# define SEE_NaN		(SEE_literal_NaN.n)
-# define SEE_Infinity		(SEE_literal_Inf.n)
-# define SEE_MinNumber		(SEE_literal_Min.n)
-# define SEE_MaxNumber		(SEE_literal_Max.n)
+# define SEE_NaN		(*(SEE_number_t *)&SEE_literal_NaN)
+# define SEE_Infinity		(*(SEE_number_t *)&SEE_literal_Inf)
+# define SEE_MinNumber		(*(SEE_number_t *)&SEE_literal_Min)
+# define SEE_MaxNumber		(*(SEE_number_t *)&SEE_literal_Max)
 #endif
 
 /* On-stack allocation */

@@ -9,6 +9,7 @@ AC_CONFIG_FILES([Makefile
 		 include/Makefile
 		 include/see/Makefile
 		 libsee/Makefile 
+		 libsee/libsee-config
 		 doc/Makefile 
 		 shell/Makefile
 		 shell/test/Makefile])
@@ -19,8 +20,7 @@ dnl
 
 AC_PROG_CC
 
-test x"$target" = x"" && target=NONE		# (workaround libtool bug)
-AM_PROG_LIBTOOL
+AC_PROG_LIBTOOL
 
 AC_CHECK_PROG(PERL, perl, [$ac_dir/$ac_word],
     [$PATH:/bin:/usr/bin:/usr/local/bin:/opt/local/bin])
@@ -364,8 +364,14 @@ AH_TEMPLATE([HAVE__LONGJMP],
 	    [Define if you have working _longjmp() and _setjmp() functions])
 
 dnl ------------------------------------------------------------
+dnl tests
+dnl
+
+AC_CONFIG_FILES([shell/test/test-grammar],
+	  [chmod +x $ac_file])
+
+dnl ------------------------------------------------------------
 dnl finalisation
 dnl
 
 AC_OUTPUT
-

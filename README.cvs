@@ -5,26 +5,12 @@ DEVELOPER NOTES
 the build environment with the following commands:
 
 	$ autoreconf --install
-	$ sh configure CFLAGS="-Wall -ggdb -O2"
+	$ (cd unicode && make)
 
 You'll also find that you need libtool installed, and probably the
 boehm-gc package.
 
-[If there are problems with old versions of libtool not finding
-configure.ac, make a symbolic from configure.in to configure.ac.
-This may cause automake to whine slightly, but it will be okay.
-Perhaps, one day, libtool will be fixed and find configure.ac.]
-
-2. Next, you will need to go into the 'unicode' directory and do
-a make there. This will probably download unicode tables, and compress
-them, generating a libsee/unicode.c file (intended to be distributed).
-
 3. At this stage, you should be able to run configure, like everyone else.
-Enable the cache with -C because when developing, it helps hasten builds.
-Finally build with GNU make.
-
-	$ sh configure -C
-	$ gmake
 
 4. If you plan on modifying libsee to work on your architecture,
 please work with configure.ac primarily.
@@ -36,7 +22,7 @@ RELEASE STEPS
 2. Make sure that the package is configured (autoreconf --install)
 3. Create a temporary build dir (e.g. /tmp/b), cd there and run
    the configure script from the check-out directory.
-4. make distcheck
+4. Ensure you run 'make distcheck'
 
 $Id$
 

@@ -1,0 +1,21 @@
+#!/bin/sh
+# $Id$
+
+case "$1" in
+    --version) 
+	echo "@PACKAGE_NAME@-@PACKAGE_VERSION@" ;;
+    --libs)
+	echo "-L@libdir@ -lsee @LDFLAGS@ @LIBS@" ;;
+    --cppflags)
+	echo "-I@includedir@" ;;
+    *)
+	exec >&2
+	test -z "$1" || echo "unknown flag: $1"
+	echo "usage: $0 --<request>" 
+	echo "  where --<request> is one of:"
+	echo "     --version      - prints <package>-<version>"
+	echo "     --libs         - prints linker flags"
+	echo "     --cppflags     - prints preprocessor flags to use"
+	exit 1
+	;;
+esac

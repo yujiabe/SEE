@@ -21,21 +21,16 @@ noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
                    function.h lex.h parse.h regex.h tokens.h unicode.h	\
 		   init.h
 
-libsee_la_LIBADD=  @LIBOBJS@ @ALLOCA@ -lgc -lm
+libsee_la_LIBADD=  @LIBOBJS@ @ALLOCA@
 
-EXTRA_DIST=	   string.pl string.defs unicode.c
+EXTRA_DIST=	   string.pl string.defs
 PERL=		   @PERL@
 
-#-- the following DEFS/INCLUDES avoids including -I../include/see
-#   yet allows us to keep config.h there, and stops <string.h> from
-#   being an ambiguous #include.
-#DEFS = 		   @DEFS@ -I. -I$(srcdir)
+bin_SCRIPTS=	   libsee-config
+
 INCLUDES=	   -I$(top_builddir)/include -I$(top_srcdir)/include
 
 stringdefs.inc: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl c $(srcdir)/string.defs >$@
 stringdefs.h: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl h $(srcdir)/string.defs >$@
-unicode.c:
-#	cd $(top_builddir)/unicode && ${MAKE}
-	cp $(top_srcdir)/unicode/unicode.c .

@@ -12,13 +12,6 @@
 #	http://www.mozilla.org/js/tests/library.html
 #
 
-TESTS =	test
+TESTS =	test-grammar
 
-EXTRA_DIST=	test.sh grammar.js
-EXTRA_CLEAN=	test
-
-test: test.sh
-	rm -f $@
-	sed -e 's,=top_builddir=,$(top_builddir),g' \
-	    -e 's,=srcdir=,$(srcdir),g' < $(srcdir)/test.sh > $@
-	chmod +x $@
+EXTRA_DIST=	grammar.js
