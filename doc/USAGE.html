@@ -427,7 +427,7 @@ reference counting.
 <li> Exceptions (<a href="#try">&sect;4.2</a>)
 could not have been implemented easily with (fast)
 <code>longjmp()</code>, because references on the stack would
-become memory leaks or introduce too much fragile 'finaly' code.
+become memory leaks or introduce too much fragile 'finally' code.
 <li> The object-prototype model of ECMAScript results in plenty of
 circular references between constructor functions and instances,
 and with recursive function scope chains.
@@ -467,6 +467,7 @@ strategy:
 
 <p>
 The <code>SEE_Global_eval()</code> function is able to
+execute program text and then
 store the value associated with the last executed statement in 
 a location given by a value pointer.
 In a non-interactive environment, this last statement's value is 
