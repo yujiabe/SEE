@@ -1971,17 +1971,19 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">TypeError</code>. The upshot of this is that
 	<code class="js">arguments</code> can be coerced into a string.
 
-<li>	<code class="js">Array.join(undefined)</code> uses
-	the string '<code class="js">undefined</code>'
-	as the join string instead of '<code class="js">,</code>'.
-	However when called without arguments will still use
-	'<code class="js">,</code>'. (How bizarre.)
-
 <li>
 	Calling an empty function will not bypass the expensive 
 	process of extending the scope chain, creating an arguments 
 	property etc.
 </ul>
+
+<tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>
+<td>
+	<code class="js">Array.join(undefined)</code> uses
+	the string '<code class="js">undefined</code>'
+	as the join string instead of '<code class="js">,</code>'.
+	However when called without arguments will still use
+	'<code class="js">,</code>'. (How bizarre.)
 
 </table>
 
