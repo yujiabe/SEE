@@ -1867,7 +1867,7 @@ Enable optional features in ECMA-262 ed3 Appendix B:
 
 <tr><td><code>EXT1</code>
 <td>
-Random extensions:
+Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 <ul>
 <li>	SEE's lexical analyser will recognise octal integers (i.e.
 	integers starting with '0') and will throw a
@@ -1938,10 +1938,9 @@ Random extensions:
 	'<code class="js">//</code>' comment introducer. 
 	This makes it very useful for use with HTML SCRIPT tags.
 <li>
-	Calling an empty function is bypassed and returns the constant
-	<code class="js">undefined</code>. This avoids going through the
-	expensive process of extending the scope chain, creating an
-	arguments property etc.
+	Calling an empty function will not bypass the expensive 
+	process of extending the scope chain, creating an arguments 
+	property etc.
 </ul>
 
 </table>

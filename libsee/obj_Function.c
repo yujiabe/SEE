@@ -437,7 +437,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	fi = tofunction(interp, self);
 
 	/* Bypass empty functions */
-	if ((interp->compatibility & SEE_COMPAT_EXT1) &&
+	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0 &&
 	    fi->function->is_empty)
 	{
 		SEE_SET_UNDEFINED(res);
