@@ -55,7 +55,10 @@
 /*
  * cfunction
  * 
- * These are ECMAScript objects that wrap native C functions.
+ * These are the ECMAScript objects that wrap native C functions.
+ * They are referred to in the introduction of section 15 of the
+ * standard as 'built-in' functions.
+ *
  * They have a [[Call]] property which invokes the appropriate 
  * C function, and also has a "length" property which 
  * gives the typical number of arguments to the [[Call]] method.
