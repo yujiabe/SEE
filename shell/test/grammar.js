@@ -190,7 +190,7 @@ test("x = ''; for (i = 0; i < 8; i++) switch (i) {" +
      "case 2: x+='c'; break; case 3: x+='d'; default: x+='e';" +
      "case 4: x+='f'; break; case 5: x+='g'; case 6: x+='h';}; x",
      "abbcdeffghhef");
-test("foo:;", undefined);
+test("foo:bar:baz:;", undefined);
 test("throw {}", "exception");
 test("x=0;try{throw {a:1}} catch(e){x=e.a};x", 1);
 test("x=y=0;try{" +
@@ -220,7 +220,7 @@ test("String('ab'.split(/a*/))", ",b");
 /* Print a summary of what went right, and what went wrong */
 
 print();
-print(failures + " out of " + total + " failed.");
+print((total - failures) + " out of " + total + " passed.");
 
 /* Throw an error on failure */
 if (failures > 0)
