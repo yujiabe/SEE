@@ -38,6 +38,7 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
+# include <stdlib.h>
 #endif
 
 #include <see/mem.h>
@@ -784,7 +785,7 @@ global_escape(interp, self, thisobj, argc, argv, res)
 	{ 0x00,0x00,0x00,0x00,0x00,0xec,0xff,0x03,    /* [A-Za-z0-9@*_+\-./] */
 	  0xff,0xff,0xff,0x87,0xfe,0xff,0xff,0x07, };
 	char *hexstr = (interp->compatibility & SEE_COMPAT_EXT1) 
-		? SEE_hexstr_uppercase : SEE_hexstr;
+		? SEE_hexstr_uppercase : SEE_hexstr_lowercase;
 
 	if (argc < 1) {
 		SEE_SET_UNDEFINED(res);
