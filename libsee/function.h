@@ -21,9 +21,10 @@ struct function {
 	struct SEE_string **params;
 	void *body;			/* FunctionBody_node */
 	struct SEE_string *name;	/* optional function name */
-	struct SEE_native *common;		/* common to joined functions */
+	struct SEE_native *common;	/* common to joined functions */
 	struct SEE_object *cache;	/* used by SEE_Function_create() */
 	struct function *next;		/* linked list of functions */
+	int is_empty;			/* true if body is empty */
 };
 
 struct function *SEE_function_make(struct SEE_interpreter *i,
