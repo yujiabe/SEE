@@ -289,8 +289,8 @@ SEE_string_vsprintf(interp, fmt, ap)
 
         len = vsnprintf(buf, 0, fmt, ap);
 	if (len) {
-		buf = SEE_ALLOCA(len, char);
-		vsnprintf(buf, len, fmt, ap);
+		buf = SEE_ALLOCA(len + 1, char);
+		vsnprintf(buf, len + 1, fmt, ap);
 	}
 
 	str = SEE_string_new(interp, len);
