@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_type_
-#define _h_type_
+#ifndef _SEE_h_type_
+#define _SEE_h_type_
 
 /*
  * Machine-dependent types and definitions
@@ -10,58 +10,82 @@
 
 #include "config.h"
 
+#if HAVE_INTTYPES_H
+# include <inttypes.h>
+
+typedef uint16_t SEE_uint16_t;
+typedef uint32_t SEE_uint32_t;
+typedef int32_t  SEE_int32_t;
+typedef uint64_t SEE_uint64_t;
+typedef int64_t  SEE_int64_t;
+
+#else /* !HAVE_INTTYPES_H */
+
+# if HAVE_STDINT_H
+#  include <stdint.h>
+
+typedef uint16_t SEE_uint16_t;
+typedef uint32_t SEE_uint32_t;
+typedef int32_t  SEE_int32_t;
+
+# else /* !HAVE_STDINT_H */
+
 /* 16-bit unsigned integer */
-#if SIZEOF_UNSIGNED_SHORT == 2
+#  if SIZEOF_UNSIGNED_SHORT == 2
 typedef unsigned short	  SEE_uint16_t;
-#elif SIZEOF_UNSIGNED_INT == 2
+#  elif SIZEOF_UNSIGNED_INT == 2
 typedef unsigned int	  SEE_uint16_t;
-#else
-# error "cannot provide type for SEE_uint16_t"
-#endif
+#  else
+#   error "cannot provide type for SEE_uint16_t"
+#  endif
 
 /* 32-bit signed integer */
-#if SIZEOF_SIGNED_SHORT == 4
+#  if SIZEOF_SIGNED_SHORT == 4
 typedef signed short	  SEE_int32_t;
-#elif SIZEOF_SIGNED_INT == 4
+#  elif SIZEOF_SIGNED_INT == 4
 typedef signed int	  SEE_int32_t;
-#elif SIZEOF_SIGNED_LONG == 4
+#  elif SIZEOF_SIGNED_LONG == 4
 typedef signed long	  SEE_int32_t;
-#else
-# error "cannot provide type for SEE_int32_t"
-#endif
+#  else
+#   error "cannot provide type for SEE_int32_t"
+#  endif
 
 /* 32-bit unsigned integer */
-#if SIZEOF_UNSIGNED_SHORT == 4
+#  if SIZEOF_UNSIGNED_SHORT == 4
 typedef unsigned short	  SEE_uint32_t;
-#elif SIZEOF_UNSIGNED_INT == 4
+#  elif SIZEOF_UNSIGNED_INT == 4
 typedef unsigned int	  SEE_uint32_t;
-#elif SIZEOF_UNSIGNED_LONG == 4
+#  elif SIZEOF_UNSIGNED_LONG == 4
 typedef unsigned long	  SEE_uint32_t;
-#else
-# error "cannot provide type for SEE_uint32_t"
-#endif
+#  else
+#   error "cannot provide type for SEE_uint32_t"
+#  endif
+
+# endif /* !HAVE_STDINT_H */
 
 /* 64-bit signed integer */
-#if SIZEOF_SIGNED_INT == 8
+# if SIZEOF_SIGNED_INT == 8
 typedef signed int	  SEE_int64_t;
-#elif SIZEOF_SIGNED_LONG == 8
+# elif SIZEOF_SIGNED_LONG == 8
 typedef signed long	  SEE_int64_t;
-#elif SIZEOF_SIGNED_LONG_LONG == 8
+# elif SIZEOF_SIGNED_LONG_LONG == 8
 typedef signed long long  SEE_int64_t;
-#else
-# error "cannot provide type for SEE_int64_t"
-#endif
+# else
+#  error "cannot provide type for SEE_int64_t"
+# endif
 
 /* 64-bit unsigned integer */
-#if SIZEOF_UNSIGNED_INT == 8
+# if SIZEOF_UNSIGNED_INT == 8
 typedef unsigned int	  SEE_uint64_t;
-#elif SIZEOF_UNSIGNED_LONG == 8
+# elif SIZEOF_UNSIGNED_LONG == 8
 typedef unsigned long	  SEE_uint64_t;
-#elif SIZEOF_UNSIGNED_LONG_LONG == 8
+# elif SIZEOF_UNSIGNED_LONG_LONG == 8
 typedef unsigned long long SEE_uint64_t;
-#else
-# error "cannot provide type for SEE_uint64_t"
-#endif
+# else
+#  error "cannot provide type for SEE_uint64_t"
+# endif
+
+#endif /* !HAVE_INTTYPES_H */
 
 /* 64-bit floating point */
 #if SIZEOF_FLOAT == 8
@@ -125,4 +149,4 @@ extern const union SEE_numeric_literal {
 
 #define SEE_ALLOCA(n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)
 
-#endif /* _h_type_ */
+#endif /* _SEE_h_type_ */
