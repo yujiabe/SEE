@@ -389,6 +389,7 @@ init_dummy_malloc()
  *  undefdef     - return undefined for unknown names instead of throwing
  *  262_3b       - provide the optional functions in section 3B of standard
  *  ext1         - enable local SEE extension set number 1
+ *  arrayjoin1   - emulate old array.join(undefined) bug
  */
 static int
 compatvalue(name, compatibility)
@@ -401,6 +402,7 @@ compatvalue(name, compatibility)
 		{ "undefdef",	SEE_COMPAT_UNDEFDEF },
 		{ "262_3b",	SEE_COMPAT_262_3B },
 		{ "ext1",	SEE_COMPAT_EXT1 },
+		{ "arrayjoin1",	SEE_COMPAT_ARRAYJOIN1 },
 	};
 	int i;
 	int no = 0;
@@ -440,7 +442,6 @@ main(argc, argv)
 	int do_interactive = 1;
 	int globals_added = 0;
 	int document_added = 0;
-	int compatibility = 0;
 	char *s;
 
 	/* Initialise memory allocator only if default is not available */
@@ -456,7 +457,7 @@ main(argc, argv)
 	while (!error && (ch = getopt(argc, argv, "c:d:f:h:")) != -1)
 	    switch (ch) {
 	    case 'c':
-		if (compatvalue(optarg, &compatibility) == -1)
+		if (compatvalue(optarg, &interp.compatibility) == -1)
 		    error = 1;
 		break;
 	    case 'd':
