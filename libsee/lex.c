@@ -188,6 +188,21 @@ HexValue(c)
 }
 
 static int
+is_HexEscape(lex)
+	struct lex *lex;			/* 7.6 */
+{
+	SEE_unicode_t lookahead[4];
+	int lookahead_len;
+
+	lookahead_len = LOOKAHEAD(lookahead, 4);
+	return (lookahead_len >= 4 &&
+		lookahead[0] == '\\' &&
+		lookahead[1] == 'x' &&
+		is_HexDigit(lookahead[2]) &&
+		is_HexDigit(lookahead[3]));
+}
+
+static int
 is_UnicodeEscape(lex)
 	struct lex *lex;			/* 7.6 */
 {
@@ -230,6 +245,21 @@ is_IdentifierPart(lex)
 	return is_UnicodeDigit(c) 
 		/* XXX  || is combining mark || is connector punct */
 		;
+}
+
+static SEE_unicode_t
+HexEscape(lex)
+	struct lex *lex;			/* 7.6 la \x */
+{
+	int i;
+	SEE_unicode_t r = 0;
+	CONSUME('\\'); CONSUME('x');
+	for (i = 0; i < 2; i++) {
+		if (ATEOF) SYNTAX_ERROR(STR(unexpected_eof));
+		r = (r << 4) | HexValue(NEXT);
+		SKIP;
+	}
+	return r;
 }
 
 static SEE_unicode_t
@@ -354,9 +384,11 @@ StringLiteral(lex)
 	while (!ATEOF && NEXT != quote) {
 		if (is_LineTerminator(NEXT))
 			SYNTAX_ERROR(STR(broken_literal));
-		if (is_UnicodeEscape(lex)) {
+		else if (is_UnicodeEscape(lex))
 			c = UnicodeEscape(lex);
-		} else if (NEXT == '\\') {
+		else if (is_HexEscape(lex))
+			c = HexEscape(lex);
+		else if (NEXT == '\\') {
 			SKIP;
 			if (ATEOF || is_LineTerminator(NEXT))
 				SYNTAX_ERROR(STR(escaped_lit_nl));
@@ -380,23 +412,17 @@ StringLiteral(lex)
 					{ c = (c << 3) | (NEXT - '0'); SKIP; }
 				break;
 			case 'x':
-				SKIP;
-				if (!ATEOF && is_HexDigit(NEXT)) {
-					c = HexValue(NEXT);
-					SKIP;
-					if (!ATEOF && is_HexDigit(NEXT)) {
-					    c = (c << 4) | HexValue(NEXT);
-					    SKIP;
-					} else
-					    SYNTAX_ERROR(STR(invalid_esc_x));
-				} else
-					SYNTAX_ERROR(STR(invalid_esc_x));
-				break;
 			case 'u':
-				/* Would have been handled above */
-				SYNTAX_ERROR(STR(invalid_esc_u));
-				break;
-			default:	c = NEXT; SKIP; break;
+				if ((lex->input->interpreter->compatibility 
+				    & SEE_COMPAT_EXT1) == 0)
+				{ if (NEXT == 'x')
+				     SYNTAX_ERROR(STR(invalid_esc_x));
+				  else
+				     SYNTAX_ERROR(STR(invalid_esc_u));
+				}
+				/* FALLTHROUGH */
+			default:
+				c = NEXT; SKIP; break;
 			}
 		} else {
 			c = NEXT;
@@ -504,14 +530,15 @@ NumericLiteral(lex)
 		n = 0;
 		for (i = 1; i < s->length; i++) {
 		    if (s->data[i] > '7')
-			SYNTAX_ERROR(STR(oct_literal_detritus));
+			goto not_octal;
 		    n = n * 8 + s->data[i] - '0';
 		}
 		if (!ATEOF && is_IdentifierStart(lex))
-		    SYNTAX_ERROR(STR(oct_literal_detritus));
+		    goto not_octal;
 		SEE_SET_NUMBER(&lex->value, n);
 		return tNUMBER;
 	}
+    not_octal:
 
 	if (!ATEOF && NEXT == '.') {
 	    SEE_string_addch(s, NEXT);
