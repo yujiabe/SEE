@@ -24,5 +24,6 @@ struct function *SEE_parse_program(struct SEE_interpreter *i,
 void  SEE_functionbody_print(struct SEE_interpreter *i, struct function *f);
 struct SEE_string *SEE_functionbody_string(struct SEE_interpreter *i, 
 	struct function *f);
+int SEE_function_isempty(struct SEE_interpreter *i, struct function *f);
 
 #endif /* _SEE_h_parse_ */
