@@ -355,6 +355,7 @@ compatvalue(name)
 	const char *name;
 {
 	static struct { const char *name; int flag; } names[] = {
+		{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE },
 		{ "undefdef",	SEE_COMPAT_UNDEFDEF },
 		{ "262_3b",	SEE_COMPAT_262_3B },
 		{ "ext1",	SEE_COMPAT_EXT1 },
