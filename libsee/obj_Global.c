@@ -61,6 +61,12 @@
 #include "dtoa.h"
 #include "init.h"
 
+#if SEE_NUMBER_IS_FLOAT
+# define IS_INF(n)	isinff(n)
+#elif SEE_NUMBER_IS_DOUBLE
+# define IS_INF(n)	isinf(n)
+#endif
+
 /*
  * The Global object.
  *
@@ -284,7 +290,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	SEE_number_t n, sign;
 
 	if (argc < 1) {
-		SEE_SET_UNDEFINED(res);
+		SEE_SET_NUMBER(res, SEE_NaN);
 		return;
 	}
 
@@ -315,7 +321,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 		R = 16;
 	}
 	else if ((interp->compatibility & SEE_COMPAT_EXT1) && 
-	    R == 0 && 
+	    R == 0 && i < s->length &&
 	    s->data[i] == '0')
 	{
 		R = 8;
@@ -350,6 +356,10 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 		SEE_char_t ch;
 		int digit;
 
+		if (IS_INF(factor)) {
+			n = factor;
+			break;
+		}
 		ch = s->data[i - j - 1];
 		if (ch >= '0' && ch <= '9') 
 			digit = ch - '0';
