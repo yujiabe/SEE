@@ -14,6 +14,7 @@ $Id$
   Fixed octal parsing bug in parseInt
   Fixed undefined arg bugs with escape, unescape, isNaN, isFinite
   Fixed bug scanning /*/*/ as comment
+  Simpler search for perl and better support for compiling with MSYS/MinGW
 
 1.1 [2004-08-15]
   Much improved documentation.
