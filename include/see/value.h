@@ -147,6 +147,6 @@ SEE_uint32_t SEE_ToUint32(struct SEE_interpreter *i, struct SEE_value *val);
 SEE_uint16_t SEE_ToUint16(struct SEE_interpreter *i, struct SEE_value *val);
 
 /* "0123456789abcdef" */
-extern char SEE_hexstr[16], SEE_hexstr_uppercase[16];
+extern char SEE_hexstr_lowercase[16], SEE_hexstr_uppercase[16];
 
 #endif /* _h_value_ */
