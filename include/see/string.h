@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_string_
-#define _h_string_
+#ifndef _SEE_h_string_
+#define _SEE_h_string_
 
 /*
  * Strings are read-only, in-memory, sized arrays of 16-bit characters.
@@ -65,4 +65,4 @@ struct SEE_string *SEE_string_vsprintf(struct SEE_interpreter *i,
 struct SEE_string *SEE_string_literal(struct SEE_interpreter *i,
 				const struct SEE_string *s);
 
-#endif /* _h_string_ */
+#endif /* _SEE_h_string_ */

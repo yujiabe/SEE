@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_input_
-#define _h_input_
+#ifndef _SEE_h_input_
+#define _SEE_h_input_
 
 /*
  * UCS-32 character stream inputs,
@@ -65,4 +65,4 @@ int SEE_input_lookahead_copy(struct SEE_input *li, SEE_unicode_t *buf, int bufle
 
 #define SEE_INPUT_BADCHAR	((SEE_unicode_t)0x100000)
 
-#endif /* _h_input_ */
+#endif /* _SEE_h_input_ */

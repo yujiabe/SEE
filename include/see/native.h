@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_native_
-#define _h_native_
+#ifndef _SEE_h_native_
+#define _SEE_h_native_
 
 /*
  * All native objects have a hash table of attributed name-value properties.
@@ -52,4 +52,4 @@ void SEE_native_init(struct SEE_native *obj, struct SEE_interpreter *i,
 		struct SEE_objectclass *obj_class, 
 		struct SEE_object *prototype);
 
-#endif /* _h_native_ */
+#endif /* _SEE_h_native_ */

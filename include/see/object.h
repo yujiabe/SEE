@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_object_
-#define _h_object_
+#ifndef _SEE_h_object_
+#define _SEE_h_object_
 
 struct SEE_value;
 struct SEE_object;
@@ -130,4 +130,4 @@ void SEE_object_call(struct SEE_interpreter *, struct SEE_object *,
 void SEE_object_construct(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
-#endif /* _h_object_ */
+#endif /* _SEE_h_object_ */

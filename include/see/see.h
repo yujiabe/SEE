@@ -1,5 +1,5 @@
-#ifndef _h_see_
-#define _h_see_
+#ifndef _SEE_h_see_
+#define _SEE_h_see_
 
 /*
  * Although every header file is autonomous (or handles its own dependencies),
@@ -32,4 +32,4 @@ extern "C" {
 }
 #endif /* C++ */
 
-#endif /* _h_see_ */
+#endif /* _SEE_h_see_ */

@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_no_
-#define _h_no_
+#ifndef _SEE_h_no_
+#define _SEE_h_no_
 
 struct SEE_object;
 struct SEE_string;
@@ -23,4 +23,4 @@ void	SEE_no_defaultvalue(struct SEE_interpreter *, struct SEE_object *,
 struct SEE_enum *SEE_no_enumerator(struct SEE_interpreter *, 
 		struct SEE_object *);
 
-#endif /* _h_no_ */
+#endif /* _SEE_h_no_ */

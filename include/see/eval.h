@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_eval
-#define _h_eval
+#ifndef _SEE_h_eval
+#define _SEE_h_eval
 
 struct SEE_string;
 struct SEE_value;
@@ -16,4 +16,4 @@ struct SEE_object *SEE_Function_new(struct SEE_interpreter *i,
 	struct SEE_string *name, struct SEE_input *param_input, 
 	struct SEE_input *body_input);
 
-#endif _h_eval
+#endif _SEE_h_eval

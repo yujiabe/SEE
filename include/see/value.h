@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_value_
-#define _h_value_
+#ifndef _SEE_h_value_
+#define _SEE_h_value_
 
 /*
  * Values are small units of short-life, typed memory
@@ -149,4 +149,4 @@ SEE_uint16_t SEE_ToUint16(struct SEE_interpreter *i, struct SEE_value *val);
 /* "0123456789abcdef" */
 extern char SEE_hexstr_lowercase[16], SEE_hexstr_uppercase[16];
 
-#endif /* _h_value_ */
+#endif /* _SEE_h_value_ */

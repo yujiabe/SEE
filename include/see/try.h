@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_try_
-#define _h_try_
+#ifndef _SEE_h_try_
+#define _SEE_h_try_
 
 /*
  * Exception handling (try/catch)
@@ -145,4 +145,4 @@ void	SEE_throw(void);
 # define SEE_throw() /* nothing */
 #endif
 
-#endif /* _h_try_ */
+#endif /* _SEE_h_try_ */

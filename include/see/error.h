@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_error_
-#define _h_error_
+#ifndef _SEE_h_error_
+#define _SEE_h_error_
 
 #include "config.h"
 #include "type.h"
@@ -84,4 +84,4 @@ void SEE_error__throw_sys0(struct SEE_interpreter *i,
 #  define SEE_ASSERT(i, x) /* ignore */
 #endif /* NDEBUG */
 
-#endif /* _h_error_ */
+#endif /* _SEE_h_error_ */

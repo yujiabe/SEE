@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_interpreter_
-#define _h_interpreter_
+#ifndef _SEE_h_interpreter_
+#define _SEE_h_interpreter_
 
 #include "config.h"
 #include "type.h"
@@ -91,4 +91,4 @@ void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
  */
 extern void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead;
 
-#endif _h_interpreter_
+#endif _SEE_h_interpreter_

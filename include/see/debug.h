@@ -1,8 +1,8 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _h_debug_
-#define _h_debug_
+#ifndef _SEE_h_debug_
+#define _SEE_h_debug_
 
 #include "config.h"
 
@@ -19,4 +19,4 @@ void SEE_PrintObject(struct SEE_interpreter *i, struct SEE_object *o, FILE *f);
 void SEE_PrintString(struct SEE_interpreter *i, struct SEE_string *s, FILE *f);
 void SEE_PrintTraceback(struct SEE_interpreter *i, FILE *f);
 
-#endif /* _h_debug_ */
+#endif /* _SEE_h_debug_ */
