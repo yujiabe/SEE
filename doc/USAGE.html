@@ -525,9 +525,8 @@ main()
         SEE_INPUT_CLOSE(input);
 
         <i>/* Catch any exceptions */</i>
-        if (SEE_CAUGHT(try_ctxt)) {
+        if (SEE_CAUGHT(try_ctxt))
                 printf("Unexpected exception\n");
-        }
 
         exit(0);
 }</pre>
@@ -1912,6 +1911,12 @@ Enable optional features in ECMA-262 ed3 Appendix B:
 <td>
 Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 <ul>
+
+<li>	Invalid <code class="js">\u</code> or <code class="js">\x</code>
+	escapes will treat the leading
+	<code class="js">\u</code> or <code class="js">\x</code> as
+	a single-letter escape.
+
 <li>	SEE's lexical analyser will recognise octal integers (i.e.
 	integers starting with '0') and will throw a
 	<code class="js">SyntaxError</code> if they contain 
