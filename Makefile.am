@@ -3,5 +3,5 @@
 
 SUBDIRS = include libsee shell
 
-EXTRA_DIST = README.see USAGE.html
+EXTRA_DIST = README.see USAGE.html CHANGES
 
