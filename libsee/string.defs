@@ -20,20 +20,20 @@
 #
 # general error messages
 #
-bad_argc = "Wrong number of arguments"
-bad_arg = "Invalid argument"
-internal_error = "Internal error"
-new_not_an_object = "Cannot 'new' a non-object"
-not_a_constructor = "Object has no constructor"
+bad_argc = "Wrong number of arguments to function"
+bad_arg = "Invalid argument given to function"
+internal_error = "Internal error - please report"
+new_not_an_object = "Cannot apply 'new' to a non-object"
+not_a_constructor = "Cannot apply 'new' to the object"
 no_such_function = "No such function"
 not_a_function = "Cannot call a non-function"
 not_callable = "Object is not callable"
-instanceof_not_object = "'instanceof' target is not an object"
-in_not_object = "'in' target is not an object"
-no_hasinstance = "object does not support 'instanceof'"
-bad_lvalue = "cannot assign to value"
-regex_syntax_error = "bad regular expression"
-recursion_limit_reached = "recursion limit reached"
+instanceof_not_object = "Expected object to follow 'instanceof'"
+in_not_object = "Expected object to follow 'in'"
+no_hasinstance = "Object does not support 'instanceof' operator"
+bad_lvalue = "Invalid lvalue in assignment"
+regex_syntax_error = "Problem parsing regular expression"
+recursion_limit_reached = "Call limit reached (Runaway recursion?)"
 error
 
 #
@@ -44,40 +44,40 @@ no_string_space = "No string space"
 bad_utf16_string = "Invalid UTF-16 sequence in string"
 unknown_file = "<input>"
 string_input_name = "<string>"
-duplicate_label = "duplicate label '"
+duplicate_label = "Duplicate label '"
 previous_definition = "previous definition"
 
 #
 # more misc error messages
 #
-toobject_undefined =	"Cannot use undefined as an object"
-toobject_null =		"Cannot use null as an object"
+toobject_undefined =	"Tried to use undefined as an object"
+toobject_null =		"Tried to use null as an object"
 toobject_bad =		"Cannot convert the value into an object"
 toboolean_bad =		"Cannot convert the value into a boolean"
 tonumber_bad =		"Cannot convert the value into a number"
 tostring_bad =		"Cannot convert the value into a string"
 
-defaultvalue_string_bad = "Cannot convert object into string"
-defaultvalue_number_bad = "Cannot convert object into number"
-defaultvalue_no_bad =     "Cannot convert object into a default form"
-not_array =		  "Object is not a native Array object"
-array_badlen =		  "Bad length given to Array constructor"
-not_boolean =		  "Object is not a native Boolean object"
-not_function =		  "Object is not a native Function object"
-not_number =		  "Object is not a native Number object"
-not_regexp =		  "Object is not a native RegExp object"
-not_string =		  "Object is not a native String object"
-not_date =		  "Object is not a native Date object"
+defaultvalue_string_bad = "Cannot convert the object into a string"
+defaultvalue_number_bad = "Cannot convert the object into a number"
+defaultvalue_no_bad =     "Cannot convert the object into a default form"
+not_array =		  "Expected a native Array object"
+array_badlen =		  "A bad length was given to the Array constructor"
+not_boolean =		  "Expected a native Boolean object"
+not_function =		  "Expected a native Function object"
+not_number =		  "Expected a native Number object"
+not_regexp =		  "Expected a native RegExp object"
+not_string =		  "Expected a native String object"
+not_date =		  "Expected a native Date object"
 
-apply_not_array =	"2nd argument to apply() is not an array"
-bad_radix =		"Bad radix"
-regexp_bad_string =	"Expected a string argument for RegExp constructor"
-uri_badhex =		"Bad hexadecimal encoding"
-bad_utf8 =		"Bad UTF-8 sequence in encoded string"
-bad_unicode =		"unicode codepoint too large for internal UTF-16"
-array_sort_error =	"sort comparison function returned non-number or NaN"
-toLocaleString_notfunc   = "toLocaleString property is not a function"
-toLocaleString_notstring = "toLocaleString() did not return a string"
+apply_not_array =	"Expected second argument to apply() to be an array"
+bad_radix =		"Given radix does not lie between 2 and 36, inclusive"
+regexp_bad_string =	"Wrong type of argument given to RegExp constructor"
+uri_badhex =		"Could not decode hexadecimal escape sequence in URI"
+bad_utf8 =		"Encountered an invalid UTF-8 sequence"
+bad_unicode =		"Decoded unicode codepoint too large for UTF-16"
+array_sort_error =	"Sort comparison function did not return a number"
+toLocaleString_notfunc   = "expected 'toLocaleString' property to be a function"
+toLocaleString_notstring = "toLocaleString() property did not return a string"
 
 
 # The default Function program body
@@ -306,24 +306,24 @@ unknown
 #
 # Lexer errors
 #
-unexpected_eof = "unexpected eof"
-broken_literal = "line break in string literal"
-escaped_lit_nl = "escaped line break in string literal"
-invalid_esc_x =	 "invalid \\x escape"
-invalid_esc_u =	 "invalid \\u escape"
-hex_literal_detritus = "unexpected characters after hex literal"
-oct_literal_detritus = "unexpected characters after octal literal"
-dec_literal_detritus = "unexpected characters after decimal literal"
-number_too_long = "number too long"
-eof_in_c_comment = "EOF inside /* comment"
-eof_in_regex = "EOF inside regular expression"
-broken_regex = "line break in regular expression"
+unexpected_eof = "Unexpected end of file"
+broken_literal = "Missing ending quote of string literal"
+escaped_lit_nl = "Missing ending quote of string literal"
+invalid_esc_x =	 "Invalid \\x escape"
+invalid_esc_u =	 "Invalid \\u escape"
+hex_literal_detritus = "Unexpected characters after hexadecimal literal"
+oct_literal_detritus = "Unexpected characters after octal literal"
+dec_literal_detritus = "Unexpected characters after decimal literal"
+number_too_long = "Number is too long"
+eof_in_c_comment = "Multiline comment is missing its closing '*/'"
+eof_in_regex = "Missing closing '/' of regular expression"
+broken_regex = "Missing closing '/' of regular expression"
 
 #
 # Parser errors
 # 
-parse_error = "parse error"
-unexpected_token = "unexpected token"
+parse_error = "Parse error"
+unexpected_token = "Unexpected token"
 
 #
 # lexer tokens

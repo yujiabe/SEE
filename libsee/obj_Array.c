@@ -474,7 +474,7 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
 
-	if (interp->compatibility & SEE_COMPAT_EXT1) 
+	if (interp->compatibility & SEE_COMPAT_ARRAYJOIN1) 
 		use_comma = (argc == 0);
 	else 
 		/* strict E262-3 behaviour: */

@@ -160,8 +160,8 @@ SEE_intern_init(interp)
 	for (i = 0; i < _SEE_STR_MAX; i++) {
 		int h = hash(&SEE_stringtab[i]);
 		x = find(interp->intern_tab, &SEE_stringtab[i], h);
-		SEE_ASSERT(interp, *x == NULL);
-		*x = make(interp, &SEE_stringtab[i]);
+		if (*x == NULL) 
+			*x = make(interp, &SEE_stringtab[i]);
 	}
 }
 

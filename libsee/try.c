@@ -76,13 +76,23 @@
  * SEE_error_throw(), for instance).
  */
 void
-SEE_throw_abort(interp, file, line)
+SEE_throw_abort(interp, v, file, line)
 	struct SEE_interpreter *interp;
+	const struct SEE_value *v;
 	const char *file;
 	int line;
 {
 #ifndef NDEBUG
-	fprintf(stderr, "%s:%d: uncatchable exception\n", file, line);
+	fprintf(stderr, "%s:%d: threw uncatchable exception\n", file, line);
+	if (v != NULL) {
+	    SEE_try_context_t ctx;
+	    fprintf(stderr, "  exception: ");
+	    SEE_TRY(interp, ctx)
+		SEE_PrintValue(interp, v, stderr);
+	    if (SEE_CAUGHT(ctx))
+		fprintf(stderr, "<error printing value>");
+	    fprintf(stderr, "\n");
+	}
 #endif
 	(*SEE_abort)(interp, "exception thrown but no TRY block");
 }

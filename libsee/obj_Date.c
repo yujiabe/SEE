@@ -156,6 +156,9 @@ static void date_call(struct SEE_interpreter *,
 static void date_construct(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *, int,
 	struct SEE_value **, struct SEE_value *);
+static void date_defaultvalue(struct SEE_interpreter *,
+	struct SEE_object *, struct SEE_value *,
+	struct SEE_value *);
 
 static void date_parse(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *, int,
@@ -305,7 +308,7 @@ static struct SEE_objectclass date_const_class = {
 	SEE_native_delete,		/* Delete */
 	SEE_native_defaultvalue,	/* DefaultValue */
 	SEE_native_enumerator,		/* DefaultValue */
-	date_construct,		/* Construct */
+	date_construct,			/* Construct */
 	date_call			/* Call */
 };
 
@@ -317,7 +320,7 @@ static struct SEE_objectclass date_inst_class = {
 	SEE_native_canput,		/* CanPut */
 	SEE_native_hasproperty,		/* HasProperty */
 	SEE_native_delete,		/* Delete */
-	SEE_native_defaultvalue,	/* DefaultValue */
+	date_defaultvalue,		/* DefaultValue */
 	SEE_native_enumerator		/* enumerator */
 };
 
@@ -1033,6 +1036,23 @@ date_construct(interp, self, thisobj, argc, argv, res)
 	d->t = t;
 
 	SEE_SET_OBJECT(res, (struct SEE_object *)d);
+}
+
+/* See NOTE at 11.6.1 */
+static void
+date_defaultvalue(interp, obj, hint, res)
+	struct SEE_interpreter *interp;
+	struct SEE_object *obj;
+	struct SEE_value *hint;
+	struct SEE_value *res;
+{
+	struct SEE_value string_hint;
+
+	if (hint == NULL) {
+		SEE_SET_OBJECT(&string_hint, interp->String);
+		hint = &string_hint;
+	}
+	return SEE_native_defaultvalue(interp, obj, hint, res);
 }
 
 /* 15.9.4.2 */

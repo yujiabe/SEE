@@ -81,8 +81,18 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 	struct SEE_value v, *argv[1], res;
 
 	/* If no try-catch context exists, we should abort immediately */
-	if (!interp->try_context)
-		SEE_throw_abort(interp, filename, lineno);
+	if (!interp->try_context) {
+		struct SEE_value v;
+#ifndef NDEBUG
+		if (s) {
+			fprintf(stderr, "message: ");
+			SEE_string_fputs(s, stderr);
+			fprintf(stderr, "\n");
+		}
+#endif
+		SEE_SET_OBJECT(&v, obj);
+		SEE_throw_abort(interp, &v, filename, lineno);
+	}
 
 	/* 
 	 * Temporarily remove the current try-catch context
@@ -131,8 +141,11 @@ error_throw(interp, obj, errval, filename, lineno, fmt, ap)
 	volatile struct SEE_try_context *ctxt_save;
 
 	/* Detect recursive errors: */
-	if (!interp->try_context)
-		SEE_throw_abort(interp, filename, lineno); 
+	if (!interp->try_context) {
+		struct SEE_value v;
+		SEE_SET_OBJECT(&v, obj);
+		SEE_throw_abort(interp, &v, filename, lineno); 
+	}
 	ctxt_save = interp->try_context;
 	interp->try_context = NULL;
 

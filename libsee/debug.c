@@ -54,7 +54,7 @@
 void
 SEE_PrintValue(interp, v, f)
 	struct SEE_interpreter *interp;
-	struct SEE_value *v;
+	const struct SEE_value *v;
 	FILE *f;
 {
 	if (v == NULL) {
@@ -135,7 +135,7 @@ SEE_PrintValue(interp, v, f)
 void
 SEE_PrintObject(interp, o, f)
 	struct SEE_interpreter *interp;
-	struct SEE_object *o;
+	const struct SEE_object *o;
 	FILE *f;
 {
 	const char *known;
@@ -186,7 +186,7 @@ SEE_PrintObject(interp, o, f)
 void
 SEE_PrintString(interp, s, f)
 	struct SEE_interpreter *interp;
-	struct SEE_string *s;
+	const struct SEE_string *s;
 	FILE *f;
 {
 	int i;

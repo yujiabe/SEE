@@ -176,7 +176,12 @@ SEE_native_put(interp, o, p, val, attr)
 	 */
 	if ((interp->compatibility & SEE_COMPAT_EXT1) && ip == STR(__proto__)) {
 		struct SEE_object *po;
+		if (SEE_VALUE_GET_TYPE(val) == SEE_NULL) {
+			o->Prototype = NULL;
+			return;
+		}
 		if (SEE_VALUE_GET_TYPE(val) != SEE_OBJECT)
+			/* XXX: better error message needed. 'bad proto'? */
 			SEE_error_throw_string(interp, interp->TypeError, 
 				STR(internal_error));
 		/* Check for recursive prototype */

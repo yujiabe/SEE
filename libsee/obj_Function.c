@@ -142,7 +142,7 @@ static struct SEE_objectclass function_const_class = {
 	function_construct			/* Call */
 };
 
-/* object class for function instances */
+/* object class for function delegate instances */
 static struct SEE_objectclass function_inst_class = {
 	STR(Function),				/* Class */
 	function_inst_get,			/* Get */
@@ -152,6 +152,21 @@ static struct SEE_objectclass function_inst_class = {
 	function_inst_delete,			/* Delete */
 	SEE_native_defaultvalue,		/* DefaultValue */
 	function_inst_enumerator,		/* Enumerator */
+	function_inst_construct,		/* Construct */
+	function_inst_call,			/* Call */
+	function_inst_hasinstance		/* HasInstance */
+};
+
+/* object class for function common (master) instances */
+static struct SEE_objectclass function_common_inst_class = {
+	STR(Function),				/* Class */
+	SEE_native_get,				/* Get */
+	SEE_native_put,				/* Put */
+	SEE_native_canput,			/* CanPut */
+	SEE_native_hasproperty,			/* HasProperty */
+	SEE_native_delete,			/* Delete */
+	SEE_native_defaultvalue,		/* DefaultValue */
+	SEE_native_enumerator,			/* Enumerator */
 	function_inst_construct,		/* Construct */
 	function_inst_call,			/* Call */
 	function_inst_hasinstance		/* HasInstance */
@@ -183,7 +198,7 @@ static struct SEE_objectclass inst_inst_class = {
 
 /* structure of function instances */
 struct function_inst {
-	struct SEE_object object;
+	struct SEE_native native;
 	struct function  *function;
 	struct SEE_scope *scope;
 };
@@ -285,8 +300,15 @@ function_inst_init(fi, interp, f, scope)
 	struct function *f;
 	struct SEE_scope *scope;
 {
-	fi->object.objectclass = &function_inst_class;
-	fi->object.Prototype = interp->Function_prototype;
+	if (f->common == NULL)  {
+		SEE_native_init(&fi->native, interp,
+		    &function_common_inst_class,
+		    interp->Function_prototype);
+		f->common = &fi->native;
+	} else {
+		fi->native.object.objectclass = &function_inst_class;
+		fi->native.object.Prototype = interp->Function_prototype;
+	}
 	fi->function = f;
 	fi->scope = scope;
 }
@@ -301,8 +323,8 @@ SEE_function_inst_create(interp, f, scope)
 	struct function_inst *fi;
 
 	/*
-	 * We cached the first created Function instance of a 
-	 * function strcuture, and return it if the scopes are
+	 * We cache the first created Function instance of a 
+	 * function structure, and return it if the scopes are
 	 * observationally equivalent.
 	 */
 	if (f->cache) {

@@ -64,20 +64,10 @@
  * Function instance creation (13.2) 'struct function' pointer comparison
  * is sufficient for telling if two Function instances are joined.
  */
-
-struct SEE_objectclass common_class = {
-	STR(Function),				/* Class */
-	SEE_native_get,                         /* Get */
-	SEE_native_put,                         /* Put */
-	SEE_native_canput,                      /* CanPut */
-	SEE_native_hasproperty,                 /* HasProperty */
-	SEE_native_delete,                      /* Delete */
-	SEE_native_defaultvalue,                /* DefaultValue */
-	SEE_native_enumerator,                  /* enumerator */
-};
  
 /*
- * create a new common function structure
+ * Create a new function 'core' entity (struct function) with a initial
+ * common function object instance.
  */
 struct function *
 SEE_function_make(interp, name, params, body)
@@ -113,17 +103,15 @@ SEE_function_make(interp, name, params, body)
 
 	f->next = NULL;
 	f->cache = NULL;
+	f->common = NULL;
+
+	/* 13.2 step 2: make object F, fills in f->common = F as side-effect. */
+	SEE_function_inst_create(interp, f, NULL);
 
 	/*
-	 * Perform 13.2 steps 2 thru 11 here now, since
-	 * SEE_function_inst_create() will perform the equivalent
-	 * of steps 13-19 later.
+	 * NB: SEE_function_inst_create() will perform the equivalent
+	 * of steps 13 through 19 of 13.2 at this point.
 	 */
-
-	/* 13.2 step 2: make object F, etc. */
-	f->common = SEE_NEW(interp, struct SEE_native);
-	SEE_native_init(f->common, interp, &common_class,
-		interp->Function_prototype);
 
 	/* 13.2 step 8 + 15.3.5.1: add the 'length' property */
 	SEE_SET_NUMBER(&val, f->nparams);
