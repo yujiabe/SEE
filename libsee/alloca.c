@@ -47,9 +47,12 @@
 #include <see/mem.h>
 
 #if !HAVE_ALLOCA
+/**
+ * Allocates short-term storage in an unknown interpreter context.
+ */
 char *
 SEE_alloca(unsigned int sz)
 {
-	return (*SEE_mem_malloc_hook)((struct SEE_interpreter *)0, sz);
+	return (char *)(*SEE_mem_malloc_hook)((struct SEE_interpreter *)0, sz);
 }
 #endif /* !HAVE_ALLOCA */
