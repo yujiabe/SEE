@@ -12,6 +12,5 @@
 #	http://www.mozilla.org/js/tests/library.html
 #
 
-TESTS =	test-grammar
-
+TESTS=		test-grammar
 EXTRA_DIST=	grammar.js
