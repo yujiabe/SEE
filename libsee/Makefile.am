@@ -18,7 +18,7 @@ noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
 
 libsee_la_LIBADD=  @LTLIBOBJS@ @LTALLOCA@ -lgc -lm
 
-INCLUDES=	   -I$(srcdir)/../include
+INCLUDES=	   -I$(top_builddir)/include
 
 BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 
@@ -28,3 +28,9 @@ stringdefs.inc: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl c $(srcdir)/string.defs >$@
 stringdefs.h: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl h $(srcdir)/string.defs >$@
+
+## the unicode generation is not distributed; this is for developers
+unicode.c:
+	@echo "unicode.c should be built prior to distribution!"
+	cd $(top_srcdir)/unicode && ${MAKE}
+
