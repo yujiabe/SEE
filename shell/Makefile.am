@@ -11,3 +11,4 @@ see_shell_DEPENDENCIES=	../libsee/libsee.la
 
 INCLUDES=		-I$(top_srcdir)/include
 
+SUBDIRS=		test
