@@ -115,7 +115,7 @@ static void math_tan(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *,
 	int, struct SEE_value **, struct SEE_value *);
 
-/* object class for Number constructor */
+/* Math is a normal native object */
 static struct SEE_objectclass math_class = {
 	STR(Math),			/* Class */
 	SEE_native_get,			/* Get */
