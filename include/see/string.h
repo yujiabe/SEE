@@ -33,6 +33,11 @@ struct SEE_string {
 	int 			 flags;
 };
 #define SEE_STRING_FLAG_INTERNED 1
+#define SEE_STRING_FLAG_STATIC   2
+
+#define SEE_STRING_DECL(chararray) \
+	{ sizeof (chararray) / sizeof (SEE_char_t), (chararray), \
+	  NULL, NULL, SEE_STRING_FLAG_STATIC }
 
 struct SEE_stringclass {
 	void (*growto)(struct SEE_string *, unsigned int);
