@@ -196,6 +196,18 @@ static struct SEE_objectclass inst_inst_class = {
 	SEE_native_enumerator			/* Enumerator */
 };
 
+/* object class for activation objects (10.2.3) */
+struct SEE_objectclass SEE_activation_class = {
+	STR(Activation),			/* Class */
+	SEE_native_get,				/* Get */
+	SEE_native_put,				/* Put */
+	SEE_native_canput,			/* CanPut */
+	SEE_native_hasproperty,			/* HasProperty */
+	SEE_native_delete,			/* Delete */
+	SEE_no_defaultvalue,			/* DefaultValue */
+	SEE_native_enumerator,			/* Enumerator */
+};
+
 /* structure of function instances */
 struct function_inst {
 	struct SEE_native native;
@@ -210,6 +222,17 @@ struct arguments {
 	struct SEE_object *activation;
 	int argc;
 };
+
+struct SEE_object *
+SEE_activation_new(interp)
+	struct SEE_interpreter * interp;
+{
+	struct SEE_object *obj;
+
+	obj = SEE_native_new(interp);
+	obj->objectclass = &SEE_activation_class;
+	return obj;
+}
 
 void
 SEE_Function_alloc(interp)

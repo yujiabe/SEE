@@ -1958,7 +1958,7 @@ CallExpression_eval(n, context, res)
 	} else 
 		argv = NULL;
 	GetValue(context, &r1, &r3);
-	if (SEE_VALUE_GET_TYPE(&r3) == SEE_UNDEFINED)		/* nonstandard */
+	if (SEE_VALUE_GET_TYPE(&r3) == SEE_UNDEFINED)	/* nonstandard */
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(no_such_function));
 	if (SEE_VALUE_GET_TYPE(&r3) != SEE_OBJECT)
@@ -1971,7 +1971,7 @@ CallExpression_eval(n, context, res)
 		r6 = r1.u.reference.base;
 	else
 		r6 = NULL;
-	if (r6 == context->activation) /* TDB: is this sufficient? */
+	if (r6 != NULL && IS_ACTIVATION_OBJECT(r6))
 		r7 = NULL;
 	else
 		r7 = r6;

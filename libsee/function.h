@@ -8,6 +8,7 @@ struct SEE_interpreter;
 struct SEE_string;
 struct SEE_scope;
 struct SEE_native;
+struct SEE_object;
 struct context;
 
 /* Linked list of variable declarations, or formal parameter names */
@@ -31,6 +32,10 @@ struct function *SEE_function_make(struct SEE_interpreter *i,
 	struct SEE_string *name, struct var *vars, void *node);
 void SEE_function_put_args(struct context *i, struct function *func,
 	int argc, struct SEE_value **argv);
+
+extern struct SEE_objectclass SEE_activation_class;
+#define IS_ACTIVATION_OBJECT(o) ((o)->objectclass == &SEE_activation_class)
+struct SEE_object *SEE_activation_new(struct SEE_interpreter * i);
 
 /* obj_Function.c */
 struct SEE_object *SEE_function_inst_create(struct SEE_interpreter *i,
