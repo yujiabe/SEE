@@ -7,26 +7,26 @@ it. It also has a simplistic 'HTML' mode where it will pre-process
 a HTML document a little bit like a browser would.
 
 Usage:
-	shell [-d<debugflags>] [-f file] [-h html] 
+	shell [-d<debugflags>] [-f file] [-h htmlfile] 
 
-The '-f file' and '-h html' options can be specified multiple times.
+The '-f file' and '-h htmlfile' options can be specified multiple times.
 Each time they are specified, the given file is loaded and run.
-The first exception terminate the process, otherwise it exits with 0.
 
 Files specified with -f are loaded and run as pure ECMAScript. The
 entire file is parsed as a 'Program' in the grammar, and the
-global statements are evaluated.
+global statements are evaluated.  An exception in a parsed file terminate
+the process, otherwise it exits with 0.
 
-Files specified with -h are loaded as HTML. The
-file is copied to stdout, but all text found inside <SCRIPT> elements
-are interpreted as ECMAScript (regardless of the LANGUAGE attribute).
-Exceptions are ignored in this mode.
+Files specified with -h are loaded as HTML. The file is copied to
+stdout, but all text found inside <SCRIPT> elements are stripped and run
+as ECMAScript (regardless of its LANGUAGE attribute).  Exceptions
+are ignored in HTML files.
 
 if no -f or -h flags are given (or a "-f -" argument is given), an
-interactive prompt is supplied, and individual statements are read
-from standard input.
+interactive prompt is produced, and individual statements are read
+from standard input until EOF.
 
-NB The funny command line interface was designed to be compatible with
+NB. The command line arguments are chosen to be compatible with
 the perl script used with Mozilla/spidermonkey's test suite.
 
 David Leonard
