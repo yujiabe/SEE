@@ -22,13 +22,13 @@ AC_PROG_CC
 
 AC_PROG_LIBTOOL
 
-AC_CHECK_PROG(PERL, perl, [$ac_dir/$ac_word],
-    [$PATH:/bin:/usr/bin:/usr/local/bin:/opt/local/bin])
-AC_CACHE_CHECK([if $PERL works], [ac_cv_perl_works],
-    [ac_cv_perl_works=no
-     $PERL -e 'exit (0);' && ac_cv_perl_works=yes])
-test $ac_cv_perl_works = yes || \
-    AC_MSG_ERROR([a working perl interpreter is required])
+AC_ARG_VAR(PERL, [Practical Extraction and Report Language interpreter])
+AC_PATH_PROG(PERL, perl)
+m4_define(_perl_vers_var,$])
+AC_CACHE_CHECK([$PERL version], [ac_cv_perl_version],
+    [ac_cv_perl_version=`$PERL -e 'print _perl_vers_var;' || echo error`])
+test "$ac_cv_perl_version" != error || \
+    AC_MSG_ERROR([cannot find a working PERL interpreter])
 
 dnl ------------------------------------------------------------
 dnl C headers
@@ -122,14 +122,15 @@ fi
 dnl --- things to add later?
 dnl  AC_CHECK_FUNCS([srand srandom vsprintf funopen])
 dnl  AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
-dnl  AC_CHECK_FUNC(rand_r,,AC_LIBOBJ(rand_r))
 dnl  AM_FUNC_STRTOD
 dnl  AC_CHECK_FUNCS([dtoa freedtoa])
+
+AC_CHECK_FUNC(rand_r)
 
 dnl -- functions that we *need* (i.e. don't have workarounds for):
 AC_CHECK_FUNCS([copysign rint \
 		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
-		snprintf vsnprintf rand_r \
+		snprintf vsnprintf \
 		getopt \
 		abort memcpy memset \
 		qsort strcmp strerror],,
