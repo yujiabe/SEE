@@ -199,14 +199,13 @@ SEE_Array_init(interp)
 	PUTFUNC(unshift, 1)			/* 15.4.4.13 */
 }
 
+#define MAX_INDEX	(4294967295UL)
+
 /*
  * Helper function that returns true if the string
  * is an integer property less than 2^32-1 (4294967295), and stores
  * the integer value in the given pointer. Don't allow leading zeroes.
  */
-
-#define MAX_INDEX	(4294967295UL)
-
 static int
 toint(s, ip)
 	struct SEE_string *s;
@@ -234,9 +233,9 @@ toint(s, ip)
 }
 
 /*
- * Helper functions for quickly building a string from an integer
+ * Helper functions for quickly building a string from an integer.
+ * Only called from intstr().
  */
-
 static void
 intstr_p(s, i)
 	struct SEE_string *s;
@@ -455,10 +454,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	    if (i >= argc) break;
 	    E = argv[i++];
 	}
-#if 0
-	/* XXX Is this necessary?? */
 	SEE_SET_NUMBER(&v, n); SEE_OBJECT_PUT(interp, A, STR(length), &v, 0);
-#endif
 	SEE_SET_OBJECT(res, A);
 }
 
@@ -722,8 +718,8 @@ SortCompare(interp, x, y, cmpfn)
 	}
 }
 
-/*
- * Partition: partition the given segment into numbers
+/**
+ * Quicksort partition: partitions the given segment into numbers
  * smaller, then larger than the first element, using swaps.
  * Returns the index of the pivot point.
  */
@@ -783,8 +779,8 @@ qs_partition(interp, thisobj, lo, hi, cmpfn, s1, s2)
 	}
 }
 
-/*
- * Sort the array segment by partitioning, and then sorting the
+/**
+ * Sorts the array segment by partitioning, and then sorting the
  * partitions. ("Quicksort", Cormen et al "Introduction to Algorithms").
  */
 static void
