@@ -50,16 +50,18 @@ shell_add_globals(interp)
 {
 	struct SEE_object *obj;
 	struct SEE_value v;
-	struct SEE_string *name;
 
-	name = SEE_string_sprintf(interp, "print");
-	obj = SEE_cfunction_make(interp, print_fn, name, 1);
+	static SEE_char_t SA_print[] = {'p','r','i','n','t'};
+	static struct SEE_string S_print = SEE_STRING_DECL(SA_print);
+	static SEE_char_t SA_version[] = {'v','e','r','s','i','o','n'};
+	static struct SEE_string S_version = SEE_STRING_DECL(SA_version);
+
+	obj = SEE_cfunction_make(interp, print_fn, &S_print, 1);
 	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
+	SEE_OBJECT_PUT(interp, interp->Global, &S_print, &v, 0);
 
-	name = SEE_string_sprintf(interp, "version");
 	SEE_SET_UNDEFINED(&v);
-	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
+	SEE_OBJECT_PUT(interp, interp->Global, &S_version, &v, 0);
 }
 
 static void
@@ -85,30 +87,34 @@ shell_add_document(interp)
 {
 	struct SEE_object *obj, *document, *navigator;
 	struct SEE_value v;
-	struct SEE_string *name;
 
-	name = SEE_string_sprintf(interp, "document");
+	static SEE_char_t SA_document[] = {'d','o','c','u','m','e','n','t'};
+	static struct SEE_string S_document = SEE_STRING_DECL(SA_document);
+	static SEE_char_t SA_write[] = {'w','r','i','t','e'};
+	static struct SEE_string S_write = SEE_STRING_DECL(SA_write);
+	static SEE_char_t SA_navigator[] ={'n','a','v','i','g','a','t','o','r'};
+	static struct SEE_string S_navigator = SEE_STRING_DECL(SA_navigator);
+	static SEE_char_t SA_userAgent[] ={'u','s','e','r','A','g','e','n','t'};
+	static struct SEE_string S_userAgent = SEE_STRING_DECL(SA_userAgent);
+	static SEE_char_t SA_window[] = {'w','i','n','d','o','w'};
+	static struct SEE_string S_window = SEE_STRING_DECL(SA_window);
+
 	document = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, document);
-	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
+	SEE_OBJECT_PUT(interp, interp->Global, &S_document, &v, 0);
 
-	name = SEE_string_sprintf(interp, "write");
-	obj = SEE_cfunction_make(interp, document_write, name, 1);
+	obj = SEE_cfunction_make(interp, document_write, &S_write, 1);
 	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, document, name, &v, 0);
+	SEE_OBJECT_PUT(interp, document, &S_write, &v, 0);
 
-	name = SEE_string_sprintf(interp, "navigator");
 	navigator = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, navigator);
-	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
+	SEE_OBJECT_PUT(interp, interp->Global, &S_navigator, &v, 0);
 
-	name = SEE_string_sprintf(interp, "userAgent");
 	SEE_SET_STRING(&v, SEE_string_sprintf(interp, 
 		"SEE-shell (" PACKAGE "-" VERSION ")" ));
-	SEE_OBJECT_PUT(interp, navigator, name, &v, 0);
+	SEE_OBJECT_PUT(interp, navigator, &S_userAgent, &v, 0);
 
-	name = SEE_string_sprintf(interp, "window");
 	SEE_SET_OBJECT(&v, interp->Global);
-	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
-
+	SEE_OBJECT_PUT(interp, interp->Global, &S_window, &v, 0);
 }
