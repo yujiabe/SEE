@@ -1,6 +1,4 @@
 
-$Id$
-
 Welcome to SEE.
 
 This is a library that provides an ECMAScript (JavaScript) run-time
@@ -12,4 +10,6 @@ The 'see-shell' program is a additional example that demonstrates how
 the library is intended to be used.
 
 David Leonard, 2003.
+
+$Id$
 

@@ -2,12 +2,15 @@
 DEVELOPER NOTES
 
 1. After checking this out from CVS, you will first need to initialise
-some of the build tools with the following commands:
+the build environment with the following commands:
 
 	$ aclocal
 	$ autoheader
 	$ autoconf
 	$ automake -v -a --foreign
+
+You'll also find that you need libtool installed, and probably the
+boehm-gc package.
 
 [If there are problems with old versions of libtool not finding
 configure.ac, make a symbolic from configure.in to configure.ac.
@@ -19,12 +22,14 @@ a make there. This will probably download unicode tables, and compress
 them, generating a libsee/unicode.c file (intended to be distributed).
 
 3. At this stage, you should be able to run configure, like everyone else.
-Enable the cache with -C because auto-everything seems to be re-run a lot.
-Then build with GNU make, because automake forces it upon us.
+Enable the cache with -C because when developing, it helps hasten builds.
+Finally build with GNU make.
 
-	$ configure -C
+	$ sh configure -C
 	$ gmake
 
 4. If you plan on modifying libsee to work on your architecture,
 please work with configure.ac primarily.
+
+$Id$
 
