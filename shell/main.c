@@ -27,8 +27,12 @@
 #include <stdlib.h>
 #endif
 
-#if HAVE_LIBREADLINE
-#include <readline/readline.h>
+#if HAVE_READLINE_H
+# include <readline.h>
+#else
+# if HAVE_READLINE_READLINE_H
+#  include <readline/readline.h>
+# endif
 #endif
 
 #include <see/see.h>
@@ -167,7 +171,7 @@ run_file(interp, filename)
 	return ok;
 }
 
-#if !HAVE_LIBREADLINE
+#if !HAVE_READLINE
 
 #if !HAVE_STRDUP
 static char *
@@ -179,7 +183,7 @@ strdup(s)
 	memcpy(t, s, len + 1);
 	return t;
 }
-#endif
+#endif /* !HAVE_STRDUP */
 
 /*
  * Reads a line of text from the user.
@@ -202,7 +206,8 @@ readline(prompt)
 	ret[len] = '\0';
 	return strdup(ret);
 }
-#endif
+
+#endif /* !HAVE_READLINE */
 
 /*
  * Reads lines of ECMAscript from the user
