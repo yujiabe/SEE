@@ -77,7 +77,7 @@ memory_exhausted(interp)
 	struct SEE_interpreter *interp;
 {
 	/* Call the interpreter's abort mechanism */
-	(*SEE_abort)(interp);
+	(*SEE_abort)(interp, "memory exhausted");
 }
 
 #if defined HAVE_GC_MALLOC
