@@ -36,7 +36,7 @@
 # include <see/config.h>
 #endif
 
-#if HAVE_STDC_HEADERS
+#if STDC_HEADERS
 # include <stdlib.h>
 #endif
 

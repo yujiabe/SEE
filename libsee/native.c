@@ -258,7 +258,7 @@ SEE_native_hasownproperty(interp, o, p)
 	x = find(interp, o, p);
 #ifndef NDEBUG
 	if (SEE_native_debug) {
-	    fprintf(stderr, "hasownprop: p=", p);
+	    fprintf(stderr, "hasownprop: p=");
 	    SEE_PrintString(interp, p, stderr);
 	    fprintf(stderr, " -> %p\n", *x);
 	}

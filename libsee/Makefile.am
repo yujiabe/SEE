@@ -17,11 +17,13 @@ noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
 
 libsee_la_LIBADD=  @LTLIBOBJS@ @LTALLOCA@ -lgc -lm
 
-INCLUDES=	   -I$(top_builddir)/include -I$(top_srcdir)/include
-
 EXTRA_DIST=	   string.pl string.defs
 BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 PERL=		   @PERL@
+
+#-- the following DEFS line tries to avoid the -I../include/see
+DEFS = @DEFS@ -I. -I$(srcdir)
+INCLUDES=	   -I$(top_builddir)/include -I$(top_srcdir)/include
 
 stringdefs.inc: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl c $(srcdir)/string.defs >$@

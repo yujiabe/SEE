@@ -49,6 +49,7 @@
 
 #include "context.h"
 #include "function.h"
+#include "parse.h"
 #include "stringdefs.h"
 
 /*

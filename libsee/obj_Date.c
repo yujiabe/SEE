@@ -34,6 +34,9 @@
 
 #if HAVE_CONFIG_H
 # include <see/config.h>
+#endif
+
+#if STDC_HEADERS
 # include <math.h>
 #endif
 

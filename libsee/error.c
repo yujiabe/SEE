@@ -32,10 +32,14 @@
  */
 /* $Id$ */
 
+#if HAVE_CONFIG_H
+# include <see/config.h>
+#endif
+
 #if STDC_HEADERS
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
+# include <stdio.h>
+# include <string.h>
+# include <stdarg.h>
 #endif
 
 #if HAVE_ERRNO_H

@@ -143,7 +143,7 @@ SEE_intern_init(interp)
 	struct SEE_interpreter *interp;
 {
 	intern_tab_t *intern_tab;
-	int h, i;
+	int i;
 	struct intern **x;
 
 #ifndef NDEBUG

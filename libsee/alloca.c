@@ -40,7 +40,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <see/config.h>
+# include <see/config.h>
 #endif
 
 #include <see/types.h>
