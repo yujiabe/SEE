@@ -1,7 +1,7 @@
 
 DEVELOPER NOTES
 
-After checking this out from CVS, you will first need to initialise
+1. After checking this out from CVS, you will first need to initialise
 some of the build tools with the following commands:
 
 	$ aclocal
@@ -11,9 +11,20 @@ some of the build tools with the following commands:
 
 [If there are problems with old versions of libtool not finding
 configure.ac, make a symbolic from configure.in to configure.ac.
-This may cause automake to whine slightly, but it ill be okay.
-Maybe libtool will be fixed one day.]
+This may cause automake to whine slightly, but it will be okay.
+Perhaps, one day, libtool will be fixed and find configure.ac.]
 
-Next, you will need to go into the 'unicode' directory and do
-a make there. This will download unicode tables, compress them and
-generate a libsee/unicode.c file (which is distributable).
+2. Next, you will need to go into the 'unicode' directory and do
+a make there. This will probably download unicode tables, and compress
+them, generating a libsee/unicode.c file (intended to be distributed).
+
+3. At this stage, you should be able to run configure, like everyone else.
+Enable the cache with -C because auto-everything seems to be re-run a lot.
+Then build with GNU make, because automake forces it upon us.
+
+	$ configure -C
+	$ gmake
+
+4. If you plan on modifying libsee to work on your architecture,
+please work with configure.ac primarily.
+

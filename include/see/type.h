@@ -98,6 +98,24 @@ typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 #endif
 
 /* on-stack allocation */
+
+#ifndef __GNUC__
+# if HAVE_ALLOCA_H
+#  include <alloca.h>
+# else
+#  ifdef _AIX
+#   pragma alloca
+#  else
+#   ifndef alloca /* predefined by HP cc +Olibcalls */
+#    ifndef HAVE_ALLOCA
+      char *SEE_alloca();
+#     define alloca SEE_alloca
+#    endif
+#   endif
+#  endif
+# endif
+#endif
+
 #define SEE_ALLOCA(n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)
 
 #endif /* _h_type_ */

@@ -273,7 +273,7 @@ SEE_string_fputs(s, f)
 
 /*
  * sprintf-like interface to new strings.
- * Assumes the fmt and arguments are 8-bit ASCII (and not UTF-8!).
+ * Assumes the format yields 7-bit ASCII (and not UTF-8!).
  * (Also assumes a va_list can be passed multiple times to vsnprintf!)
  */
 struct SEE_string *
@@ -283,30 +283,21 @@ SEE_string_vsprintf(interp, fmt, ap)
 	va_list ap;
 {
 	char *buf = NULL;
-	int buflen, reqlen;
+	int len;
 	struct SEE_string *str;
 	SEE_char_t *p;
 
-	buflen = 0;
-	for (;;) {
-	    reqlen = vsnprintf(buf, buflen, fmt, ap);
-	    if (reqlen < 0)
-		SEE_error_throw_sys(interp, interp->Error, "vsnprintf");
-	    if (reqlen + 1 <= buflen)
-		break;
-	    if (buflen == 0)
-		buflen = reqlen + 1;
-	    else
-		buflen *= 2;
-	    /* free(buf) */
-	    buf = SEE_malloc(interp, buflen);
+        len = vsnprintf(buf, 0, fmt, ap);
+	if (len) {
+		buf = SEE_ALLOCA(len, char);
+		vsnprintf(buf, len, fmt, ap);
 	}
 
-	str = SEE_string_new(interp, reqlen);
-	str->length = reqlen;
-	p = str->data;
-	while (*buf)
-		*p++ = 0x7f & *(unsigned char *)buf++;
+	str = SEE_string_new(interp, len);
+	str->length = len;
+	for (p = str->data; len--; p++, buf++)
+	    *p = *(unsigned char *)buf & 0x007f;
+
 	return str;
 }
 

@@ -10,7 +10,7 @@ libsee_la_SOURCES= cfunction.c context.c debug.c dtoa.c enumerate.c	\
                    obj_Date.c obj_Error.c obj_Function.c obj_Global.c	\
                    obj_Math.c obj_Number.c obj_Object.c obj_RegExp.c	\
                    obj_String.c parse.c regex.c string.c stringdefs.c	\
-                   tokens.c try.c value.c 				\
+                   tokens.c try.c unicode.c value.c			\
 		   string.defs string.pl
 
 noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
@@ -20,7 +20,7 @@ libsee_la_LIBADD=  @LTLIBOBJS@ @LTALLOCA@ -lgc -lm
 
 INCLUDES=	   -I$(srcdir)/../include
 
-BUILT_SOURCES=	   unicode.c stringdefs.inc
+BUILT_SOURCES=	   stringdefs.h stringdefs.inc
 
 PERL=		   @PERL@
 

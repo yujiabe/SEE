@@ -58,9 +58,10 @@ SEE into their applications. It explains how you can use SEE to:
 </p>
 
 <p>
-This documentation
-refers to any application that uses the SEE runtime environment as the "host 
-application". Typical examples of host applications are web browsers and
+I will use the phrase "host application" to mean your application, or
+any application that uses the SEE runtime environment as auxillary to
+some primary purpose.
+Typical examples of host applications are web browsers and
 scripted XML processors.
 </p>
 
@@ -106,18 +107,28 @@ files to find the precise definitions and arguments of each function or macro.
 <h2 id="req">Requirements</h2>
 
 <p>
-SEE is written completely in ANSI C, and concentrates machine-dependent
-assumptions in the <code>&lt;see/type.h&gt;</code> header file.
-Developers may need to adjust this file to suit their target platform(s).
-</p>
-
-<p>
+SEE is written completely in ANSI C.
 Although SEE is essentially self-contained, it does depend on the
 host application or developer providing the following:
 <ul>
  <li> an IEEE 754 floating point type (most modern compilers have this)
  <li> a garbage-collecting memory allocator (such as the free Boehm gc)
 </ul>
+</p>
+
+<p>
+At install time, SEEE uses GNU configure to determine if these
+are available, and also to determine other system-dependent
+properties. 
+Host applications should <code>#include &lt;see/see.h&gt;</code> to
+access all the macros and functions prototypes.
+</p>
+
+<p>
+(The developer may find they need to edit the header files to make
+SEE work for their system. I would be interested in hearing what
+changes were needed so that future releases can supply this automatically
+for other users.)
 </p>
 
 <h2 id="interp">Creating interpreters</h2>
@@ -187,6 +198,8 @@ If SEE was compiled with Boehm-gc support, these hooks are initialised to
 wrappers around the <code>GC_malloc()</code> and 
 <code>GC_free()</code> functions. 
 Otherwise, the application must initialise them.
+(If you intend to implement these, be aware that they may be called
+with a NULL argument, indicating unknown context.)
 </p>
 
 <p>
@@ -211,8 +224,8 @@ SEE provides three convenient macros for allocating storage. They are:
 	- allocate array storage returning a pointer of type 
 		<code>type *</code>
 <li><code>SEE_ALLOCA(length, type)</code>
-	- allocate array storage on the stack returning a pointer of type 
-		<code>type *</code>
+	- allocate an array of element storage on the stack returning a 
+	  pointer of type <code>type *</code>
 </ul>
 </p>
 
@@ -443,6 +456,18 @@ Exceptions thrown outside of any try-catch context will cause the
 interpreter to abort.
 </p>
 
+<p>
+If you are not interested in catching exceptions, and only want the
+'finally' behaviour, use the following idiom:
+</p>
+
+<pre>
+	<b>SEE_TRY</b>(interp, c) {
+		do_something();
+	}
+	do_cleanup();
+	<b>SEE_DEFAULT_CATCH</b>(interp, c);
+</pre>
 
 <h2 id="value">Values</h2>
 

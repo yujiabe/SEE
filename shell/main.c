@@ -7,7 +7,23 @@
  * If no files are given, it prompts for javascript code interactively.
  */
 
-#include <stdio.h>
+#include <see/config.h>
+
+#if STDC_HEADERS
+# include <stdio.h>
+#endif
+
+#if HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
+#if HAVE_STRING_H
+#include <string.h>
+#endif
+
+#if HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
 
 #if HAVE_LIBREADLINE
 #include <readline/readline.h>
@@ -15,7 +31,6 @@
 
 #include <see/see.h>
 #include "shell.h"
-
 
 static int run_input(struct SEE_interpreter *, struct SEE_input *,
 	struct SEE_value *);
@@ -150,6 +165,19 @@ run_file(interp, filename)
 }
 
 #if !HAVE_LIBREADLINE
+
+#if !HAVE_STRDUP
+static char *
+strdup(s)
+	const char *s;
+{
+	int len = strlen(s);
+	char *t = (char *)malloc(len + 1);
+	memcpy(t, s, len + 1);
+	return t;
+}
+#endif
+
 /*
  * Reads a line of text from the user.
  * (A simple replacement for GNU readline)
@@ -196,7 +224,7 @@ run_interactive(interp)
 		a = line;
 		b = readline("+ ");
 		if (!b) break;
-		line = malloc(len + strlen(b) + 1);
+		line = (char *)malloc(len + strlen(b) + 1);
 		memcpy(line, a, len - 1);
 		line[len-1] = '\n';
 		strcpy(line + len, b);

@@ -52,14 +52,14 @@
 
 static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
-#if defined(HAVE_LIBGC)
+#if defined(HAVE_GC_MALLOC)
 static void *malloc_gc(struct SEE_interpreter *, unsigned int);
 # define INITIAL_MALLOC		malloc_gc
 # define INITIAL_FREE		NULL
 #else
-# define INITIAL_MALLOC		NULL
+# define INITIAL_MALLOC		NULL	/* application must provide */
 # define INITIAL_FREE		NULL
-#endif
+#endif /* !HAVE_GC_MALLOC */
 
 void* (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
 		= INITIAL_MALLOC;
@@ -80,7 +80,7 @@ memory_exhausted(interp)
 	(*SEE_abort)(interp);
 }
 
-#if defined HAVE_LIBGC
+#if defined HAVE_GC_MALLOC
 /*------------------------------------------------------------
  * Boehm-GC wrapper
  */
@@ -94,7 +94,7 @@ malloc_gc(interp, size)
 {
 	return GC_malloc(size);
 }
-#endif /* HAVE_LIBGC */
+#endif /* HAVE_GC_MALLOC */
 
 /*------------------------------------------------------------
  * wrappers around memory allocators that check for failur

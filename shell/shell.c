@@ -103,7 +103,8 @@ shell_add_document(interp)
 	SEE_OBJECT_PUT(interp, interp->Global, name, &v, 0);
 
 	name = SEE_string_sprintf(interp, "userAgent");
-	SEE_SET_STRING(&v, SEE_string_sprintf(interp, "SEE-shell"));
+	SEE_SET_STRING(&v, SEE_string_sprintf(interp, 
+		"SEE-shell (" PACKAGE "-" VERSION ")" ));
 	SEE_OBJECT_PUT(interp, navigator, name, &v, 0);
 
 	name = SEE_string_sprintf(interp, "window");

@@ -4,6 +4,11 @@ dnl $Id$
 AC_INIT
 AM_INIT_AUTOMAKE(see, 1.0)
 AM_CONFIG_HEADER(include/see/config.h)
+AC_CONFIG_FILES([Makefile
+		 include/Makefile
+		 include/see/Makefile
+		 libsee/Makefile 
+		 shell/Makefile])
 
 dnl ------------------------------------------------------------
 dnl programs required
@@ -61,17 +66,39 @@ AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 
-AM_FUNC_STRTOD
-AC_CHECK_FUNCS([dtoa freedtoa strerror])
+AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within
 
-AC_SEARCH_LIBS(isnan, [m])
-AC_SEARCH_LIBS(isnanf, [m])
-AC_CHECK_FUNCS([isnan isnanf finite finitef copysign rint \
-		acos atan atan2 ceil cos exp floor log pow \
-		sin sqrt tan])
+dnl -- pick the right nan/finite functions for the 64-bit float
+if test $ac_cv_sizeof_float -eq 8; then
+	AC_CHECK_FUNCS([isnanf finitef],,
+		       [missing_funcs="$missing_funcs $ac_func"])
+else
+	AC_CHECK_FUNCS([isnan finite],,
+		       [missing_funcs="$missing_funcs $ac_func"])
+fi
 
-AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
-AC_CHECK_FUNC(rand_r,,AC_LIBOBJ(rand_r))
+dnl --- things to add later?
+dnl  AC_CHECK_FUNCS([srand srandom vsprintf funopen])
+dnl  AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
+dnl  AC_CHECK_FUNC(rand_r,,AC_LIBOBJ(rand_r))
+dnl  AM_FUNC_STRTOD
+dnl  AC_CHECK_FUNCS([dtoa freedtoa])
+
+dnl -- functions that we *need* (i.e. don't have workarounds for):
+AC_CHECK_FUNCS([copysign rint \
+		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
+		snprintf vsnprintf rand_r \
+		getopt \
+		gettimeofday abort memcpy memset \
+		qsort strcmp strerror],,
+	       [missing_funcs="$missing_funcs $ac_func"])
+ 
+if test -n "$missing_funcs"; then
+    AC_MSG_ERROR([cannot find required functions:$missing_funcs])
+fi
+
+dnl -- functions that have workarounds written for
+AC_CHECK_FUNCS([strdup])
 
 dnl ------------------------------------------------------------
 dnl external libraries
@@ -85,20 +112,28 @@ AC_ARG_WITH(boehm-gc-libdir,
     AC_HELP_STRING([--with-boehm-gc-libdir],
 	[path to gc lib, default=PREFIX/lib]),
 	[ac_cv_use_boehmgc_libdir=$withval],
-	[ac_cv_use_boehmgc_libdir=$prefix/lib])
+	[if test x"$prefix" = x"NONE"; then
+	     ac_cv_use_boehmgc_libdir=$ac_default_prefix/lib
+	 else
+	     ac_cv_use_boehmgc_libdir=$prefix/lib
+	 fi])
 AC_ARG_WITH(boehm-gc-incdir, 
     AC_HELP_STRING([--with-boehm-gc-incdir],
 	[path to gc includes, default=PREFIX/include]),
 	[ac_cv_use_boehmgc_incdir=$withval],
-	[ac_cv_use_boehmgc_incdir=$prefix/include])
+	[if test x"$prefix" = x"NONE"; then
+	     ac_cv_use_boehmgc_incdir=$ac_default_prefix/include
+	 else
+	     ac_cv_use_boehmgc_incdir=$prefix/include
+	 fi])
 if test x"$ac_cv_use_boehmgc" != x"no"; then
     test x"$ac_cv_use_boehmgc_libdir" = x"no" || \
         LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc_libdir}"
     test x"$ac_cv_use_boehmgc_incdir" = x"no" || \
         CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc_incdir}"
     AC_CHECK_HEADERS([gc.h],,,[;])
-    AC_SEARCH_LIBS(gc_malloc, [gc])
-    AC_CHECK_LIB(gc, gc_malloc)
+    AC_SEARCH_LIBS(GC_malloc, [gc])
+    AC_CHECK_FUNC(GC_malloc)
 fi
 
 AC_ARG_WITH(readline, 
@@ -107,7 +142,7 @@ AC_ARG_WITH(readline,
 	[ac_cv_use_readline=$withval], [ac_cv_use_readline=no])
 if test x"$ac_cv_use_readline" != x"no"; then
     AC_CHECK_HEADERS([readline/readline.h readline.h],,,[;])
-    AC_CHECK_LIB(readline, readline)
+    AC_SEARCH_LIBS(readline, [readline edit])
 fi
 
 dnl ------------------------------------------------------------
@@ -210,12 +245,38 @@ AC_CACHE_CHECK([working longjmp()], [ac_cv_cc_longjmp_works],
 		    [ac_cv_cc_longjmp_works=no])])
 test $ac_cv_cc_longjmp_works = yes && AC_DEFINE(HAVE_LONGJMP)
 
+if test $ac_cv_cc__longjmp_works = no -a \
+        $ac_cv_cc_longjmp_works = no; then
+		AC_MSG_ERROR([cannot find working setjmp()/longjmp()])
+fi
+
+dnl ------------------------------------------------------------
+dnl templates for autoheader
+dnl
+
+AH_TOP([#ifndef _SEE_h_config_
+#define _SEE_h_config_])
+AH_BOTTOM([#endif /* _SEE_h_config_ */])
+
+AH_TEMPLATE([NDEBUG], 
+	    [Define to disable and remove all debugging code])
+AH_TEMPLATE([HAVE_ATTRIBUTE_NORETURN], 
+	    [Define if the compiler understands __attribute__((__noreturn__))])
+AH_TEMPLATE([HAVE_CONSTANT_INF_DIV],
+	    [Define if compiler can inline the expression 1.0/0.0 as constant])
+AH_TEMPLATE([HAVE_CONSTANT_NAN_DIV],
+	    [Define if compiler can inline the expression 0.0/0.0 as constant])
+AH_TEMPLATE([HAVE_LONGJMP],
+	    [Define if longjmp()/setjmp() are functional])
+AH_TEMPLATE([HAVE__LONGJMP],
+	    [Define if _longjmp()/_setjmp() are functional])
+
 dnl ------------------------------------------------------------
 dnl finalisation
 dnl
 
 dnl
-dnl compute some substitutions for libtool+automake
+dnl libtool+automake substitutions
 dnl
 
 AC_CONFIG_COMMANDS_PRE([LTLIBOBJS=`echo "$LIBOBJS" | sed 's/\.o/\.lo/g'`
@@ -223,5 +284,5 @@ AC_CONFIG_COMMANDS_PRE([LTLIBOBJS=`echo "$LIBOBJS" | sed 's/\.o/\.lo/g'`
 			LTALLOCA=`echo "$ALLOCA" | sed 's/\.o/\.lo/g'`
 			AC_SUBST(LTALLOCA)])
 
-AC_OUTPUT([Makefile include/Makefile include/see/Makefile libsee/Makefile shell/Makefile])
+AC_OUTPUT
 
