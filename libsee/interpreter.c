@@ -84,11 +84,11 @@ SEE_interpreter_init(interp)
  * .Fn SEE_interpreter_init_compat
  * function (re)initialises the interpreter structure pointed to by
  * .Fa interp ,
- * using the bitwise-OR of the flags in
+ * using the bitwise-OR of flags in
  * .Fa compat_flags .
  * The compatibility flags are documented in the
- * file
- * .Pa COMPATIBILITY .
+ * .Pa COMPATIBILITY
+ * file.
  */
 void
 SEE_interpreter_init_compat(interp, compat_flags)
@@ -106,6 +106,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	interp->trace = NULL;
 	interp->traceback = NULL;
 	interp->locale = NULL;
+	interp->recursion_limit = -1;
 
 	/* Allocate object storage first, since dependencies are complex */
 	SEE_Array_alloc(interp);
@@ -147,10 +148,16 @@ SEE_interpreter_init_compat(interp, compat_flags)
  * .Xr abort 3 .
  * It should be set by the application if more graceful handling is
  * required.
+ * Note that the first parameter to the function may be NULL
  */
 void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead =
 	interpreter_abort;
 
+/*
+ * The default abort handler: we just print a fatal error message,
+ * and die. Calling abort() will usually leave a core image that 
+ * may be analysed for som port mortem debugging.
+ */
 static void
 interpreter_abort(i, msg)
 	struct SEE_interpreter *i;		/* may be NULL */
