@@ -17,7 +17,7 @@ Each time they are specified, the given files are loaded and run.
 
 Files specified with -f are loaded and run as pure ECMAScript. The
 entire file is parsed as a 'Program' (see the language grammar), and the
-global statements are evaluated.  If an exception during execution of
+global statements are evaluated.  If an exception occurs during execution of
 the file, it terminates the process (exit 1), otherwise processing continues.
 
 Files specified with -h are loaded as HTML. The HTML content is copied to
