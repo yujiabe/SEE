@@ -244,6 +244,7 @@ static struct SEE_traceback *traceback_enter(struct SEE_interpreter *,
 			struct SEE_object *, struct SEE_throw_location *);
 static void traceback_leave(struct SEE_interpreter *,
 			struct SEE_traceback *);
+static int FunctionBody_isempty(struct SEE_interpreter *, struct node *);
 
 /*------------------------------------------------------------
  * macros
@@ -995,15 +996,15 @@ StringLiteral_print(n, printer)
 		else if (c < 0x100) {
 			PRINT_CHAR('\\');
 			PRINT_CHAR('x');
-			PRINT_CHAR(SEE_hexstr[ (c >> 4) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr[ (c >> 0) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 4) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 0) & 0xf ]);
 		} else {
 			PRINT_CHAR('\\');
 			PRINT_CHAR('u');
-			PRINT_CHAR(SEE_hexstr[ (c >>12) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr[ (c >> 8) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr[ (c >> 4) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr[ (c >> 0) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >>12) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 8) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 4) & 0xf ]);
+			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 0) & 0xf ]);
 		}
 	}
 	PRINT_CHAR('"');
@@ -7076,6 +7077,28 @@ SEE_eval_functionbody(f, context, res)
 	EVAL((struct node *)f->body, context, res);
 }
 
+int
+SEE_functionbody_isempty(interp, f)
+	struct SEE_interpreter *interp;
+	struct function *f;
+{
+	return FunctionBody_isempty(interp, (struct node *)f->body);
+}
+
+/* Returns true if the FunctionBody is empty */
+static int
+FunctionBody_isempty(interp, body)
+	struct SEE_interpreter *interp;
+	struct node *body;
+{
+	struct SourceElements_node *se;
+
+	SEE_ASSERT(interp, body->nodeclass == &FunctionBody_nodeclass);
+	se = (struct SourceElements_node *)((struct Unary_node *)body)->a;
+	SEE_ASSERT(interp, se->node.nodeclass == &SourceElements_nodeclass);
+	return se->statements == NULL;
+}
+
 /*------------------------------------------------------------
  * printer common code
  */
@@ -7140,7 +7163,8 @@ printer_print_node(printer, n)
 }
 
 /*------------------------------------------------------------
- * stdio printer
+ * stdio printer - prints each node in an AST to a stdio file.
+ * So we can reconstruct parsed programs and print them to the screen.
  */
 
 struct stdio_printer {
@@ -7205,6 +7229,7 @@ stdio_printer_new(interp, output)
 
 /*------------------------------------------------------------
  * string printer
+ * So we can reconstruct parsed programs and save them in a string.
  */
 
 struct string_printer {
