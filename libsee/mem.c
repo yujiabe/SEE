@@ -53,8 +53,8 @@
 static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
 #if defined(HAVE_LIBGC)
-static void *gc_malloc(struct SEE_interpreter *, unsigned int);
-# define INITIAL_MALLOC		gc_malloc
+static void *malloc_gc(struct SEE_interpreter *, unsigned int);
+# define INITIAL_MALLOC		malloc_gc
 # define INITIAL_FREE		NULL
 #else
 # define INITIAL_MALLOC		NULL
@@ -88,7 +88,7 @@ memory_exhausted(interp)
 #include "gc.h"
 
 static void *
-gc_malloc(interp, size)
+malloc_gc(interp, size)
 	struct SEE_interpreter *interp;
 	unsigned int size;
 {
