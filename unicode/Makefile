@@ -36,9 +36,11 @@ analyse: gen
 #
 # Get the latest unicode tables
 #
-${UDATA}:
+UnicodeData.txt:
 	ftp http://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+SpecialCasing.txt:
+	ftp http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt
 
 clean:
 	rm -f unicode.c gen
-	#rm -f ${UDATA}
+	#rm -f UnicodeData.txt SpecialCasing.txt

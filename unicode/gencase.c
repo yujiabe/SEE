@@ -1,3 +1,9 @@
+/* (c) David Leonard, 2003 */
+/* $Id$ */
+
+/*
+ * Experimental code to generate compressed unicode case translation tables
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

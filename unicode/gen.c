@@ -1,3 +1,15 @@
+/* Copyright David Leonard, 2003. */
+/* $Id$ */
+
+/*
+ * Generate Unicode tables.
+ * This is a HORRIBLE program that does two things: First, it computes the
+ * best compression result for a depth=2 splay tree for various
+ * properties of the Unicode data tables. Its second function is to
+ * spew out the C code that will implement those tables. Do not attempt
+ * to understand this.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
