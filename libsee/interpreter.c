@@ -155,9 +155,10 @@ SEE_interpreter_init(interp)
 	SEE_Function_init(interp);
 }
 
+/* Handle a fatal interpreter fault. */
 static void
 interpreter_abort(i)
-	struct SEE_interpreter *i;
+	struct SEE_interpreter *i;		/* may be NULL */
 {
 	abort();
 }
