@@ -205,9 +205,13 @@ SEE_PrintString(interp, s, f)
 	struct SEE_string *s;
 	FILE *f;
 {
-	SEE_string_fputs(SEE_string_literal(interp, s), f);
-	fprintf(f, "<%s%s%p>", 
-		s->flags & SEE_STRING_FLAG_INTERNED ? "." : "",
-		s->flags & SEE_STRING_FLAG_STATIC ? "@" : "",
-		s);
+	if (s == NULL) 
+		fprintf("<NULL>");
+	else {
+		SEE_string_fputs(SEE_string_literal(interp, s), f);
+		fprintf(f, "<%s%s%p>", 
+			s->flags & SEE_STRING_FLAG_INTERNED ? "." : "",
+			s->flags & SEE_STRING_FLAG_STATIC ? "@" : "",
+			s);
+	}
 }
