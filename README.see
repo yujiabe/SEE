@@ -1,16 +1,23 @@
 
-Welcome to SEE.
+Welcome to SEE (Simple ECMAScript Engine).
 
-This is a library that provides an ECMAScript (JavaScript) run-time
-environment. Running configure and compiling in the normal way should
-provide the library 'libsee.a' and a test application 'see-shell'.
+SEE is a library that provides an ECMAScript (JavaScript) run-time
+environment.
 
-	$ configure -C
-	$ gmake
+Running configure and compiling in the normal way should provide
+the library 'libsee.a' and a test application, 'see-shell'.  I
+strongly recommend that you have Boehm-gc installed (it's a garbage
+collector library) otherwise see-shell just uses the non-free'ing
+malloc().  Run configure with the '--help' argument to see switches
+on how to configure it for boehm-gc.
 
-Developer documentation for using the library can be found in USAGE.html.
-The 'see-shell' program is a additional example that demonstrates how
-the library is intended to be used.
+Documentation for development using the SEE library can be found in
+USAGE.html.  The 'see-shell' program doubles as an example and
+demonstration of how the library is intended to be used.
+
+I hope someone finds this useful. Please send bug reports back to me
+via <leonard@users.sourceforge.net>. New releases of SEE will be announced
+at <http://freshmeat.net/projects/see/>
 
 David Leonard, 2003.
 
