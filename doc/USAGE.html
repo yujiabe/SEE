@@ -1923,8 +1923,8 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	a single-letter escape.
 
 <li>	SEE's lexical analyser will recognise octal integers (i.e.
-	integers starting with '0') and will throw a
-	<code class="js">SyntaxError</code> if they contain 
+	integers starting with '0') and will fall back to decimal if
+	the token contains
 	a non-octal digit.
 
 <li>	Coercing native values that do not have a 
@@ -1961,7 +1961,8 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">this</code> different to the global object executes
 	its contents with the scope and variable object always set to
 	<code class="js">this</code>
-	(instead of inheriting the caller's context as per the standard).
+	(instead of inheriting the caller's context as per
+	s10.2.2 of the standard).
 
 <li>	Native objects synthesize a property called
 	<code class="js">__proto__</code> with the same
@@ -1982,9 +1983,10 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">arguments</code> can be coerced into a string.
 
 <li>
-	Calling an empty function will not bypass the expensive 
-	process of extending the scope chain, creating an arguments 
-	property etc.
+	Calling an empty function will involve the expensive 
+	process of extending the scope chain, creating an
+	<code class="js">arguments</code> property, etc.
+	In other words, an simple optimisation is disabled.
 
 </ul>
 
