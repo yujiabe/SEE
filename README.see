@@ -15,11 +15,12 @@ Documentation for development using the SEE library can be found in
 doc/USAGE.html.  The 'see-shell' program doubles as an example and
 demonstration of how the library is intended to be used.
 
-I hope someone finds this useful. Please send bug reports back to me
+I hope you find this library useful. Please send bug reports back to me
 via <leonard@users.sourceforge.net>. New releases of SEE will be announced
-at <http://freshmeat.net/projects/see/>
+at <http://freshmeat.net/projects/see/> and made available at
+<http://www.dart.net.au/users/leonard/software/see/>.
 
-David Leonard, 2003.
+David Leonard, 2004.
 
 $Id$
 
