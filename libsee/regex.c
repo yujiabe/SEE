@@ -171,6 +171,7 @@ struct recontext {
 #define CC_INTERN(cc)	    cc_intern(recontext, cc)
 
 #define UNDEFINED 	(-1)
+#undef INFINITY /* XXX fixme - rename INFINITY in this file maybe? */
 #define INFINITY	(-1)
 
 /*
