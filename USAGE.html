@@ -88,6 +88,7 @@ files to find the precise definitions and arguments of each function or macro.
  </ul>
 <li><a href="#value">Values</a>
  <ul>
+ <li><a href="#conversion">Value conversion</a>
  <li><a href="#undef">Undefined, null, boolean and number values</a>
  <li><a href="#string">String values</a>
  </ul>
@@ -108,11 +109,16 @@ files to find the precise definitions and arguments of each function or macro.
 
 <p>
 SEE is written completely in ANSI C.
-Although SEE is essentially self-contained, it does depend on the
-host application or developer providing the following:
+Although SEE is essentially self-contained, it does depend on you
+(the host application developer) providing the following:
 <ul>
- <li> an IEEE 754 floating point type (most modern compilers have this)
- <li> a garbage-collecting memory allocator (such as the free Boehm gc)
+ <li> <strong>an IEEE 754 floating point type</strong> 
+      Most modern compilers have this, but if you are developing
+      for some old, obscure architecture, you should check.
+ <li> <strong>a garbage-collecting memory allocator</strong>
+      The free Boehm gc is highly recommended. See the
+      <a href="#ref">references</a> for how to get it, and also
+      see the section on <a href="#mem">memory management</a>.
 </ul>
 </p>
 
@@ -170,7 +176,7 @@ If SEE encounters an internal error (such as memory exhaustion,
 memory corruption, or a bug), it calls the function pointer
 <code>SEE_abort</code>, 
 passing it a pointer to the interpreter in context. The <code>SEE_abort</code>
-global variable initially points to a function that simply calls 
+global variable initially points to a function that calls 
 the C library function <code>abort()</code>.
 </p>
 
@@ -233,7 +239,7 @@ SEE provides three convenient macros for allocating storage. They are:
 
 <p>
 Memory allocators can be controversial; as a developer you will understand
-your applications's memory requirments and limitations better than anyone.
+your application's memory requirments and limitations better than anyone.
 Developers not familiar with garbage collectors are often concerned that
 using them in their application will result in something somehow substandard.
 This section tries to address that concern.
@@ -247,7 +253,7 @@ but mainly because using an alternative
 development time, run-time performance and code size of the library
 (and consequently of the host application). A range of very good, sometimes
 freely available garbage-collecting allocators exist for the C language
-on wide range of platforms. Arguments can be made that garbage collecting
+on a wide range of platforms. Arguments can be made that garbage collecting
 allocators have much improved runtime performance and overhead than any 
 scheme that manage storage explicitly.
 </p>
@@ -304,7 +310,7 @@ SEE uses this generalised stream input API rather than (say) a
 simple UCS-4 or UTF-8 string API, because Unicode-compliant applications will 
 usually have a much better understanding of the encodings they are using 
 than will SEE and streams provide this flexibility, and also because 
-streams avoids much unnecessary duplication in terms of text storage.
+streams avoid much unnecessary duplication in terms of text storage.
 </p>
 
 <p>
@@ -314,6 +320,20 @@ These functionally resemble stdio's <code>FILE</code> type, or Java's
 instead. Each <code>SEE_input</code> structure contains
 the input's state and provides a pointer to its access methods.
 </p>
+
+<pre>
+        struct SEE_input {
+                struct SEE_inputclass *inputclass;
+                SEE_boolean_t          eof;
+                SEE_unicode_t          lookahead;
+                ....
+        };
+
+	struct SEE_inputclass {
+		SEE_unicode_t   (*next)(struct SEE_input *);
+		void            (*close)(struct SEE_input *);
+	};
+</pre>
 
 <p>
 The <code>inputclass</code> member
@@ -360,15 +380,15 @@ The <code>close()</code> method should deallocate any operating system
 resources acquired during the input stream's construction. Note that,
 by convention, SEE will not call the <code>close()</code> method 
 of any application-supplied input. The onus is on the caller to close the
-inputs supplies to SEE library functions.
+inputs supplied to SEE library functions.
 </p>
 
 <p>
-The <code>SEE_input</code> structure maintains the input state in various 
-members.
+The <code>SEE_input</code> structure represents the current state of the
+input stream.
 Most importantly, the <code>lookahead</code> field must always reflect the
 next character that a call to <code>next()</code> would return.
-Once set, the <code>filename</code>, <code>first_lineno</code> and 
+Once initialised, the <code>filename</code>, <code>first_lineno</code> and 
 <code>interpreter</code> members of the <code>SEE_input</code> structure 
 should not be changed. 
 The <code>lookahead</code> and <code>eof</code> members 
@@ -376,8 +396,9 @@ should also be initialised before the structure is given to SEE.
 </p>
 
 <p>
-Three demonstration/testing input constructors are provided. When called,
-they create a new <code>SEE_input</code> structure, appropriately initialised.
+Three constructors for demonstration/testing different kinds of input stream
+are provided. When called, they each create a new <code>SEE_input</code> 
+structure, initialised and ready.
 They are:
 <ul>
   <li>	<code>SEE_input_file()</code>
@@ -487,8 +508,8 @@ The ECMAScript language provides for only six value types. They are:
 </p>
 
 <p>
-The <code>struct SEE_value</code> structure type expresses all these values
-(and some more that are the parser uses):
+The <code>struct SEE_value</code> can represent values of all of
+these types (plus some more that the parser uses internally):
 </p>
 
 <pre>
@@ -505,16 +526,21 @@ The <code>struct SEE_value</code> structure type expresses all these values
 </pre>
 
 <p>
-Its <code>type</code> member acts as a discriminator, and is always one of 
+The first member, <code>type</code>, acts as a discriminator,
+and is usually one of 
 <code>SEE_UNDEFINED</code>, <code>SEE_NULL</code>, 
 <code>SEE_BOOLEAN</code>, <code>SEE_NUMBER</code>, <code>SEE_STRING</code> or
 <code>SEE_OBJECT</code>.
+(Note: To coerce values into other types, use the utility functions
+<code>SEE_ToNumber()</code>, <code>SEE_ToString()</code>, etc.)
 </p>
 
 <p>
-Given a <code>struct SEE_value</code> called <code>v</code>, 
-you can access the appropriate member of the union <code>v.u</code> as 
-shown in the following table:
+Depending on the type,
+you can access the corresponding value of a 
+<code>struct SEE_value</code> (called <code>v</code>, say),
+by accessing the correct field of its union member, <code>v.u</code>.
+The following table shows which union fields are valid when:
 </p>
 
 <table>
@@ -548,9 +574,9 @@ are only used internally to SEE and are not documented here.
 </p>
 
 <p>
-To initialise <code>struct SEE_value</code> structures, 
-use the macros provided. These set the <code>type</code> field and the 
-appropriate part of the union.
+To create new values in <code>struct SEE_value</code> structures, 
+use the following initialisation macros. They first set the <code>type</code> 
+field and then copy the second parameter into the appropriate union field.
 </p>
 
 <pre>
@@ -572,13 +598,16 @@ To copy a value, use the following macro:
 
 <p>
 Most <code>SEE_value</code>s are passed about the SEE library functions using 
-pointers.
-In particular, functions that need to return a value do so by copying
-the value into the <code>struct SEE_value</code> that the caller provides.
-Conventionally, the result value pointer is the last argument to these
-functions. The <code>SEE_VALUE_COPY()</code> macro breaks this convention
-by instead following the better-known idiom of <code>memcpy()</code>.
+pointers. This is because the general contract is that the caller supplies
+storage for the return value (usually named <code>ret</code>).
+Conventionally, the result value pointer is provided as the last argument 
+to these functions.
+Note: The <code>SEE_VALUE_COPY()</code> macro breaks this convention
+by instead following the better-known idiom of <code>memcpy()</code>, and
+placing the destination first.
 </p>
+
+<h3 id="conversion">Value conversion</h3>
 
 <p>
 The ECMAScript language specification provides for conversion functions
@@ -610,7 +639,9 @@ into values of a known type:
 <h3 id="undef">Undefined, null, boolean and number values</h3>
 
 <p>
-The undefined and null types have only one implicit and default value.
+The undefined and null types have exactly one implied value each, namely
+<code>undefined</code> and <code>null</code>. 
+(Note that <code>null</code> is <em>not</em> an object type!)
 </p>
 
 <p>
@@ -725,11 +756,11 @@ modified, and the garbage collector can cope with it.
 </p>
 
 <p>
-All strings are assumed to use UTF-16 encoding, meaning that in some cases
-you will need to be aware of Unicode surrogate characters. If the host
+All strings in SEE use UTF-16 encoding, meaning that in some cases
+you may need to be aware of Unicode surrogate characters. If the host
 application really needs (say) UCS-4 strings, you will need to write your
-own conversion functionl. (The <code>SEE_input_string()</code> generator 
-may prove useful here).
+own conversion function. (I suggest using the implementation of 
+<code>SEE_input_string()</code> as the basis for such a converter).
 </p>
 
 <p>
@@ -903,7 +934,7 @@ All SEE objects are in-memory structures starting with a
 </pre>
 
 <p>
-Normally, this is just part of a larger structure that maintains the object
+Normally, this is part of a larger structure that maintains the object
 state. For example, <code class=js>Number</code> objects could be defined as:
 </p>
 
@@ -988,7 +1019,7 @@ ECMA-262 standard, but can be summarised as follows:
 
 <p>
 It is up to the host application to provide storage for the properties, and
-so forth. The simplest strategy is to simply ignore properties calls to
+so forth. The simplest strategy is to ignore property calls to
 <code>Put</code> and <code>Get</code> that are meaningless.
 To this end, if the host object does not want to support some of the mandatory
 operations, it can use the corresponding 'do-nothing' function(s) from 
