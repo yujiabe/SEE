@@ -121,7 +121,7 @@ struct regex {
 
 struct recontext {
 	struct SEE_interpreter *interpreter;
-	struct SEE_input	       *input;
+	struct SEE_input       *input;
 	struct regex	       *regex;
 };
 
@@ -1561,7 +1561,7 @@ pcode_run(interp, regex, addr, text, state)
 
 	    case OP_GOTO:	addr = a; break;
 
-	    /* operations that push state and branch fro backtracking */
+	    /* operations that push state and branch for backtracking */
 	    case OP_GS:	/* greedy success */
 	    case OP_NS:	/* non-greedy success */
 	    case OP_GF: /* greedy fail */
@@ -1679,7 +1679,9 @@ SEE_regex_match(interp, regex, text, index, capture_ret)
 	char *state = SEE_ALLOCA(regex->statesz, char);
 	struct capture *capture = (struct capture *)state;
 
+#ifndef NDEBUG
 	memset(state, 0xd0, regex->statesz);		/* catch bugs */
+#endif
 
 	capture[0].start = index;
 	capture[0].end = index;
