@@ -274,6 +274,7 @@ tofunction(interp, o)
 	if (!o || o->objectclass != &function_inst_class)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(not_function));
+	SEE_ASSERT(interp, ((struct function_inst *)o)->function != NULL);
 	return (struct function_inst *)o;
 }
 
@@ -434,6 +435,14 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	int old_arguments_attr = 0;
 
 	fi = tofunction(interp, self);
+
+	/* Bypass empty functions */
+	if ((interp->compatibility & SEE_COMPAT_EXT1) &&
+	    fi->function->is_empty)
+	{
+		SEE_SET_UNDEFINED(res);
+		return;
+	}
 
 	/* 10.1.6 Create an activation object */
 	activation = SEE_Object_new(interp);
