@@ -103,31 +103,24 @@ run_input(interp, inp, res)
 {
 	struct SEE_value v;
 	SEE_try_context_t ctxt, ctxt2;
-	struct SEE_traceback *tb;
-	struct SEE_string *locstr;
 
 	interp->traceback = NULL;
         SEE_TRY (interp, ctxt) {
             SEE_Global_eval(interp, inp, res);
         }
         if (SEE_CAUGHT(ctxt)) {
-            fprintf(stderr, "exception: ");
+            fprintf(stderr, "exception:\n");
             SEE_TRY(interp, ctxt2) {
                 SEE_ToString(interp, SEE_CAUGHT(ctxt), &v);
+                fprintf(stderr, "  ");
                 SEE_string_fputs(v.u.string, stderr);
                 fprintf(stderr, "\n");
+#ifndef NDEBUG
                 if (ctxt.throw_file)
-		    fprintf(stderr, "\t(thrown from %s:%d)\n", 
+		    fprintf(stderr, "  (thrown from %s:%d)\n", 
                         ctxt.throw_file, ctxt.throw_line);
-		if (interp->traceback) {
-		    fprintf(stderr, "traceback:\n");
-		    for (tb = interp->traceback; tb; tb = tb->prev) {
-			locstr = SEE_location_string(interp, tb->call_location);
-		        fprintf(stderr, "\t");
-			SEE_string_fputs(locstr, stderr);
-		        fprintf(stderr, "\n");
-		    }
-		}
+#endif
+		SEE_PrintTraceback(interp, stderr);
             }
             if (SEE_CAUGHT(ctxt2)) {
                 fprintf(stderr, "exception thrown while "
@@ -241,6 +234,7 @@ run_interactive(interp)
 		len = strlen(line);
 	    }
 	    inp = SEE_input_utf8(interp, line);
+	    inp->filename = s_interactive;
 	    if (run_input(interp, inp, &res)) {
 		printf(" = ");
 		SEE_PrintValue(interp, &res, stdout);
@@ -355,6 +349,7 @@ compatvalue(name)
 	const char *name;
 {
 	static struct { const char *name; int flag; } names[] = {
+		{ "sgmlcom",	SEE_COMPAT_SGMLCOM },
 		{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE },
 		{ "undefdef",	SEE_COMPAT_UNDEFDEF },
 		{ "262_3b",	SEE_COMPAT_262_3B },
@@ -430,6 +425,7 @@ main(argc, argv)
 		break;
 	    case 'h':
 		initinterp(&interp, &initialised, compatibility);
+		interp.compatibility |= SEE_COMPAT_SGMLCOM;
 		if (!document_added) {
 		    shell_add_document(&interp);
 		    document_added = 1;

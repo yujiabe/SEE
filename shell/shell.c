@@ -35,6 +35,7 @@ static struct SEE_string *s_write;
 static struct SEE_string *s_navigator;
 static struct SEE_string *s_userAgent;
 static struct SEE_string *s_window;
+       struct SEE_string *s_interactive;
 
 void
 shell_strings()
@@ -53,6 +54,8 @@ shell_strings()
 	static struct SEE_string S_userAgent = SEE_STRING_DECL(SA_userAgent);
 	static SEE_char_t SA_window[] =   {'w','i','n','d','o','w'};
 	static struct SEE_string S_window = SEE_STRING_DECL(SA_window);
+	static SEE_char_t SA_interactive[] = {'<','i','n','t','e','r','a','c','t','i','v','e','>'};
+	static struct SEE_string S_interactive = SEE_STRING_DECL(SA_interactive);
 
 	SEE_intern_global(s_print = &S_print);
 	SEE_intern_global(s_version = &S_version);
@@ -61,6 +64,7 @@ shell_strings()
 	SEE_intern_global(s_navigator = &S_navigator);
 	SEE_intern_global(s_userAgent = &S_userAgent);
 	SEE_intern_global(s_window = &S_window);
+	SEE_intern_global(s_interactive = &S_interactive);
 }
 
 static void
