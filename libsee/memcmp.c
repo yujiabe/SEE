@@ -43,10 +43,12 @@ memcmp(a, b, n)
 	void *a, *b;
 	int n;
 {
+	const char *aa = (const char *)a;
+	const char *bb = (const char *)b;
 	int diff = 0;
 
 	while (n-- > 0)
-		if ((diff = (int)*a++ - (int)*b++) != 0)
+		if ((diff = (int)*aa++ - (int)*bb++) != 0)
 			break;
 	return diff;
 }
