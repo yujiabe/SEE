@@ -87,9 +87,9 @@ SEE_throw_abort(interp, file, line)
 	int line;
 {
 #ifndef NDEBUG
-	fprintf(stderr, "%s:%d: uncaught exception\n", file, line);
+	fprintf(stderr, "%s:%d: uncatchable exception\n", file, line);
 #endif
-	(*SEE_abort)(interp);
+	(*SEE_abort)(interp, "exception thrown but no TRY block");
 }
 
 /* Return a location prefix string in the form "program.js:23: " */
@@ -126,5 +126,5 @@ SEE_throw()
 void
 longjmperror()
 {
-	(*SEE_abort)(NULL);
+	(*SEE_abort)(NULL, "longjmp error");
 }
