@@ -65,48 +65,48 @@
  * (See the NP-complete regex discussion at <http://perl.plover.com/NPC/>)
  *
  * The regex parser generates a 'struct regex' which contains the bytecode 
- * ('p-code'), that when executed will try to match against a given 
- * strings at the given index.
+ * ('p-code'), that when executed will try to match the pattern against the
+ * given string, commencing at the given index into the string.
  */
 
 #ifndef NDEBUG
 int SEE_regex_debug = 0;
 #endif
 
-#define	OP_FAIL		 0
-#define	OP_SUCCEED	 1
-#define	OP_CHAR		 2
-#define	OP_ZERO		 3
-#define	OP_REACH	 4
-#define	OP_NREACH	 5
-#define	OP_START	 6
-#define	OP_END		 7
-#define	OP_UNDEF	 8
-#define	OP_MARK		 9
-#define	OP_FDIST	10
-#define	OP_RDIST	11
-#define	OP_MNEXT	12
-#define	OP_RNEXT	13
-#define	OP_GOTO		14
-#define	OP_GS		15
-#define	OP_NS		16
-#define	OP_GF		17
-#define	OP_NF		18
-#define	OP_AS		19
-#define	OP_AF		20
-#define	OP_BOL		21
-#define	OP_EOL		22
-#define	OP_BRK		23
-#define	OP_NBRK		24
-#define	OP_BACKREF	25
+#define	OP_FAIL		 0		/* match failed */
+#define	OP_SUCCEED	 1		/* match succeeded */
+#define	OP_CHAR		 2		/* match a char class instance */
+#define	OP_ZERO		 3		/* reset counter */
+#define	OP_REACH	 4		/* test counter over */
+#define	OP_NREACH	 5		/* test counter under */
+#define	OP_START	 6		/* enter a group */
+#define	OP_END		 7		/* exit a group */
+#define	OP_UNDEF	 8		/* reset a group */
+#define	OP_MARK		 9		/* record a position */
+#define	OP_FDIST	10		/* position test */
+#define	OP_RDIST	11		/* position and counter test */
+#define	OP_MNEXT	12		/* max-loop */
+#define	OP_RNEXT	13		/* reach-loop */
+#define	OP_GOTO		14		/* branch */
+#define	OP_GS		15		/* greedy success */
+#define	OP_NS		16		/* non-greedy success */
+#define	OP_GF		17		/* greedy fail */
+#define	OP_NF		18		/* non-greedy fail */
+#define	OP_AS		19		/* assert success */
+#define	OP_AF		20		/* assert fail */
+#define	OP_BOL		21		/* test beginning of line */
+#define	OP_EOL		22		/* test end of line */
+#define	OP_BRK		23		/* test word-break */
+#define	OP_NBRK		24		/* test non-word-break */
+#define	OP_BACKREF	25		/* backreference match */
 
 struct charclassrange {
 	struct charclassrange *next;
-	SEE_unicode_t lo, hi;
-} *ranges;
+	SEE_unicode_t lo, hi;		/* simple range of chars, eg [a-z] */
+};
 
 struct charclass {
-	struct charclassrange *ranges;
+	struct charclassrange *ranges;	/* linked list of character ranges */
 };
 
 struct regex {
@@ -542,6 +542,13 @@ code_insert(recontext, pos, n)
 
 /*------------------------------------------------------------
  * Parser
+ *
+ * This recursive descent parser builds a p-code array as it runs.
+ * During recursion, the p-code array is sometimes 'back-patched'
+ * because branch distances weren't known in advance. In some
+ * cases, p-code segments are also shifted. This all means that we
+ * have to be very careful that our p-code is quite relocatable,
+ * and not dependendent on absolute addresses.
  */
 
 /* parse a source pattern, and return a filled-in regex structure */
@@ -730,11 +737,11 @@ Term_parse(recontext)
 	} else
 		greedy = 1;
 
-	if (min == max) {
+	if (min == max && !greedy) {
 		/*
-		 * XXX should we warn 
-		 * that '{n,n}?' and '{n}?' 
-		 * are meaningless?
+		 * XXX should we warn that the greedy modifiers to
+		 * 'a{n,n}?' and 'a{n}?' are technically meaningless?
+		 * We speed up our code by using greedy mode anyway.
 		 */
 		greedy = 1;
 	}
@@ -1475,6 +1482,8 @@ pcode_run(interp, regex, addr, text, state)
 		    break;
 	    default:
 		    /* error */
+	            SEE_error_throw_string(interp, interp->Error, 
+		       STR(internal_error));
 	    }
 
 	    switch (op) {
@@ -1659,7 +1668,10 @@ pcode_run(interp, regex, addr, text, state)
 	    			}
 				break;
 
-	    default:		/* error */
+	    /* catch unexpected instructions */
+	    default:
+			        SEE_error_throw_string(interp, interp->Error, 
+			          STR(internal_error));
 	    }
 	}
 }
