@@ -97,6 +97,7 @@
 #include "enumerate.h"
 #include "tokens.h"
 #include "stringdefs.h"
+#include "dtoa.h"
 
 #ifndef NDEBUG
 int SEE_parse_debug = 0;
@@ -292,7 +293,9 @@ static void traceback_leave(struct SEE_interpreter *,
 #  define SKIP_DEBUG
 #endif
 
-#define EXPECT(c)					\
+#define EXPECT(c) EXPECTX(c, SEE_tokenname(c))
+
+#define EXPECTX(c, tokstr)				\
     do { 						\
 	if (NEXT != (c)) 				\
 	    SEE_error_throw_string(			\
@@ -300,7 +303,7 @@ static void traceback_leave(struct SEE_interpreter *,
 		parser->interpreter->SyntaxError,	\
 		error_at(parser, 			\
 		         "expected %s but got %s",	\
-		         SEE_tokenname(c),		\
+		         tokstr,			\
 		         SEE_tokenname(NEXT)));		\
 	SKIP;						\
     } while (0)
@@ -325,7 +328,7 @@ static void traceback_leave(struct SEE_interpreter *,
 	else if ((NEXT == '}' || NEXT_FOLLOWS_NL)) {	\
 		/* automatic semicolon insertion */	\
 	} else						\
-		EXPECT(';');				\
+		EXPECTX(';', "';', '}' or newline");	\
     } while (0)
 
 /*
@@ -872,6 +875,8 @@ Literal_print(n, printer)
 	struct Literal_node *n;
 	struct printer *printer;
 {
+	struct SEE_value str;
+
 	switch (n->value.type) {
 	case SEE_BOOLEAN:
 		PRINT_STRING(n->value.u.boolean
@@ -879,12 +884,9 @@ Literal_print(n, printer)
 			: STR(false));
 		break;
 	case SEE_NUMBER:
-	    {
-		char buf[50], *b;
-		snprintf(buf, sizeof buf, "%.21g", n->value.u.number);
-		for (b = buf; *b; b++) PRINT_CHAR(*b);
+		SEE_ToString(printer->interpreter, &n->value, &str);
+		PRINT_STRING(str.u.string);
 		break;
-	    }
 	case SEE_NULL:
 		PRINT_STRING(STR(null));
 		break;
@@ -1310,7 +1312,7 @@ ArrayLiteral_parse(parser)
 			elp = &(*elp)->next;
 			index++;
 			if (NEXT != ']')
-				EXPECT(',');
+				EXPECTX(',', "',' or ']'");
 		}
 	n->length = index;
 	*elp = NULL;
@@ -1423,8 +1425,10 @@ ObjectLiteral_parse(parser)
 	    }
 	    EXPECT(':');
 	    (*pairp)->value = PARSE(AssignmentExpression);
-	    if (NEXT != '}')
-		    EXPECT(',');   /* XXX permits trailing comma e.g. {a:b,} */
+	    if (NEXT != '}') {
+		    /* XXX permits trailing comma e.g. {a:b,} */
+		    EXPECTX(',', "',' or '}'"); 
+	    }
 	    pairp = &(*pairp)->next;
 	}
 	*pairp = NULL;
@@ -1562,7 +1566,7 @@ Arguments_parse(parser)
 		(*argp)->expr = PARSE(AssignmentExpression);
 		argp = &(*argp)->next;
 		if (NEXT != ')')
-			EXPECT(',');
+			EXPECTX(',', "',' or ')'");
 	}
 	*argp = NULL;
 	EXPECT(')');
@@ -5611,7 +5615,13 @@ IterationStatement_parse(parser)
 		target_pop(parser, fin);
 		return (struct node *)fin;
 	    }
-	    EXPECT(';');			/* "for ( var VarDeclList ;" */
+
+	    /* Accurately describe possible tokens at this stage */
+	    EXPECTX(';', 
+	       (n->nodeclass == &VariableDeclaration_nodeclass
+		  ? "';' or 'in'"
+		  : "';'"));
+					    /* "for ( var VarDeclList ;" */
 	    fn = NEW_NODE(struct IterationStatement_for_node,
 		&IterationStatement_forvar_nodeclass);
 	    target_push(parser, fn, TARGET_TYPE_BREAK | TARGET_TYPE_CONTINUE);
@@ -6146,7 +6156,7 @@ SwitchStatement_parse(parser)
 		n->defcase = c;
 		break;
 	    default:
-		ERRORm("expected 'case' or 'default'");
+		ERRORm("expected '}', 'case' or 'default'");
 	    }
 	    EXPECT(':');
 	    next = NEXT;
