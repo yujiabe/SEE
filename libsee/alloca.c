@@ -39,7 +39,7 @@
 # include <config.h>
 #endif
 
-#include <see/types.h>
+#include <see/type.h>
 #include <see/mem.h>
 
 #if !HAVE_ALLOCA
