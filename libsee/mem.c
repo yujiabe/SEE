@@ -90,7 +90,11 @@ memory_exhausted(interp)
  * Boehm-GC wrapper
  */
 
-#include "gc.h"
+#if HAVE_GC_H
+# include <gc.h>
+#else
+extern void * GC_malloc(int);
+#endif
 
 static void *
 malloc_gc(interp, size)
