@@ -37,6 +37,7 @@
 #endif
 
 #if STDC_HEADERS
+# include <stdio.h>
 # include <stdlib.h>
 #endif
 
@@ -115,6 +116,11 @@ void
 SEE_interpreter_init(interp)
 	struct SEE_interpreter *interp;
 {
+	if (SEE_mem_malloc_hook == NULL) {
+		fprintf(stderr, "SEE_mem_malloc_hook: not configured\n");
+		(*SEE_abort)(interp);
+	}
+
 	interp->try_context = NULL;
 	interp->try_location = NULL;
 
