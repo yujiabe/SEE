@@ -318,7 +318,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	    R == 0 && 
 	    s->data[i] == '0')
 	{
-		R = 7;
+		R = 8;
 	}
 	if (R == 0)
 		R = 10;
