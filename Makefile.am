@@ -3,5 +3,5 @@
 
 SUBDIRS = include libsee shell doc
 
-EXTRA_DIST = README.see CHANGES
+EXTRA_DIST = README.see CHANGES LICENCE
 
