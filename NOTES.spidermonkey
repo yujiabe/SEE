@@ -16,18 +16,18 @@ Creating an environment:
   SEE_interpreter_init()		JS_NewRuntime()/JS_InitStandardClasses()
   SEE_interpreter_init_compat()		.../JS_SetVersion()
 
-  n/a (single-threaded)			JS_NewContext()
+  n/a (caller owns mutex)		JS_NewContext()
 
 Memory management:
 
   "conservative gc"			"exact gc"
 
-  implicit     				JS_AddRoot()
+  n/a (implicit)			JS_AddRoot()
   					JS_DestroyRuntime()
 					JS_ShutDown()
 
   SEE_malloc()				JS_malloc()
-  n/a					JS_free()
+  n/a (implicit)			JS_free()
 
   (*SEE_mem_exhausted_hook)()		JS_ReportOutOfMemory()
 
@@ -43,7 +43,7 @@ ECMAscript data types:
 
 
   SEE_VALUE_GET_TYPE() 			JS_TypeOfValue()
-  n/a					JSVAL_IS_<type>()
+  n/a (use ==)				JSVAL_IS_<type>()
 
 
   SEE_ToInt32				JS_ConvertArguments('u')
