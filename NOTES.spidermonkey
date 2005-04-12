@@ -1,0 +1,121 @@
+$Id$
+
+This document briefly outlines correspondences in the 
+SEE API with Mozilla's Spidermonkey API.
+
+References: http://www.mozilla.org/js/spidermonkey/
+
+------------------------------------------------------------
+
+Included headers:
+
+  #include <see/see.h>			#include <jsapi.h>
+
+Creating an environment:
+
+  SEE_interpreter_init()		JS_NewRuntime()/JS_InitStandardClasses()
+  SEE_interpreter_init_compat()		.../JS_SetVersion()
+
+  n/a (single-threaded)			JS_NewContext()
+
+Memory management:
+
+  "conservative gc"			"exact gc"
+
+  implicit     				JS_AddRoot()
+  					JS_DestroyRuntime()
+					JS_ShutDown()
+
+  SEE_malloc()				JS_malloc()
+  n/a					JS_free()
+
+  (*SEE_mem_exhausted_hook)()		JS_ReportOutOfMemory()
+
+ECMAscript data types:
+
+  SEE_boolean_t				JSBool
+  SEE_number_t				jsdouble
+  SEE_string_t				jsstr
+  SEE_unicode_t				jschar
+  struct SEE_object *			JSObject *
+
+  struct SEE_value			jsval
+
+
+  SEE_VALUE_GET_TYPE() 			JS_TypeOfValue()
+  n/a					JSVAL_IS_<type>()
+
+
+  SEE_ToInt32				JS_ConvertArguments('u')
+
+String handling
+
+  string->data				JS_GetStringBytes()
+  string->len				JS_GetStringLength()
+
+  SEE_intern()				JS_InternString()
+  SEE_string_new()			JS_NewString()
+  SEE_string_cmp()			JS_CompareStrings()
+  SEE_string_dup()			JS_NewStringCopy()
+
+  SEE_ToString()			JS_ValueToString()
+
+Arrays
+
+  SEE_OBJECT_CONSTRUCT(interp->Array)	JS_NewArrayObject()
+
+Binding application classes to ECMAScript classes:
+
+  struct SEE_objectclass 		JSClass / JSObjectOps
+  
+  SEE_native_init()			JS_InitClass()
+  SEE_OBJECT_CONSTRUCT()		JS_NewObject()
+
+  SEE_cfunction_make()/SEE_OBJECT_PUT()	JS_FunctionSpec()/JS_DefineFunctions()
+
+  SEE_Object_new()			JS_NewObject()
+
+Invoking Javascript functions
+
+  SEE_OBJECT_CALL()			JS_CallFunction()
+
+Adding application data to objects:
+
+  struct SEE_object extension		JS_SetPrivate() / JS_GetPrivate()
+
+Modifying and inspecting ECMAScript objects:
+
+  SEE_OBJECT_PUT()			JS_SetProperty()
+  SEE_OBJECT_GET()			JS_GetProperty()
+  SEE_OBJECT_DELETE()			JS_DeleteProperty()
+  SEE_OBJECT_ENUMERATE()		JS_Enumerate()
+
+Compiling and running ECMAScript source text:
+
+  SEE_Function_new()			JS_CompileFunction()
+  SEE_input_utf8() / SEE_Global_eval()	JS_CompileScript() / JS_ExecuteScript()
+  SEE_input_file() / SEE_Global_eval()	JS_CompileFile() / JS_ExecuteScript()
+
+ECMAScript exceptions:
+
+  SEE_TRY/SEE_CATCH/SEE_THROW		n/a  [JSErrorReport() is closest]
+
+Debugging
+
+  trace()				trap()
+
+Unicode
+
+  SEE_input is always UCS-32		JS_*UC*() Unicode-enabled functions
+
+Exceptions
+
+  SEE_THROW()				if (!JS_..) return JS_FALSE;
+					
+Security
+
+   n/a					JS_CompileScriptForPrincipals()
+					JS_EvaluateScriptForPrincipals()
+					JS_CheckAccess()
+
+
