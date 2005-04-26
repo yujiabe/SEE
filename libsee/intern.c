@@ -135,7 +135,7 @@ find(intern_tab, s, hash)
 
 /** Create an interpreter-local intern table */
 void
-SEE_intern_init(interp)
+_SEE_intern_init(interp)
 	struct SEE_interpreter *interp;
 {
 	intern_tab_t *intern_tab;

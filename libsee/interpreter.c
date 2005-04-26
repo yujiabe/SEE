@@ -117,7 +117,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_RegExp_alloc(interp);
 	SEE_String_alloc(interp);
 
-	SEE_intern_init(interp);
+	_SEE_intern_init(interp);
 
 	/* Initialise the objects; order *shouldn't* matter */
 	SEE_Array_init(interp);
