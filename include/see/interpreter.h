@@ -21,7 +21,7 @@ struct SEE_interpreter {
 	void *	host_data;		/* reserved for host app's use */
 	int	compatibility;		/* compatibility flags (read-only?) */
 
-	/* Built-in objects */
+	/* Built-in objects newly created for each interpreter instance */
 	struct SEE_object *Global;
 	struct SEE_object *Object;
 	struct SEE_object *Object_prototype;
@@ -58,7 +58,7 @@ struct SEE_interpreter {
 	struct SEE_traceback {
 		struct SEE_throw_location *call_location;
 		struct SEE_object *callee;
-		int call_type;
+		int call_type;		/* SEE_CALLTYPE_* */
 		struct SEE_traceback *prev;
 	} *traceback;
 
@@ -67,10 +67,12 @@ struct SEE_interpreter {
 	const char *locale;		/* current locale (may be NULL) */
 	int recursion_limit;		/* -1 means don't care */
 
+	/* Trace hook, called by interpreter at each step if not NULL */
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *);
 };
 
 /* Compatibility flags */
+#define SEE_COMPAT_STRICT	0x0000	/* ECMA-262 3rd ed. */
 #define SEE_COMPAT_262_3B	0x0001	/* ECMA-262 3rd ed. Annex B */
 #define SEE_COMPAT_EXT1		0x0002	/* see1.0 (non-ecma) extensions */
 #define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undefined var */
@@ -82,7 +84,10 @@ struct SEE_interpreter {
 #define SEE_CALLTYPE_CALL	1
 #define SEE_CALLTYPE_CONSTRUCT	2
 
+/* Initialises an interpreter with default behaviour */
 void SEE_interpreter_init(struct SEE_interpreter *i);
+
+/* Initialises an interpreter with specific behaviour */
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
 
 /*

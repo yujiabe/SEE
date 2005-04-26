@@ -37,12 +37,17 @@ typedef struct SEE_enum *(*SEE_enumerator_fn_t)(struct SEE_interpreter *i,
 			struct SEE_object *obj);
 
 /*
- * Core object definition: an object is a set of named properties.
- * All objects must implement Prototype, Class, Get, Put, CanPut,
+ * Object classes: an object insatnce appears as a container of named
+ * properties accessible through methods provided by its object class.
+ * Object classes are a SEE implementation feature and not directly visible
+ * to ECMAScript programs.
+ *
+ * All object classes must implement: Prototype, Class, Get, Put, CanPut,
  * HasProperty, Delete and DefaultValue. (DefaultValue may simply
  * throw a TypeError, and Proptype may be NULL)
+ * Optionally, object classes can implement the enumerator, Construct, Call
+ * or HasInstance. Unimplemented optional methods are indicated as NULL.
  */
-
 struct SEE_objectclass {
 	struct SEE_string *	Class;			/* [[Class]] */
 	SEE_get_fn_t		Get;			/* [[Get]] */
@@ -57,6 +62,10 @@ struct SEE_objectclass {
 	SEE_hasinstance_fn_t	HasInstance;		/* [[HasInstance]] */
 };
 
+/*
+ * Base object structure. This structure is not generally useful
+ * unless extended (see struct SEE_native in <see/native.h>).
+ */
 struct SEE_object {
 	struct SEE_objectclass *objectclass;
 	struct SEE_object *	Prototype;		/* [[Prototype]] */
@@ -98,12 +107,17 @@ struct SEE_object {
 #define SEE_ATTR_DONTDELETE 0x04
 #define SEE_ATTR_INTERNAL   0x08
 
+/* Enumerator class. */
 struct SEE_enumclass {
-	void *unused; /* XXX Leftover from deprecated reset method */
+	void *unused; 		/* XXX leftover from deprecated reset method */
 	struct SEE_string *(*next)(struct SEE_interpreter *i,
 			struct SEE_enum *e, int *flags_return);
 };
 
+/*
+ * Enumerator instance. This structure is generally subclassed to
+ * hold enumeration state.
+ */
 struct SEE_enum {
 	struct SEE_enumclass *enumclass;
 };
@@ -111,8 +125,9 @@ struct SEE_enum {
 #define SEE_ENUM_NEXT(i,e,dep) ((e)->enumclass->next)(i,e,dep)
 
 /*
- * Test to see if two objects are "joined", i.e. a change to one
- * is reflected in the other.
+ * This macro tests to see if two objects are "joined", i.e. a change to one
+ * is reflected in the other. This is only useful with function 
+ * objects that share a common function implementation.
  */
 #define SEE_OBJECT_JOINED(a,b)					\
 	((a) == (b) || 						\
@@ -120,10 +135,13 @@ struct SEE_enum {
 	   SEE_function_is_joined(a,b)))
 int SEE_function_is_joined(struct SEE_object *a, struct SEE_object *b);
 
-/* Convenience function equivalent to "new Object()" */
+/* A convenience function equivalent to "new Object()" */
 struct SEE_object *SEE_Object_new(struct SEE_interpreter *);
 
-/* Wrappers that check for recursion limits being reached */
+/*
+ * Wrappers around [[Call]] and [[Construct]] that check for 
+ * recursion limits being reached.
+ */
 void SEE_object_call(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 void SEE_object_construct(struct SEE_interpreter *, struct SEE_object *,

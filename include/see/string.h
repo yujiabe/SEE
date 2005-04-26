@@ -5,13 +5,21 @@
 #define _SEE_h_string_
 
 /*
- * Strings are read-only, in-memory, sized arrays of 16-bit characters.
- * Strings can optionally provide a 'growto' method that is used
- * by append() and addch() to grow the string, although care must be
- * taken to ensure that the growing string's data is not in use elsewhere.
+ * Strings are in-memory, sized arrays of 16-bit characters.
+ * They have length and content, and may be 'owned' by the intern system.
  *
- * How I Learned To Stop Worrying And Love The Garbage Collector:
- * There is no mechanism for disposing of strings 
+ * Like objects, a string class provides an implementation.
+ * The implementation can optionally provide a 'growto' method that
+ * is used by SEE_string_append() and SEE_string_addch() to grow the 
+ * string, although care must be taken to ensure that the grown
+ * string's data is not in use elsewhere. 
+ * Practically there are only two string implementations: growable and 
+ * non-growable.
+ *
+ * The lifetime of a string is as it passes through the following stages:
+ *   1. new, mutable; can be modified, grown and kept private
+ *   2. public, immutable; must not be changed, can be referenced anywhere
+ *   3. unreachable; garbage collector determines when to deallocate string
  */
 
 #include <stdio.h>

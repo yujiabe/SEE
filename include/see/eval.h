@@ -9,9 +9,11 @@ struct SEE_value;
 struct SEE_interpreter;
 struct SEE_input;
 
+/* Parses and evaluates the program text from input */
 void SEE_Global_eval(struct SEE_interpreter *i, struct SEE_input *input, 
 	struct SEE_value *res);
 
+/* Constructs a new function object from inputs */
 struct SEE_object *SEE_Function_new(struct SEE_interpreter *i, 
 	struct SEE_string *name, struct SEE_input *param_input, 
 	struct SEE_input *body_input);

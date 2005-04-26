@@ -8,6 +8,7 @@ struct SEE_object;
 struct SEE_string;
 struct SEE_value;
 
+/* Object class methods that do nothing or return empty or failure */
 void	SEE_no_get(struct SEE_interpreter *, struct SEE_object *, 
 		struct SEE_string *, struct SEE_value *val);
 void	SEE_no_put(struct SEE_interpreter *, struct SEE_object *, 

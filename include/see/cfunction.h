@@ -9,7 +9,8 @@
 struct SEE_interpeter;
 struct SEE_string;
 
+/* Creates a new function object, implemented by func */
 struct SEE_object *SEE_cfunction_make(struct SEE_interpreter *i,
-	SEE_call_fn_t func, struct SEE_string *, int argc);
+	SEE_call_fn_t func, struct SEE_string *name, int length);
 
 #endif /* _SEE_h_cfunction_ */
