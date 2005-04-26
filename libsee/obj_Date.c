@@ -105,15 +105,12 @@ static SEE_int32_t YearFromTime(SEE_number_t);		/* 15.9.1.3 */
 #define InLeapYear(t)	isleapyear(YearFromTime(t))	/* 15.9.1.3 */
 static int isleapyear(SEE_int32_t);
 #define DayWithinYear(t)	(Day(t) - DayFromYear(YearFromTime(t)))
-static int MonthFromTime(SEE_number_t);	/* 15.9.1.4 */
-static SEE_number_t DateFromTime(SEE_number_t);		/* 15.9.1.5 */
+static int MonthFromTime(SEE_number_t);			/* 15.9.1.4 */
+static int DateFromTime(SEE_number_t);			/* 15.9.1.5 */
 #define WeekDay(t)		modulo(Day(t)+4,7)	/* 15.9.1.6 */
 
-/*
- * XXX TODO: timezone conversion functions. Currently we assume local == UTC
- */
-#define LocalTZA	0 				/* 15.9.1.7 */
-#define DaylightSavingTA(t) 0 				/* 15.9.1.8 */
+static SEE_number_t LocalTZA;				/* 15.9.1.7(8) */
+static SEE_number_t DaylightSavingTA(SEE_number_t t);	/* 15.9.1.8(9) */
 #define LocalTime(t)	((t) + LocalTZA + DaylightSavingTA(t)) /* 15.9.1.9 */
 #define UTC(t)		((t) - LocalTZA - DaylightSavingTA(t - LocalTZA))
 
@@ -130,6 +127,8 @@ static SEE_number_t DateFromTime(SEE_number_t);		/* 15.9.1.5 */
 #define	msPerHour		(msPerMinute * MinutesPerHour)
 
 static SEE_number_t modulo(SEE_number_t, SEE_number_t);
+static SEE_number_t getLocalTZA(void);
+static SEE_number_t getDaylightSavingTA(SEE_number_t);
 static SEE_number_t MakeTime(SEE_number_t, SEE_number_t,	/* 15.9.1.11 */
 				SEE_number_t, SEE_number_t);
 static SEE_number_t MakeDay(SEE_number_t, SEE_number_t,		/* 15.9.1.12 */
@@ -294,6 +293,8 @@ static void date_proto_setYear(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *, int,
 	struct SEE_value **, struct SEE_value *);
 
+static void init_time();
+
 /* object class for Date constructor */
 static struct SEE_objectclass date_const_class = {
 	STR(DateConstructor),		/* Class */
@@ -347,6 +348,7 @@ SEE_Date_init(interp)
 	struct SEE_object *Date_prototype;	/* struct date_object */
 	struct SEE_value v;
 
+	init_time();
 	Date = interp->Date;
 	Date_prototype = interp->Date_prototype;
 
@@ -516,7 +518,7 @@ MonthFromTime(t)
 }
 
 /* 15.9.1.5 */
-static SEE_number_t
+static int
 DateFromTime(t)
 	SEE_number_t t;
 {
@@ -536,7 +538,7 @@ DateFromTime(t)
 	case 9:		return dwy - 272 - ily;
 	case 10:	return dwy - 303 - ily;
 	case 11:	return dwy - 333 - ily;
-	default:	return SEE_NaN;
+	default:	return -1;
 	}
 }
 
@@ -885,9 +887,9 @@ reprdatetime(interp, t)
 	min = MinFromTime(t);
 	sec = SecFromTime(t);
 
-	/* "Sun, 12 Oct 2003 07:19:24 GMT" */
+	/* "Sun, 12 Oct 2003 07:19:24" */
 	return SEE_string_sprintf(interp,
-		"%.3s, %2d %.3s %d %02d:%02d:%02d GMT",
+		"%.3s, %2d %.3s %d %02d:%02d:%02d",
 		&wkdayname[wkday * 3], day, &monthname[month * 3],
 		year, hour, min, sec);
 }
@@ -955,7 +957,7 @@ date_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	/* Ignore arguments; equiavlent to (new Date()).toString() */
-	SEE_SET_STRING(res, reprdatetime(interp, now(interp)));
+	SEE_SET_STRING(res, reprdatetime(interp, LocalTime(now(interp))));
 }
 
 /* 15.9.3.1 */
@@ -1135,7 +1137,7 @@ date_proto_toString(interp, self, thisobj, argc, argv, res)
 {
 	struct date_object *d = todate(interp, thisobj);
 
-	SEE_SET_STRING(res, reprdatetime(interp, d->t));
+	SEE_SET_STRING(res, reprdatetime(interp, LocalTime(d->t)));
 }
 
 /* 15.9.5.3 */
@@ -1847,9 +1849,10 @@ date_proto_setMonth(interp, self, thisobj, argc, argv, res)
 	if (argc < 1)
 		d->t = SEE_NaN;
 	else {
-		if (argc < 2)
+		if (argc < 2) {
 			date = DateFromTime(t);
-		else {
+			if (date < 0) date = SEE_NaN;
+		} else {
 			SEE_ToNumber(interp, argv[1], &v);
 			date = v.u.number;
 		}
@@ -1878,9 +1881,10 @@ date_proto_setUTCMonth(interp, self, thisobj, argc, argv, res)
 	if (argc < 1)
 		d->t = SEE_NaN;
 	else {
-		if (argc < 2)
+		if (argc < 2) {
 			date = DateFromTime(t);
-		else {
+			if (date < 0) date = SEE_NaN;
+		} else {
 			SEE_ToNumber(interp, argv[1], &v);
 			date = v.u.number;
 		}
@@ -1915,9 +1919,10 @@ date_proto_setFullYear(interp, self, thisobj, argc, argv, res)
 			SEE_ToNumber(interp, argv[1], &v);
 			month = v.u.number;
 		}
-		if (argc < 3)
+		if (argc < 3) {
 			date = DateFromTime(t);
-		else {
+			if (date < 0) date = SEE_NaN;
+		} else {
 			SEE_ToNumber(interp, argv[2], &v);
 			date = v.u.number;
 		}
@@ -1951,9 +1956,10 @@ date_proto_setUTCFullYear(interp, self, thisobj, argc, argv, res)
 			SEE_ToNumber(interp, argv[1], &v);
 			month = v.u.number;
 		}
-		if (argc < 3)
+		if (argc < 3) {
 			date = DateFromTime(t);
-		else {
+			if (date < 0) date = SEE_NaN;
+		} else {
 			SEE_ToNumber(interp, argv[2], &v);
 			date = v.u.number;
 		}
@@ -1973,7 +1979,9 @@ date_proto_toUTCString(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	date_proto_toString(interp, self, thisobj, argc, argv, res);
+	struct date_object *d = todate(interp, thisobj);
+
+	SEE_SET_STRING(res, reprdatetime(interp, d->t));
 }
 
 /* B.2.4 */
@@ -2024,4 +2032,127 @@ date_proto_setYear(interp, self, thisobj, argc, argv, res)
 		       ));
 	}
 	SEE_SET_NUMBER(res, d->t);
+}
+
+
+/* 
+ * Because of standards madness (15.9.1.9[8])
+ * we must first translate the date in question to an
+ * 'equivalent' year of a fixed era. I've chosen the 
+ * fourteen years starting from the current year.
+ * Once the translation is done, we then figure out what
+ * the difference between UTC and local time is, using the
+ * system's timezone databases.
+ * Can only use the following four properties
+ *   ysec - time since beginning of year
+ *   InLeapYear(t)
+ *   weekday of beginning of year
+ *   geographic location
+ */
+
+/* Map from leapyearness/firstdayofweek to a year */
+static unsigned int yearmap[2][7];
+
+/* Local timezone offset in milliseconds */
+static int localtza;
+
+/* Initialises the yearmap matrix based on the current year */
+void
+init_yearmap() 
+{
+	int ily, wstart;
+	int year;
+	struct tm *tm;
+	time_t now = time(NULL);
+	int i, count;
+
+	tm = localtime(&now);
+	year = 1900 + tm->tm_year;		/* TM_YEAR_BASE */
+	/* assert(year > 0); */
+
+	count = 0;
+	while (count < 14) {
+	    wstart = WeekDay(TimeFromYear(year));
+	    ily = isleapyear(year);
+	    if (yearmap[ily][wstart] == 0) {
+		    yearmap[ily][wstart] = year;
+		    count++;
+	    }
+	    year++;
+	}
+}
+
+/* 15.9.1.8(9) - Determine the local timezone offset, in a suspicious way */
+static void
+init_localtza()
+{
+	struct tm tm, *utm;
+	time_t t;
+	int year = yearmap[0][0];
+
+	/* Convert the first second of the year into a time_t */
+	t = time(NULL);
+	memcpy(&tm, localtime(&t), sizeof tm);
+	tm.tm_sec = 0;
+	tm.tm_min = 0;
+	tm.tm_hour = 0;
+	tm.tm_mday = 1;
+	tm.tm_mon = 0;
+	tm.tm_year = year - 1900;	/* pick any year in era */
+	tm.tm_isdst = 0;
+	t = mktime(&tm);
+	/* assert(t != -1); */
+
+	/* Determine the UTC time */
+	utm = gmtime(&t);
+	/* assert(utm != NULL); */
+
+	if (utm->tm_year < year) 
+	    LocalTZA = -1000 * (utm->tm_hour * 60 * 60 +
+	    		        utm->tm_min  * 60 +
+			        utm->tm_sec - 
+				24 * 60 * 60);
+	else
+	    LocalTZA = -1000 * (utm->tm_hour * 60 * 60 +
+	    		        utm->tm_min  * 60 +
+			        utm->tm_sec);
+}
+
+static SEE_number_t
+DaylightSavingTA(SEE_number_t t)
+{
+	SEE_number_t ysec = t - TimeFromYear(YearFromTime(t));
+	int ily = InLeapYear(t);
+	int wstart = WeekDay(TimeFromYear(YearFromTime(t)));
+	int equiv_year = yearmap[ily][wstart];
+	struct tm tm;
+	time_t dst_time, nodst_time;
+
+	memset(&tm, 0, sizeof tm);
+	tm.tm_sec = SecFromTime(ysec);
+	tm.tm_min = MinFromTime(ysec);
+	tm.tm_hour = HourFromTime(ysec);
+	tm.tm_mday = DateFromTime(ysec);
+	tm.tm_mon = MonthFromTime(ysec) - 1;
+	tm.tm_year = equiv_year - 1900;
+	tm.tm_isdst = -1;
+
+	if (tm.tm_isdst == 0) return 0;
+
+	dst_time = mktime(&tm);
+	tm.tm_isdst = 0;
+	nodst_time = mktime(&tm);
+
+	return (dst_time - nodst_time) * 1000;
+}
+
+static void
+init_time()
+{
+	static int initialized;
+	if (!initialized) {
+	    initialized = 1;	/* XXX race condition */
+	    init_yearmap();
+	    init_localtza();
+	}
 }
