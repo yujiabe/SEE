@@ -12,7 +12,7 @@
 
 #include <see/type.h>
 
-#if defined(__i386__)
+#if defined(__i386__) || defined(__amd64__)
 #   define IEEE_8087
 #endif
 
