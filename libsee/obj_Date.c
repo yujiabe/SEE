@@ -2043,11 +2043,6 @@ date_proto_setYear(interp, self, thisobj, argc, argv, res)
  * Once the translation is done, we then figure out what
  * the difference between UTC and local time is, using the
  * system's timezone databases.
- * Can only use the following four properties
- *   ysec - time since beginning of year
- *   InLeapYear(t)
- *   weekday of beginning of year
- *   geographic location
  */
 
 /* Map from leapyearness/firstdayofweek to a year */
@@ -2118,6 +2113,13 @@ init_localtza()
 			        utm->tm_sec);
 }
 
+/*
+ * Can only use the following four properties for computing DST:
+ *   ysec - time since beginning of year
+ *   InLeapYear(t)
+ *   weekday of beginning of year
+ *   geographic location
+ */
 static SEE_number_t
 DaylightSavingTA(SEE_number_t t)
 {
