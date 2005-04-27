@@ -32,6 +32,10 @@
 # include <config.h>
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include <see/value.h>
 #include <see/object.h>
 #include <see/interpreter.h>

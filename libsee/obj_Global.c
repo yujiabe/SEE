@@ -280,7 +280,8 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	int j, i, start, R;
+	unsigned int j, i, start;
+	SEE_int32_t R;
 	struct SEE_value v;
 	struct SEE_string *s;
 	SEE_number_t n, sign;
@@ -389,7 +390,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_string *s, *Inf;
 	SEE_number_t n, sign;
-	int i, hasdigits;
+	unsigned int i, hasdigits;
 
 	if (argc < 1) {
 		SEE_SET_NUMBER(res, SEE_NaN);
@@ -557,19 +558,19 @@ Encode(interp, s, unesc)
 		    if (unesc[(C & 0x7f) >> 3] & (1 << (C & 0x7)))
 			SEE_string_addch(R, C);
 		    else
-			AddEscape(interp, R, C & 0x7f);
+			AddEscape(interp, R, (unsigned char)(C & 0x7f));
 	    } else if (C < 0x800) {
-		    AddEscape(interp, R, 0xc0 | ((C >>  6) & 0x1f));
-		    AddEscape(interp, R, 0x80 | ((C >>  0) & 0x2f));
+		AddEscape(interp, R, (unsigned char)(0xc0 | (C >>  6 & 0x1f)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >>  0 & 0x2f)));
 	    } else if (C < 0x10000) {
-		    AddEscape(interp, R, 0xe0 | ((C >> 12) & 0x0f));
-		    AddEscape(interp, R, 0x80 | ((C >>  6) & 0x2f));
-		    AddEscape(interp, R, 0x80 | ((C >>  0) & 0x2f));
+		AddEscape(interp, R, (unsigned char)(0xe0 | (C >> 12 & 0x0f)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >>  6 & 0x2f)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >>  0 & 0x2f)));
 	    } else /* if (C < 0x200000) */ {
-		    AddEscape(interp, R, 0xf0 | ((C >> 18) & 0x07));
-		    AddEscape(interp, R, 0x80 | ((C >> 12) & 0x2f));
-		    AddEscape(interp, R, 0x80 | ((C >>  6) & 0x2f));
-		    AddEscape(interp, R, 0x80 | ((C >>  0) & 0x2f));
+		AddEscape(interp, R, (unsigned char)(0xf0 | (C >> 18 & 0x07)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >> 12 & 0x2f)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >>  6 & 0x2f)));
+		AddEscape(interp, R, (unsigned char)(0x80 | (C >>  0 & 0x2f)));
 	    }
 	}
 	return R;
@@ -593,6 +594,7 @@ urihexval(interp, c1, c2)
 	    return (hexval(c1) << 4) | hexval(c2);
 	else
 	    SEE_error_throw_string(interp, interp->URIError, STR(uri_badhex));
+	    /* NOTREACHED */
 }
 
 /* 15.1.3 */
@@ -667,11 +669,11 @@ Decode(interp, s, resv)
 			start++;
 		    }
 		else
-		    SEE_string_addch(R, C);
+		    SEE_string_addch(R, (SEE_char_t)C);
 	    } else if (C < 0x110000) {
 		C -= 0x10000;
-		SEE_string_addch(R, 0xd800 | ((C >> 10) & 0x3ff));
-		SEE_string_addch(R, 0xdc00 | (C & 0x3ff));
+		SEE_string_addch(R, (SEE_char_t)(0xd800 | (C >> 10 & 0x3ff)));
+		SEE_string_addch(R, (SEE_char_t)(0xdc00 | (C & 0x3ff)));
 	    } else {
 		SEE_error_throw_string(interp, interp->URIError, 
 			STR(bad_unicode));

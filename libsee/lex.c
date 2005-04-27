@@ -38,6 +38,10 @@
 /* # include <math.h> */
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include <see/type.h>
 #include <see/string.h>
 #include <see/value.h>
@@ -118,12 +122,12 @@ string_adducs32(s, c)
 	SEE_unicode_t c;
 {
 	if (c < 0x10000)
-		SEE_string_addch(s, c & 0xffff);
+		SEE_string_addch(s, (SEE_char_t)(c & 0xffff));
 	else {
 		/* RFC2781: UTF-16 encoding */
 		c -= 0x10000;
-		SEE_string_addch(s, 0xd800 | ((c >> 10) & 0x3ff));
-		SEE_string_addch(s, 0xdc00 | ( c        & 0x3ff));
+		SEE_string_addch(s, (SEE_char_t)(0xd800 | (c >> 10 & 0x3ff)));
+		SEE_string_addch(s, (SEE_char_t)(0xdc00 | (c       & 0x3ff)));
 	}
 		
 }
@@ -364,6 +368,7 @@ Punctuator(lex)
 	}
 	SYNTAX_ERROR(SEE_string_sprintf(interp, 
 		"unexpected character '%s'", buf));
+	/* NOTREACHED */
 }
 
 static int
@@ -478,7 +483,8 @@ NumericLiteral(lex)
 	struct lex *lex;			/* 7.8.3 la [.0-9] */
 {
 	SEE_number_t n, e;
-	int seendigit, i;
+	int seendigit;
+	unsigned int i;
 	struct SEE_string *s;
 	char *numbuf, *endstr;
 
@@ -493,7 +499,7 @@ NumericLiteral(lex)
 		if (ATEOF || !is_HexDigit(NEXT))
 		    SYNTAX_ERROR(STR(hex_literal_detritus));
 		while (!ATEOF && is_HexDigit(NEXT)) {
-		    SEE_string_addch(s, NEXT);
+		    SEE_string_addch(s, (SEE_char_t)NEXT);
 		    SKIP;
 		}
 		if (!ATEOF && is_IdentifierStart(lex))
@@ -511,7 +517,7 @@ NumericLiteral(lex)
 	}
 
 	while (!ATEOF && '0' <= NEXT && NEXT <= '9') {
-	    SEE_string_addch(s, NEXT);
+	    SEE_string_addch(s, (SEE_char_t)NEXT);
 	    seendigit = 1;
 	    SKIP;
 	}
@@ -537,11 +543,11 @@ NumericLiteral(lex)
     not_octal:
 
 	if (!ATEOF && NEXT == '.') {
-	    SEE_string_addch(s, NEXT);
+	    SEE_string_addch(s, '.');
 	    SKIP;
 	    while (!ATEOF && '0' <= NEXT && NEXT <= '9') {
 		seendigit = 1;
-	        SEE_string_addch(s, NEXT);
+	        SEE_string_addch(s, (SEE_char_t)NEXT);
 		SKIP;
 	    }
 	}
@@ -551,20 +557,20 @@ NumericLiteral(lex)
 	}
 
 	if (!ATEOF && (NEXT == 'e' || NEXT == 'E')) {
-	    SEE_string_addch(s, NEXT);
+	    SEE_string_addch(s, (SEE_char_t)NEXT);
 	    SKIP;
 	    seendigit = 0;
 	    if (!ATEOF && NEXT == '-') {
-	        SEE_string_addch(s, NEXT);
+	        SEE_string_addch(s, '-');
 		SKIP;
 	    } else if (!ATEOF && NEXT == '+') {
-	        SEE_string_addch(s, NEXT);
+	        SEE_string_addch(s, '+');
 		SKIP;
 	    }
 	    e = 0;
 	    while (!ATEOF && '0' <= NEXT && NEXT <= '9') {
 		seendigit = 1;
-	        SEE_string_addch(s, NEXT);
+	        SEE_string_addch(s, (SEE_char_t)NEXT);
 		SKIP;
 	    }
 	    if (!seendigit)

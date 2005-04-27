@@ -36,6 +36,10 @@
 # include <stdio.h>
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include <see/mem.h>
 #include <see/value.h>
 #include <see/native.h>
@@ -775,7 +779,7 @@ arg_rename(a, s)
 	struct SEE_string *s;
 {
 	int value;
-	int i;
+	unsigned int i;
 
 	if (s->length == 0)
 		return NULL;

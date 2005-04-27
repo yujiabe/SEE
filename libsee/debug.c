@@ -185,7 +185,7 @@ SEE_PrintString(interp, s, f)
 	const struct SEE_string *s;
 	FILE *f;
 {
-	int i;
+	unsigned int i;
 
 	if (s == NULL) 
 	    fprintf(f, "<NULL>");

@@ -42,6 +42,7 @@
 #include <see/try.h>
 #include <see/object.h>
 #include <see/string.h>
+#include <see/debug.h>
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
