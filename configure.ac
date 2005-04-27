@@ -1,9 +1,9 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(see, 1.2, [dleonard@users.sourceforge.net])
+AC_INIT([see],[1.3],[dleonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_FILES([Makefile
 		 include/Makefile
@@ -142,6 +142,7 @@ fi
 dnl -- functions that have workarounds written for
 AC_CHECK_FUNCS([strdup GC_malloc getopt \
 		gettimeofday GetSystemTimeAsFileTime time \
+		localtime timegm
 		])
 
 dnl ------------------------------------------------------------
