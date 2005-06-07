@@ -70,6 +70,19 @@ AC_CHECK_SIZEOF(double)
 
 AC_TYPE_SIZE_T
 
+AC_DEFUN([SEE_CHECK___FUNCTION__],
+  [AC_CACHE_CHECK([for __FUNCTION__], [ac_cv_have___FUNCTION__],
+		  [AC_TRY_RUN([], [return __FUNCTION__ ? 0 : 1;],
+			      [ac_cv_have___FUNCTION__=yes], 
+			      [ac_cv_have___FUNCTION__=no])])
+   if test $ac_cv_have___FUNCTION__ = yes; then
+       AC_DEFINE([HAVE___FUNCTION__], [1], 
+		 [Define if the compiler generates __FUNCTION__])
+   fi
+  ])
+SEE_CHECK___FUNCTION__
+
+
 dnl ------------------------------------------------------------
 dnl external libraries
 dnl
