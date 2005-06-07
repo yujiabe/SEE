@@ -144,6 +144,7 @@ AC_CHECK_FUNCS([strdup GC_malloc getopt \
 		gettimeofday GetSystemTimeAsFileTime time \
 		localtime timegm
 		])
+AC_CHECK_FUNCS([gc_dump])
 
 dnl ------------------------------------------------------------
 dnl miscellanea

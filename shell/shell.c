@@ -41,6 +41,7 @@ static struct SEE_string *s_write;
 static struct SEE_string *s_navigator;
 static struct SEE_string *s_userAgent;
 static struct SEE_string *s_window;
+static struct SEE_string *s_gc_dump;
 struct SEE_string *s_interactive;
 
 /*
@@ -65,6 +66,8 @@ shell_strings()
 	static struct SEE_string S_userAgent = SEE_STRING_DECL(SA_userAgent);
 	static SEE_char_t SA_window[] =   {'w','i','n','d','o','w'};
 	static struct SEE_string S_window = SEE_STRING_DECL(SA_window);
+	static SEE_char_t SA_gc_dump[] =   {'g','c','_','d','u','m','p'};
+	static struct SEE_string S_gc_dump = SEE_STRING_DECL(SA_gc_dump);
 	static SEE_char_t SA_interactive[] = {'<','i','n','t','e','r','a','c','t','i','v','e','>'};
 	static struct SEE_string S_interactive = SEE_STRING_DECL(SA_interactive);
 
@@ -75,6 +78,7 @@ shell_strings()
 	SEE_intern_global(s_navigator = &S_navigator);
 	SEE_intern_global(s_userAgent = &S_userAgent);
 	SEE_intern_global(s_window = &S_window);
+	SEE_intern_global(s_gc_dump = &S_gc_dump);
 	SEE_intern_global(s_interactive = &S_interactive);
 }
 
@@ -100,6 +104,28 @@ print_fn(interp, self, thisobj, argc, argv, res)
         SEE_SET_UNDEFINED(res);
 }
 
+#if HAVE_GC_DUMP
+/*
+ * Dump the garbage collector.
+ */
+static void
+gc_dump_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+        struct SEE_value v;
+
+        if (argc) {
+                SEE_ToString(interp, argv[0], &v);
+                SEE_string_fputs(v.u.string, stdout);
+        }
+	gc_dump();
+        SEE_SET_UNDEFINED(res);
+}
+#endif
+
 /*
  * Adds global symbols 'print' and 'version' to the interpreter.
  * 'print' is a function and 'version' will be the undefined value.
@@ -111,9 +137,17 @@ shell_add_globals(interp)
 	struct SEE_object *obj;
 	struct SEE_value v;
 
+	/* Create the print function, and attch to the Globals */
 	obj = SEE_cfunction_make(interp, print_fn, s_print, 1);
 	SEE_SET_OBJECT(&v, obj);
 	SEE_OBJECT_PUT(interp, interp->Global, s_print, &v, 0);
+
+#if HAVE_GC_DUMP
+	/* Create the gc_dump function, and attach to the Globals. */
+	obj = SEE_cfunction_make(interp, gc_dump_fn, s_gc_dump, 1);
+	SEE_SET_OBJECT(&v, obj);
+	SEE_OBJECT_PUT(interp, interp->Global, s_gc_dump, &v, 0);
+#endif
 
 	SEE_SET_UNDEFINED(&v);
 	SEE_OBJECT_PUT(interp, interp->Global, s_version, &v, 0);
