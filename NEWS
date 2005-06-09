@@ -1,13 +1,15 @@
 $Id$
 
-1.3 [2005-04-26]
+1.3 [2005-06-09 BETA]
   Changed licence (removed BSD advertising clause)
   Fixed bugs where allocated memory was not zeroed
   Added --[exec-]prefix options to libsee-config
   Improved usage and error messages in see-shell
   Support for amd64 in dtoa [simun mikeci]
+  Some static declarations missing extern [simun mikeci]
   Remove need for platform to supply rint() getopt() [fabrice segura]
   Provide local time support (was UTC-only)
+  Improved support for win32 [gerry sweeney]
 
 1.2 [2004-10-31]
   Corrected embarrasing stringdefs build problem
