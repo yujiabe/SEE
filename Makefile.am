@@ -7,4 +7,8 @@ PACKAGE=@PACKAGE_NAME@
 
 SUBDIRS = include libsee shell doc
 
-EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
+EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO
+
+dist-hook:
+	(cd $(srcdir) && cvs2cl --stdout) | tr @ = > $(distdir)/ChangeLog
+	test -s $(distdir)/ChangeLog
