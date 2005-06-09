@@ -861,6 +861,12 @@ static void eval(struct context *context, struct SEE_object *thisobj,
 
 #ifndef NDEBUG
 
+# if !HAVE___FUNCTION__
+#  define X_STR2(s) #s
+#  define X_STR(s) X_STR2(s)
+#  define __FUNCTION__   __FILE__ ":" X_STR(__LINE__)
+# endif
+
 # define EVAL(n, ctxt, res)				\
     do {						\
 	struct SEE_throw_location * _loc_save = NULL;	\
