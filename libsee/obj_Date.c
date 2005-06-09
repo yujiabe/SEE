@@ -653,7 +653,7 @@ now(interp)
 	 * http://msdn.microsoft.com/library/default.asp?url=/library/
 	 *  en-us/sysinfo/base/converting_a_time_t_value_to_a_file_time.asp
 	 */
-	t = (ft - 116444736000000000) / 10000;
+	t = (ft - 116444736000000000) / 10000f;
 
 #elif HAVE_GETTIMEOFDAY
 	struct timeval tv;
@@ -663,7 +663,7 @@ now(interp)
 
 #elif HAVE_TIME
 	/* Lose millisecond precision. */
-	t = time(0) * 1000;
+	t = time(0) * 1000f;
 
 #else
 # warning "don't know how to get system time; using constant 0:00 Jan 1, 1970"
