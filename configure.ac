@@ -72,7 +72,7 @@ AC_TYPE_SIZE_T
 
 AC_DEFUN([SEE_CHECK___FUNCTION__],
   [AC_CACHE_CHECK([for __FUNCTION__], [ac_cv_have___FUNCTION__],
-		  [AC_TRY_RUN([], [int main() { return __FUNCTION__ ? 0 : 1; }],
+		  [AC_TRY_RUN([int main() { return __FUNCTION__ ? 0 : 1; }],
 			      [ac_cv_have___FUNCTION__=yes], 
 			      [ac_cv_have___FUNCTION__=no])])
    if test $ac_cv_have___FUNCTION__ = yes; then
