@@ -20,63 +20,63 @@
 #
 # general error messages
 #
-bad_argc = "Wrong number of arguments to function"
-bad_arg = "Invalid argument given to function"
-internal_error = "Internal error - please report"
-new_not_an_object = "Cannot apply 'new' to a non-object"
-not_a_constructor = "Cannot apply 'new' to the object"
-no_such_function = "No such function"
-not_a_function = "Cannot call a non-function"
+bad_argc = "Wrong number of arguments passed to the function"
+bad_arg = "Invalid arguments were given to the function"
+internal_error = "Internal error occurred; please report"
+new_not_an_object = "'new' cannot be applied to a non-object"
+not_a_constructor = "'new' cannot be applied to the object"
+no_such_function = "Function is not defined"
+not_a_function = "Value is not a function"
 not_callable = "Object is not callable"
-instanceof_not_object = "Expected object to follow 'instanceof'"
-in_not_object = "Expected object to follow 'in'"
-no_hasinstance = "Object does not support 'instanceof' operator"
-bad_lvalue = "Invalid lvalue in assignment"
-regex_syntax_error = "Problem parsing regular expression"
-recursion_limit_reached = "Call limit reached (Runaway recursion?)"
+instanceof_not_object = "Value following 'instanceof' is not an object"
+in_not_object = "Value folling 'in' is not an object"
+no_hasinstance = "Object does not support the 'instanceof' operator"
+bad_lvalue = "Left-hand-side of the assignment cannot be assigned to"
+regex_syntax_error = "Regular expression contained a syntax error"
+recursion_limit_reached = "Call limit was reached; runaway recursion?"
 error
 
 #
 # some errors from the string module
 #
-out_of_memory =	"Out of memory"
-no_string_space = "No string space"
-bad_utf16_string = "Invalid UTF-16 sequence in string"
+out_of_memory =	"No more memory left"
+no_string_space = "No string space left"
+bad_utf16_string = "Invalid UTF-16 sequence was found in the string"
 unknown_file = "<input>"
 string_input_name = "<string>"
 duplicate_label = "Duplicate label '"
-previous_definition = "previous definition"
+previous_definition = "Previous definition"
 
 #
 # more misc error messages
 #
 toobject_undefined =	"Tried to use undefined as an object"
 toobject_null =		"Tried to use null as an object"
-toobject_bad =		"Cannot convert the value into an object"
-toboolean_bad =		"Cannot convert the value into a boolean"
-tonumber_bad =		"Cannot convert the value into a number"
-tostring_bad =		"Cannot convert the value into a string"
+toobject_bad =		"Value cannot be converted into an object"
+toboolean_bad =		"Value cannot be converted into a boolean"
+tonumber_bad =		"Value cannot be converted into a number"
+tostring_bad =		"Value cannot be converted into a string"
 
-defaultvalue_string_bad = "Cannot convert the object into a string"
-defaultvalue_number_bad = "Cannot convert the object into a number"
-defaultvalue_no_bad =     "Cannot convert the object into a default form"
-not_array =		  "Expected a native Array object"
-array_badlen =		  "A bad length was given to the Array constructor"
-not_boolean =		  "Expected a native Boolean object"
-not_function =		  "Expected a native Function object"
-not_number =		  "Expected a native Number object"
-not_regexp =		  "Expected a native RegExp object"
-not_string =		  "Expected a native String object"
-not_date =		  "Expected a native Date object"
+defaultvalue_string_bad = "Object cannot be converted into a string"
+defaultvalue_number_bad = "Object cannot be converted into a number"
+defaultvalue_no_bad =     "Object cannot be converted into a default form"
+not_array =		  "Object is not a native Array object"
+array_badlen =		  "Bad length given to the Array constructor"
+not_boolean =		  "Object is not a native Boolean object"
+not_function =		  "Object is not a native Function object"
+not_number =		  "Object is not a native Number object"
+not_regexp =		  "Object is not a native RegExp object"
+not_string =		  "Object is not a native String object"
+not_date =		  "Object is not a native Date object"
 
-apply_not_array =	"Expected second argument to apply() to be an array"
-bad_radix =		"Given radix does not lie between 2 and 36, inclusive"
-regexp_bad_string =	"Wrong type of argument given to RegExp constructor"
-uri_badhex =		"Could not decode hexadecimal escape sequence in URI"
-bad_utf8 =		"Encountered an invalid UTF-8 sequence"
-bad_unicode =		"Decoded unicode codepoint too large for UTF-16"
+apply_not_array =	"Second argument to apply() is not an array"
+bad_radix =	"Radix argument does not lie between 2 and 36, inclusive"
+regexp_bad_string =	"Bad argument was given to RegExp constructor"
+uri_badhex =		"Bad hexadecimal escape sequence in URI"
+bad_utf8 =		"Invalid UTF-8 sequence in string"
+bad_unicode =		"Unicode codepoint is too large for UTF-16"
 array_sort_error =	"Sort comparison function did not return a number"
-toLocaleString_notfunc   = "expected 'toLocaleString' property to be a function"
+toLocaleString_notfunc   = "'toLocaleString' property is not a function"
 toLocaleString_notstring = "toLocaleString() property did not return a string"
 
 
@@ -307,24 +307,18 @@ unknown
 #
 # Lexer errors
 #
-unexpected_eof = "Unexpected end of file"
-broken_literal = "Missing ending quote of string literal"
-escaped_lit_nl = "Missing ending quote of string literal"
+unexpected_eof = "Token truncated at end of file"
+broken_literal = "String literal not closed at end of line"
+escaped_lit_nl = "Backslash immediately followed by end of line"
 invalid_esc_x =	 "Invalid \\x escape"
 invalid_esc_u =	 "Invalid \\u escape"
 hex_literal_detritus = "Unexpected characters after hexadecimal literal"
 oct_literal_detritus = "Unexpected characters after octal literal"
 dec_literal_detritus = "Unexpected characters after decimal literal"
 number_too_long = "Number is too long"
-eof_in_c_comment = "Multiline comment is missing its closing '*/'"
-eof_in_regex = "Missing closing '/' of regular expression"
-broken_regex = "Missing closing '/' of regular expression"
-
-#
-# Parser errors
-# 
-parse_error = "Parse error"
-unexpected_token = "Unexpected token"
+eof_in_c_comment = "Comment is missing its closing '*/'"
+eof_in_regex = "Regular expression missing final '/'"
+broken_regex = "Regular expression missing final '/'"
 
 #
 # lexer tokens
