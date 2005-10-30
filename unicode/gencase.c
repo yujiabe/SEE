@@ -3,6 +3,16 @@
 
 /*
  * Experimental code to generate compressed unicode case translation tables
+ *
+ * Case conversion is used in ECMAScript in these places
+ *	String.prototype.toUpperCase()
+ *	String.prototype.toLocaleUpperCase()
+ *	String.prototype.toLowerCase()
+ *	String.prototype.toLocaleLowerCase()
+ *	Regex internal Canonicalize() enabled by case-insensitive matching
+ *
+ * In all places, case conversion happens character-by-character.
+ * 
  */
 
 #include <stdio.h>
