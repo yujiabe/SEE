@@ -323,7 +323,6 @@ Punctuator(lex)
 {
 	SEE_unicode_t op[4];	/* ">>>=" is the longest punctuator */
 	struct token *t;
-	struct SEE_string *s;
 	int j, len, oplen;
 	char buf[10], *badchar;
 	struct SEE_interpreter *interp = lex->input->interpreter;
@@ -355,7 +354,6 @@ Punctuator(lex)
 	/*
 	 * Throw a descriptive error message
 	 */
-	s = SEE_string_dup(interp, STR(unexpected_token));
 	if (op[0] == SEE_INPUT_BADCHAR) {
 		badchar = "malformed input";
 	} else if (op[0] >= ' ' && op[0] <= '~') {
@@ -367,7 +365,7 @@ Punctuator(lex)
 		badchar = buf;
 	}
 	SYNTAX_ERROR(SEE_string_sprintf(interp, 
-		"unexpected character '%s'", buf));
+		"unexpected character '%s'", badchar));
 	/* NOTREACHED */
 }
 
