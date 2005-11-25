@@ -115,8 +115,8 @@ struct printer;
 typedef void (*visitor_fn_t)(struct node *, void *);
 
 struct nodeclass {
-	void (*eval)(struct node *, struct context *, struct SEE_value *);
-	void (*fproc)(struct node *, struct context *);
+	void (*eval)(struct node *, struct SEE_context *, struct SEE_value *);
+	void (*fproc)(struct node *, struct SEE_context *);
 	void (*print)(struct node *, struct printer *);
 	void (*visit)(struct node *, visitor_fn_t, void *);
 	int  (*isconst)(struct node *, struct SEE_interpreter *);
@@ -233,16 +233,16 @@ static void *target_lookup(struct parser *parser, struct SEE_string *name,
 
 static int lookahead(struct parser *parser, int n);
 
-static void trace_event(struct context *ctxt);
+static void trace_event(struct SEE_context *ctxt);
 static struct SEE_traceback *traceback_enter(struct SEE_interpreter *interp,
 	struct SEE_object *callee, struct SEE_throw_location *loc,
 	int call_type);
 static void traceback_leave(struct SEE_interpreter *interp, 
 	struct SEE_traceback *old_tb);
 
-static void GetValue(struct context *context, struct SEE_value *v, 
+static void GetValue(struct SEE_context *context, struct SEE_value *v, 
 	struct SEE_value *res);
-static void PutValue(struct context *context, struct SEE_value *v, 
+static void PutValue(struct SEE_context *context, struct SEE_value *v, 
 	struct SEE_value *w);
 
 static struct SEE_string *error_at(struct parser *parser, const char *fmt, ...);
@@ -250,46 +250,46 @@ static struct SEE_string *error_at(struct parser *parser, const char *fmt, ...);
 static int Always_isconst(struct Literal_node *n, 
 	struct SEE_interpreter *interp);
 
-static void Literal_eval(struct Literal_node *n, struct context *context, 
+static void Literal_eval(struct Literal_node *n, struct SEE_context *context, 
 	struct SEE_value *res);
 static void Literal_print(struct Literal_node *n, struct printer *printer);
 static struct node *Literal_parse(struct parser *parser);
 static struct node *NumericLiteral_parse(struct parser *parser);
 static void StringLiteral_eval(struct StringLiteral_node *n, 
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void StringLiteral_print(struct StringLiteral_node *n, 
 	struct printer *printer);
 static struct node *StringLiteral_parse(struct parser *parser);
 static void RegularExpressionLiteral_eval(
-	struct RegularExpressionLiteral_node *n, struct context *context,
+	struct RegularExpressionLiteral_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void RegularExpressionLiteral_print(
 	struct RegularExpressionLiteral_node *n, struct printer *printer);
 static struct node *RegularExpressionLiteral_parse(struct parser *parser);
 static void PrimaryExpression_this_eval(struct node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void PrimaryExpression_this_print(struct node *n,
 	struct printer *printer);
 static void PrimaryExpression_ident_eval(struct PrimaryExpression_ident_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void PrimaryExpression_ident_print(
 	struct PrimaryExpression_ident_node *n, struct printer *printer);
 static struct node *PrimaryExpression_parse(struct parser *parser);
 static void ArrayLiteral_eval(struct ArrayLiteral_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ArrayLiteral_print(struct ArrayLiteral_node *n,
 	struct printer *printer);
 static void ArrayLiteral_visit(struct ArrayLiteral_node *n, visitor_fn_t v,
 	void *va);
 static struct node *ArrayLiteral_parse(struct parser *parser);
 static void ObjectLiteral_eval(struct ObjectLiteral_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ObjectLiteral_print(struct ObjectLiteral_node *n,
 	struct printer *printer);
 static void ObjectLiteral_visit(struct ObjectLiteral_node *n, visitor_fn_t v,
 	void *va);
 static struct node *ObjectLiteral_parse(struct parser *parser);
-static void Arguments_eval(struct Arguments_node *n, struct context *context,
+static void Arguments_eval(struct Arguments_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void Arguments_visit(struct Arguments_node *n, visitor_fn_t v, void *va);
 static int Arguments_isconst(struct Arguments_node *n,
@@ -297,19 +297,19 @@ static int Arguments_isconst(struct Arguments_node *n,
 static void Arguments_print(struct Arguments_node *n, struct printer *printer);
 static struct Arguments_node *Arguments_parse(struct parser *parser);
 static void MemberExpression_new_eval(struct MemberExpression_new_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void MemberExpression_new_print(struct MemberExpression_new_node *n,
 	struct printer *printer);
 static void MemberExpression_new_visit(struct MemberExpression_new_node *n,
 	visitor_fn_t v, void *va);
 static void MemberExpression_dot_eval(struct MemberExpression_dot_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void MemberExpression_dot_print(struct MemberExpression_dot_node *n,
 	struct printer *printer);
 static void MemberExpression_dot_visit(struct MemberExpression_dot_node *n,
 	visitor_fn_t v, void *va);
 static void MemberExpression_bracket_eval(
-	struct MemberExpression_bracket_node *n, struct context *context,
+	struct MemberExpression_bracket_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void MemberExpression_bracket_print(
 	struct MemberExpression_bracket_node *n, struct printer *printer);
@@ -317,7 +317,7 @@ static void MemberExpression_bracket_visit(
 	struct MemberExpression_bracket_node *n, visitor_fn_t v, void *va);
 static struct node *MemberExpression_parse(struct parser *parser);
 static void CallExpression_eval(struct CallExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void CallExpression_print(struct CallExpression_node *n,
 	struct printer *printer);
 static void CallExpression_visit(struct CallExpression_node *n, visitor_fn_t v,
@@ -326,48 +326,48 @@ static struct node *LeftHandSideExpression_parse(struct parser *parser);
 static void Unary_visit(struct Unary_node *n, visitor_fn_t v, void *va);
 static int Unary_isconst(struct Unary_node *n, struct SEE_interpreter *interp);
 static void PostfixExpression_inc_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void PostfixExpression_inc_print(struct Unary_node *n,
 	struct printer *printer);
 static void PostfixExpression_dec_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void PostfixExpression_dec_print(struct Unary_node *n,
 	struct printer *printer);
 static struct node *PostfixExpression_parse(struct parser *parser);
 static void UnaryExpression_delete_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_delete_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_void_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_void_print(struct Unary_node *n, 
 	struct printer *printer);
 static void UnaryExpression_typeof_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_typeof_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_preinc_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_preinc_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_predec_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_predec_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_plus_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_plus_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_minus_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_minus_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_inv_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_inv_print(struct Unary_node *n,
 	struct printer *printer);
 static void UnaryExpression_not_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_not_print(struct Unary_node *n,
 	struct printer *printer);
 static struct node *UnaryExpression_parse(struct parser *parser);
@@ -375,141 +375,141 @@ static void Binary_visit(struct Binary_node *n, visitor_fn_t v, void *va);
 static int Binary_isconst(struct Binary_node *n,
 	struct SEE_interpreter *interp);
 static void MultiplicativeExpression_mul_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_mul_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_mul_print(struct Binary_node *n,
 	struct printer *printer);
 static void MultiplicativeExpression_div_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_div_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_div_print(struct Binary_node *n,
 	struct printer *printer);
 static void MultiplicativeExpression_mod_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_mod_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_mod_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *MultiplicativeExpression_parse(struct parser *parser);
 static void AdditiveExpression_add_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void AdditiveExpression_add_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AdditiveExpression_add_print(struct Binary_node *n,
 	struct printer *printer);
 static void AdditiveExpression_sub_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void AdditiveExpression_sub_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AdditiveExpression_sub_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *AdditiveExpression_parse(struct parser *parser);
 static void ShiftExpression_lshift_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_lshift_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_lshift_print(struct Binary_node *n,
 	struct printer *printer);
 static void ShiftExpression_rshift_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_rshift_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_rshift_print(struct Binary_node *n,
 	struct printer *printer);
 static void ShiftExpression_urshift_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_urshift_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_urshift_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *ShiftExpression_parse(struct parser *parser);
 static void RelationalExpression_sub(struct SEE_interpreter *interp,
 	struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void RelationalExpression_lt_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_lt_print(struct Binary_node *n,
 	struct printer *printer);
 static void RelationalExpression_gt_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_gt_print(struct Binary_node *n,
 	struct printer *printer);
 static void RelationalExpression_le_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_le_print(struct Binary_node *n,
 	struct printer *printer);
 static void RelationalExpression_ge_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_ge_print(struct Binary_node *n,
 	struct printer *printer);
 static void RelationalExpression_instanceof_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_instanceof_print(struct Binary_node *n,
 	struct printer *printer);
 static void RelationalExpression_in_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_in_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *RelationalExpression_parse(struct parser *parser);
 static void EqualityExpression_eq(struct SEE_interpreter *interp,
 	struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
-static void EqualityExpression_seq(struct context *context,
+static void EqualityExpression_seq(struct SEE_context *context,
 	struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void EqualityExpression_eq_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_eq_print(struct Binary_node *n,
 	struct printer *printer);
 static void EqualityExpression_ne_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_ne_print(struct Binary_node *n,
 	struct printer *printer);
 static void EqualityExpression_seq_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_seq_print(struct Binary_node *n,
 	struct printer *printer);
 static void EqualityExpression_sne_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_sne_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *EqualityExpression_parse(struct parser *parser);
 static void BitwiseANDExpression_common(struct SEE_value *r2, struct node *bn,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void BitwiseANDExpression_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void BitwiseANDExpression_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *BitwiseANDExpression_parse(struct parser *parser);
 static void BitwiseXORExpression_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void BitwiseXORExpression_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void BitwiseXORExpression_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *BitwiseXORExpression_parse(struct parser *parser);
 static void BitwiseORExpression_common(struct SEE_value *r2,
-	struct node *bn, struct context *context, struct SEE_value *res);
+	struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void BitwiseORExpression_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void BitwiseORExpression_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *BitwiseORExpression_parse(struct parser *parser);
 static void LogicalANDExpression_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void LogicalANDExpression_print(struct Binary_node *n,
 	struct printer *printer);
 static int LogicalANDExpression_isconst(struct Binary_node *n,
 	struct SEE_interpreter *interp);
 static struct node *LogicalANDExpression_parse(struct parser *parser);
 static void LogicalORExpression_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void LogicalORExpression_print(struct Binary_node *n,
 	struct printer *printer);
 static int LogicalORExpression_isconst(struct Binary_node *n,
 	struct SEE_interpreter *interp);
 static struct node *LogicalORExpression_parse(struct parser *parser);
 static void ConditionalExpression_eval(struct ConditionalExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ConditionalExpression_print(struct ConditionalExpression_node *n,
 	struct printer *printer);
 static void ConditionalExpression_visit(struct ConditionalExpression_node *n,
@@ -520,100 +520,100 @@ static struct node *ConditionalExpression_parse(struct parser *parser);
 static void AssignmentExpression_visit(struct AssignmentExpression_node *n,
 	visitor_fn_t v, void *va);
 static void AssignmentExpression_simple_eval(
-	struct AssignmentExpression_node *n, struct context *context,
+	struct AssignmentExpression_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void AssignmentExpression_simple_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_muleq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_muleq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_diveq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_diveq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_modeq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_modeq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_addeq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_addeq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_subeq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_subeq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_lshifteq_eval(
-	struct AssignmentExpression_node *n, struct context *context, 
+	struct AssignmentExpression_node *n, struct SEE_context *context, 
 	struct SEE_value *res);
 static void AssignmentExpression_lshifteq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_rshifteq_eval(
-	struct AssignmentExpression_node *n, struct context *context,
+	struct AssignmentExpression_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void AssignmentExpression_rshifteq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_urshifteq_eval(
-	struct AssignmentExpression_node *n, struct context *context,
+	struct AssignmentExpression_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void AssignmentExpression_urshifteq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_andeq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_andeq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_xoreq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_xoreq_print(
 	struct AssignmentExpression_node *n, struct printer *printer);
 static void AssignmentExpression_oreq_eval(struct AssignmentExpression_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_oreq_print(struct AssignmentExpression_node *n,
 	struct printer *printer);
 static struct node *AssignmentExpression_parse(struct parser *parser);
 static void Expression_comma_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void Expression_comma_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *Expression_parse(struct parser *parser);
 static struct node *Statement_parse(struct parser *parser);
-static void Block_empty_eval(struct node *n, struct context *context,
+static void Block_empty_eval(struct node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void Block_empty_print(struct node *n, struct printer *printer);
 static struct node *Block_parse(struct parser *parser);
-static void StatementList_eval(struct Binary_node *n, struct context *context,
+static void StatementList_eval(struct Binary_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void StatementList_print(struct Binary_node *n, struct printer *printer);
 static struct node *StatementList_parse(struct parser *parser);
 static void VariableStatement_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void VariableStatement_print(struct Unary_node *n,
 	struct printer *printer);
 static struct node *VariableStatement_parse(struct parser *parser);
 static void VariableDeclarationList_eval(struct Binary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void VariableDeclarationList_print(struct Binary_node *n,
 	struct printer *printer);
 static struct node *VariableDeclarationList_parse(struct parser *parser);
 static void VariableDeclaration_eval(struct VariableDeclaration_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void VariableDeclaration_print(struct VariableDeclaration_node *n,
 	struct printer *printer);
 static void VariableDeclaration_visit(struct VariableDeclaration_node *n,
 	visitor_fn_t v, void *va);
 static struct node *VariableDeclaration_parse(struct parser *parser);
-static void EmptyStatement_eval(struct node *n, struct context *context,
+static void EmptyStatement_eval(struct node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void EmptyStatement_print(struct node *n, struct printer *printer);
 static struct node *EmptyStatement_parse(struct parser *parser);
 static void ExpressionStatement_eval(struct Unary_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ExpressionStatement_print(struct Unary_node *n,
 	struct printer *printer);
 static struct node *ExpressionStatement_parse(struct parser *parser);
 static void IfStatement_eval(struct IfStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void IfStatement_print(struct IfStatement_node *n,
 	struct printer *printer);
 static void IfStatement_visit(struct IfStatement_node *n, visitor_fn_t v,
@@ -623,7 +623,7 @@ static int IfStatement_isconst(struct IfStatement_node *n,
 static struct node *IfStatement_parse(struct parser *parser);
 static void print_label(struct printer *printer, void *node);
 static void IterationStatement_dowhile_eval(
-	struct IterationStatement_while_node *n, struct context *context,
+	struct IterationStatement_while_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void IterationStatement_dowhile_print(
 	struct IterationStatement_while_node *n, struct printer *printer);
@@ -633,7 +633,7 @@ static int IterationStatement_dowhile_isconst(
 	struct IterationStatement_while_node *n,
 	struct SEE_interpreter *interp);
 static void IterationStatement_while_eval(
-	struct IterationStatement_while_node *n, struct context *context,
+	struct IterationStatement_while_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void IterationStatement_while_print(
 	struct IterationStatement_while_node *n, struct printer *printer);
@@ -641,95 +641,95 @@ static int IterationStatement_while_isconst(
 	struct IterationStatement_while_node *n,
 	struct SEE_interpreter *interp);
 static void IterationStatement_for_eval(struct IterationStatement_for_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void IterationStatement_for_print(struct IterationStatement_for_node *n,
 	struct printer *printer);
 static void IterationStatement_for_visit(struct IterationStatement_for_node *n,
 	visitor_fn_t v, void *va);
 static void IterationStatement_forvar_eval(
-	struct IterationStatement_for_node *n, struct context *context,
+	struct IterationStatement_for_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void IterationStatement_forvar_print(
 	struct IterationStatement_for_node *n, struct printer *printer);
 static void IterationStatement_forin_eval(
-	struct IterationStatement_forin_node *n, struct context *context,
+	struct IterationStatement_forin_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void IterationStatement_forin_print(
 	struct IterationStatement_forin_node *n, struct printer *printer);
 static void IterationStatement_forvarin_eval(
-	struct IterationStatement_forin_node *n, struct context *context,
+	struct IterationStatement_forin_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void IterationStatement_forvarin_print(
 	struct IterationStatement_forin_node *n, struct printer *printer);
 static struct node *IterationStatement_parse(struct parser *parser);
 static void ContinueStatement_eval(struct ContinueStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ContinueStatement_print(struct ContinueStatement_node *n,
 	struct printer *printer);
 static struct node *ContinueStatement_parse(struct parser *parser);
 static void BreakStatement_eval(struct BreakStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void BreakStatement_print(struct BreakStatement_node *n,
 	struct printer *printer);
 static struct node *BreakStatement_parse(struct parser *parser);
 static void ReturnStatement_eval(struct ReturnStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ReturnStatement_print(struct ReturnStatement_node *n,
 	struct printer *printer);
 static void ReturnStatement_undef_eval(struct ReturnStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void ReturnStatement_undef_print(struct ReturnStatement_node *n,
 	struct printer *printer);
 static struct node *ReturnStatement_parse(struct parser *parser);
-static void WithStatement_eval(struct Binary_node *n, struct context *context,
+static void WithStatement_eval(struct Binary_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void WithStatement_print(struct Binary_node *n, struct printer *printer);
 static struct node *WithStatement_parse(struct parser *parser);
 static void SwitchStatement_caseblock(struct SwitchStatement_node *n,
-	struct context *context, struct SEE_value *input,
+	struct SEE_context *context, struct SEE_value *input,
 	struct SEE_value *res);
 static void SwitchStatement_eval(struct SwitchStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void SwitchStatement_print(struct SwitchStatement_node *n,
 	struct printer *printer);
 static struct node *SwitchStatement_parse(struct parser *parser);
 static struct node *LabelledStatement_parse(struct parser *parser);
-static void ThrowStatement_eval(struct Unary_node *n, struct context *context,
+static void ThrowStatement_eval(struct Unary_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void ThrowStatement_print(struct Unary_node *n, struct printer *printer);
 static struct node *ThrowStatement_parse(struct parser *parser);
 static void TryStatement_catch(struct TryStatement_node *n,
-	struct context *context, struct SEE_value *C, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *C, struct SEE_value *res);
 static void TryStatement_catch_eval(struct TryStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void TryStatement_catch_print(struct TryStatement_node *n,
 	struct printer *printer);
 static void TryStatement_finally_eval(struct TryStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void TryStatement_finally_print(struct TryStatement_node *n,
 	struct printer *printer);
 static void TryStatement_catchfinally_eval(struct TryStatement_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void TryStatement_catchfinally_print(struct TryStatement_node *n,
 	struct printer *printer);
 static struct node *TryStatement_parse(struct parser *parser);
 static void FunctionDeclaration_fproc(struct Function_node *n,
-	struct context *context);
+	struct SEE_context *context);
 static void Function_print(struct Function_node *n, struct printer *printer);
 static struct node *FunctionDeclaration_parse(struct parser *parser);
 static void FunctionExpression_eval(struct Function_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static struct node *FunctionExpression_parse(struct parser *parser);
 static struct var *FormalParameterList_parse(struct parser *parser);
-static void FunctionBody_eval(struct Unary_node *n, struct context *context,
+static void FunctionBody_eval(struct Unary_node *n, struct SEE_context *context,
 	struct SEE_value *res);
 static void FunctionBody_print(struct Unary_node *n, struct printer *printer);
 static struct node *FunctionBody_parse(struct parser *parser);
 static struct function *Program_parse(struct parser *parser);
 static void SourceElements_eval(struct SourceElements_node *n,
-	struct context *context, struct SEE_value *res);
+	struct SEE_context *context, struct SEE_value *res);
 static void SourceElements_fproc(struct SourceElements_node *n,
-	struct context *context);
+	struct SEE_context *context);
 static void SourceElements_print(struct SourceElements_node *n,
 	struct printer *printer);
 static struct node *SourceElements_parse(struct parser *parser);
@@ -754,7 +754,7 @@ static void string_print_char(struct printer *printer, SEE_char_t c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp,
 	struct SEE_string *string);
 
-static void eval(struct context *context, struct SEE_object *thisobj,
+static void eval(struct SEE_context *context, struct SEE_object *thisobj,
 	int argc, struct SEE_value **argv, struct SEE_value *res);
 
 /*------------------------------------------------------------
@@ -1281,7 +1281,7 @@ lookahead(parser, n)
  */
 static void
 trace_event(ctxt)
-	struct context *ctxt;
+	struct SEE_context *ctxt;
 {
 	if (ctxt->interpreter->trace)
 	    (*ctxt->interpreter->trace)(ctxt->interpreter,
@@ -1330,7 +1330,7 @@ traceback_leave(interp, old_tb)
 /* 8.7.1 */
 static void
 GetValue(context, v, res)
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *v;
 	struct SEE_value *res;
 {
@@ -1355,7 +1355,7 @@ GetValue(context, v, res)
 /* 8.7.2 */
 static void
 PutValue(context, v, w)
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *v;
 	struct SEE_value *w;
 {
@@ -1452,7 +1452,7 @@ struct Literal_node {
 static void
 Literal_eval(n, context, res)
 	struct Literal_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_VALUE_COPY(res, &n->value);
@@ -1555,7 +1555,7 @@ struct StringLiteral_node {
 static void
 StringLiteral_eval(n, context, res)
 	struct StringLiteral_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_SET_STRING(res, n->string);
@@ -1626,7 +1626,7 @@ struct RegularExpressionLiteral_node {
 static void
 RegularExpressionLiteral_eval(n, context, res)
 	struct RegularExpressionLiteral_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -1704,7 +1704,7 @@ RegularExpressionLiteral_parse(parser)
 static void
 PrimaryExpression_this_eval(n, context, res)
 	struct node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_SET_OBJECT(res, context->thisobj);
@@ -1732,7 +1732,7 @@ struct PrimaryExpression_ident_node {
 static void
 PrimaryExpression_ident_eval(n, context, res)
 	struct PrimaryExpression_ident_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_context_lookup(context, n->string, res);
@@ -1824,7 +1824,7 @@ struct ArrayLiteral_node {
 static void
 ArrayLiteral_eval(n, context, res)
 	struct ArrayLiteral_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct ArrayLiteral_element *element;
@@ -1955,7 +1955,7 @@ struct ObjectLiteral_node {
 static void
 ObjectLiteral_eval(n, context, res)
 	struct ObjectLiteral_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value valuev, v;
@@ -2129,7 +2129,7 @@ struct Arguments_node {				/* declare for early use */
 static void
 Arguments_eval(n, context, res)
 	struct Arguments_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;		/* Assumed pointer to array */
 {
 	struct Arguments_arg *arg;
@@ -2226,7 +2226,7 @@ struct MemberExpression_new_node {
 static void
 MemberExpression_new_eval(n, context, res)
 	struct MemberExpression_new_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, *args, **argv;
@@ -2297,7 +2297,7 @@ struct MemberExpression_dot_node {
 static void
 MemberExpression_dot_eval(n, context, res)
 	struct MemberExpression_dot_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r5;
@@ -2343,7 +2343,7 @@ struct MemberExpression_bracket_node {
 static void
 MemberExpression_bracket_eval(n, context, res)
 	struct MemberExpression_bracket_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4, r5, r6;
@@ -2450,7 +2450,7 @@ struct CallExpression_node {
 static void
 CallExpression_eval(n, context, res)
 	struct CallExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -2624,7 +2624,7 @@ Unary_isconst(n, interp)
 static void
 PostfixExpression_inc_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3;
@@ -2656,7 +2656,7 @@ static struct nodeclass PostfixExpression_inc_nodeclass
 static void
 PostfixExpression_dec_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3;
@@ -2727,7 +2727,7 @@ PostfixExpression_parse(parser)
 static void
 UnaryExpression_delete_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1;
@@ -2768,7 +2768,7 @@ static struct nodeclass UnaryExpression_delete_nodeclass
 static void
 UnaryExpression_void_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2797,7 +2797,7 @@ static struct nodeclass UnaryExpression_void_nodeclass
 static void
 UnaryExpression_typeof_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r4;
@@ -2840,7 +2840,7 @@ static struct nodeclass UnaryExpression_typeof_nodeclass
 static void
 UnaryExpression_preinc_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2872,7 +2872,7 @@ static struct nodeclass UnaryExpression_preinc_nodeclass
 static void
 UnaryExpression_predec_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2904,7 +2904,7 @@ static struct nodeclass UnaryExpression_predec_nodeclass
 static void
 UnaryExpression_plus_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2933,7 +2933,7 @@ static struct nodeclass UnaryExpression_plus_nodeclass
 static void
 UnaryExpression_minus_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2962,7 +2962,7 @@ static struct nodeclass UnaryExpression_minus_nodeclass
 static void
 UnaryExpression_inv_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -2993,7 +2993,7 @@ static struct nodeclass UnaryExpression_inv_nodeclass
 static void
 UnaryExpression_not_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3;
@@ -3103,7 +3103,7 @@ static void
 MultiplicativeExpression_mul_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4, r5, r6;
 
@@ -3117,7 +3117,7 @@ MultiplicativeExpression_mul_common(r2, bn, context, res)
 static void
 MultiplicativeExpression_mul_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3149,7 +3149,7 @@ static void
 MultiplicativeExpression_div_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4, r5, r6;
 
@@ -3163,7 +3163,7 @@ MultiplicativeExpression_div_common(r2, bn, context, res)
 static void
 MultiplicativeExpression_div_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3195,7 +3195,7 @@ static void
 MultiplicativeExpression_mod_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4, r5, r6;
 
@@ -3209,7 +3209,7 @@ MultiplicativeExpression_mod_common(r2, bn, context, res)
 static void
 MultiplicativeExpression_mod_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3283,7 +3283,7 @@ static void
 AdditiveExpression_add_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4, r5, r6,
 			 r8, r9, r12, r13;
@@ -3311,7 +3311,7 @@ AdditiveExpression_add_common(r2, bn, context, res)
 static void
 AdditiveExpression_add_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3343,7 +3343,7 @@ static void
 AdditiveExpression_sub_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4, r5, r6;
 
@@ -3357,7 +3357,7 @@ AdditiveExpression_sub_common(r2, bn, context, res)
 static void
 AdditiveExpression_sub_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3429,7 +3429,7 @@ static void
 ShiftExpression_lshift_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_int32_t r5;
@@ -3445,7 +3445,7 @@ ShiftExpression_lshift_common(r2, bn, context, res)
 static void
 ShiftExpression_lshift_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3477,7 +3477,7 @@ static void
 ShiftExpression_rshift_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_int32_t r5;
@@ -3493,7 +3493,7 @@ ShiftExpression_rshift_common(r2, bn, context, res)
 static void
 ShiftExpression_rshift_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3525,7 +3525,7 @@ static void
 ShiftExpression_urshift_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_uint32_t r5, r6;
@@ -3540,7 +3540,7 @@ ShiftExpression_urshift_common(r2, bn, context, res)
 static void
 ShiftExpression_urshift_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -3680,7 +3680,7 @@ RelationalExpression_sub(interp, x, y, res)
 static void
 RelationalExpression_lt_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4;
@@ -3715,7 +3715,7 @@ static struct nodeclass RelationalExpression_lt_nodeclass
 static void
 RelationalExpression_gt_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4;
@@ -3750,7 +3750,7 @@ static struct nodeclass RelationalExpression_gt_nodeclass
 static void
 RelationalExpression_le_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4, r5;
@@ -3788,7 +3788,7 @@ static struct nodeclass RelationalExpression_le_nodeclass
 static void
 RelationalExpression_ge_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4, r5;
@@ -3826,7 +3826,7 @@ static struct nodeclass RelationalExpression_ge_nodeclass
 static void
 RelationalExpression_instanceof_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -3868,7 +3868,7 @@ static struct nodeclass RelationalExpression_instanceof_nodeclass
 static void
 RelationalExpression_in_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -4040,7 +4040,7 @@ EqualityExpression_eq(interp, x, y, res)
  */
 static void
 EqualityExpression_seq(context, x, y, res)
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *x, *y, *res;
 {
 	if (SEE_VALUE_GET_TYPE(x) != SEE_VALUE_GET_TYPE(y))
@@ -4077,7 +4077,7 @@ EqualityExpression_seq(context, x, y, res)
 static void
 EqualityExpression_eq_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4;
@@ -4109,7 +4109,7 @@ static struct nodeclass EqualityExpression_eq_nodeclass
 static void
 EqualityExpression_ne_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4, t;
@@ -4142,7 +4142,7 @@ static struct nodeclass EqualityExpression_ne_nodeclass
 static void
 EqualityExpression_seq_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4;
@@ -4175,7 +4175,7 @@ static struct nodeclass EqualityExpression_seq_nodeclass
 static void
 EqualityExpression_sne_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, r4, r5;
@@ -4261,7 +4261,7 @@ static void
 BitwiseANDExpression_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
@@ -4276,7 +4276,7 @@ BitwiseANDExpression_common(r2, bn, context, res)
 static void
 BitwiseANDExpression_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4338,7 +4338,7 @@ static void
 BitwiseXORExpression_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
@@ -4353,7 +4353,7 @@ BitwiseXORExpression_common(r2, bn, context, res)
 static void
 BitwiseXORExpression_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4415,7 +4415,7 @@ static void
 BitwiseORExpression_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
 	struct node *bn;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
@@ -4430,7 +4430,7 @@ BitwiseORExpression_common(r2, bn, context, res)
 static void
 BitwiseORExpression_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4492,7 +4492,7 @@ BitwiseORExpression_parse(parser)
 static void
 LogicalANDExpression_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r3, r5;
@@ -4525,7 +4525,7 @@ LogicalANDExpression_isconst(n, interp)
 {
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct context *)NULL, &r1);
+		EVAL(n->a, (struct SEE_context *)NULL, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? ISCONST(n->b, interp) : 1;
@@ -4572,7 +4572,7 @@ LogicalANDExpression_parse(parser)
 static void
 LogicalORExpression_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r3, r5;
@@ -4605,7 +4605,7 @@ LogicalORExpression_isconst(n, interp)
 {
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct context *)NULL, &r1);
+		EVAL(n->a, (struct SEE_context *)NULL, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? 1: ISCONST(n->b, interp);
@@ -4659,7 +4659,7 @@ struct ConditionalExpression_node {
 static void
 ConditionalExpression_eval(n, context, res)
 	struct ConditionalExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3, t;
@@ -4706,7 +4706,7 @@ ConditionalExpression_isconst(n, interp)
 {
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct context *)NULL, &r1);
+		EVAL(n->a, (struct SEE_context *)NULL, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
@@ -4789,7 +4789,7 @@ AssignmentExpression_visit(n, v, va)
 static void
 AssignmentExpression_simple_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4821,7 +4821,7 @@ static struct nodeclass AssignmentExpression_simple_nodeclass
 static void
 AssignmentExpression_muleq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4854,7 +4854,7 @@ static struct nodeclass AssignmentExpression_muleq_nodeclass
 static void
 AssignmentExpression_diveq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4887,7 +4887,7 @@ static struct nodeclass AssignmentExpression_diveq_nodeclass
 static void
 AssignmentExpression_modeq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4920,7 +4920,7 @@ static struct nodeclass AssignmentExpression_modeq_nodeclass
 static void
 AssignmentExpression_addeq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4953,7 +4953,7 @@ static struct nodeclass AssignmentExpression_addeq_nodeclass
 static void
 AssignmentExpression_subeq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -4986,7 +4986,7 @@ static struct nodeclass AssignmentExpression_subeq_nodeclass
 static void
 AssignmentExpression_lshifteq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5020,7 +5020,7 @@ static struct nodeclass AssignmentExpression_lshifteq_nodeclass
 static void
 AssignmentExpression_rshifteq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5054,7 +5054,7 @@ static struct nodeclass AssignmentExpression_rshifteq_nodeclass
 static void
 AssignmentExpression_urshifteq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5089,7 +5089,7 @@ static struct nodeclass AssignmentExpression_urshifteq_nodeclass
 static void
 AssignmentExpression_andeq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5122,7 +5122,7 @@ static struct nodeclass AssignmentExpression_andeq_nodeclass
 static void
 AssignmentExpression_xoreq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5155,7 +5155,7 @@ static struct nodeclass AssignmentExpression_xoreq_nodeclass
 static void
 AssignmentExpression_oreq_eval(n, context, res)
 	struct AssignmentExpression_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -5268,7 +5268,7 @@ AssignmentExpression_parse(parser)
 static void
 Expression_comma_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3;
@@ -5406,7 +5406,7 @@ Statement_parse(parser)
 static void
 Block_empty_eval(n, context, res)
 	struct node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
@@ -5453,7 +5453,7 @@ Block_parse(parser)
 static void
 StatementList_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *val;
@@ -5542,7 +5542,7 @@ StatementList_parse(parser)
 static void
 VariableStatement_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value v;
@@ -5586,7 +5586,7 @@ VariableStatement_parse(parser)
 static void
 VariableDeclarationList_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;		/* unused */
 {
 
@@ -5637,7 +5637,7 @@ struct VariableDeclaration_node {
 static void
 VariableDeclaration_eval(n, context, res)
 	struct VariableDeclaration_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;		/* unused */
 {
 	struct SEE_value r1, r2, r3;
@@ -5726,7 +5726,7 @@ VariableDeclaration_parse(parser)
 static void
 EmptyStatement_eval(n, context, res)
 	struct node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
@@ -5768,7 +5768,7 @@ EmptyStatement_parse(parser)
 static void
 ExpressionStatement_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v = SEE_NEW(context->interpreter, struct SEE_value);
@@ -5823,7 +5823,7 @@ struct IfStatement_node {
 static void
 IfStatement_eval(n, context, res)
 	struct IfStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2, r3;
@@ -5882,7 +5882,7 @@ IfStatement_isconst(n, interp)
 {
 	if (ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct context *)NULL, &r1);
+		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
@@ -5969,7 +5969,7 @@ print_label(printer, node)
 static void
 IterationStatement_dowhile_eval(n, context, res)
 	struct IterationStatement_while_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v, r7, r8, r9;
@@ -6047,7 +6047,7 @@ static struct nodeclass IterationStatement_dowhile_nodeclass
 static void
 IterationStatement_while_eval(n, context, res)
 	struct IterationStatement_while_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v, r2, r3, r4;
@@ -6103,7 +6103,7 @@ IterationStatement_while_isconst(n, interp)
 {
 	if (ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct context *)NULL, &r1);
+		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? ISCONST(n->body, interp) : 1;
@@ -6127,7 +6127,7 @@ struct IterationStatement_for_node {
 static void
 IterationStatement_for_eval(n, context, res)
 	struct IterationStatement_for_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v, r2, r3, r6, r7, r8, r16, r17;
@@ -6207,7 +6207,7 @@ static struct nodeclass IterationStatement_for_nodeclass
 static void
 IterationStatement_forvar_eval(n, context, res)
 	struct IterationStatement_for_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v, r1, r4, r5, r6, r14, r15;
@@ -6282,7 +6282,7 @@ struct IterationStatement_forin_node {
 static void
 IterationStatement_forin_eval(n, context, res)
 	struct IterationStatement_forin_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -6347,7 +6347,7 @@ static struct nodeclass IterationStatement_forin_nodeclass
 static void
 IterationStatement_forvarin_eval(n, context, res)
 	struct IterationStatement_forin_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = context->interpreter;
@@ -6564,7 +6564,7 @@ struct ContinueStatement_node {
 static void
 ContinueStatement_eval(n, context, res)
 	struct ContinueStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	_SEE_SET_COMPLETION(res, SEE_CONTINUE, NULL, n->target);
@@ -6631,7 +6631,7 @@ struct BreakStatement_node {
 static void
 BreakStatement_eval(n, context, res)
 	struct BreakStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	_SEE_SET_COMPLETION(res, SEE_BREAK, NULL, n->target);
@@ -6698,7 +6698,7 @@ struct ReturnStatement_node {
 static void
 ReturnStatement_eval(n, context, res)
 	struct ReturnStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r2, *v;
@@ -6729,7 +6729,7 @@ static struct nodeclass ReturnStatement_nodeclass
 static void
 ReturnStatement_undef_eval(n, context, res)
 	struct ReturnStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	static struct SEE_value undef = { SEE_UNDEFINED };
@@ -6784,7 +6784,7 @@ ReturnStatement_parse(parser)
 static void
 WithStatement_eval(n, context, res)
 	struct Binary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_try_context_t ctxt;
@@ -6890,7 +6890,7 @@ struct SwitchStatement_node {
 static void
 SwitchStatement_caseblock(n, context, input, res)
 	struct SwitchStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *input, *res;
 {
 	struct case_list *c;
@@ -6927,7 +6927,7 @@ SwitchStatement_caseblock(n, context, input, res)
 static void
 SwitchStatement_eval(n, context, res)
 	struct SwitchStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value *v, r1, r2;
@@ -7074,7 +7074,7 @@ LabelledStatement_parse(parser)
 static void
 ThrowStatement_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r2;
@@ -7151,7 +7151,7 @@ struct TryStatement_node {
 static void
 TryStatement_catch(n, context, C, res)
 	struct TryStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *C, *res;
 {
 	struct SEE_value *tcp;
@@ -7179,7 +7179,7 @@ TryStatement_catch(n, context, C, res)
 static void
 TryStatement_catch_eval(n, context, res)
 	struct TryStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	SEE_try_context_t ctxt;
@@ -7220,7 +7220,7 @@ static struct nodeclass TryStatement_catch_nodeclass
 static void
 TryStatement_finally_eval(n, context, res)
 	struct TryStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r2;
@@ -7263,7 +7263,7 @@ static struct nodeclass TryStatement_finally_nodeclass
 static void
 TryStatement_catchfinally_eval(n, context, res)
 	struct TryStatement_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_value r1, r4, r6, *C = NULL, *retv;
@@ -7411,7 +7411,7 @@ struct Function_node {
 static void
 FunctionDeclaration_fproc(n, context)
 	struct Function_node *n;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SEE_object *funcobj;
 	struct SEE_value   funcval;
@@ -7429,7 +7429,7 @@ FunctionDeclaration_fproc(n, context)
 static void
 FunctionDeclaration_eval(n, context, res)
 	struct Function_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL); /* 14 */
@@ -7508,7 +7508,7 @@ FunctionDeclaration_parse(parser)
 static void
 FunctionExpression_eval(n, context, res)
 	struct Function_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SEE_object *funcobj = NULL, *obj;
@@ -7627,7 +7627,7 @@ FormalParameterList_parse(parser)
 static void
 FunctionBody_eval(n, context, res)
 	struct Unary_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	FPROC(n->a, context);
@@ -7714,7 +7714,7 @@ struct SourceElements_node {
 static void
 SourceElements_eval(n, context, res)
 	struct SourceElements_node *n;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	struct SourceElement *e;
@@ -7736,7 +7736,7 @@ SourceElements_eval(n, context, res)
 static void
 SourceElements_fproc(n, context)
 	struct SourceElements_node *n;
-	struct context *context;
+	struct SEE_context *context;
 {
 	struct SourceElement *e;
 	struct var *v;
@@ -7942,7 +7942,7 @@ SEE_parse_program(interp, inp)
 void
 SEE_eval_functionbody(f, context, res)
 	struct function *f;
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_value *res;
 {
 	EVAL((struct node *)f->body, context, res);
@@ -8193,7 +8193,7 @@ SEE_functionbody_string(interp, f)
  */
 static void
 eval(context, thisobj, argc, argv, res)
-	struct context *context;
+	struct SEE_context *context;
 	int argc;
 	struct SEE_object *thisobj;
 	struct SEE_value **argv, *res;
@@ -8201,7 +8201,7 @@ eval(context, thisobj, argc, argv, res)
 	struct SEE_input *inp;
 	struct function *f;
 	struct SEE_value v;
-	struct context evalcontext;
+	struct SEE_context evalcontext;
 	struct SEE_interpreter *interp = context->interpreter;
 
 	if (argc == 0) {

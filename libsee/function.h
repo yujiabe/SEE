@@ -9,7 +9,7 @@ struct SEE_string;
 struct SEE_scope;
 struct SEE_native;
 struct SEE_object;
-struct context;
+struct SEE_context;
 
 /* Linked list of variable declarations, or formal parameter names */
 struct var {
@@ -30,7 +30,7 @@ struct function {
 
 struct function *SEE_function_make(struct SEE_interpreter *i,
 	struct SEE_string *name, struct var *vars, void *node);
-void SEE_function_put_args(struct context *i, struct function *func,
+void SEE_function_put_args(struct SEE_context *i, struct function *func,
 	int argc, struct SEE_value **argv);
 
 extern struct SEE_objectclass SEE_activation_class;

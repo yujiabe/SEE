@@ -488,7 +488,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	struct context context;
+	struct SEE_context context;
 	struct function_inst *fi;
 	struct SEE_object *activation;
 	struct arguments *arguments;

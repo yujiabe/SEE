@@ -52,7 +52,7 @@ int SEE_context_debug = 0;
  */
 void
 SEE_context_lookup(context, ident, res)
-	struct context *context;
+	struct SEE_context *context;
 	struct SEE_string *ident; 
 	struct SEE_value *res;
 {

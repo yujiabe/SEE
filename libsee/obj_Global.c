@@ -929,7 +929,7 @@ SEE_Global_eval(interp, inp, res)
 	struct SEE_value *res;
 {
 	struct function *f;
-	struct context context;
+	struct SEE_context context;
 	struct SEE_value cres, *v;
 	struct SEE_traceback *old_traceback;
 

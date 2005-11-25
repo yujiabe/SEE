@@ -146,7 +146,7 @@ SEE_function_make(interp, name, params, body)
  */
 void
 SEE_function_put_args(context, f, argc, argv)
-	struct context *context;
+	struct SEE_context *context;
 	struct function *f;
 	int argc;
 	struct SEE_value **argv;
