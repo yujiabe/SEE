@@ -1,6 +1,8 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
+  Add a simple interactive debugger into see-shell
+  Trace hook now exposes context structures for use with SEE_context_eval()
   Fixed bug where malformed unicode text could cause seg fault
   Changed licence (removed BSD advertising clause)
   Fixed bugs where allocated memory was not zeroed

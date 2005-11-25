@@ -33,14 +33,18 @@ extern int optind;
 
 #include <see/see.h>
 #include "shell.h"
+#include "debug.h"
 
 static int run_input(struct SEE_interpreter *, struct SEE_input *,
 	struct SEE_value *);
 static int run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
 static void debug(struct SEE_interpreter *, char);
-static void trace(struct SEE_interpreter *, struct SEE_throw_location *);
+static void trace(struct SEE_interpreter *, struct SEE_throw_location *,
+	struct SEE_context *);
 static void run_html(struct SEE_interpreter *, char *);
+
+static struct debug *debugger;
 
 /* 
  * Enables the debugging flag given by character c.
@@ -81,9 +85,10 @@ debug(interp, c)
  * the program parse tree.
  */
 static void
-trace(interp, loc)
+trace(interp, loc, context)
 	struct SEE_interpreter *interp;
 	struct SEE_throw_location *loc;
+	struct SEE_context *context;
 {
 	if (loc) {
 	    fprintf(stderr, "trace: ");
@@ -116,7 +121,10 @@ run_input(interp, inp, res)
 
 	interp->traceback = NULL;
         SEE_TRY (interp, ctxt) {
-            SEE_Global_eval(interp, inp, res);
+	    if (debugger)
+	        debug_eval(interp, debugger, inp, res);
+	    else
+	        SEE_Global_eval(interp, inp, res);
         }
         if (SEE_CAUGHT(ctxt)) {
             fprintf(stderr, "exception:\n");
@@ -412,7 +420,7 @@ main(argc, argv)
 	/* Initialise our interpreter */
 	SEE_interpreter_init(&interp);
 
-	while (!error && (ch = getopt(argc, argv, "c:d:f:h:")) != -1)
+	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:")) != -1)
 	    switch (ch) {
 	    case 'c':
 		if (compatvalue(optarg, &interp.compatibility) == -1)
@@ -432,6 +440,10 @@ main(argc, argv)
 		do_interactive = 0;
 		if (!run_file(&interp, optarg))
 			exit(1);
+		break;
+	    case 'g':
+	    	if (!debugger)
+			debugger = debug_new(&interp);
 		break;
 	    case 'h':
 		interp.compatibility |= SEE_COMPAT_SGMLCOM;
