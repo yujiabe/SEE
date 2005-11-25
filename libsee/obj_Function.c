@@ -56,6 +56,7 @@
 #include "function.h"
 #include "parse.h"
 #include "stringdefs.h"
+#include "scope.h"
 #include "init.h"
 
 /*
@@ -353,7 +354,7 @@ SEE_function_inst_create(interp, f, scope)
 	if (f->cache) {
 		/* Does the cached object have the same scope? */
 		fi = (struct function_inst *)f->cache;
-		if (SEE_context_scope_eq(fi->scope, scope))
+		if (SEE_scope_eq(fi->scope, scope))
 			return f->cache;
 	}
 

@@ -52,6 +52,7 @@
 
 #include "stringdefs.h"
 #include "parse.h"
+#include "scope.h"
 #include "function.h"
 #include "unicode.h"
 #include "dtoa.h"

@@ -37,7 +37,8 @@
 #include <see/native.h>
 #include <see/debug.h>
 #include <see/string.h>
-#include <see/context.h>
+
+#include "scope.h"
 
 #ifndef NDEBUG
 int SEE_context_debug = 0;
@@ -50,22 +51,21 @@ int SEE_context_debug = 0;
  * -- 10.1.4
  */
 void
-SEE_context_lookup(context, ident, res)
-	struct SEE_context *context;
+SEE_scope_lookup(interp, scope, ident, res)
+	struct SEE_interpreter *interp;
+	struct SEE_scope *scope;
 	struct SEE_string *ident; 
 	struct SEE_value *res;
 {
-	struct SEE_scope *scope;
-	struct SEE_interpreter *interp = context->interpreter;
 
-	for (scope = context->scope; scope; scope = scope->next) {
+	for (; scope; scope = scope->next) {
 
 #ifndef NDEBUG
 	    if (SEE_context_debug) {
-		fprintf(stderr, "context_lookup: searching for '");
+		fprintf(stderr, "scope_lookup: searching for '");
 		SEE_string_fputs(ident, stderr);
 		fprintf(stderr, "' in scope %p, obj = ", scope);
-		SEE_PrintObject(context->interpreter, scope->obj, stderr);
+		SEE_PrintObject(interp, scope->obj, stderr);
 		fprintf(stderr, "\n");
 	    }
 #endif
@@ -77,7 +77,7 @@ SEE_context_lookup(context, ident, res)
 		    fprintf(stderr, "context_lookup: found '");
 		    SEE_string_fputs(ident, stderr);
 		    fprintf(stderr, "' in ");
-		    SEE_PrintObject(context->interpreter, scope->obj, stderr);
+		    SEE_PrintObject(interp, scope->obj, stderr);
 		    fprintf(stderr, "\n");
 	        }
 #endif
@@ -102,7 +102,7 @@ SEE_context_lookup(context, ident, res)
  * will incorrectly return false. Simple scope recursion is handled OK.
  */
 int
-SEE_context_scope_eq(s1, s2)
+SEE_scope_eq(s1, s2)
 	struct SEE_scope *s1, *s2;
 {
 	struct SEE_object *o;

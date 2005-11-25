@@ -7,26 +7,24 @@
 struct SEE_string;
 struct SEE_object;
 struct SEE_value;
+struct SEE_scope;
 struct SEE_interpreter;
 
 /*
- * Execution context
+ * Execution context. 
+ * (This structure is only of interest to debugger writers.)
  * -- 10
  */
 struct SEE_context {
 	struct SEE_interpreter *interpreter;
 	struct SEE_object *activation;
 	struct SEE_object *variable;
-	int varattr;
+	int varattr;			/* default attrs for new vars */
 	struct SEE_object *thisobj;
-	struct SEE_scope {
-		struct SEE_scope *next;
-		struct SEE_object *obj;
-	} *scope;
+	struct SEE_scope *scope;
 };
 
-void SEE_context_lookup(struct SEE_context *context,
-	struct SEE_string *name, struct SEE_value *res);
-int SEE_context_scope_eq(struct SEE_scope *scope1, struct SEE_scope *scope2);
+void SEE_eval(struct SEE_context *context, struct SEE_object *thisobj,
+	int argc, struct SEE_value **argv, struct SEE_value *res);
 
 #endif /* _SEE_h_context_ */

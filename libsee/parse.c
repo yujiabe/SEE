@@ -91,6 +91,7 @@
 
 #include "lex.h"
 #include "parse.h"
+#include "scope.h"
 #include "function.h"
 #include "enumerate.h"
 #include "tokens.h"
@@ -754,7 +755,7 @@ static void string_print_char(struct printer *printer, SEE_char_t c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp,
 	struct SEE_string *string);
 
-static void eval(struct SEE_context *context, struct SEE_object *thisobj,
+static void SEE_eval(struct SEE_context *context, struct SEE_object *thisobj,
 	int argc, struct SEE_value **argv, struct SEE_value *res);
 
 /*------------------------------------------------------------
@@ -1285,7 +1286,7 @@ trace_event(ctxt)
 {
 	if (ctxt->interpreter->trace)
 	    (*ctxt->interpreter->trace)(ctxt->interpreter,
-		ctxt->interpreter->try_location);
+		ctxt->interpreter->try_location, ctxt);
 }
 
 /*
@@ -1735,7 +1736,7 @@ PrimaryExpression_ident_eval(n, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	SEE_context_lookup(context, n->string, res);
+	SEE_scope_lookup(context->interpreter, context->scope, n->string, res);
 }
 
 static void
@@ -2491,7 +2492,7 @@ CallExpression_eval(n, context, res)
 		SEE_CALLTYPE_CALL);
 	if (r3.u.object == interp->Global_eval) {
 	    /* The special 'eval' function' */
-	    eval(context, r7, argc, argv, res);
+	    SEE_eval(context, r7, argc, argv, res);
 	} else {
 #ifndef NDEBUG
 	    SEE_SET_STRING(res, STR(internal_error));
@@ -5643,7 +5644,8 @@ VariableDeclaration_eval(n, context, res)
 	struct SEE_value r1, r2, r3;
 
 	if (n->init) {
-		SEE_context_lookup(context, n->var.name, &r1);
+		SEE_scope_lookup(context->interpreter, context->scope, 
+			n->var.name, &r1);
 		EVAL(n->init, context, &r2);
 		GetValue(context, &r2, &r3);
 		PutValue(context, &r1, &r3);
@@ -6368,7 +6370,8 @@ IterationStatement_forvarin_eval(n, context, res)
 	    if (!SEE_OBJECT_HASPROPERTY(interp, r4.u.object, *props))
 		    continue;	/* property was deleted! */
 	    SEE_SET_STRING(&r6, *props);
-	    SEE_context_lookup(context, lhs->var.name, &r7);
+	    SEE_scope_lookup(context->interpreter, context->scope, 
+	    	lhs->var.name, &r7);
 	    PutValue(context, &r7, &r6);
 	    EVAL(n->body, context, res);
 	    if (res->u.completion.value)
@@ -8187,12 +8190,12 @@ SEE_functionbody_string(interp, f)
  * the execution context of the caller (which is not available to 
  * functions and methods invoked via SEE_OBJECT_CALL()).
  *
- * This should only ever get called from CallExpression_eval().
+ * This normally only ever get called from CallExpression_eval().
  * A stub cfunction exists for Global.eval, but it should be bypassed
  * in every case.
  */
-static void
-eval(context, thisobj, argc, argv, res)
+void
+SEE_eval(context, thisobj, argc, argv, res)
 	struct SEE_context *context;
 	int argc;
 	struct SEE_object *thisobj;
