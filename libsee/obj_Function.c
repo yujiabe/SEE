@@ -50,10 +50,10 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/try.h>
+#include <see/context.h>
 
 #include "array.h"
 #include "function.h"
-#include "context.h"
 #include "parse.h"
 #include "stringdefs.h"
 #include "init.h"

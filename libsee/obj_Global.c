@@ -48,9 +48,9 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/debug.h>
+#include <see/context.h>
 
 #include "stringdefs.h"
-#include "context.h"
 #include "parse.h"
 #include "function.h"
 #include "unicode.h"

@@ -53,8 +53,8 @@
 #include <see/interpreter.h>
 #include <see/cfunction.h>
 #include <see/intern.h>
+#include <see/context.h>
 
-#include "context.h"
 #include "init.h"
 
 static void interpreter_abort(struct SEE_interpreter *i, const char *) SEE_dead;

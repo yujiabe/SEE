@@ -87,9 +87,9 @@
 #include <see/error.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+#include <see/context.h>
 
 #include "lex.h"
-#include "context.h"
 #include "parse.h"
 #include "function.h"
 #include "enumerate.h"

@@ -37,8 +37,7 @@
 #include <see/native.h>
 #include <see/debug.h>
 #include <see/string.h>
-
-#include "context.h"
+#include <see/context.h>
 
 #ifndef NDEBUG
 int SEE_context_debug = 0;

@@ -21,6 +21,7 @@ extern "C" {
 #include <see/input.h>
 #include <see/intern.h>
 #include <see/interpreter.h>
+#include <see/context.h>
 #include <see/mem.h>
 #include <see/no.h>
 #include <see/string.h>

@@ -42,8 +42,8 @@
 #include <see/native.h>
 #include <see/interpreter.h>
 #include <see/debug.h>
+#include <see/context.h>
 
-#include "context.h"
 #include "function.h"
 #include "parse.h"
 #include "stringdefs.h"

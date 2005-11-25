@@ -17,7 +17,7 @@ libsee_la_SOURCES= cfunction.c context.c debug.c dtoa.c enumerate.c	\
 
 #cfunction.lo: stringdefs.h stringdefs.inc
 
-noinst_HEADERS=    array.h context.h dtoa.h dtoa_config.h enumerate.h	\
+noinst_HEADERS=    array.h dtoa.h dtoa_config.h enumerate.h	\
                    function.h lex.h parse.h regex.h tokens.h unicode.h	\
 		   init.h
 
