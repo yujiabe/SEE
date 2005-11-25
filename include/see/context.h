@@ -24,7 +24,7 @@ struct SEE_context {
 	struct SEE_scope *scope;
 };
 
-void SEE_eval(struct SEE_context *context, struct SEE_object *thisobj,
-	int argc, struct SEE_value **argv, struct SEE_value *res);
+void SEE_context_eval(struct SEE_context *context, struct SEE_string *expr,
+	struct SEE_value *res);
 
 #endif /* _SEE_h_context_ */

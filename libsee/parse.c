@@ -755,7 +755,7 @@ static void string_print_char(struct printer *printer, SEE_char_t c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp,
 	struct SEE_string *string);
 
-static void SEE_eval(struct SEE_context *context, struct SEE_object *thisobj,
+static void eval(struct SEE_context *context, struct SEE_object *thisobj,
 	int argc, struct SEE_value **argv, struct SEE_value *res);
 
 /*------------------------------------------------------------
@@ -2492,7 +2492,7 @@ CallExpression_eval(n, context, res)
 		SEE_CALLTYPE_CALL);
 	if (r3.u.object == interp->Global_eval) {
 	    /* The special 'eval' function' */
-	    SEE_eval(context, r7, argc, argv, res);
+	    eval(context, r7, argc, argv, res);
 	} else {
 #ifndef NDEBUG
 	    SEE_SET_STRING(res, STR(internal_error));
@@ -8194,11 +8194,11 @@ SEE_functionbody_string(interp, f)
  * A stub cfunction exists for Global.eval, but it should be bypassed
  * in every case.
  */
-void
-SEE_eval(context, thisobj, argc, argv, res)
+static void
+eval(context, thisobj, argc, argv, res)
 	struct SEE_context *context;
-	int argc;
 	struct SEE_object *thisobj;
+	int argc;
 	struct SEE_value **argv, *res;
 {
 	struct SEE_input *inp;
@@ -8266,6 +8266,20 @@ SEE_eval(context, thisobj, argc, argv, res)
 	    SEE_SET_UNDEFINED(res);
 	else
 	    SEE_VALUE_COPY(res, v.u.completion.value);
+}
+
+/* Helper function for external debuggers wanting to use a context */
+void
+SEE_context_eval(context, expr, res)
+	struct SEE_context *context;
+	struct SEE_string *expr;
+	struct SEE_value *res;
+{
+	struct SEE_value s, *argv[1];
+
+	argv[0] = &s;
+	SEE_SET_STRING(argv[0], expr);
+	eval(context, context->interpreter->Global, 1, argv, res);
 }
 
 #if 0
