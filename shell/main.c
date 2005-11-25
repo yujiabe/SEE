@@ -31,16 +31,7 @@ extern char *optarg;
 extern int optind;
 #endif
 
-#if HAVE_READLINE_H
-# include <readline.h>
-#else
-# if HAVE_READLINE_READLINE_H
-#  include <readline/readline.h>
-# endif
-#endif
-
 #include <see/see.h>
-
 #include "shell.h"
 
 static int run_input(struct SEE_interpreter *, struct SEE_input *,
@@ -184,45 +175,6 @@ run_file(interp, filename)
 	SEE_INPUT_CLOSE(inp);
 	return ok;
 }
-
-#if !HAVE_READLINE
-
-#if !HAVE_STRDUP
-/* Duplicates a string using dynamically allocated memory. */
-static char *
-strdup(s)
-	const char *s;
-{
-	int len = strlen(s);
-	char *t = (char *)malloc(len + 1);
-	memcpy(t, s, len + 1);
-	return t;
-}
-#endif /* !HAVE_STRDUP */
-
-/*
- * Reads a line of prompted text from the user.
- * This is a simple replacement for GNU readline.
- */
-static char *
-readline(prompt)
-	char *prompt;
-{
-	char buf[1024], *ret;
-	int len;
-
-	printf("%s", prompt);
-	fflush(stdout);
-	ret = fgets(buf, sizeof buf, stdin);
-	if (!ret) return NULL;
-	len = strlen(ret);
-	while (len && (ret[len-1] == '\n' || ret[len-1] == '\r'))
-		len--;
-	ret[len] = '\0';
-	return (char *)strdup(ret);
-}
-
-#endif /* !HAVE_READLINE */
 
 /*
  * Reads lines of ECMAscript from the user
