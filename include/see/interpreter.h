@@ -9,6 +9,7 @@
 struct SEE_object;
 struct SEE_try_context;
 struct SEE_throw_location;
+struct SEE_context;
 struct SEE_scope;
 
 /*
@@ -68,7 +69,8 @@ struct SEE_interpreter {
 	int recursion_limit;		/* -1 means don't care */
 
 	/* Trace hook, called by interpreter at each step if not NULL */
-	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *);
+	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,
+			struct SEE_context *);
 };
 
 /* Compatibility flags */
