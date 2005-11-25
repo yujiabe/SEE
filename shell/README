@@ -10,7 +10,9 @@ an interactive (prompted) mode.
 
 Usage
 -----
-	shell [-d<debugflags>] [-c value] [-f file] [-h htmlfile] 
+	shell [-g] [-d<debugflags>] [-c value] [-f file] [-h htmlfile] 
+
+The '-g' option drops into the interactive debugger - see below for details.
 
 The '-f file' and '-h htmlfile' options can be specified multiple times.
 Each time they are specified, the given files are loaded and run.
@@ -77,6 +79,26 @@ In HTML mode the following objects are provided:
  document.navigator  - a simple Object used as a placeholder
  document.userAgent  - "SEE-shell (see-1.0)" or similar
  document.window     - a reference to the Global object
+
+Interactive debugger
+--------------------
+
+The simple interactive debugger demonstrates how the SEE library can be
+controlled by a debugger via the trace() callback. The first time
+ECMAScript code is excuted, the debugger provides a prompt to the
+user. Command available at the prompt include:
+
+	break [<filename>:]<lineno>	- add a new breakpoint
+	show				- show current breakpoints
+	delete <number>			- delete existing breakpoint
+
+	step				- step to a new line
+	cont				- continue execution
+
+	where				- print traceback information
+	info				- current context information
+	eval <expr>			- evaluate expression in context
+	throw <expr>			- throw an exception value
 
 
 David Leonard
