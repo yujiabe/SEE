@@ -2613,6 +2613,14 @@ Unary_visit(n, v, va)
 	VISIT(n->a, v, va);
 }
 
+static void
+Unary_print(n, printer)
+	struct Unary_node *n;
+	struct printer *printer;
+{
+	PRINT(n->a);
+}
+
 static int
 Unary_isconst(n, interp)
 	struct Unary_node *n;
@@ -3089,6 +3097,15 @@ Binary_visit(n, v, va)
 {
 	VISIT(n->a, v, va);
 	VISIT(n->b, v, va);
+}
+
+static void
+Binary_print(n, printer)
+	struct Binary_node *n;
+	struct printer *printer;
+{
+	PRINT(n->a);
+	PRINT(n->b);
 }
 
 static int
@@ -5469,17 +5486,8 @@ StatementList_eval(n, context, res)
 	}
 }
 
-static void
-StatementList_print(n, printer)
-	struct Binary_node *n;
-	struct printer *printer;
-{
-	PRINT(n->a);
-	PRINT(n->b);
-}
-
 static struct nodeclass StatementList_nodeclass
-	= { StatementList_eval, 0, StatementList_print,
+	= { StatementList_eval, 0, Binary_print,
 	    Binary_visit, Binary_isconst };
 
 static struct node *
@@ -6036,7 +6044,14 @@ IterationStatement_dowhile_isconst(n, interp)
         struct IterationStatement_while_node *n;
 	struct SEE_interpreter *interp;
 {
-	return ISCONST(n->body, interp) && ISCONST(n->cond, interp);
+	if (ISCONST(n->cond, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		return r3.u.boolean ? 0 : ISCONST(n->body, interp);
+	} else
+		return 0;
 }
 
 static struct nodeclass IterationStatement_dowhile_nodeclass
@@ -6201,9 +6216,34 @@ IterationStatement_for_visit(n, v, va)
 	VISIT(n->body, v, va);
 }
 
+static int
+IterationStatement_for_isconst(n, interp)
+        struct IterationStatement_for_node *n;
+	struct SEE_interpreter *interp;
+{
+	if (n->cond && ISCONST(n->cond, interp)) {
+		struct SEE_value r1, r3;
+		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
+		SEE_ToBoolean(interp, &r1, &r3);
+		if (r3.u.boolean)
+			return 0;	/* Infinite loop */
+		if (n->init && !ISCONST(n->init, interp))
+			return 0;
+		if (n->cond && !ISCONST(n->cond, interp))
+			return 0;
+		if (n->incr && !ISCONST(n->incr, interp))
+			return 0;
+		return ISCONST(n->body, interp);
+	} else
+		return 0;
+}
+
 static struct nodeclass IterationStatement_for_nodeclass
 	= { IterationStatement_for_eval, 0,
-	    IterationStatement_for_print };
+	    IterationStatement_for_print,
+	    IterationStatement_for_visit,
+	    IterationStatement_for_isconst };
 
 /* 12.6.3 - "for (var init; cond; incr) body" */
 static void
@@ -6272,7 +6312,9 @@ IterationStatement_forvar_print(n, printer)
 
 static struct nodeclass IterationStatement_forvar_nodeclass
 	= { IterationStatement_forvar_eval, 0,
-	    IterationStatement_forvar_print };
+	    IterationStatement_forvar_print,
+	    IterationStatement_for_visit,
+	    IterationStatement_for_isconst };
 
 
 struct IterationStatement_forin_node {
@@ -6341,9 +6383,21 @@ IterationStatement_forin_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+IterationStatement_forin_visit(n, v, va)
+	struct IterationStatement_forin_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT(n->lhs, v, va);
+	VISIT(n->list, v, va);
+	VISIT(n->body, v, va);
+}
+
 static struct nodeclass IterationStatement_forin_nodeclass
 	= { IterationStatement_forin_eval, 0,
-	    IterationStatement_forin_print };
+	    IterationStatement_forin_print,
+	    IterationStatement_forin_visit, 0 };
 
 
 static void
@@ -6413,7 +6467,8 @@ IterationStatement_forvarin_print(n, printer)
 
 static struct nodeclass IterationStatement_forvarin_nodeclass
 	= { IterationStatement_forvarin_eval, 0,
-	    IterationStatement_forvarin_print };
+	    IterationStatement_forvarin_print, 
+	    IterationStatement_forin_visit, 0 };
 
 
 static struct node *
@@ -6724,9 +6779,19 @@ ReturnStatement_print(n, printer)
 	PRINT_NEWLINE(0);
 }
 
+static void
+ReturnStatement_visit(n, v, va)
+	struct ReturnStatement_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT(n->expr, v, va);
+}
+
 static struct nodeclass ReturnStatement_nodeclass
 	= { ReturnStatement_eval, 0,
-	    ReturnStatement_print };
+	    ReturnStatement_print,
+	    ReturnStatement_visit, 0 };
 
 
 static void
@@ -6752,7 +6817,8 @@ ReturnStatement_undef_print(n, printer)
 
 static struct nodeclass ReturnStatement_undef_nodeclass
 	= { ReturnStatement_undef_eval, 0,
-	    ReturnStatement_undef_print };
+	    ReturnStatement_undef_print,
+	    0, 0 };
 
 
 static struct node *
@@ -6828,7 +6894,8 @@ WithStatement_print(n, printer)
 
 static struct nodeclass WithStatement_nodeclass
 	= { WithStatement_eval, 0,
-	    WithStatement_print };
+	    WithStatement_print,
+	    Binary_visit, 0 };
 
 
 static struct node *
@@ -6985,9 +7052,26 @@ SwitchStatement_print(n, printer)
 	PRINT_NEWLINE(0);
 }
 
+static void
+SwitchStatement_visit(n, v, va)
+	struct SwitchStatement_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	struct case_list *c;
+
+	VISIT(n->cond, v, va);
+	for (c = n->cases; c; c = c->next) {
+		if (c->expr) 
+		    VISIT(c->expr, v, va);
+		VISIT(c->body, v, va);
+	}
+}
+
 static struct nodeclass SwitchStatement_nodeclass
 	= { SwitchStatement_eval, 0,
-	    SwitchStatement_print };
+	    SwitchStatement_print,
+	    SwitchStatement_visit, 0 };
 
 
 static struct node *
@@ -7103,7 +7187,7 @@ ThrowStatement_print(n, printer)
 }
 
 static struct nodeclass ThrowStatement_nodeclass
-	= { ThrowStatement_eval, 0, ThrowStatement_print };
+	= { ThrowStatement_eval, 0, ThrowStatement_print, Unary_visit, 0 };
 
 static struct node *
 ThrowStatement_parse(parser)
@@ -7216,8 +7300,19 @@ TryStatement_catch_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+TryStatement_catch_visit(n, v, va)
+	struct TryStatement_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT(n->block, v, va);
+	VISIT(n->bcatch, v, va);
+}
+
 static struct nodeclass TryStatement_catch_nodeclass
-	= { TryStatement_catch_eval, 0, TryStatement_catch_print };
+	= { TryStatement_catch_eval, 0, TryStatement_catch_print,
+	    TryStatement_catch_visit, 0 };
 
 
 static void
@@ -7259,8 +7354,19 @@ TryStatement_finally_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+TryStatement_finally_visit(n, v, va)
+	struct TryStatement_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT(n->block, v, va);
+	VISIT(n->bfinally, v, va);
+}
+
 static struct nodeclass TryStatement_finally_nodeclass
-	= { TryStatement_finally_eval, 0, TryStatement_finally_print };
+	= { TryStatement_finally_eval, 0, TryStatement_finally_print,
+	    TryStatement_finally_visit, 0 };
 
 
 static void
@@ -7334,9 +7440,21 @@ TryStatement_catchfinally_print(n, printer)
 	PRINT_NEWLINE(-1);
 }
 
+static void
+TryStatement_catchfinally_visit(n, v, va)
+	struct TryStatement_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT(n->block, v, va);
+	VISIT(n->bcatch, v, va);
+	VISIT(n->bfinally, v, va);
+}
+
 static struct nodeclass TryStatement_catchfinally_nodeclass
 	= { TryStatement_catchfinally_eval, 0, 
-	    TryStatement_catchfinally_print };
+	    TryStatement_catchfinally_print,
+	    TryStatement_catchfinally_visit, 0 };
 
 
 static struct node *
@@ -7428,7 +7546,7 @@ FunctionDeclaration_fproc(n, context)
 }
 
 #if 0
-/* XXX - this is NEVER called */
+/* This is never called. Spec bug? */
 static void
 FunctionDeclaration_eval(n, context, res)
 	struct Function_node *n;
@@ -7470,10 +7588,19 @@ Function_print(n, printer)
 	PRINT_NEWLINE(0);
 }
 
+static void
+Function_visit(n, v, va)
+	struct Function_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	VISIT((struct node *)n->function->body, v, va);
+}
+
 static struct nodeclass FunctionDeclaration_nodeclass
 	= { NULL /* FunctionDeclaration_eval */,
 	    FunctionDeclaration_fproc,
-	    Function_print };
+	    Function_print, Function_visit, 0 };
 
 static struct node *
 FunctionDeclaration_parse(parser)
@@ -7552,7 +7679,7 @@ FunctionExpression_eval(n, context, res)
 
 static struct nodeclass FunctionExpression_nodeclass
 	= { FunctionExpression_eval, 0,
-	    Function_print };
+	    Function_print, Function_visit, 0 };
 
 static struct node *
 FunctionExpression_parse(parser)
@@ -7637,16 +7764,8 @@ FunctionBody_eval(n, context, res)
 	EVAL(n->a, context, res);
 }
 
-static void
-FunctionBody_print(n, printer)
-	struct Unary_node *n;
-	struct printer *printer;
-{
-	PRINT(n->a);
-}
-
 static struct nodeclass FunctionBody_nodeclass
-	= { FunctionBody_eval, 0, FunctionBody_print };
+	= { FunctionBody_eval, 0, Unary_print, Unary_visit, 0 };
 
 static struct node *
 FunctionBody_parse(parser)
@@ -7798,10 +7917,25 @@ SourceElements_print(n, printer)
 		PRINT(e->node);
 }
 
+static void
+SourceElements_visit(n, v, va)
+	struct SourceElements_node *n;
+	visitor_fn_t v;
+	void *va;
+{
+	struct SourceElement *e;
+
+	for (e = n->functions; e; e = e->next)
+		VISIT(e->node, v, va);
+	for (e = n->statements; e; e = e->next)
+		VISIT(e->node, v, va);
+}
+
 static struct nodeclass SourceElements_nodeclass
 	= { SourceElements_eval,
 	    SourceElements_fproc,
-	    SourceElements_print };
+	    SourceElements_print,
+	    SourceElements_visit, 0 };
 
 static struct node *
 SourceElements_parse(parser)
