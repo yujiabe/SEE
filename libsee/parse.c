@@ -117,9 +117,10 @@ typedef void (*visitor_fn_t)(struct node *, void *);
 
 struct nodeclass {
 #ifndef NDEBUG
+	const char *decl_file; int decl_line;
 	struct nodeclass *superclass;
-# define SUPERCLASS(cls)	&cls##_nodeclass,
-# define BASECLASS		NULL,
+# define SUPERCLASS(cls)	__FILE__, __LINE__, &cls##_nodeclass,
+# define BASECLASS		__FILE__, __LINE__, NULL,
 #else
 # define SUPERCLASS(cls)
 # define BASECLASS
@@ -1148,8 +1149,10 @@ cast_node(na, nc, cname, file, line)
 		while (nac && nac != nc)
 		    nac = nac->superclass;
 		if (!nac) {
-		    fprintf(stderr, "%s:%d: cast to %s failed\n",
-			file, line, cname);
+		    fprintf(stderr, "%s:%d: cast to %s failed"
+		    		    " (got class from %s:%d)\n",
+			file, line, cname, na->nodeclass->decl_file,
+					   na->nodeclass->decl_line);
 		    abort();
 		}
 	}
@@ -6427,7 +6430,7 @@ IterationStatement_dowhile_isconst(na, interp)
 }
 
 static struct nodeclass IterationStatement_dowhile_nodeclass
-	= { BASECLASS
+	= { SUPERCLASS(IterationStatement_while)
 	    IterationStatement_dowhile_eval, 0, 
 	    IterationStatement_dowhile_print,
 	    IterationStatement_while_visit,
@@ -6695,7 +6698,7 @@ IterationStatement_forvar_print(na, printer)
 /* NB : the VarDecls of n->init are exposed through parser->vars */
 
 static struct nodeclass IterationStatement_forvar_nodeclass
-	= { BASECLASS
+	= { SUPERCLASS(IterationStatement_for)
 	    IterationStatement_forvar_eval, 0,
 	    IterationStatement_forvar_print,
 	    IterationStatement_for_visit,
@@ -6783,7 +6786,7 @@ IterationStatement_forin_visit(na, v, va)
 }
 
 static struct nodeclass IterationStatement_forin_nodeclass
-	= { BASECLASS
+	= { SUPERCLASS(IterationStatement_forin)
 	    IterationStatement_forin_eval, 0,
 	    IterationStatement_forin_print,
 	    IterationStatement_forin_visit, 0 };
@@ -6857,7 +6860,7 @@ IterationStatement_forvarin_print(na, printer)
 }
 
 static struct nodeclass IterationStatement_forvarin_nodeclass
-	= { BASECLASS
+	= { SUPERCLASS(IterationStatement_forin)
 	    IterationStatement_forvarin_eval, 0,
 	    IterationStatement_forvarin_print, 
 	    IterationStatement_forin_visit, 0 };
