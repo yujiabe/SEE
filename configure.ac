@@ -82,6 +82,30 @@ AC_DEFUN([SEE_CHECK___FUNCTION__],
   ])
 SEE_CHECK___FUNCTION__
 
+dnl ------------------------------------------------------------
+dnl developer support
+dnl
+
+AC_ARG_ENABLE(developer,
+    AC_HELP_STRING([--enable-developer],
+	           [Enable developer warnings and checks [default=no]]),
+    [developer=yes],
+    [developer=no])
+
+if test x"$developer" = x"yes"; then
+    for flag in -Wall -Wmissing-declarations \
+    		 -Wmissing-prototypes  -Wtraditional
+    do
+	AC_MSG_CHECKING([for $flag])
+        CFLAGS_save="$CFLAGS"
+	CFLAGS="$CFLAGS $flag"
+    	AC_COMPILE_IFELSE([/* empty */],
+			  [AC_MSG_RESULT(yes)],
+			  [AC_MSG_RESULT(no)
+			   CFLAGS="$CFLAGS_save"])
+    done
+fi
+
 
 dnl ------------------------------------------------------------
 dnl external libraries
