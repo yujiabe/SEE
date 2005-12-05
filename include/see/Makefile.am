@@ -19,10 +19,12 @@ EXTRA_DIST=     error.h.in try.h.in type.h.in
 CLEANFILES=	error.h try.h type.h inc-subst
 
 inc-subst: $(CONFIG_HEADER)
+	echo 'print "/* Automatically generated. Do not edit. */\n" if $$.==1;'\
+		> inc-subst
 	$(PERL) -n -e \
 	'print if s!^#define\s+(\S+)\s+(.+)!s,\\\@$$1\\\@,$$2/*$$1*/,g;!; \
 	 print if s:^/\*\s*#undef\s+(\S+)\s*\*/.*:s,\\\@$$1\\\@,0/*!$$1*/,g;:; \
-	' < $(CONFIG_HEADER) > inc-subst
+	' < $(CONFIG_HEADER) >> inc-subst
 
 error.h: error.h.in inc-subst
 	$(PERL) -p inc-subst < $(srcdir)/error.h.in > error.h
