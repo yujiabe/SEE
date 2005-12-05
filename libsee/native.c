@@ -32,6 +32,10 @@
 # include <config.h>
 #endif
 
+#if STDC_HEADERS
+# include <string.h>
+#endif
+
 #include <see/native.h>
 #include <see/string.h>
 #include <see/intern.h>

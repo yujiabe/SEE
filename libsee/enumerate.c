@@ -74,10 +74,9 @@ struct propname_list {
 	int dontenum, depth;
 };
 
-static int make_list(struct SEE_interpreter *, struct SEE_object *,
-	int, struct propname_list **);
-static int property_cmp(const struct SEE_string *, const struct SEE_string *);
-static int slist_cmp(void *, void *);
+static int make_list(struct SEE_interpreter *interp, struct SEE_object *o, int depth, struct propname_list **head);
+static int slist_cmp_nice(const void *a, const void *b);
+static int slist_cmp_fast(const void *a, const void *b);
 
 /*
  * Add the property names of the local object to the property name list.
@@ -116,7 +115,7 @@ make_list(interp, o, depth, head)
  */
 static int
 slist_cmp_nice(a, b)
-	void *a, *b;
+	const void *a, *b;
 {
 	struct propname_list **sa = (struct propname_list **)a;
 	struct propname_list **sb = (struct propname_list **)b;
@@ -136,7 +135,7 @@ slist_cmp_nice(a, b)
  */
 static int
 slist_cmp_fast(a, b)
-	void *a, *b;
+	const void *a, *b;
 {
 	struct propname_list **sa = (struct propname_list **)a;
 	struct propname_list **sb = (struct propname_list **)b;

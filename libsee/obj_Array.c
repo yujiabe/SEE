@@ -104,8 +104,6 @@ static int  array_hasproperty(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
 static int  array_delete(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
-static struct SEE_enum *array_enumerator(struct SEE_interpreter *,
-	struct SEE_object *);
 
 /* object class for Array constructor */
 static struct SEE_objectclass array_const_class = {

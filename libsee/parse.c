@@ -73,6 +73,7 @@
 #if STDC_HEADERS
 # include <stdio.h>
 # include <string.h>
+# include <stdlib.h>
 #endif
 
 #include <see/mem.h>
@@ -587,7 +588,6 @@ static void Block_empty_print(struct node *n, struct printer *printer);
 static struct node *Block_parse(struct parser *parser);
 static void StatementList_eval(struct node *n, struct SEE_context *context,
 	struct SEE_value *res);
-static void StatementList_print(struct node *n, struct printer *printer);
 static struct node *StatementList_parse(struct parser *parser);
 static void VariableStatement_eval(struct node *n,
 	struct SEE_context *context, struct SEE_value *res);
@@ -726,7 +726,6 @@ static struct node *FunctionExpression_parse(struct parser *parser);
 static struct var *FormalParameterList_parse(struct parser *parser);
 static void FunctionBody_eval(struct node *n, struct SEE_context *context,
 	struct SEE_value *res);
-static void FunctionBody_print(struct node *n, struct printer *printer);
 static struct node *FunctionBody_parse(struct parser *parser);
 static struct function *Program_parse(struct parser *parser);
 static void SourceElements_eval(struct node *n,
@@ -1149,10 +1148,10 @@ cast_node(na, nc, cname, file, line)
 		while (nac && nac != nc)
 		    nac = nac->superclass;
 		if (!nac) {
-		    fprintf(stderr, "%s:%d: cast to %s failed"
-		    		    " (got class from %s:%d)\n",
+		    fprintf(stderr, "%s:%d: internal error: cast to %s failed"
+		    		    " (source class from %s:%d) [vers %s]\n",
 			file, line, cname, na->nodeclass->decl_file,
-					   na->nodeclass->decl_line);
+		        na->nodeclass->decl_line, PACKAGE_VERSION);
 		    abort();
 		}
 	}
@@ -1549,10 +1548,9 @@ error_at(struct parser *parser, const char *fmt, ...)
 
 static int
 Always_isconst(na, interp)
-	struct node *na; /* (struct Literal_node) */
+	struct node *na;
 	struct SEE_interpreter *interp;
 {
-	struct Literal_node *n = CAST_NODE(na, Literal);
 	return 1;
 }
 
@@ -7205,7 +7203,7 @@ ReturnStatement_undef_eval(na, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
+/*	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement); */
 	static struct SEE_value undef = { SEE_UNDEFINED };
 
 	_SEE_SET_COMPLETION(res, SEE_RETURN, &undef, NULL);
@@ -7216,7 +7214,7 @@ ReturnStatement_undef_print(na, printer)
 	struct node *na; /* (struct ReturnStatement_node) */
 	struct printer *printer;
 {
-	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
+/*	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement); */
 	PRINT_STRING(STR(return));
 	PRINT_CHAR(';');
 	PRINT_NEWLINE(0);

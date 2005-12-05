@@ -34,6 +34,7 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
+# include <string.h>
 #endif
 
 #include <see/interpreter.h>

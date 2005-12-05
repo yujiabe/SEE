@@ -32,7 +32,12 @@
 # include <config.h>
 #endif
 
+#if STDC_HEADERS
+# include <string.h>
+#endif
+
 #include <see/mem.h>
+#include <see/type.h>
 #include <see/value.h>
 #include <see/string.h>
 #include <see/object.h>

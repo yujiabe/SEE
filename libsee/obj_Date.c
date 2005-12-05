@@ -34,6 +34,7 @@
 
 #if STDC_HEADERS
 # include <math.h>
+# include <string.h>
 #endif
 
 #if TIME_WITH_SYS_TIME
@@ -127,8 +128,6 @@ static SEE_number_t DaylightSavingTA(SEE_number_t t);	/* 15.9.1.8(9) */
 #define	msPerHour		(msPerMinute * MinutesPerHour)
 
 static SEE_number_t modulo(SEE_number_t, SEE_number_t);
-static SEE_number_t getLocalTZA(void);
-static SEE_number_t getDaylightSavingTA(SEE_number_t);
 static SEE_number_t MakeTime(SEE_number_t, SEE_number_t,	/* 15.9.1.11 */
 				SEE_number_t, SEE_number_t);
 static SEE_number_t MakeDay(SEE_number_t, SEE_number_t,		/* 15.9.1.12 */
@@ -2048,9 +2047,6 @@ date_proto_setYear(interp, self, thisobj, argc, argv, res)
 /* Map from leapyearness/firstdayofweek to a year */
 static unsigned int yearmap[2][7];
 
-/* Local timezone offset in milliseconds */
-static int localtza;
-
 /* Initialises the yearmap matrix based on the current year */
 void
 init_yearmap() 
@@ -2059,7 +2055,7 @@ init_yearmap()
 	int year;
 	struct tm *tm;
 	time_t now = time(NULL);
-	int i, count;
+	int count;
 
 	tm = localtime(&now);
 	year = 1900 + tm->tm_year;		/* TM_YEAR_BASE */
