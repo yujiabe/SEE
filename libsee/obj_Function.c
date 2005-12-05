@@ -301,7 +301,7 @@ SEE_Function_init(interp)
 	SEE_SET_OBJECT(&v, Function_prototype);
 	SEE_OBJECT_PUT(interp, Function, STR(prototype), &v, 	/* 15.3.3.1 */
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
-};
+}
 
 
 /* Convert an object to a function instance, or raise a TypeError */
