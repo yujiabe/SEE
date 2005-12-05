@@ -83,7 +83,7 @@ SEE_PrintValue(interp, v, f)
 	    break;
 	case SEE_COMPLETION:
 	    switch (v->u.completion.type) {
-	    case SEE_NORMAL:
+	    case SEE_COMPLETION_NORMAL:
 		fprintf(f, "<normal");
 		if (v->u.completion.value) {
 		    fprintf(f, " ");
@@ -91,24 +91,24 @@ SEE_PrintValue(interp, v, f)
 		}
 		fprintf(f, ">");
 		break;
-	    case SEE_BREAK:
+	    case SEE_COMPLETION_BREAK:
 		fprintf(f, "<break");
 		if (v->u.completion.target != (void *)1)
 			fprintf(f, " %p", v->u.completion.target);
 		fprintf(f, ">");
 		break;
-	    case SEE_CONTINUE:
+	    case SEE_COMPLETION_CONTINUE:
 		fprintf(f, "<continue");
 		if (v->u.completion.target != (void *)2)
 			fprintf(f, " %p", v->u.completion.target);
 		fprintf(f, ">");
 		break;
-	    case SEE_RETURN:
+	    case SEE_COMPLETION_RETURN:
 		fprintf(f, "<return ");
 		SEE_PrintValue(interp, v->u.completion.value, f);
 		fprintf(f, ">");
 		break;
-	    case SEE_THROW:
+	    case SEE_COMPLETION_THROW:
 		fprintf(f, "<throw ");
 		SEE_PrintValue(interp, v->u.completion.value, f);
 		fprintf(f, ">");

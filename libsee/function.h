@@ -46,4 +46,9 @@ struct SEE_string *SEE_function_getname(struct SEE_interpreter * i,
 struct SEE_string *SEE_cfunction_getname(struct SEE_interpreter *i,
         struct SEE_object *o);
 
+/* cfunction.h */
+void SEE_cfunction_toString(struct SEE_interpreter *,
+    struct SEE_object *, struct SEE_object *,
+    int, struct SEE_value **, struct SEE_value *);
+
 #endif /* _SEE_h_function_ */

@@ -205,7 +205,7 @@ shell_add_document(interp)
 
 	/* Create a string and attach as 'navigator.userAgent' */
 	SEE_SET_STRING(&v, SEE_string_sprintf(interp, 
-		"SEE-shell (" PACKAGE "-" VERSION ")" ));
+		"SEE-shell (%s-%s)", PACKAGE, VERSION));
 	SEE_OBJECT_PUT(interp, navigator, s_userAgent, &v, 0);
 
 	/* Create a dummy 'window' object */

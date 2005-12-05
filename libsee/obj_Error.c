@@ -46,6 +46,7 @@
 #include <see/mem.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+#include <see/error.h>
 
 #include "stringdefs.h"
 #include "init.h"

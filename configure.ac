@@ -46,6 +46,9 @@ AC_CHECK_HEADERS([stdint.h inttypes.h],,,[;])
 dnl (This is for some windows compat)
 AC_CHECK_HEADERS([windows.h getopt.h],,,[;])
 
+dnl (And others)
+AC_CHECK_HEADERS([float.h],,,[;])
+
 dnl ------------------------------------------------------------
 dnl C compiler features
 dnl

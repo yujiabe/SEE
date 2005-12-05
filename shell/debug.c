@@ -6,6 +6,8 @@
  */
 
 #include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
 #include <see/see.h>
 #include "shell.h"
 #include "debug.h"
@@ -307,7 +309,6 @@ location_parse(interp, debug, loc, nloc, argp)
 
 	if (*p && isdigit(*p) && filename) {
 		/* pure line number */
-setlineno:
 		while (*p && isdigit(*p)) {
 			lineno = lineno * 10 + *p - '0';
 			p++;
@@ -410,7 +411,7 @@ debug_add_bp(interp, debug, filename, lineno)
 	struct SEE_throw_location loc;
 	struct breakpoint *bp;
 
-	loc.filename = SEE_string_sprintf("%s", filename);
+	loc.filename = SEE_string_sprintf(interp, "%s", filename);
 	loc.lineno = lineno;
 	bp = bp_add(interp, debug, &loc, 0, 0);
 	fprintf(stderr, "added breakpoint: ");
@@ -461,6 +462,7 @@ cmd_delete(interp, debug, loc, context, arg)
 	char *p;
 	int id;
 
+	p = arg;
 	if (!*p || !isdigit(*p)) {
 		fprintf(stderr, "expected number\n");
 		return 0;
@@ -543,8 +545,7 @@ cmd_throw(interp, debug, loc, context, arg)
 	if (SEE_CAUGHT(ctxt)) {
 		char *yn;
 
-		fprintf(stderr, "An exception occured while evaluating "
-				"the expression\n  exception: ");
+		fprintf(stderr, "An exception occured while evaluating the expression\n  exception: ");
 		SEE_PrintValue(interp, SEE_CAUGHT(ctxt), stderr);
 		fprintf(stderr, "\n");
 		yn = readline("Throw this exception instead? [n]: ");

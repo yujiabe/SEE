@@ -5774,7 +5774,7 @@ Block_empty_eval(n, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
 
 static void
@@ -5826,7 +5826,7 @@ StatementList_eval(na, context, res)
 	struct SEE_value *val;
 
 	EVAL(n->a, context, res);
-	if (res->u.completion.type == SEE_NORMAL) {
+	if (res->u.completion.type == SEE_COMPLETION_NORMAL) {
 		val = res->u.completion.value;
 		EVAL(n->b, context, res);
 		if (res->u.completion.value == NULL)
@@ -5907,7 +5907,7 @@ VariableStatement_eval(na, context, res)
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	struct SEE_value v;
 	EVAL(n->a, context, &v);
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
 
 static void
@@ -6099,7 +6099,7 @@ EmptyStatement_eval(n, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
 
 static void
@@ -6145,7 +6145,7 @@ ExpressionStatement_eval(na, context, res)
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	struct SEE_value *v = SEE_NEW(context->interpreter, struct SEE_value);
 	EVAL(n->a, context, v);
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -6210,7 +6210,7 @@ IfStatement_eval(na, context, res)
 	else if (n->bfalse)
 		EVAL(n->bfalse, context, res);
 	else
-		_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
 
 static void
@@ -6358,23 +6358,23 @@ IterationStatement_dowhile_eval(na, context, res)
 step2:	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
-	if (res->u.completion.type == SEE_CONTINUE &&
+	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	    goto step7;
-	if (res->u.completion.type == SEE_BREAK &&
+	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
-	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
 	}
-	if (res->u.completion.type != SEE_NORMAL)
+	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 	    return;
  step7: EVAL(n->cond, context, &r7);
 	GetValue(context, &r7, &r8);
 	SEE_ToBoolean(context->interpreter, &r8, &r9);
 	if (r9.u.boolean)
 		goto step2;
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -6449,22 +6449,22 @@ IterationStatement_while_eval(na, context, res)
 	GetValue(context, &r2, &r3);
 	SEE_ToBoolean(context->interpreter, &r3, &r4);
 	if (!r4.u.boolean) {
-	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
 	}
 	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 		v = res->u.completion.value;
-	if (res->u.completion.type == SEE_CONTINUE &&
+	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 		goto step2;
-	if (res->u.completion.type == SEE_BREAK &&
+	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
-	    _SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
 	}
-	if (res->u.completion.type != SEE_NORMAL)
+	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 	    return;
 	goto step2;
 }
@@ -6542,20 +6542,20 @@ IterationStatement_for_eval(na, context, res)
 	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
-	if (res->u.completion.type == SEE_BREAK &&
+	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 		goto step19;
-	if (res->u.completion.type == SEE_CONTINUE &&
+	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 		goto step15;
-	if (res->u.completion.type != SEE_NORMAL)
+	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
 step15: if (n->incr) {
 	    EVAL(n->incr, context, &r16);
 	    GetValue(context, &r16, &r17);	/* r17 not used */
 	}
 	goto step5;
-step19:	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+step19:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -6649,20 +6649,20 @@ IterationStatement_forvar_eval(na, context, res)
 	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
-	if (res->u.completion.type == SEE_BREAK &&
+	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 		goto step17;
-	if (res->u.completion.type == SEE_CONTINUE &&
+	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 		goto step13;
-	if (res->u.completion.type != SEE_NORMAL)
+	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
 step13: if (n->incr) {
 	    EVAL(n->incr, context, &r14);
 	    GetValue(context, &r14, &r15); 		/* value not used */
 	}
 	goto step3;
-step17:	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+step17:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -6736,16 +6736,16 @@ IterationStatement_forin_eval(na, context, res)
 	    EVAL(n->body, context, res);
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
-	    if (res->u.completion.type == SEE_BREAK &&
+	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 		res->u.completion.target == NODE_TO_TARGET(n))
 		    break;
-	    if (res->u.completion.type == SEE_CONTINUE &&
+	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 		res->u.completion.target == NODE_TO_TARGET(n))
 		    continue;
-	    if (res->u.completion.type != SEE_NORMAL)
+	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
 	}
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -6821,16 +6821,16 @@ IterationStatement_forvarin_eval(na, context, res)
 	    EVAL(n->body, context, res);
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
-	    if (res->u.completion.type == SEE_BREAK &&
+	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 		res->u.completion.target == NODE_TO_TARGET(n))
 		    break;
-	    if (res->u.completion.type == SEE_CONTINUE &&
+	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
 		res->u.completion.target == NODE_TO_TARGET(n))
 		    continue;
-	    if (res->u.completion.type != SEE_NORMAL)
+	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
 	}
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
 static void
@@ -7019,7 +7019,7 @@ ContinueStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct ContinueStatement_node *n = CAST_NODE(na, ContinueStatement);
-	_SEE_SET_COMPLETION(res, SEE_CONTINUE, NULL, n->target);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_CONTINUE, NULL, n->target);
 }
 
 static void
@@ -7089,7 +7089,7 @@ BreakStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct BreakStatement_node *n = CAST_NODE(na, BreakStatement);
-	_SEE_SET_COMPLETION(res, SEE_BREAK, NULL, n->target);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_BREAK, NULL, n->target);
 }
 
 static void
@@ -7164,7 +7164,7 @@ ReturnStatement_eval(na, context, res)
 	EVAL(n->expr, context, &r2);
 	v = SEE_NEW(context->interpreter, struct SEE_value);
 	GetValue(context, &r2, v);
-	_SEE_SET_COMPLETION(res, SEE_RETURN, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, v, NULL);
 }
 
 static void
@@ -7206,7 +7206,7 @@ ReturnStatement_undef_eval(na, context, res)
 /*	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement); */
 	static struct SEE_value undef = { SEE_UNDEFINED };
 
-	_SEE_SET_COMPLETION(res, SEE_RETURN, &undef, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, &undef, NULL);
 }
 
 static void
@@ -7394,11 +7394,11 @@ SwitchStatement_caseblock(n, context, input, res)
 	}
 	if (!c)
 	    c = n->defcase;	/* can be NULL, meaning no default */
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 	for (; c; c = c->next) {
 	    if (c->body)
 		EVAL(c->body, context, res);
-	    if (res->u.completion.type != SEE_NORMAL)
+	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		break;
 	}
 }
@@ -7415,11 +7415,11 @@ SwitchStatement_eval(na, context, res)
 	EVAL(n->cond, context, &r1);
 	GetValue(context, &r1, &r2);
 	SwitchStatement_caseblock(n, context, &r2, res);
-	if (res->u.completion.type == SEE_BREAK &&
+	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    res->u.completion.target == NODE_TO_TARGET(n))
 	{
 		v = res->u.completion.value;
-		_SEE_SET_COMPLETION(res, SEE_NORMAL, v, NULL);
+		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	}
 }
 
@@ -7652,7 +7652,7 @@ static struct nodeclass TryStatement_nodeclass
 
 /*
  * Helper function to evaluate the catch clause in a new scope.
- * Weill return a SEE_THROW completion instead of directly throwing
+ * Weill return a SEE_COMPLETION_THROW completion instead of directly throwing
  * an exception.
  */
 static void
@@ -7679,7 +7679,7 @@ TryStatement_catch(n, context, C, res)
 	if (SEE_CAUGHT(ctxt)) {
 	    tcp = SEE_NEW(interp, struct SEE_value);
 	    SEE_VALUE_COPY(tcp, SEE_CAUGHT(ctxt));
-	    _SEE_SET_COMPLETION(res, SEE_THROW, tcp, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_THROW, tcp, NULL);
 	}
 }
 
@@ -7696,7 +7696,7 @@ TryStatement_catch_eval(na, context, res)
 	    EVAL(n->block, context, res);
 	if (SEE_CAUGHT(ctxt))
 	    TryStatement_catch(n, context, SEE_CAUGHT(ctxt), res);
-	if (res->u.completion.type == SEE_THROW)
+	if (res->u.completion.type == SEE_COMPLETION_THROW)
 	    SEE_THROW(context->interpreter, res->u.completion.value);
 }
 
@@ -7752,11 +7752,12 @@ TryStatement_finally_eval(na, context, res)
 	SEE_TRY(context->interpreter, ctxt)
 	    EVAL(n->block, context, res);
 	if (SEE_CAUGHT(ctxt))
-	    _SEE_SET_COMPLETION(res, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_THROW, 
+	    	SEE_CAUGHT(ctxt), NULL);
 	EVAL(n->bfinally, context, &r2);
-	if (r2.u.completion.type != SEE_NORMAL)	 /* for break, return etc */
-	    SEE_VALUE_COPY(res, &r2);
-	if (res->u.completion.type == SEE_THROW)
+	if (r2.u.completion.type != SEE_COMPLETION_NORMAL)
+	    SEE_VALUE_COPY(res, &r2); 		/* break, return etc */
+	if (res->u.completion.type == SEE_COMPLETION_THROW)
 	    SEE_THROW(context->interpreter, res->u.completion.value);
 }
 
@@ -7811,14 +7812,15 @@ TryStatement_catchfinally_eval(na, context, res)
 	SEE_TRY(interp, ctxt)
 /*1*/	    EVAL(n->block, context, &r1);
 	if (SEE_CAUGHT(ctxt)) 
-	    _SEE_SET_COMPLETION(&r1, SEE_THROW, SEE_CAUGHT(ctxt), NULL);
+	    _SEE_SET_COMPLETION(&r1, SEE_COMPLETION_THROW, 
+	        SEE_CAUGHT(ctxt), NULL);
 
 /*2*/	C = &r1;
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(C) == SEE_COMPLETION);
 
-/*3*/	if (C->u.completion.type == SEE_THROW) {
+/*3*/	if (C->u.completion.type == SEE_COMPLETION_THROW) {
 /*4*/	    TryStatement_catch(n, context, C->u.completion.value, &r4);
-/*5*/	    if (r4.u.completion.type != SEE_NORMAL) {
+/*5*/	    if (r4.u.completion.type != SEE_COMPLETION_NORMAL) {
 		C = &r4;
 	    }
 	}
@@ -7826,15 +7828,16 @@ TryStatement_catchfinally_eval(na, context, res)
 	SEE_TRY(interp, ctxt2)
 /*6*/	    EVAL(n->bfinally, context, &r6);
 	if (SEE_CAUGHT(ctxt2))
-	    _SEE_SET_COMPLETION(&r6, SEE_THROW, SEE_CAUGHT(ctxt2), NULL);
+	    _SEE_SET_COMPLETION(&r6, SEE_COMPLETION_THROW, 
+	    	SEE_CAUGHT(ctxt2), NULL);
 
-	if (r6.u.completion.type != SEE_NORMAL)
+	if (r6.u.completion.type != SEE_COMPLETION_NORMAL)
 		retv = C;
 	else
 		retv = &r6;
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(retv) == SEE_COMPLETION);
 		
-	if (retv->u.completion.type == SEE_THROW)
+	if (retv->u.completion.type == SEE_COMPLETION_THROW)
 	    SEE_THROW(interp, retv->u.completion.value);
 	else 
 	    SEE_VALUE_COPY(res, retv);
@@ -7970,7 +7973,7 @@ FunctionDeclaration_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Function_node *n = CAST_NODE(na, Function);
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL); /* 14 */
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL); /* 14 */
 }
 #endif
 
@@ -8297,10 +8300,10 @@ SourceElements_eval(na, context, res)
 	 * so, why bother. We just run the non-functiondecl statements
 	 * instead. It's equivalent.
 	 */
-	_SEE_SET_COMPLETION(res, SEE_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 	for (e = n->statements; e; e = e->next) {
 		EVAL(e->node, context, res);
-		if (res->u.completion.type != SEE_NORMAL)
+		if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 			break;
 	}
 }
@@ -8837,7 +8840,9 @@ eval(context, thisobj, argc, argv, res)
 	/* Evaluate the statement */
 	SEE_eval_functionbody(f, &evalcontext, &v);
 
-	if (SEE_VALUE_GET_TYPE(&v) != SEE_COMPLETION || v.u.completion.type != SEE_NORMAL) {
+	if (SEE_VALUE_GET_TYPE(&v) != SEE_COMPLETION || 
+	    v.u.completion.type != SEE_COMPLETION_NORMAL) 
+	{
 	    /* XXX spec bug: what if the eval did a 'return'? */
 #ifndef NDEBUG
 	    fprintf(stderr, "eval'd string returned ");

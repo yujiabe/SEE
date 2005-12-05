@@ -60,10 +60,16 @@
 #include "init.h"
 
 #if SEE_NUMBER_IS_FLOAT
-# define IS_INF(n)	isinff(n)
-#elif SEE_NUMBER_IS_DOUBLE
-# define IS_INF(n)	isinf(n)
+# define POW(a,b)		powf(a,b)
+# define COPYSIGN(a,b)		copysignf(a,b)
 #endif
+#if SEE_NUMBER_IS_DOUBLE
+# define POW(a,b)		pow(a,b)
+# define COPYSIGN(a,b)		copysign(a,b)
+#endif
+
+#define POSITIVE	(1)
+#define NEGATIVE	(-1)
 
 /*
  * The Global object.
@@ -298,9 +304,9 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	i = 0;
 	while (i < s->length && is_StrWhiteSpace(s->data[i])) 
 		i++;
-	sign = +1;
+	sign = POSITIVE;
 	if (i < s->length && s->data[i] == '-') 
-		sign = -1;
+		sign = NEGATIVE;
 	if (i < s->length && (s->data[i] == '-' || s->data[i] == '+')) 
 		i++;
 	if (argc < 2)
@@ -314,7 +320,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	if ((R == 0 || R == 16) && 
  	    i + 1 < s->length && 
 	    s->data[i] == '0' &&
-	    (s->data[i+1] == 'x' || s->data[i+1] == 'X'))
+	    (s->data[i + 1] == 'x' || s->data[i + 1] == 'X'))
 	{
 		i += 2;
 		R = 16;
@@ -351,11 +357,11 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	}
 	n = 0;
 	for (j = 0; j < i - start; j++) {
-		SEE_number_t factor = pow(R, j);
+		SEE_number_t factor = POW(R, (SEE_number_t)j);
 		SEE_char_t ch;
 		int digit;
 
-		if (IS_INF(factor)) {
+		if (SEE_ISINF(factor)) {
 			n = factor;
 			break;
 		}
@@ -368,7 +374,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 			digit = ch - 'A' + 10;
 		n += factor * digit;
 	}
-	SEE_SET_NUMBER(res, copysign(n, sign));
+	SEE_SET_NUMBER(res, COPYSIGN(n, sign));
 }
 
 
@@ -405,9 +411,9 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 	while (i < s->length && is_StrWhiteSpace(s->data[i]))
 		i++;
 
-	sign = +1;
+	sign = POSITIVE;
 	if (i < s->length && (s->data[i] == '-' || s->data[i] == '+')) {
-		if (s->data[i] == '-') sign = -1;
+		if (s->data[i] == '-') sign = NEGATIVE;
 		i++;
 	}
 
@@ -471,7 +477,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 		return;
 	    }
 	}
-	SEE_SET_NUMBER(res, copysign(n, sign));
+	SEE_SET_NUMBER(res, COPYSIGN(n, sign));
 }
 
 
@@ -639,7 +645,7 @@ Decode(interp, s, resv)
 		if (k + 1 >= s->length)
 		    SEE_error_throw_string(interp, interp->URIError, 
 			STR(uri_badhex));
-		C = urihexval(interp, s->data[k], s->data[k+1]);
+		C = urihexval(interp, s->data[k], s->data[k + 1]);
 		k += 2;
 		if (C & 0x80) {
 		    for (i = 1; i < 6; i++)
@@ -653,7 +659,7 @@ Decode(interp, s, resv)
 			if (!(k + 2 < s->length && s->data[k] == '%'))
 			    SEE_error_throw_string(interp, interp->URIError, 
 				STR(bad_utf8));
-			D = urihexval(interp, s->data[k+1], s->data[k+2]);
+			D = urihexval(interp, s->data[k + 1], s->data[k + 2]);
 			k += 3;
 			if ((D & ~0x3f) != 0x80)
 			    SEE_error_throw_string(interp, interp->URIError, 
@@ -852,23 +858,23 @@ global_unescape(interp, self, thisobj, argc, argv, res)
 	    if (c == '%' && 
 		i + 4 < s->length && 
 		s->data[i] == 'u' &&
-		ishex(s->data[i+1]) &&
-		ishex(s->data[i+2]) &&
-		ishex(s->data[i+3]) &&
-		ishex(s->data[i+4]))
+		ishex(s->data[i + 1]) &&
+		ishex(s->data[i + 2]) &&
+		ishex(s->data[i + 3]) &&
+		ishex(s->data[i + 4]))
 	    {
-		c = (hexval(s->data[i+1]) << 12) |
-		    (hexval(s->data[i+2]) <<  8) |
-		    (hexval(s->data[i+3]) <<  4) |
-		    (hexval(s->data[i+4]) <<  0);
+		c = (hexval(s->data[i + 1]) << 12) |
+		    (hexval(s->data[i + 2]) <<  8) |
+		    (hexval(s->data[i + 3]) <<  4) |
+		    (hexval(s->data[i + 4]) <<  0);
 		i += 5;
 	    } else if (c == '%' &&
 		i + 1 < s->length &&
 		ishex(s->data[i]) &&
-		ishex(s->data[i+1]))
+		ishex(s->data[i + 1]))
 	    {
-		c = (hexval(s->data[i+0]) << 4) |
-		    (hexval(s->data[i+1]) << 0);
+		c = (hexval(s->data[i + 0]) << 4) |
+		    (hexval(s->data[i + 1]) << 0);
 		i += 2;
 	    } else {
 		/* leave character alone */
@@ -953,7 +959,7 @@ SEE_Global_eval(interp, inp, res)
 	if (SEE_VALUE_GET_TYPE(&cres) != SEE_COMPLETION)
 		SEE_error_throw_string(interp, interp->Error, 
 			STR(internal_error));
-	if (cres.u.completion.type != SEE_NORMAL)
+	if (cres.u.completion.type != SEE_COMPLETION_NORMAL)
 		SEE_error_throw_string(interp, interp->Error, 
 			STR(internal_error));
 

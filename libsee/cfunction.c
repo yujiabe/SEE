@@ -47,6 +47,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "cfunction_private.h"
 
 /*
  * cfunction

@@ -8,6 +8,10 @@
  * Machine-dependent types and definitions
  */
 
+#if HAVE_FLOAT_H
+# include <float.h>
+#endif
+
 #if @HAVE_INTTYPES_H@
 # include <inttypes.h>
 
@@ -31,32 +35,42 @@ typedef int32_t  SEE_int32_t;
 /* 16-bit unsigned integer */
 #  if @SIZEOF_UNSIGNED_SHORT@ == 2
 typedef unsigned short	  SEE_uint16_t;
-#  elif @SIZEOF_UNSIGNED_INT@ == 2
-typedef unsigned int	  SEE_uint16_t;
 #  else
-#   error "cannot provide type for SEE_uint16_t"
+#   if @SIZEOF_UNSIGNED_INT@ == 2
+typedef unsigned int	  SEE_uint16_t;
+#   else
+ #   error "cannot provide type for SEE_uint16_t"
+#   endif
 #  endif
 
 /* 32-bit signed integer */
 #  if @SIZEOF_SIGNED_SHORT@ == 4
 typedef signed short	  SEE_int32_t;
-#  elif @SIZEOF_SIGNED_INT@ == 4
-typedef signed int	  SEE_int32_t;
-#  elif @SIZEOF_SIGNED_LONG@ == 4
-typedef signed long	  SEE_int32_t;
 #  else
-#   error "cannot provide type for SEE_int32_t"
+#   if @SIZEOF_SIGNED_INT@ == 4
+typedef signed int	  SEE_int32_t;
+#   else
+#    if @SIZEOF_SIGNED_LONG@ == 4
+typedef signed long	  SEE_int32_t;
+#    else
+ #    error "cannot provide type for SEE_int32_t"
+#    endif
+#   endif
 #  endif
 
 /* 32-bit unsigned integer */
 #  if @SIZEOF_UNSIGNED_SHORT@ == 4
 typedef unsigned short	  SEE_uint32_t;
-#  elif @SIZEOF_UNSIGNED_INT@ == 4
-typedef unsigned int	  SEE_uint32_t;
-#  elif @SIZEOF_UNSIGNED_LONG@ == 4
-typedef unsigned long	  SEE_uint32_t;
 #  else
-#   error "cannot provide type for SEE_uint32_t"
+#   if @SIZEOF_UNSIGNED_INT@ == 4
+typedef unsigned int	  SEE_uint32_t;
+#   else
+#    if @SIZEOF_UNSIGNED_LONG@ == 4
+typedef unsigned long	  SEE_uint32_t;
+#    else
+ #    error "cannot provide type for SEE_uint32_t"
+#    endif
+#   endif
 #  endif
 
 # endif /* !HAVE_STDINT_H */
@@ -64,40 +78,54 @@ typedef unsigned long	  SEE_uint32_t;
 /* 64-bit signed integer */
 # if @SIZEOF_SIGNED_INT@ == 8
 typedef signed int	  SEE_int64_t;
-# elif @SIZEOF_SIGNED_LONG@ == 8
-typedef signed long	  SEE_int64_t;
-# elif @SIZEOF_SIGNED_LONGLONG@ == 8
-typedef signed LONGLONG   SEE_int64_t;
-# elif @SIZEOF_SIGNED_LONG_LONG@ == 8
-typedef signed long long  SEE_int64_t;
 # else
-#  error "cannot provide type for SEE_int64_t"
+#  if @SIZEOF_SIGNED_LONG@ == 8
+typedef signed long	  SEE_int64_t;
+#  else
+#   if @SIZEOF_SIGNED_LONGLONG@ == 8
+typedef signed LONGLONG   SEE_int64_t;
+#   else
+#    if @SIZEOF_SIGNED_LONG_LONG@ == 8
+typedef signed long long  SEE_int64_t;
+#    else
+ #    error "cannot provide type for SEE_int64_t"
+#    endif
+#   endif
+#  endif
 # endif
 
 /* 64-bit unsigned integer */
 # if @SIZEOF_UNSIGNED_INT@ == 8
 typedef unsigned int	  SEE_uint64_t;
-# elif @SIZEOF_UNSIGNED_LONG@ == 8
-typedef unsigned long	  SEE_uint64_t;
-# elif @SIZEOF_UNSIGNED_LONGLONG@ == 8
-typedef unsigned LONGLONG  SEE_uint64_t;
-# elif @SIZEOF_UNSIGNED_LONG_LONG@ == 8
-typedef unsigned long long SEE_uint64_t;
 # else
-#  error "cannot provide type for SEE_uint64_t"
+#  if @SIZEOF_UNSIGNED_LONG@ == 8
+typedef unsigned long	  SEE_uint64_t;
+#  else
+#   if @SIZEOF_UNSIGNED_LONGLONG@ == 8
+typedef unsigned LONGLONG  SEE_uint64_t;
+#   else
+#    if @SIZEOF_UNSIGNED_LONG_LONG@ == 8
+typedef unsigned long long SEE_uint64_t;
+#    else
+ #    error "cannot provide type for SEE_uint64_t"
+#    endif
+#   endif
+#  endif
 # endif
 
 #endif /* !HAVE_INTTYPES_H */
 
 /* 64-bit floating point */
 #if @SIZEOF_FLOAT@ == 8
-#define SEE_NUMBER_IS_FLOAT 1
+# define SEE_NUMBER_IS_FLOAT 1
 typedef float SEE_number_t;
-#elif @SIZEOF_DOUBLE@ == 8
-#define SEE_NUMBER_IS_DOUBLE 1
-typedef double SEE_number_t;
 #else
-# error "cannot provide 64-bit IEEE-754 type for SEE_number_t"
+# if @SIZEOF_DOUBLE@ == 8
+#  define SEE_NUMBER_IS_DOUBLE 1
+typedef double SEE_number_t;
+# else
+ # error "cannot provide 64-bit IEEE-754 type for SEE_number_t"
+# endif
 #endif
 
 typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
@@ -141,7 +169,7 @@ extern const unsigned char
 #  include <alloca.h>
 # else
 #  ifdef _AIX
-#   pragma alloca
+ #  pragma alloca
 #  else
 #   ifndef alloca 		/* predefined by HP cc +Olibcalls */
 #    ifndef @HAVE_ALLOCA@

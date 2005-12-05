@@ -85,13 +85,13 @@ int SEE_lex_debug = 0;
 #define UNGET(c)	do { lex->la[++lex->lalen]=(c); } while (0)
 #define ATEOF		(lex->input->eof)
 #define LOOKAHEAD(buf,len) SEE_input_lookahead_copy(lex->input, buf, len)
-#define CONSUME(c)							\
+#define CONSUME(ch)							\
     do {								\
 	if (ATEOF)							\
 	    SYNTAX_ERROR(STR(unexpected_eof));				\
-	if (NEXT != (c))						\
+	if (NEXT != (ch))						\
 	    SYNTAX_ERROR(SEE_string_sprintf(				\
-		lex->input->interpreter, "expected '%c'", (c)));	\
+		lex->input->interpreter, "expected '%c'", (ch)));	\
 	SKIP;								\
     } while (0)
 
@@ -99,6 +99,10 @@ int SEE_lex_debug = 0;
 	SEE_error_throw_string(lex->input->interpreter,			\
 	    lex->input->interpreter->SyntaxError,			\
 	    prefix_msg(s, lex))
+
+/* Sign constants */
+#define NEGATIVE	(-1)
+#define POSITIVE	(1)
 
 static struct SEE_string * prefix_msg(struct SEE_string *, struct lex *);
 
@@ -870,16 +874,16 @@ SEE_lex_number(interp, s, res)
 		SKIP;
 
 	if (ATEOF) {
-		SEE_SET_NUMBER(res, +0);
+		SEE_SET_NUMBER(res, 0);		/* +0 */
 		return 1;
 	}
 
 	sign = 0;
 	if (NEXT == '-') {
-		sign = -1;
+		sign = NEGATIVE;
 		SKIP;
 	} else if (NEXT == '+') {
-		sign = +1;
+		sign = POSITIVE;
 		SKIP;
 	}
 
@@ -974,7 +978,7 @@ SEE_lex_number(interp, s, res)
 	}
 
    out:
-	if (!sign) sign = +1;
+	if (!sign) sign = POSITIVE;
 
 	/* trailing StrWhiteSpace */
 	while (!ATEOF && (is_WhiteSpace(NEXT) || is_LineTerminator(NEXT)))

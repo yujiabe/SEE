@@ -141,8 +141,7 @@ run_input(interp, inp, res)
 		SEE_PrintTraceback(interp, stderr);
             }
             if (SEE_CAUGHT(ctxt2)) {
-                fprintf(stderr, "exception thrown while "
-				"printing exception");
+                fprintf(stderr, "exception thrown while printing exception");
 		if (ctxt2.throw_file)
 		    fprintf(stderr, " at %s:%d",
 		        ctxt2.throw_file, ctxt2.throw_line);
@@ -340,8 +339,8 @@ dummy_malloc(interp, sz)
 static void
 init_dummy_malloc()
 {
-	fprintf(stderr, "WARNING: no garbage collector. "
-			"Using non-release malloc()\n");
+	fprintf(stderr, 
+	    "WARNING: no garbage collector. Using non-release malloc()\n");
 	SEE_mem_malloc_hook = dummy_malloc;
 }
 
@@ -463,12 +462,15 @@ main(argc, argv)
 	    error = 1;
 
 	if (error) {
-	    fprintf(stderr, "usage: %s [-c flag] "
+	    fprintf(stderr, 
+	        "usage: %s [-c flag] %s[-f file.js | -h file.html]...\n",
+		argv[0],
 #ifndef NDEBUG
-				      "[-d[ETcelnprv]] "
+	        "[-d[ETcelnprv]] "
+#else
+		""
 #endif
-				      "[-f file.js | -h file.html]...\n",
-			argv[0]);
+	    );
 	    exit(1);
 	}
 

@@ -53,6 +53,7 @@
 #include <see/context.h>
 
 #include "array.h"
+#include "cfunction_private.h"
 #include "function.h"
 #include "parse.h"
 #include "stringdefs.h"
@@ -575,9 +576,9 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 
 	SEE_DEFAULT_CATCH(interp, ctxt);
 
-	if (v.u.completion.type == SEE_NORMAL)
+	if (v.u.completion.type == SEE_COMPLETION_NORMAL)
 		SEE_SET_UNDEFINED(res);
-	else if (v.u.completion.type == SEE_RETURN)
+	else if (v.u.completion.type == SEE_COMPLETION_RETURN)
 		SEE_VALUE_COPY(res, v.u.completion.value);
 	else
 		SEE_error_throw_string(interp, interp->Error, 
@@ -634,9 +635,6 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 	     */
 	    extern struct SEE_objectclass SEE_cfunction_class;
 	    if (thisobj && thisobj->objectclass == &SEE_cfunction_class) {
-		    void SEE_cfunction_toString(struct SEE_interpreter *,
-			    struct SEE_object *, struct SEE_object *,
-			    int, struct SEE_value **, struct SEE_value *);
 		    SEE_cfunction_toString(interp, self, thisobj, argc, argv,
 			res);
 		    return;

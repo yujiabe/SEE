@@ -194,7 +194,9 @@ SEE_Array_init(interp)
 	PUTFUNC(unshift, 1)			/* 15.4.4.13 */
 }
 
-#define MAX_ARRAY_INDEX	(4294967295UL)
+#define MAX_ARRAY_INDEX	       4294967295
+#define MAX_ARRAY_INDEX_DIV_10 429496729
+#define MAX_ARRAY_INDEX_MOD_10          5
 
 /*
  * Helper function that returns true if the string
@@ -218,9 +220,9 @@ SEE_to_array_index(s, ip)
 	    if (s->data[i] < '0' || s->data[i] > '9')
 		return 0;
 	    digit = s->data[i] - '0';
-	    if (n > (MAX_ARRAY_INDEX / 10) ||
-	        (n == (MAX_ARRAY_INDEX / 10) && 
-		 digit >= (MAX_ARRAY_INDEX % 10)))
+	    if (n > (MAX_ARRAY_INDEX_DIV_10) ||
+	        (n == (MAX_ARRAY_INDEX_DIV_10) && 
+		 digit >= (MAX_ARRAY_INDEX_MOD_10)))
 		    return 0;
 	    n = n * 10 + digit;
 	}

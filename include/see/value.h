@@ -33,7 +33,7 @@ enum SEE_type {
 	SEE_STRING,
 	SEE_OBJECT,
 	SEE_REFERENCE,			/* internal type (8.7) */
-	SEE_COMPLETION			/* internat type (8.9) */
+	SEE_COMPLETION			/* internal type (8.9) */
 };
 
 /* This structure is not part of the public API and may change */
@@ -46,8 +46,11 @@ struct _SEE_reference {
 struct _SEE_completion {
 	struct SEE_value *value;
 	void *target;
-	enum { SEE_NORMAL, SEE_BREAK, SEE_CONTINUE, 
-	       SEE_RETURN, SEE_THROW } type;
+	enum { SEE_COMPLETION_NORMAL,
+	       SEE_COMPLETION_BREAK, 
+	       SEE_COMPLETION_CONTINUE, 
+	       SEE_COMPLETION_RETURN,
+	       SEE_COMPLETION_THROW } type;
 };
 
 /* Value storage */
@@ -135,10 +138,17 @@ struct SEE_value {
 # define SEE_ISNAN(n)		isnanf(n)
 # define SEE_ISINF(n)		isinff(n)
 # define SEE_ISFINITE(n)	finitef(n)
-#elif SEE_NUMBER_IS_DOUBLE
+# define SEE_FLOOR(n)		floorf(n)
+# define SEE_FMOD(a,b)		fmodf(a,b)
+# define SEE_RINT(n)		rintf(n)
+#endif
+#if SEE_NUMBER_IS_DOUBLE
 # define SEE_ISNAN(n)    	isnan(n)
 # define SEE_ISINF(n)    	isinf(n)
 # define SEE_ISFINITE(n) 	finite(n)
+# define SEE_FLOOR(n)		floor(n)
+# define SEE_FMOD(a,b)		fmod(a,b)
+# define SEE_RINT(n)		rint(n)
 #endif
 #define SEE_NUMBER_ISNAN(v)    SEE_ISNAN((v)->u.number)
 #define SEE_NUMBER_ISINF(v)    SEE_ISINF((v)->u.number)
