@@ -33,8 +33,8 @@ extern unsigned char* SEE_unicode_IP[];
 #define _UNICODE_MAX	0x10ffff
 #define _UNICODE_IS(c, table, grp)				\
 	((c) < _UNICODE_MAX && 					\
-		table[(c)>>grp] &&				\
-		(table[(c)>>grp][((c) >> 3) & ((1<<(grp-3))-1)]	\
+		(table)[(c)>>(grp)] &&				\
+		(table[(c)>>(grp)][((c) >> 3) & ((1<<((grp)-3))-1)]	\
 		    & (1<<((c)&7))))
 
 extern SEE_unicode_t  SEE_unicode_Zscodes[];
