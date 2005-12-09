@@ -57,6 +57,7 @@
 #include "stringdefs.h"
 #include "unicode.h"
 #include "dtoa.h"
+#include "dprint.h"
 
 #ifndef NDEBUG
 int SEE_lex_debug = 0;
@@ -810,19 +811,19 @@ SEE_lex_next(lex)
 	if (SEE_lex_debug)
 	    switch (lex->next) {
 	    case tIDENT:  
-		  fprintf(stderr, "lex: tIDENT ");
-		  SEE_PrintValue(lex->input->interpreter, &lex->value, stderr);
-		  fprintf(stderr, "\n"); break;
+		  dprintf("lex: tIDENT ");
+		  dprintv(lex->input->interpreter, &lex->value);
+		  dprintf("\n"); break;
 	    case tSTRING: 
-		  fprintf(stderr, "lex: tSTRING ");
-		  SEE_PrintValue(lex->input->interpreter, &lex->value, stderr);
-		  fprintf(stderr, "\n"); break;
+		  dprintf("lex: tSTRING ");
+		  dprintv(lex->input->interpreter, &lex->value);
+		  dprintf("\n"); break;
 	    case tNUMBER: 
-		  fprintf(stderr, "lex: tNUMBER ");
-		  SEE_PrintValue(lex->input->interpreter, &lex->value, stderr);
-		  fprintf(stderr, "\n"); break;
+		  dprintf("lex: tNUMBER ");
+		  dprintv(lex->input->interpreter, &lex->value);
+		  dprintf("\n"); break;
 	    default:
-		  fprintf(stderr, "lex: %s\n", SEE_tokenname(lex->next));
+		  dprintf("lex: %s\n", SEE_tokenname(lex->next));
 	}
 #endif
 

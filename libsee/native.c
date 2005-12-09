@@ -45,6 +45,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "dprint.h"
 
 static struct SEE_property **find(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_string *);
@@ -116,16 +117,16 @@ SEE_native_get(interp, o, p, res)
 
 #ifndef NDEBUG
 	if (SEE_native_debug) {
-	    fprintf(stderr, "native_get: o=");
-	    SEE_PrintObject(interp, o, stderr);
-	    fprintf(stderr, " ip=");
-	    SEE_PrintString(interp, ip, stderr);
+	    dprintf("native_get: o=");
+	    dprinto(interp, o);
+	    dprintf(" ip=");
+	    dprints(ip);
 	    if (*x) { 
-		fprintf(stderr, " -> ");
-		SEE_PrintValue(interp, &(*x)->value, stderr);
-		fprintf(stderr, "\n");
+		dprintf(" -> ");
+		dprintv(interp, &(*x)->value);
+		dprintf("\n");
 	    } else 
-		fprintf(stderr, " -> not found\n");
+		dprintf(" -> not found\n");
 	}
 #endif
 
@@ -140,11 +141,11 @@ SEE_native_get(interp, o, p, res)
 	} else {
 #ifndef NDEBUG
 	    if (SEE_native_debug) {
-		fprintf(stderr, "native_get: o=");
-		SEE_PrintObject(interp, o, stderr);
-		fprintf(stderr, " has prototype=");
-		SEE_PrintObject(interp, o->Prototype, stderr);
-		fprintf(stderr, "\n");
+		dprintf("native_get: o=");
+		dprinto(interp, o);
+		dprintf(" has prototype=");
+		dprinto(interp, o->Prototype);
+		dprintf("\n");
 	    }
 #endif
 	    if (!o->Prototype)
@@ -209,13 +210,13 @@ SEE_native_put(interp, o, p, val, attr)
 
 #ifndef NDEBUG
 	if (SEE_native_debug) {
-	    fprintf(stderr, "native_put: o=");
-	    SEE_PrintObject(interp, o, stderr);
-	    fprintf(stderr, " ip=");
-	    SEE_PrintString(interp, ip, stderr);
-	    fprintf(stderr, " <- ");
-	    SEE_PrintValue(interp, val, stderr);
-	    fprintf(stderr, "\n");
+	    dprintf("native_put: o=");
+	    dprinto(interp, o);
+	    dprintf(" ip=");
+	    dprints(ip);
+	    dprintf(" <- ");
+	    dprintv(interp, val);
+	    dprintf("\n");
 	}
 #endif
 }
@@ -263,9 +264,9 @@ SEE_native_hasownproperty(interp, o, p)
 	x = find(interp, o, p);
 #ifndef NDEBUG
 	if (SEE_native_debug) {
-	    fprintf(stderr, "hasownprop: p=");
-	    SEE_PrintString(interp, p, stderr);
-	    fprintf(stderr, " -> %p\n", *x);
+	    dprintf("hasownprop: p=");
+	    dprints(p);
+	    dprintf(" -> %p\n", *x);
 	}
 #endif
 	return *x ? 1 : 0;

@@ -46,6 +46,7 @@
 #include <see/interpreter.h>
 
 #include "stringdefs.h"
+#include "dprint.h"
 
 /*
  * Exception handling
@@ -80,15 +81,15 @@ SEE_throw_abort(interp, v, file, line)
 	int line;
 {
 #ifndef NDEBUG
-	fprintf(stderr, "%s:%d: threw uncatchable exception\n", file, line);
+	dprintf("%s:%d: threw uncatchable exception\n", file, line);
 	if (v != NULL) {
 	    SEE_try_context_t ctx;
-	    fprintf(stderr, "  exception: ");
+	    dprintf("  exception: ");
 	    SEE_TRY(interp, ctx)
-		SEE_PrintValue(interp, v, stderr);
+		dprintv(interp, v);
 	    if (SEE_CAUGHT(ctx))
-		fprintf(stderr, "<error printing value>");
-	    fprintf(stderr, "\n");
+		dprintf("<error printing value>");
+	    dprintf("\n");
 	}
 #endif
 	(*SEE_abort)(interp, "exception thrown but no TRY block");

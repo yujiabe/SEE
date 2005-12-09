@@ -58,6 +58,7 @@
 #include "unicode.h"
 #include "dtoa.h"
 #include "init.h"
+#include "dprint.h"
 
 #if SEE_NUMBER_IS_FLOAT
 # define POW(a,b)		powf(a,b)
@@ -915,9 +916,9 @@ global_writeval(interp, self, thisobj, argc, argv, res)
 	int i;
 
 	for (i = 0; i < argc; i++) {
-		fprintf(stderr, "argv[%d] = ", i);
-		SEE_PrintValue(interp, argv[i], stderr);
-		fprintf(stderr, "\n");
+		dprintf("argv[%d] = ", i);
+		dprintv(interp, argv[i]);
+		dprintf("\n");
 	}
 	SEE_SET_UNDEFINED(res);
 }

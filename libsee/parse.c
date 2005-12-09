@@ -98,6 +98,7 @@
 #include "tokens.h"
 #include "stringdefs.h"
 #include "dtoa.h"
+#include "dprint.h"
 
 #ifndef NDEBUG
 int SEE_parse_debug = 0;
@@ -896,8 +897,7 @@ static void eval(struct SEE_context *context, struct SEE_object *thisobj,
 #ifndef NDEBUG
 #  define SKIP_DEBUG					\
     if (SEE_parse_debug)				\
-      fprintf(stderr, "SKIP: next = %s\n", 		\
-      SEE_tokenname(NEXT));
+      dprintf("SKIP: next = %s\n", SEE_tokenname(NEXT));
 #else
 #  define SKIP_DEBUG
 #endif
@@ -968,7 +968,7 @@ static void eval(struct SEE_context *context, struct SEE_object *thisobj,
     do {						\
 	struct SEE_throw_location * _loc_save = NULL;	\
 	if (SEE_eval_debug) 				\
-	    fprintf(stderr, "eval: %s enter %p\n", 	\
+	    dprintf("eval: %s enter %p\n", 		\
 		__FUNCTION__, n);			\
 	if (ctxt) {					\
 	  _loc_save = (ctxt)->interpreter->try_location;\
@@ -979,12 +979,10 @@ static void eval(struct SEE_context *context, struct SEE_object *thisobj,
 	}						\
 	(*(n)->nodeclass->eval)(n, ctxt, res);		\
 	if (SEE_eval_debug && (ctxt)) {			\
-	    fprintf(stderr, 				\
-		"eval: %s leave %p -> %p = ", 		\
+	    dprintf("eval: %s leave %p -> %p = ", 	\
 		__FUNCTION__, n, (void *)(res));	\
-	    SEE_PrintValue((ctxt)->interpreter, res,	\
-		stderr);				\
-	    fprintf(stderr, "\n");			\
+	    dprintv((ctxt)->interpreter, res);		\
+	    dprintf("\n");				\
 	}						\
 	if (ctxt) {					\
 	  (ctxt)->interpreter->try_location = _loc_save;\
@@ -1043,8 +1041,8 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 #ifndef NDEBUG
 #define PARSE(prod)					\
     ((void)(SEE_parse_debug ? 				\
-	fprintf(stderr, "parse %s next=%s\n", #prod,	\
-	SEE_tokenname(NEXT)) : 0),			\
+	dprintf("parse %s next=%s\n", #prod,		\
+	    SEE_tokenname(NEXT)) : 0),			\
         prod##_parse(parser))
 #else
 #define PARSE(prod)					\
@@ -1123,7 +1121,7 @@ new_node(parser, sz, nc, dbg_nc)
 
 #ifndef NDEBUG
 	if (SEE_parse_debug) 
-		fprintf(stderr, "parse: %p %s (next=%s)\n", 
+		dprintf("parse: %p %s (next=%s)\n", 
 			n, dbg_nc, SEE_tokenname(NEXT));
 #endif
 
@@ -1148,7 +1146,7 @@ cast_node(na, nc, cname, file, line)
 		while (nac && nac != nc)
 		    nac = nac->superclass;
 		if (!nac) {
-		    fprintf(stderr, "%s:%d: internal error: cast to %s failed"
+		    dprintf("%s:%d: internal error: cast to %s failed"
 		    		    " (source class from %s:%d) [vers %s]\n",
 			file, line, cname, na->nodeclass->decl_file,
 		        na->nodeclass->decl_line, PACKAGE_VERSION);
@@ -1324,13 +1322,14 @@ target_lookup(parser, name, type)
 
 #ifndef NDEBUG
 	if (SEE_parse_debug) {
-	    fprintf(stderr, "target_lookup: searching for '");
+	    dprintf("target_lookup: searching for '");
 	    if (name == IMPLICIT_CONTINUE_LABEL)
-	        fprintf(stderr, "IMPLICIT_CONTINUE_LABEL");
+	        dprintf("IMPLICIT_CONTINUE_LABEL");
 	    else if (name == IMPLICIT_BREAK_LABEL)
-	        fprintf(stderr, "IMPLICIT_BREAK_LABEL");
-	    else SEE_string_fputs(name, stderr);
-	    fprintf(stderr, "', (types:%s%s) -> ",
+	        dprintf("IMPLICIT_BREAK_LABEL");
+	    else
+	    	dprints(name);
+	    dprintf("', (types:%s%s) -> ",
 		type & TARGET_TYPE_BREAK ? " break" : "",
 		type & TARGET_TYPE_CONTINUE ? " continue" : "");
 	}
@@ -1344,14 +1343,14 @@ target_lookup(parser, name, type)
 			error_at(parser, "invalid branch target"));
 #ifndef NDEBUG
 		if (SEE_parse_debug) 
-		    fprintf(stderr, "L%p\n", t->target);
+		    dprintf("L%p\n", t->target);
 #endif
 		((struct node *)t->target)->istarget = 1; /* XXX yuck */
 		return t->target;
 	    }
 #ifndef NDEBUG
 	    if (SEE_parse_debug) 
-		fprintf(stderr, "not found\n");
+		dprintf("not found\n");
 #endif
 
 	if (name == IMPLICIT_CONTINUE_LABEL)
@@ -1405,7 +1404,7 @@ lookahead(parser, n)
 
 #ifndef NDEBUG
 	if (SEE_parse_debug)
-	    fprintf(stderr, "lookahead(%d) -> %s\n", n, SEE_tokenname(token));
+	    dprintf("lookahead(%d) -> %s\n", n, SEE_tokenname(token));
 #endif
 
 	return token;
@@ -2727,9 +2726,9 @@ LeftHandSideExpression_parse(parser)
 	for (;;)  {
 
 #ifndef NDEBUG
-	    if (SEE_parse_debug) fprintf(stderr, 
-		"LeftHandSideExpression: islhs = %d next is %s\n",
-		parser->is_lhs, SEE_tokenname(NEXT));
+	    if (SEE_parse_debug)
+	        dprintf("LeftHandSideExpression: islhs = %d next is %s\n",
+		    parser->is_lhs, SEE_tokenname(NEXT));
 #endif
 
 	    switch (NEXT) {
@@ -8417,8 +8416,8 @@ SourceElements_parse(parser)
 		(*f)->node = PARSE(FunctionDeclaration);
 		f = &(*f)->next;
 #ifndef NDEBUG
-		if (SEE_parse_debug) fprintf(stderr, 
-			"SourceElements_parse: got function\n");
+		if (SEE_parse_debug) 
+		    dprintf("SourceElements_parse: got function\n");
 #endif
 		break;
 	    /* The 'first's of Statement */
@@ -8436,15 +8435,15 @@ SourceElements_parse(parser)
 		(*s)->node = PARSE(Statement);
 		s = &(*s)->next;
 #ifndef NDEBUG
-		if (SEE_parse_debug) fprintf(stderr, 
-			"SourceElements_parse: got statement\n");
+		if (SEE_parse_debug)
+		    dprintf("SourceElements_parse: got statement\n");
 #endif
 		break;
 	    case tEND:
 	    default:
 #ifndef NDEBUG
-		if (SEE_parse_debug) fprintf(stderr, 
-			"SourceElements_parse: got EOF/other (%d)\n", NEXT);
+		if (SEE_parse_debug)
+		    dprintf("SourceElements_parse: got EOF/other (%d)\n", NEXT);
 #endif
 		*s = NULL;
 		*f = NULL;
@@ -8520,10 +8519,10 @@ SEE_parse_program(interp, inp)
 
 #ifndef NDEBUG
 	if (SEE_parse_debug) {
-	    fprintf(stderr, "parse Program result:\n");
+	    dprintf("parse Program result:\n");
 	    SEE_functionbody_print(interp, f);
 	    fflush(stdout);
-	    fprintf(stderr, "<end>\n");
+	    dprintf("<end>\n");
 	}
 #endif
 
@@ -8845,9 +8844,9 @@ eval(context, thisobj, argc, argv, res)
 	{
 	    /* XXX spec bug: what if the eval did a 'return'? */
 #ifndef NDEBUG
-	    fprintf(stderr, "eval'd string returned ");
-	    SEE_PrintValue(interp, &v, stderr);
-	    fprintf(stderr, "\n");
+	    dprintf("eval'd string returned ");
+	    dprintv(interp, &v);
+	    dprintf("\n");
 #endif
 
 	    SEE_error_throw_string(

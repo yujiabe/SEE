@@ -39,6 +39,7 @@
 #include <see/string.h>
 
 #include "scope.h"
+#include "dprint.h"
 
 #ifndef NDEBUG
 int SEE_context_debug = 0;
@@ -62,11 +63,11 @@ SEE_scope_lookup(interp, scope, ident, res)
 
 #ifndef NDEBUG
 	    if (SEE_context_debug) {
-		fprintf(stderr, "scope_lookup: searching for '");
-		SEE_string_fputs(ident, stderr);
-		fprintf(stderr, "' in scope %p, obj = ", scope);
-		SEE_PrintObject(interp, scope->obj, stderr);
-		fprintf(stderr, "\n");
+		dprintf("scope_lookup: searching for '");
+		dprints(ident);
+		dprintf("' in scope %p, obj = ", scope);
+		dprinto(interp, scope->obj);
+		dprintf("\n");
 	    }
 #endif
 
@@ -74,11 +75,11 @@ SEE_scope_lookup(interp, scope, ident, res)
 		_SEE_SET_REFERENCE(res, scope->obj, ident);
 #ifndef NDEBUG
 	        if (SEE_context_debug) {
-		    fprintf(stderr, "context_lookup: found '");
-		    SEE_string_fputs(ident, stderr);
-		    fprintf(stderr, "' in ");
-		    SEE_PrintObject(interp, scope->obj, stderr);
-		    fprintf(stderr, "\n");
+		    dprintf("context_lookup: found '");
+		    dprints(ident);
+		    dprintf("' in ");
+		    dprinto(interp, scope->obj);
+		    dprintf("\n");
 	        }
 #endif
 		return;
@@ -87,9 +88,9 @@ SEE_scope_lookup(interp, scope, ident, res)
 
 #ifndef NDEBUG
 	if (SEE_context_debug) {
-	    fprintf(stderr, "context_lookup: not found: '");
-	    SEE_string_fputs(ident, stderr);
-	    fprintf(stderr, "'\n");
+	    dprintf("context_lookup: not found: '");
+	    dprints(ident);
+	    dprintf("'\n");
 	}
 #endif
 

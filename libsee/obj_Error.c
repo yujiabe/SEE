@@ -50,6 +50,7 @@
 
 #include "stringdefs.h"
 #include "init.h"
+#include "dprint.h"
 
 #ifndef NDEBUG
 int SEE_Error_debug = 0;
@@ -239,12 +240,12 @@ error_proto_toString(interp, self, thisobj, argc, argv, res)
 
 #ifndef NDEBUG
 	if (SEE_Error_debug) {
-	    fprintf(stderr, "Error.prototype.toString: self=%p this=%p name=",
+	    dprintf("Error.prototype.toString: self=%p this=%p name=",
 		self,thisobj);
-	    SEE_PrintValue(interp, &name, stderr);
-	    fprintf(stderr, ", message=");
-	    SEE_PrintValue(interp, &message, stderr);
-	    fprintf(stderr, "\n");
+	    dprintv(interp, &name);
+	    dprintf(", message=");
+	    dprintv(interp, &message);
+	    dprintf("\n");
 	}
 #endif
 
@@ -287,9 +288,9 @@ error_construct(interp, self, thisobj, argc, argv, res)
 
 #ifndef NDEBUG
 	if (SEE_Error_debug) {
-	    fprintf(stderr, "error_construct: this.prototype=");
-	    SEE_PrintValue(interp, &protov, stderr);
-	    fprintf(stderr, "\n");
+	    dprintf("error_construct: this.prototype=");
+	    dprintv(interp, &protov);
+	    dprintf("\n");
 	}
 #endif
 
@@ -308,15 +309,15 @@ error_construct(interp, self, thisobj, argc, argv, res)
 
 #ifndef NDEBUG
 	    if (SEE_Error_debug) {
-		fprintf(stderr, "error_construct: put obj.message=");
-		SEE_PrintValue(interp, &msg, stderr);
-		fprintf(stderr, "\n");
+		dprintf("error_construct: put obj.message=");
+		dprintv(interp, &msg);
+		dprintf("\n");
 		SEE_OBJECT_GET(interp, (struct SEE_object *)obj, 
 		    STR(message), &msg);
-		fprintf(stderr, "error_construct: get obj.message=");
-		SEE_PrintValue(interp, &msg, stderr);
-		fprintf(stderr, "\n");
-		fprintf(stderr, "error_construct: self=%p this=%p result=%p\n",
+		dprintf("error_construct: get obj.message=");
+		dprintv(interp, &msg);
+		dprintf("\n");
+		dprintf("error_construct: self=%p this=%p result=%p\n",
 		    self, thisobj, obj);
 	    }
 #endif

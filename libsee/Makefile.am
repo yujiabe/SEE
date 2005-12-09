@@ -6,7 +6,7 @@ OBJEXT=		   @OBJEXT@
 lib_LTLIBRARIES=   libsee.la
 CLEANFILES=	   stringdefs.h stringdefs.inc
 BUILT_SOURCES=	   stringdefs.h stringdefs.inc
-libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c enumerate.c	\
+libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c dprint.c enumerate.c	\
                    error.c function.c input_file.c input_lookahead.c	\
                    input_string.c input_utf8.c intern.c interpreter.c	\
                    lex.c mem.c native.c no.c obj_Array.c obj_Boolean.c	\
@@ -18,7 +18,7 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c enumerate.c	\
 #cfunction.lo: stringdefs.h stringdefs.inc
 
 noinst_HEADERS=    array.h cfunction_private.h dtoa.h dtoa_config.h 	\
-		   enumerate.h						\
+		   dprint.h enumerate.h						\
                    function.h init.h lex.h parse.h regex.h scope.h	\
 		   tokens.h unicode.h
 

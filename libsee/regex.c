@@ -47,6 +47,7 @@
 #include "regex.h"
 #include "unicode.h"
 #include "stringdefs.h"
+#include "dprint.h"
 
 /*
  * Regular expression engine.
@@ -200,10 +201,10 @@ static struct charclass *CharacterClass_parse(struct recontext *);
 static struct charclass *CanonicalizeClass(struct recontext *, struct charclass *);
 
 #ifndef NDEBUG
-static int print_code(struct regex *, int, FILE *);
-static void print_regex(struct regex *, FILE *);
-static void print_cc(struct charclass *, FILE *);
-static void print_ch(SEE_unicode_t, FILE *);
+static int dprint_code(struct regex *, int);
+static void dprint_regex(struct regex *);
+static void dprint_cc(struct charclass *);
+static void dprint_ch(SEE_unicode_t);
 #endif
 
 static SEE_unicode_t Canonicalize(struct regex *, SEE_unicode_t);
@@ -407,26 +408,25 @@ cc_contains(c, ch)
 #ifndef NDEBUG
 /* Print a character in a readable form. */
 static void 
-print_ch(ch, f)
+dprint_ch(ch)
 	SEE_unicode_t ch;
-	FILE *f;
 {
 	switch (ch) {
 	case '{': case '}': case '[': case ']': 
 	case '(': case ')': case '-':
 	case '.': case '^': case '$': case '|':
 	case '?': case '*': case '+': case '\\': 
-	fprintf(f, "\\%c", ch & 0x7f); break;
-	case 0x0000:	fprintf(f, "\\0"); break;
-	case 0x0009:	fprintf(f, "\\t"); break;
-	case 0x000a:	fprintf(f, "\\n"); break;
-	case 0x000b:	fprintf(f, "\\v"); break;
-	case 0x000c:	fprintf(f, "\\f"); break;
-	case 0x000d:	fprintf(f, "\\r"); break;
+	dprintf("\\%c", ch & 0x7f); break;
+	case 0x0000:	dprintf("\\0"); break;
+	case 0x0009:	dprintf("\\t"); break;
+	case 0x000a:	dprintf("\\n"); break;
+	case 0x000b:	dprintf("\\v"); break;
+	case 0x000c:	dprintf("\\f"); break;
+	case 0x000d:	dprintf("\\r"); break;
 	default: 
-		if (ch >= ' ' && ch <= '~') fprintf(f, "%c", ch & 0x7f);
-		else if (ch < 0x100) fprintf(f, "\\x%02x", ch & 0xff);
-		else fprintf(f, "\\u%04x", ch);
+		if (ch >= ' ' && ch <= '~') dprintf("%c", ch & 0x7f);
+		else if (ch < 0x100) dprintf("\\x%02x", ch & 0xff);
+		else dprintf("\\u%04x", ch);
 	}
 }
 #endif
@@ -434,37 +434,36 @@ print_ch(ch, f)
 #ifndef NDEBUG
 /* Print a character class in a readable form. */
 static void
-print_cc(c, f)
+dprint_cc(c)
 	struct charclass *c;
-	FILE *f;
 {
 	struct charclassrange *r;
 
-	fprintf(f, "[");
+	dprintf("[");
 	if (c->ranges && c->ranges->lo == 0) {
-		fprintf(f, "^");
+		dprintf("^");
 		for (r = c->ranges; r; r = r->next) {
 		    if (r->next) {
-			print_ch(r->hi, f);
+			dprint_ch(r->hi);
 			if (r->next->lo != r->hi + 1) {
-			    fprintf(f, "-");
-			    print_ch(r->next->lo - 1, f);
+			    dprintf("-");
+			    dprint_ch(r->next->lo - 1);
 			}
 		    } else if (r->hi != ~0) {
-			print_ch(r->hi, f);
-			fprintf(f, "-");
-			print_ch(~0, f);
+			dprint_ch(r->hi);
+			dprintf("-");
+			dprint_ch(~0);
 		    }
 		}
 	} else
 	    for (r = c->ranges; r; r = r->next) {
-		print_ch(r->lo, f);
+		dprint_ch(r->lo);
 		if (r->hi != r->lo + 1) {
-		    fprintf(f, "-");
-		    print_ch(r->hi - 1, f);
+		    dprintf("-");
+		    dprint_ch(r->hi - 1);
 		}
 	    }
-	fprintf(f, "]");
+	dprintf("]");
 }
 #endif
 
@@ -587,9 +586,9 @@ SEE_regex_parse(interp, source, flags)
 
 #ifndef NDEBUG
 	if (SEE_regex_debug) {
-	    fprintf(stderr, "regex:");
-	    print_regex(regex, stderr);
-	    fprintf(stderr, ".\n");
+	    dprintf("regex:");
+	    dprint_regex(regex);
+	    dprintf(".\n");
 	}
 #endif
 
@@ -1208,102 +1207,100 @@ out:	    CC_ADDCC(c, a);
 
 #ifndef NDEBUG
 static int
-print_code(regex, addr, f)
+dprint_code(regex, addr)
 	struct regex *regex;
 	int addr;
-	FILE *f;
 {
 	int i;
 	const char *op="", *opc;
 	unsigned char *code = regex->code;
 
-	fprintf(f, "0x%04x: ", addr);
+	dprintf("0x%04x: ", addr);
 	switch (code[addr]) {
-	case OP_FAIL:		fprintf(f, "FAIL"); op = ""; break;
-	case OP_SUCCEED:	fprintf(f, "SUCCEED"); op = ""; break;
-	case OP_CHAR:		fprintf(f, "CHAR"); op = "i"; break;
-	case OP_ZERO:		fprintf(f, "ZERO"); op = "i"; break;
-	case OP_REACH:		fprintf(f, "REACH"); op = "ii"; break;
-	case OP_NREACH:		fprintf(f, "NREACH"); op = "ii"; break;
-	case OP_START:		fprintf(f, "START"); op = "i"; break;
-	case OP_END:		fprintf(f, "END"); op = "i"; break;
-	case OP_UNDEF:		fprintf(f, "UNDEF"); op = "ii"; break;
-	case OP_MARK:		fprintf(f, "MARK"); op = "i"; break;
-	case OP_FDIST:		fprintf(f, "FDIST"); op = "i"; break;
-	case OP_RDIST:		fprintf(f, "RDIST"); op = "iii"; break;
-	case OP_MNEXT:		fprintf(f, "MNEXT"); op = "iia"; break;
-	case OP_RNEXT:		fprintf(f, "RNEXT"); op = "iia"; break;
-	case OP_GOTO:		fprintf(f, "GOTO"); op = "a"; break;
-	case OP_GS:		fprintf(f, "GS"); op = "a"; break;
-	case OP_NS:		fprintf(f, "NS"); op = "a"; break;
-	case OP_GF:		fprintf(f, "GF"); op = "a"; break;
-	case OP_NF:		fprintf(f, "NF"); op = "a"; break;
-	case OP_AS:		fprintf(f, "AS"); op = "a"; break;
-	case OP_AF:		fprintf(f, "AF"); op = "a"; break;
-	case OP_BOL:		fprintf(f, "BOL"); op = ""; break;
-	case OP_EOL:		fprintf(f, "EOL"); op = ""; break;
-	case OP_BRK:		fprintf(f, "BRK"); op = ""; break;
-	case OP_NBRK:		fprintf(f, "NBRK"); op = ""; break;
-	case OP_BACKREF:	fprintf(f, "BACKREF"); op = "i"; break;
+	case OP_FAIL:		dprintf("FAIL"); op = ""; break;
+	case OP_SUCCEED:	dprintf("SUCCEED"); op = ""; break;
+	case OP_CHAR:		dprintf("CHAR"); op = "i"; break;
+	case OP_ZERO:		dprintf("ZERO"); op = "i"; break;
+	case OP_REACH:		dprintf("REACH"); op = "ii"; break;
+	case OP_NREACH:		dprintf("NREACH"); op = "ii"; break;
+	case OP_START:		dprintf("START"); op = "i"; break;
+	case OP_END:		dprintf("END"); op = "i"; break;
+	case OP_UNDEF:		dprintf("UNDEF"); op = "ii"; break;
+	case OP_MARK:		dprintf("MARK"); op = "i"; break;
+	case OP_FDIST:		dprintf("FDIST"); op = "i"; break;
+	case OP_RDIST:		dprintf("RDIST"); op = "iii"; break;
+	case OP_MNEXT:		dprintf("MNEXT"); op = "iia"; break;
+	case OP_RNEXT:		dprintf("RNEXT"); op = "iia"; break;
+	case OP_GOTO:		dprintf("GOTO"); op = "a"; break;
+	case OP_GS:		dprintf("GS"); op = "a"; break;
+	case OP_NS:		dprintf("NS"); op = "a"; break;
+	case OP_GF:		dprintf("GF"); op = "a"; break;
+	case OP_NF:		dprintf("NF"); op = "a"; break;
+	case OP_AS:		dprintf("AS"); op = "a"; break;
+	case OP_AF:		dprintf("AF"); op = "a"; break;
+	case OP_BOL:		dprintf("BOL"); op = ""; break;
+	case OP_EOL:		dprintf("EOL"); op = ""; break;
+	case OP_BRK:		dprintf("BRK"); op = ""; break;
+	case OP_NBRK:		dprintf("NBRK"); op = ""; break;
+	case OP_BACKREF:	dprintf("BACKREF"); op = "i"; break;
 
-	default:		fprintf(f, "*** %d", code[addr]); 
+	default:		dprintf("*** %d", code[addr]); 
 	}
 	addr++;
 	for (opc = op; *opc; opc++) {
-	    if (opc != op) fprintf(f, ",");
-	    fprintf(f, " ");
+	    if (opc != op) dprintf(",");
+	    dprintf(" ");
 	    switch (*opc) {
 	    case 'a': i = CODE_MAKEA(code, addr); 
-		      fprintf(f, "0x%04x", i); 
+		      dprintf("0x%04x", i); 
 	    	      i = CODE_MAKEI(code, addr); 
-		      fprintf(f, " [0x%04x]", i);
+		      dprintf(" [0x%04x]", i);
 		      addr += CODE_SZA; 
 		      break;
 	    case 'i': i = CODE_MAKEI(code, addr); addr += CODE_SZI;
-		      fprintf(f, "%d", i);
+		      dprintf("%d", i);
 		      break;
 	    case 'c': i = CODE_MAKEI(code, addr); addr += CODE_SZI;
-		      fprintf(f, "%d=", i);
-		      if (i > regex->cclen) fprintf(f, "**BAD**");
-		      else print_cc(regex->cc[i], f);
+		      dprintf("%d=", i);
+		      if (i > regex->cclen) dprintf("**BAD**");
+		      else dprint_cc(regex->cc[i]);
 		      break;
 	    }
 	}
-	fprintf(f, "\n");
+	dprintf("\n");
 	return addr;
 }
 #endif
 
 #ifndef NDEBUG
 static void
-print_regex(regex, f)
+dprint_regex(regex)
 	struct regex *regex;
-	FILE *f;
 {
 	int i, addr;
 	struct charclassrange *r;
 
-	fprintf(f, "regex %p\n", regex);
-	fprintf(f, "\tncaptures = %d\n", regex->ncaptures);
-	fprintf(f, "\tcodealloc = %d\n", regex->codealloc);
-	fprintf(f, "\tcodelen = %d\n", regex->codelen);
-	fprintf(f, "\tccalloc = %d\n", regex->ccalloc);
-	fprintf(f, "\tcclen = %d\n", regex->cclen);
-	fprintf(f, "\tflags = 0x%x\n", regex->flags);
-	fprintf(f, "\tcc:\n");
+	dprintf("regex %p\n", regex);
+	dprintf("\tncaptures = %d\n", regex->ncaptures);
+	dprintf("\tcodealloc = %d\n", regex->codealloc);
+	dprintf("\tcodelen = %d\n", regex->codelen);
+	dprintf("\tccalloc = %d\n", regex->ccalloc);
+	dprintf("\tcclen = %d\n", regex->cclen);
+	dprintf("\tflags = 0x%x\n", regex->flags);
+	dprintf("\tcc:\n");
 	for (i = 0; i < regex->cclen; i++) {
-		fprintf(f, "\t\t%d = ", i);
-		print_cc(regex->cc[i], f);
-		fprintf(f, "\n\t\t  = { ");
+		dprintf("\t\t%d = ", i);
+		dprint_cc(regex->cc[i]);
+		dprintf("\n\t\t  = { ");
 		for (r = regex->cc[i]->ranges; r; r = r->next)
-		   fprintf(f, "%x:%x ", r->lo, r->hi);
-		fprintf(f, "}\n");
+		   dprintf("%x:%x ", r->lo, r->hi);
+		dprintf("}\n");
 	}
-	fprintf(f, "\tcode:\n");
+	dprintf("\tcode:\n");
 
 	addr = 0;
 	while (addr < regex->codelen)
-		addr = print_code(regex, addr, f);
+		addr = dprint_code(regex, addr);
 }
 #endif
 
@@ -1391,50 +1388,50 @@ pcode_run(interp, regex, addr, text, state)
 		mys.stringclass = 0;
 		mys.interpreter = 0;
 		mys.flags = 0;
-		fprintf(stderr, "index=%d captures=[", index);
+		dprintf("index=%d captures=[", index);
 		for (x = 0; x < regex->ncaptures; x++) {
-		    if (x) fprintf(stderr, ",");
+		    if (x) dprintf(",");
 		    if (capture[x].start == -1) 
-			fprintf(stderr, "undef"); 
+			dprintf("undef"); 
 		    else if (capture[x].start + capture[x].end > text->length) {
-			fprintf(stderr, "bad<%x:%x>", 
+			dprintf("bad<%x:%x>", 
 				capture[x].start, capture[x].end);
 		    } else {
 			int end = capture[x].end;
 			if (end == -1) end = index;
 			mys.length = end - capture[x].start;
 			mys.data = text->data + capture[x].start;
-			fprintf(stderr, "\"");
-			SEE_string_fputs(&mys, stderr);
-			fprintf(stderr, "\"");
+			dprintf("\"");
+			dprints(&mys);
+			dprintf("\"");
 			if (capture[x].end == -1)
-				fprintf(stderr, "+");
+				dprintf("+");
 		    }
 		}
-		fprintf(stderr, "]");
+		dprintf("]");
 		if (op == OP_ZERO || op == OP_REACH || op == OP_NREACH ||
 		    op == OP_MNEXT || op == OP_RNEXT)
 		{
-		    fprintf(stderr, " counter=[");
+		    dprintf(" counter=[");
 		    for (x = 0; x < regex->ncounters; x++) {
-			if (x) fprintf(stderr, ",");
-			fprintf(stderr, "%d", counter[x]);
+			if (x) dprintf(",");
+			dprintf("%d", counter[x]);
 		    }
-		    fprintf(stderr, "]");
+		    dprintf("]");
 		}
 		if (op == OP_MARK || op == OP_FDIST || op == OP_RDIST) {
-		    fprintf(stderr, " mark=[");
+		    dprintf(" mark=[");
 		    for (x = 0; x < regex->nmarks; x++) {
-			if (x) fprintf(stderr, ",");
-			fprintf(stderr, "%d", mark[x]);
+			if (x) dprintf(",");
+			dprintf("%d", mark[x]);
 		    }
-		    fprintf(stderr, "]");
+		    dprintf("]");
 		}
 		if (regex->code[addr] == OP_CHAR && index < text->length) 
-		    fprintf(stderr, " ch='%c'", Canonicalize(regex, 
+		    dprintf(" ch='%c'", Canonicalize(regex, 
 			text->data[index]));
-		fprintf(stderr, "\n");
-		(void)print_code(regex, addr, stderr);
+		dprintf("\n");
+		(void)dprint_code(regex, addr);
 	    }
 #endif
 
@@ -1700,7 +1697,7 @@ SEE_regex_match(interp, regex, text, index, capture_ret)
 	success = pcode_run(interp, regex, 0, text, state);
 #ifndef NDEBUG
         if (SEE_regex_debug) 
-		fprintf(stderr, ". %s\n", success ? "success" : "failure");
+		dprintf(". %s\n", success ? "success" : "failure");
 #endif
 	if (success)
 		memcpy(capture_ret, capture, 

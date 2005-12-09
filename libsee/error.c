@@ -53,6 +53,7 @@ extern int errno;
 #include <see/string.h>
 
 #include "stringdefs.h"
+#include "dprint.h"
 
 #ifndef NDEBUG
 int SEE_error_debug = 0;
@@ -81,9 +82,9 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 		struct SEE_value v;
 #ifndef NDEBUG
 		if (s) {
-			fprintf(stderr, "message: ");
-			SEE_string_fputs(s, stderr);
-			fprintf(stderr, "\n");
+			dprintf("message: ");
+			dprints(s);
+			dprintf("\n");
 		}
 #endif
 		SEE_SET_OBJECT(&v, obj);
@@ -112,7 +113,7 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 
 #ifndef NDEBUG
 	if (SEE_error_debug) {
-	    fprintf(stderr, "throwing object %p from %s:%d\n",
+	    dprintf("throwing object %p from %s:%d\n",
 	    res.u.object, filename ? filename : "unknown", lineno);
 	}
 #endif

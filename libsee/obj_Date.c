@@ -64,6 +64,7 @@
 
 #include "stringdefs.h"
 #include "init.h"
+#include "dprint.h"
 
 /*
  * 15.9 The Date object.
@@ -474,7 +475,7 @@ YearFromTime(t0)
 
 #ifdef NDEBUG
 #define AS(x) do {if (!(x)) \
-	fprintf(stderr, "%s:%d: FAILURE: '%s'; y=%d t0=%g\n", \
+	dprintf("%s:%d: FAILURE: '%s'; y=%d t0=%g\n", \
 	__FILE__, __LINE__, #x, y, t0); } while(0)
 AS(TimeFromYear(y) <= t0);
 AS(TimeFromYear(y+1) > t0);
@@ -599,7 +600,7 @@ MakeDay(year, month, date)
 
 #ifndef NDEBUG
 #define AS(x,y) do { SEE_number_t __x = (x); if (__x!=(y)) \
-	fprintf(stderr, "%s:%d: FAILURE: %s = %g; expected %g (%g/%g/%g:%d)\n",\
+	dprintf("%s:%d: FAILURE: %s = %g; expected %g (%g/%g/%g:%d)\n",\
 	__FILE__, __LINE__, #x, __x, (SEE_number_t)(y), \
 	year,month,date,ily); } while(0)
 AS(YearFromTime(t), y);
