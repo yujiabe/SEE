@@ -239,10 +239,9 @@ SEE_PrintTraceback(interp, f)
 			fprintf(f, "?");
 		} else if (tb->call_type == SEE_CALLTYPE_CALL) {
 		    fprintf(f, "call ");
-		   /* if (fo == interp->Global_eval)
-			fprintf(f, "eval()");
-		    else */
-		    if ((fname = SEE_function_getname(interp, fo))) {
+		    /* XXX is fo == interp->Global_eval case handled OK? */
+		    fname = SEE_function_getname(interp, fo);
+		    if (fname) {
 		        SEE_string_fputs(fname, f); 
 			fprintf(f, "()");
 		    } else 
