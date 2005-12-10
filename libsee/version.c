@@ -40,7 +40,7 @@
 #include <see/version.h>
 
 const char *
-SEE_library_version()
+SEE_version()
 {
 	static char version[] =
 		/* First two words are the package name (see)
@@ -52,6 +52,9 @@ SEE_library_version()
 #endif
 #if !WITH_UNICODE_TABLES
 		" -unicode"
+#endif
+#if !WITH_PARSER_PRINT
+		" -print"
 #endif
 		;
 	return version;
