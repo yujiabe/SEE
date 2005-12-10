@@ -92,11 +92,9 @@ dnl
 with_developer=default
 AC_ARG_ENABLE(developer,
     AC_HELP_STRING([--enable-developer],
-	           [Enable developer warnings and checks [default=no]]),
-    [with_developer=yes],
-    [with_developer=no])
+	           [Enable developer warnings and checks [default=no]]))
 
-if test x"$with_developer" = x"yes"; then
+if test x"$enable_developer" = x"yes"; then
     for flag in -Wall -Wmissing-declarations \
     		 -Wmissing-prototypes  -Wtraditional
     do
@@ -110,15 +108,40 @@ if test x"$with_developer" = x"yes"; then
     done
 fi
 
-with_unicode_tables=yes
 AC_ARG_ENABLE(full-unicode,
     AC_HELP_STRING([--disable-full-unicode],
-	           [Includes unicode tables [default=yes]]),
-    [with_unicode_tables=yes],
-    [with_unicode_tables=no])
-if test x"$with_unicode_tables" = x"yes"; then
+	           [Include unicode tables [[default=yes]]]))
+AC_MSG_CHECKING([for unicode tables])
+if test x"$enable_full_unicode" != x"no"; then
+    AC_MSG_RESULT([yes])
     AC_DEFINE(WITH_UNICODE_TABLES, [1],
     	[Define to 1 if you want the Unicode tables for ECMA262 compliance])
+else
+    AC_MSG_RESULT([no])
+fi
+
+AC_ARG_ENABLE(parser-print,
+    AC_HELP_STRING([--disable-parser-print],
+                   [Include parser printing code [[default=yes]]]))
+AC_MSG_CHECKING([whether to include parser printer code])
+if test x"$enable_parser_print" != x"no"; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE(WITH_PARSER_PRINT, [1],
+        [Define if you want to be able to print function bodies])
+else
+    AC_MSG_RESULT([no])
+fi
+
+AC_ARG_ENABLE(parser-visit,
+    AC_HELP_STRING([--enable-parser-visit],
+                   [Include parser node visiting code [[default=no]]]))
+AC_MSG_CHECKING([whether to include AST node visitor code])
+if test x"$enable_parser_visit" = x"yes"; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE(WITH_PARSER_VISIT, [1],
+        [Define if you want to include experimental AST visitor code])
+else
+    AC_MSG_RESULT([no])
 fi
 
 

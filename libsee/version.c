@@ -56,6 +56,9 @@ SEE_version()
 #if !WITH_PARSER_PRINT
 		" -print"
 #endif
+#if WITH_PARSER_VISIT
+		" +visit"
+#endif
 		;
 	return version;
 }

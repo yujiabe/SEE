@@ -1,7 +1,7 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
-  New option --disable-full-unicode which removes unicode tables, assumes ASCII
+  New features to enable/disable: parser-print parser-visit full-unicode
   Proper API (1.0) versioning
   Better parser internal consistency checks in debug mode (node cast checks)
   Add a simple interactive debugger into see-shell
