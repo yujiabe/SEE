@@ -419,7 +419,7 @@ main(argc, argv)
 	/* Initialise our interpreter */
 	SEE_interpreter_init(&interp);
 
-	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:")) != -1)
+	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:V")) != -1)
 	    switch (ch) {
 	    case 'c':
 		if (compatvalue(optarg, &interp.compatibility) == -1)
@@ -453,6 +453,11 @@ main(argc, argv)
 		do_interactive = 0;
 		run_html(&interp, optarg);
 		break;
+	    case 'V':
+	    	printf("SEE API version: %u.%u\n", SEE_VERSION_API_MAJOR,
+			SEE_VERSION_API_MINOR);
+	    	printf("Library version: %s\n", SEE_version());
+		break;
 	    default:
 		error = 1;
 	    }
@@ -463,7 +468,7 @@ main(argc, argv)
 
 	if (error) {
 	    fprintf(stderr, 
-	        "usage: %s [-c flag] %s[-f file.js | -h file.html]...\n",
+	        "usage: %s [-V] [-c flag] %s[-f file.js | -h file.html]...\n",
 		argv[0],
 #ifndef NDEBUG
 	        "[-d[ETcelnprv]] "
