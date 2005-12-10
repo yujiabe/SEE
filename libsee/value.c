@@ -154,10 +154,10 @@ SEE_ToNumber(interp, val, res)
 	    }
 	case SEE_OBJECT:
 	    {
-		struct SEE_value num, primitive;
+		struct SEE_value hint, primitive;
 
-		SEE_SET_OBJECT(&num, interp->Number);
-		SEE_ToPrimitive(interp, val, &num, &primitive);
+		SEE_SET_OBJECT(&hint, interp->Number);
+		SEE_ToPrimitive(interp, val, &hint, &primitive);
 		SEE_ToNumber(interp, &primitive, res);
 		break;
 	    }
