@@ -96,6 +96,10 @@ for SEE version 1.2
  <li><a href="#error">6.7 Errors and Error objects</a>
  </ul>
  <li><a href="#compat">7 Compatibility features</a>
+ <ul>
+ <li><a href="#compatjs">7.1 Compatibility with other JavaScript implementations</a>
+ <li><a href="#compatsee">7.2 Compatibility with previous versions of SEE</a>
+ </ul>
  <li><a href="#debug">8 Debugging facilities</a>
  <li><a href="#ref">References</a>
  <li><a href="#idx">Name index</a>
@@ -1851,7 +1855,7 @@ A simple example:
 </p>
 
 <pre>if (something_is_wrong)
-        SEE_error_throw(interp, interp->Error, "something is wrong!");</pre>
+        SEE_error_throw(interp, interp-&gt;Error, "something is wrong!");</pre>
 
 <p>
 Although <code>Error</code> is usually sufficient for most errors,
@@ -1864,6 +1868,7 @@ of the same name should be created per interpreter.
                 struct SEE_string *name);</pre>
 
 <h2 id="compat">7 Compatibility features</h2>
+<h3 id="compatjs">7.1 Compatibility with other JavaScript implementations</h3>
 
 <p>
 SEE provides backward-compatibility with earlier versions of JavaScript
@@ -2023,6 +2028,68 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	'<code class="js">,</code>'. (How bizarre.)
 
 </table>
+
+<h3 id="compatsee">7.2 Compatibility with previous versions of SEE</h3>
+
+<p>
+As distributed, SEE has two different version numbers:
+<ol>
+<li>the package, release and shared library version number (e.g. 2.0)
+<li>the API version number (e.g. 1.0)
+</ol>
+
+<p>
+The library version is available to programs to query through the
+<code>SEE_version()</code> function. 
+This function returns a pointer to a static C string containing 
+identifiers separated by a space character (<code>0x20</code>).
+The first identifier is the name of the library (e.g. <code>"see"</code>)
+and the second identifier is the package version number
+(e.g. <code>2.0</code>).
+Further identifiers indicate the features used when compiling the library.
+This string is useful for end users to determine what capabilities
+their library implementation has.
+
+<pre>const char *<dfn id="SEE_version">SEE_version</dfn>(void);</pre>
+
+<p>
+The major and minor API version numbers indicate backward-compatible
+and backward-incompatible changes to the API, i.e the interface
+described in this documentation and the header files.
+The API version number is independent of the package and library
+version number.
+
+<p>
+Practically, developers should use the following code to signal the
+rare case of major API changes when compiling:
+<pre>#if SEE_VERSION_API_MAJOR &gt; 1
+ #warning "SEE API major version mismatch"
+#endif</pre>
+
+<p>
+This warning will indicate that past use of older API is incompatible
+with newer APIs.
+
+<p>
+The API versioning rules are:
+<ul>
+<li>If a function, type, extern or macro has been changed since last
+release so that previous use is incompatible with future use, then
+the major version number is incremented and the minor version number
+is reset to zero.
+<li>If a function, type, extern or macro has been added since last
+release such that its future use is incompatible with previous headers
+with the same API major version number, then the minor version number
+is incremented.
+</ul>
+
+<p>
+This document will indicate at what API version new API elements are added,
+defaulting to 1.0.
+
+<pre>const int <dfn id="SEE_VERSION_API_MAJOR">SEE_VERSION_API_MAJOR</dfn>;
+const int <dfn id="SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</dfn>;</pre>
+
 
 <h2 id="debug">8 Debugging facilities</h2>
 
@@ -2190,6 +2257,9 @@ will occur.
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
 <a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>
+<a href="#SEE_version">SEE_version</a><br>
+<a href="#SEE_VERSION_API_MAJOR">SEE_VERSION_API_MAJOR</a><br>
+<a href="#SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</a><br>
 </table>
 
 <hr>

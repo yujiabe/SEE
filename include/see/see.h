@@ -26,6 +26,7 @@ extern "C" {
 #include <see/no.h>
 #include <see/string.h>
 #include <see/try.h>
+#include <see/version.h>
 
 #ifdef __cplusplus
 }
