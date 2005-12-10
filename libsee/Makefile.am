@@ -21,7 +21,7 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c dprint.c enumerate.c \
 noinst_HEADERS=    array.h cfunction_private.h dtoa.h dtoa_config.h 	\
 		   dprint.h enumerate.h						\
                    function.h init.h lex.h parse.h regex.h scope.h	\
-		   tokens.h unicode.h
+		   tokens.h unicode.h unicode.inc
 
 libsee_la_LIBADD=  @LIBOBJS@ @ALLOCA@
 
