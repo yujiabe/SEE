@@ -80,22 +80,23 @@ AC_DEFUN([SEE_CHECK___FUNCTION__],
 			      [ac_cv_have___FUNCTION__=no])])
    if test $ac_cv_have___FUNCTION__ = yes; then
        AC_DEFINE([HAVE___FUNCTION__], [1], 
-		 [Define if the compiler generates __FUNCTION__])
+		 [Define to 1 if the compiler generates __FUNCTION__])
    fi
   ])
 SEE_CHECK___FUNCTION__
 
 dnl ------------------------------------------------------------
-dnl developer support
+dnl features
 dnl
 
+with_developer=default
 AC_ARG_ENABLE(developer,
     AC_HELP_STRING([--enable-developer],
 	           [Enable developer warnings and checks [default=no]]),
-    [developer=yes],
-    [developer=no])
+    [with_developer=yes],
+    [with_developer=no])
 
-if test x"$developer" = x"yes"; then
+if test x"$with_developer" = x"yes"; then
     for flag in -Wall -Wmissing-declarations \
     		 -Wmissing-prototypes  -Wtraditional
     do
@@ -107,6 +108,17 @@ if test x"$developer" = x"yes"; then
 			  [AC_MSG_RESULT(no)
 			   CFLAGS="$CFLAGS_save"])
     done
+fi
+
+with_unicode_tables=yes
+AC_ARG_ENABLE(full-unicode,
+    AC_HELP_STRING([--disable-full-unicode],
+	           [Includes unicode tables [default=yes]]),
+    [with_unicode_tables=yes],
+    [with_unicode_tables=no])
+if test x"$with_unicode_tables" = x"yes"; then
+    AC_DEFINE(WITH_UNICODE_TABLES, [1],
+    	[Define to 1 if you want the Unicode tables for ECMA262 compliance])
 fi
 
 

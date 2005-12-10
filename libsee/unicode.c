@@ -28,32 +28,17 @@
  */
 /* $Id$ */
 
-/*
- * This module collects information about features compiled in this
- * instance of the SEE library.
- */
-
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
 
-#include <see/version.h>
+#if WITH_UNICODE_TABLES
 
-const char *
-SEE_library_version()
-{
-	static char version[] =
-		/* First two words are the package name (see)
-		 * and the version number (1.3) */
-		PACKAGE_STRING
-		/* Successive words are feature identifiers */
-#if NDEBUG
-		" ndebug"
-#endif
-#if !WITH_UNICODE_TABLES
-		" -unicode"
-#endif
-		;
-	return version;
-}
+# include "unicode.h"
+# include "unicode.inc"
 
+#else
+
+ #warning "Unicode tables are omitted; library will not be ECMA-262 compliant"
+
+#endif

@@ -6,6 +6,9 @@
 
 #include <see/type.h>
 
+#define _UNICODE_MAX	0x10ffff
+
+#if WITH_UNICODE_TABLES
 /*
  * Macros to test if a given character is in a Unicode 4.0 (meta)class
  *	Cf - Format control   (=Cf)
@@ -30,7 +33,6 @@ extern unsigned char* SEE_unicode_Cf[];
 extern unsigned char* SEE_unicode_Zs[];
 extern unsigned char* SEE_unicode_IS[];
 extern unsigned char* SEE_unicode_IP[];
-#define _UNICODE_MAX	0x10ffff
 #define _UNICODE_IS(c, table, grp)				\
 	((c) < _UNICODE_MAX && 					\
 		(table)[(c)>>(grp)] &&				\
@@ -39,5 +41,17 @@ extern unsigned char* SEE_unicode_IP[];
 
 extern SEE_unicode_t  SEE_unicode_Zscodes[];
 extern int	      SEE_unicode_Zscodeslen;
+
+#else /* !WITH_UNICODE_TABLES */
+
+#include <ctype.h>
+#define UNICODE_IS_Cf(c)	((c) <= 0x7f && iscntrl((int)(c)))
+#define UNICODE_IS_Zs(c)	((c) <= 0x7f && isspace((int)(c)))
+#define UNICODE_IS_IS(c)	((c) <= 0x7f && \
+				 (isalpha((int)(c)) || (c)=='$' || (c)=='_'))
+#define UNICODE_IS_IP(c)	((c) <= 0x7f && \
+				 (isalnum((int)(c)) || (c)=='$' || (c)=='_'))
+
+#endif /* ! WITH_UNICODE_TABLES */
 
 #endif /* _SEE_h_unicode_ */

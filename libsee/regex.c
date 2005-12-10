@@ -1064,8 +1064,13 @@ ClassEscape_parse(recontext)
 			if (ch == 'W') CC_INVERT(c);
 			break;
 	case 'S':	
-	case 's':	for (i = 0; i < SEE_unicode_Zscodeslen; i++)
-			CC_ADDCHAR(c, SEE_unicode_Zscodes[i]);
+	case 's':	
+#if WITH_UNICODE_TABLES
+			for (i = 0; i < SEE_unicode_Zscodeslen; i++)
+			    CC_ADDCHAR(c, SEE_unicode_Zscodes[i]);
+#else
+			CC_ADDCHAR(c, 0x0020);
+#endif
 			if (ch == 'S') CC_INVERT(c);
 			break;
 	case 'c':	if (ATEOF) SYNTAX_ERROR;

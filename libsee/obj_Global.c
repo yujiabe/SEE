@@ -263,21 +263,26 @@ static int
 is_StrWhiteSpace(ch)
 	SEE_char_t ch;
 {
+#if WITH_UNICODE_TABLES
 	int i;
+#endif
 
 	if (ch == 0x0009 ||	/* TAB */
 	    ch == 0x0020 ||	/* SP */
-	    ch == 0x00a0 ||	/* NBSP */
 	    ch == 0x000c ||	/* FF */
 	    ch == 0x000b ||	/* VT */
 	    ch == 0x000d ||	/* CR */
-	    ch == 0x000a ||	/* LF */
+	    ch == 0x000a)  	/* LF */
+		return 1;
+#if WITH_UNICODE_TABLES
+	if (ch == 0x00a0 ||	/* NBSP */
 	    ch == 0x2028 ||	/* LS */
 	    ch == 0x2029)  	/* PS */
 		return 1;
 	for (i = 0; i < SEE_unicode_Zscodeslen; i++)
 		if (ch == SEE_unicode_Zscodes[i])
 			return 1;
+#endif
 	return 0;
 }
 
