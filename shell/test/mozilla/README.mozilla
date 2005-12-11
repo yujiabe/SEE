@@ -23,6 +23,16 @@ comprehensive Mozilla test suite.
  It writes all its output to $0.out (ie usually RUN.out)
  It writes progress information to stderr, and errors found to stdout.
 
-Note: Not all test failures necessarily mean an error in SEE. 
+4. Why some of the mozilla tests fail
+
+* ecma/Date/15.9.5.10-1.js
+  ecma/Date/15.9.5.10-9.js 
+  ecma/Date/15.9.5.12-1.js
+  ecma/Date/...
+  	- SEE doesn't seme to compute daylight savings the same way as
+	  SM. This is permitted because SEE is consistent, and the standard
+	  doesn't say how to compute daylight savings or local timezone.
+	  These errors all seem to have local timezone calculation as the
+	  underlying cause.
 
 $Id$
