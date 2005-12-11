@@ -23,7 +23,6 @@ test("i1.getValue()", 123)
 test("i2.getValue()", 456)
 test("i3.getValue()", 789)
 
-test("foo.prototype.constructor", foo)
 test("i1.constructor", foo)
 
 finish()

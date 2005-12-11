@@ -12,6 +12,6 @@
 #	http://www.mozilla.org/js/tests/library.html
 #
 
-TESTS=		grammar.js regex.js function.js
+TESTS=		grammar.js regex.js function.js regress.js
 TESTS_ENVIRONMENT= ../see-shell.static -f common.js -f
 EXTRA_DIST=	common.js
