@@ -27,4 +27,5 @@ run-mozilla-tests: run-mozilla-tests.in
 	chmod +x $@
 
 clean:
-	rm -rf $(MOZDIR) $(MOZPASS) run-mozilla-tests
+	rm -rf $(MOZDIR) $(MOZPASS) 
+	rm run-mozilla-tests run-mozilla-tests.out
