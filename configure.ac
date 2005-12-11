@@ -12,7 +12,9 @@ AC_CONFIG_FILES([Makefile
 		 libsee/libsee-config
 		 doc/Makefile 
 		 shell/Makefile
-		 shell/test/Makefile])
+		 shell/test/Makefile
+		 shell/test/mozilla/Makefile
+		 ])
 
 dnl ------------------------------------------------------------
 dnl programs required
