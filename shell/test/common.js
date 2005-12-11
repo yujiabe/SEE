@@ -12,9 +12,10 @@ var failures = 0;
 var total = 0;
 
 function describe(desc) {
-	print("\nDescription: ")
-	print(desc)
-	print("\n\n")
+	print()
+	print("===============================")
+	print("Test: " + desc)
+	print()
 }
 
 /* Literalise a string for printing purposes */
