@@ -25,6 +25,10 @@ else
 	exit 1
 fi
 
+if ! date | grep -w PST >/dev/null; then
+	echo "** WARNING: Timezone is not US/Pacific - date tests may fail" >&2
+fi
+
 (
 cd "$MOZDIR"
 
