@@ -1,54 +1,5 @@
 
-/*
- * Simple statements to test that the parser is parsing right.
- * $Id$
- */
-
-var failures = 0;
-var total = 0;
-
-/* Literalise a string for printing purposes */
-function literal(v) {
-	switch (typeof v) {
-	case "string":
-		return '"' + v.replace(/[\\'"]/, "\\$1") + '"';
-	default:
-		return String(v);
-	}
-}
-
-/* Run a test, and check that the result is that expected */
-function test(expr, expected) {
-
-	var result, msg, ok, result_str, expected_str;
-
-	try {
-		result = eval(expr);
-		ok = (result === expected);
-	} catch (e) {
-		ok = (expected == "exception");
-		result = e.name;
-		// result = String(e);
-	}
-
-	try { result_str = literal(result); }
-	catch (e) { result_str = "<cannot represent as string>"; }
-
-
-	msg = expr + ' = ' + result_str;
-	if (ok) {
-		msg += " PASS";
-	} else {
-		try { expected_str = literal(expected); }
-		catch (e) { expected_str = "<cannot represent as string>"; }
-		msg += " [7mFAIL[m, expected " + expected_str;
-		failures++;
-	}
-	print(msg);
-	total++;
-}
-
-/* Tests begin here */
+describe("Exercises every production in the grammar");
 
 /* FutureReservedWord */
 test("abstract", "exception");
@@ -199,30 +150,4 @@ test("x=y=0;try{" +
 test("x=y=0; try{throw {a:2};y=1;} catch(e){x=e.a;y=-7;} finally{y=3}; x+y", 5);
 
 
-test("String(/a|ab/.exec('abc'))", "a");
-test("String(/((a)|(ab))((c)|(bc))/.exec('abc'))", "abc,a,a,,bc,,bc");
-test("String(/a[a-z]{2,4}/.exec('abcdefghi'))", "abcde");
-test("String(/a[a-z]{2,4}?/.exec('abcdefghi'))", "abc");
-test("String(/(aa|aabaac|ba|b|c)*/.exec('aabaac'))", "aaba,ba");
-test("'aaaaaaaaaa,aaaaaaaaaaaaaaa'.replace(/^(a+)\\1*,\\1+$/,'$1')", "aaaaa");
-test("String(/(z)((a+)?(b+)?(c))*/.exec('zaacbbbcac'))", "zaacbbbcac,z,ac,a,,c")
-test("String(/(a*)*/.exec('b'))",",");
-test("String(/(a*)b\\1+/.exec('baaaac'))","b,");
-test("String(/(?=(a+))/.exec('baaabac'))",",aaa");
-test("String(/(?=(a+))a*b\\1/.exec('baaabac'))", "aba,a");
-test("String(/(.*?)a(?!(a+)b\\2c)\\2(.*)/.exec('baaabaac'))", 
-	"baaabaac,ba,,abaac");
-
-test("'$1,$2'.replace(/(\\$(\\d))/g, '$$1-$1$2')", "$1-$11,$1-$22");
-test("String('ab'.split(/a*?/))", "a,b");
-test("String('ab'.split(/a*/))", ",b");
-
-/* Print a summary of what went right, and what went wrong */
-
-print();
-print((total - failures) + " out of " + total + " passed.");
-
-/* Throw an error on failure */
-if (failures > 0)
-	throw new Error("tests failure");
-
+finish()
