@@ -703,12 +703,16 @@ parsetime(interp, str)
 	 * NaN is returned if the date wasn't parseable.
 	 *
 	 * (Yes, "GMT" and not "UTC")
+	 *
+	 * If the GMT suffix is missing, the date is assumed to be
+	 * in the local timezone.
 	 */
 
 	int i, d, m, y, yneg, hr, min, sec;
 	int len = str->length;
 	SEE_char_t *s = str->data;
 	static char mname[] = "janfebmaraprmayjunjulaugsepoctnovdec";
+	SEE_number_t t;
 		
 
 	i = 0;
@@ -760,13 +764,26 @@ parsetime(interp, str)
 	sec = (s[i+6]-'0') * 10 + (s[i+7]-'0');
 	if (hr >= 24 || min >= 60 || sec >= 60)
 		return SEE_NaN;
+	i += 8;
 
-	/* XXX currently ignore everything after the seconds, incl timezone */
-
-	return MakeDate(
+	t = MakeDate(
 		MakeDay((SEE_number_t)y, (SEE_number_t)m, (SEE_number_t)d),
 		MakeTime((SEE_number_t)hr, (SEE_number_t)min, 
 		         (SEE_number_t)sec, 0.0));
+
+	/* 
+	 * If the next few characters are "GMT", then it is already UTC, 
+	 * otherwise assume date is in local timezone and convert to UTC.
+	 */
+	while (i < len && ISWHITE(s[i])) i++;			/* space */
+	if (i + 2 < len && s[i] == 'G' && s[i+1] == 'M' && s[i+2] == 'T')
+		i += 3;
+	else
+		t = UTC(t);
+
+	/* XXX extra text is ignored */
+
+	return TimeClip(t);
 }
 
 static SEE_number_t
@@ -782,6 +799,7 @@ parse_netscape_time(interp, str)
 	int i, d, m, y, yneg, hr=0, min=0, sec=0;
 	int len = str->length;
 	SEE_char_t *s = str->data;
+	SEE_number_t t;
 
 	i = 0;
 	while (i < len && ISWHITE(s[i])) i++;
@@ -855,10 +873,11 @@ parse_netscape_time(interp, str)
 	if (hr > 24 || min >= 60 || sec >= 60) goto fail;
 	if (m < 1 || m > 12 || d < 1 || d > 31) goto fail;
 
-	return MakeDate(
+	t = MakeDate(
 	    MakeDay((SEE_number_t)y, (SEE_number_t)(m - 1), (SEE_number_t)d),
 	    MakeTime((SEE_number_t)hr, (SEE_number_t)min, 
 	    	     (SEE_number_t)sec, 0.0));
+	return TimeClip(UTC(t));
 
   fail:
 	return SEE_NaN;
@@ -884,13 +903,17 @@ repr_baddate(interp)
 
 /* ref 15.9.5.2 */
 static struct SEE_string *
-reprdatetime(interp, t)
+reprdatetime(interp, t, utc)
 	struct SEE_interpreter *interp;
 	SEE_number_t t;
+	int utc;
 {
 	SEE_int32_t wkday, day, month, year, hour, min, sec;
 
 	if (SEE_ISNAN(t)) return repr_baddate(interp);
+
+	if (!utc)
+		t = LocalTime(t);
 
 	wkday = WeekDay(t);
 	day = DateFromTime(t);
@@ -902,9 +925,9 @@ reprdatetime(interp, t)
 
 	/* "Sun, 12 Oct 2003 07:19:24" */
 	return SEE_string_sprintf(interp,
-		"%.3s, %2d %.3s %d %02d:%02d:%02d",
+		"%.3s, %2d %.3s %d %02d:%02d:%02d%s",
 		&wkdayname[wkday * 3], day, &monthname[month * 3],
-		year, hour, min, sec);
+		year, hour, min, sec, utc ? " GMT" : "");
 }
 
 static struct SEE_string *
@@ -970,7 +993,7 @@ date_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	/* Ignore arguments; equiavlent to (new Date()).toString() */
-	SEE_SET_STRING(res, reprdatetime(interp, LocalTime(now(interp))));
+	SEE_SET_STRING(res, reprdatetime(interp, now(interp), 0));
 }
 
 /* 15.9.3.1 */
@@ -1153,7 +1176,7 @@ date_proto_toString(interp, self, thisobj, argc, argv, res)
 {
 	struct date_object *d = todate(interp, thisobj);
 
-	SEE_SET_STRING(res, reprdatetime(interp, LocalTime(d->t)));
+	SEE_SET_STRING(res, reprdatetime(interp, d->t, 0));
 }
 
 /* 15.9.5.3 */
@@ -1543,7 +1566,7 @@ date_proto_setMilliseconds(interp, self, thisobj, argc, argv, res)
 {
 	struct date_object *d = todate(interp, thisobj);
 	struct SEE_value v;
-	SEE_number_t t = d->t;
+	SEE_number_t t = LocalTime(d->t);
 
 	if (argc < 1)
 		d->t = SEE_NaN;
@@ -1999,7 +2022,7 @@ date_proto_toUTCString(interp, self, thisobj, argc, argv, res)
 {
 	struct date_object *d = todate(interp, thisobj);
 
-	SEE_SET_STRING(res, reprdatetime(interp, d->t));
+	SEE_SET_STRING(res, reprdatetime(interp, d->t, 1));
 }
 
 /* B.2.4 */
@@ -2119,7 +2142,7 @@ init_localtza()
 	utm = gmtime(&t);
 	/* assert(utm != NULL); */
 
-	if (utm->tm_year < year) 
+	if (utm->tm_year + 1900 < year) 
 	    LocalTZA = -1000 * (utm->tm_hour * 60 * 60 +
 	    		        utm->tm_min  * 60 +
 			        utm->tm_sec - 
