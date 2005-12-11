@@ -204,7 +204,7 @@ regexp_construct(interp, self, thisobj, argc, argv, res)
 	{
 	    struct regexp_object *rs = 
 	        (struct regexp_object *)argv[0]->u.object;
-	    if (!(argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
+	    if (argc > 1 && SEE_VALUE_GET_TYPE(argv[1]) != SEE_UNDEFINED)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(regexp_bad_string));
 	    ro->source = rs->source;
@@ -268,11 +268,11 @@ regexp_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv;
 	struct SEE_value *res;
 {
-	if (argc > 1 && 
+	if (argc > 0 && 
 	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 	    argv[0]->u.object->objectclass == &regexp_inst_class &&
 	    (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
-		SEE_SET_OBJECT(res, argv[0]->u.object);
+	        SEE_VALUE_COPY(res, argv[0]);
 	else
 		SEE_OBJECT_CONSTRUCT(interp, self, thisobj, argc, argv, res);
 }
