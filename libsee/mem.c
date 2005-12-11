@@ -50,10 +50,13 @@ static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
 #if defined(HAVE_GC_MALLOC)
 static void *malloc_gc(struct SEE_interpreter *, unsigned int);
+static void *malloc_string_gc(struct SEE_interpreter *, unsigned int);
 # define INITIAL_MALLOC		malloc_gc
+# define INITIAL_MALLOC_STRING	malloc_string_gc
 # define INITIAL_FREE		NULL
 #else
 # define INITIAL_MALLOC		NULL	/* application must provide */
+# define INITIAL_MALLOC_STRING	NULL
 # define INITIAL_FREE		NULL
 #endif /* !HAVE_GC_MALLOC */
 
@@ -64,6 +67,8 @@ static void *malloc_gc(struct SEE_interpreter *, unsigned int);
  */
 void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
 		= INITIAL_MALLOC;
+void * (*SEE_mem_malloc_string_hook)(struct SEE_interpreter *, unsigned int)
+		= INITIAL_MALLOC_STRING;
 void (*SEE_mem_free_hook)(struct SEE_interpreter *, void *) 
 		= INITIAL_FREE;
 void (*SEE_mem_exhausted_hook)(struct SEE_interpreter *) SEE_dead
@@ -89,7 +94,8 @@ memory_exhausted(interp)
 #if HAVE_GC_H
 # include <gc.h>
 #else
-extern void * GC_malloc(int);
+extern void *GC_malloc(int);
+extern void *GC_malloc_atomic(int);
 #endif
 
 static void *
@@ -98,6 +104,14 @@ malloc_gc(interp, size)
 	unsigned int size;
 {
 	return GC_malloc(size);
+}
+
+static void *
+malloc_string_gc(interp, size)
+	struct SEE_interpreter *interp;
+	unsigned int size;
+{
+	return GC_malloc_atomic(size);
 }
 #endif /* HAVE_GC_MALLOC */
 
@@ -118,6 +132,30 @@ SEE_malloc(interp, size)
 	if (size == 0)
 		return NULL;
 	data = (*SEE_mem_malloc_hook)(interp, size);
+	if (data == NULL) 
+		(*SEE_mem_exhausted_hook)(interp);
+	return data;
+}
+
+/**
+ * Allocates size bytes of garbage-collected, string storage.
+ * This function is just like SEE_malloc(), except that the caller
+ * guarantees that no pointers will be stored in the data. This
+ * improves performance with strings.
+ */
+void *
+SEE_malloc_string(interp, size)
+	struct SEE_interpreter *interp;
+	unsigned int size;
+{
+	void *data;
+
+	if (size == 0)
+		return NULL;
+	if (SEE_mem_malloc_string_hook)
+		data = (*SEE_mem_malloc_string_hook)(interp, size);
+	else
+		data = (*SEE_mem_malloc_hook)(interp, size); /* fallback */
 	if (data == NULL) 
 		(*SEE_mem_exhausted_hook)(interp);
 	return data;

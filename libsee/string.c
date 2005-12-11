@@ -343,7 +343,7 @@ simple_growto(s, minspace)
 	    new_space = ss->space ? ss->space * 2 : 256;
 	    while (new_space < minspace)
 		new_space *= 2;
-	    new_data = SEE_NEW_ARRAY(s->interpreter, SEE_char_t, new_space);
+	    new_data = SEE_NEW_STRING_ARRAY(s->interpreter, SEE_char_t, new_space);
 	    if (s->length)
 		memcpy(new_data, s->data, s->length * sizeof (SEE_char_t));
 	    ss->string.data = new_data;

@@ -338,22 +338,26 @@ that your host application can replace:
 </p>
 
 <pre>void * (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
+void * (*<dfn id="SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
 void   (*<dfn id="SEE_mem_free_hook">SEE_mem_free_hook</dfn>)(struct SEE_interpreter *interp, void *ptr);
 void   (*<dfn id="SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</dfn>)(struct SEE_interpreter *interp);</pre>
 
 <p>
 If SEE was compiled with Boehm-gc support, <code>SEE_mem_malloc_hook</code>
 is initialised to point to a wrapper
-around the <code>GC_malloc()</code> function.
-Otherwise, it is initialised as <code>NULL</code> and your application must 
-set it before use.
+around the <code>GC_malloc()</code> function, and
+<code>SEE_mem_malloc_hook</code> is initialised to point to a wrapper
+around <code>GC_malloc_atomic()</code>.
+Otherwise, both are initialised as <code>NULL</code> and your application must 
+set at least <code>SEE_mem_malloc_hook</code> before use.
 </p>
 
 <p>
 If you intend to hook in your own memory allocator, be aware that any of
 these hooks may be called with a <code>NULL</code> interpreter argument,
 indicating unknown context.
-They must not throw exceptions, but may return <code>NULL</code> on failure.
+The malloc hooks must not throw exceptions,
+but should return <code>NULL</code> on failure.
 </p>
 
 <p class="note">
@@ -374,16 +378,19 @@ three convenient macros to allocate storage:
 returning a pointer of given type
 <li><code>SEE_NEW_ARRAY()</code>
 - allocate storage for an array of elements of the given type
+<li><code>SEE_NEW_STRING_ARRAY()</code>
+- a gc-efficient form of <code>SEE_NEW_ARRAY()</code>, where you guarantee that the elements will not contain pointers
 <li><code>SEE_ALLOCA()</code>
 - allocate storage for an array on the stack (see <code>alloca()</code>)
 </ul>
 
 <pre>T * <dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
 T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
+T * <dfn id="SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(int length, type T);</pre>
 
 <p>An usage example is:</p>
-<pre>char *buffer = SEE_NEW_ARRAY(interp, char, 30);</pre>
+<pre>char *buffer = SEE_NEW_STRING_ARRAY(interp, char, 30);</pre>
 
 <p>
 These macros check for a memory allocation failure indicated by the
@@ -2191,19 +2198,21 @@ will occur.
 <a href="#SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</a><br>
 <a href="#SEE_mem_free_hook">SEE_mem_free_hook</a><br>
 <a href="#SEE_mem_malloc_hook">SEE_mem_malloc_hook</a><br>
+<a href="#SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</a><br>
 <a href="#SEE_NaN">SEE_NaN</a><br>
 <a href="#struct_SEE_native">SEE_native</a> struct<br>
 <a href="#SEE_native_init">SEE_native_init</a><br>
 <a href="#SEE_NEW">SEE_NEW</a><br>
 <a href="#SEE_NEW_ARRAY">SEE_NEW_ARRAY</a><br>
+<a href="#SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</a><br>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
+<td>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
-<td>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
 <a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
 <a href="#SEE_OBJECT_CONSTRUCT">SEE_OBJECT_CONSTRUCT</a><br>
@@ -2222,9 +2231,9 @@ will occur.
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
+<td>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
-<td>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
 <a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
@@ -2243,9 +2252,9 @@ will occur.
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_vsprintf">SEE_string_vsprintf</a><br>
 <a href="#SEE_THROW">SEE_THROW</a><br>
+<td>
 <a href="#SEE_ToBoolean">SEE_ToBoolean</a><br>
 <a href="#SEE_ToInt32">SEE_ToInt32</a><br>
-<td>
 <a href="#SEE_ToInteger">SEE_ToInteger</a><br>
 <a href="#SEE_ToNumber">SEE_ToNumber</a><br>
 <a href="#SEE_ToObject">SEE_ToObject</a><br>

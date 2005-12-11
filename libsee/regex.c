@@ -511,7 +511,7 @@ code_add(recontext, c)
 	    int new_size;
 
 	    new_size = regex->codealloc ? regex->codealloc * 2 : 512;
-	    new_code = SEE_NEW_ARRAY(interp, unsigned char, new_size);
+	    new_code = SEE_NEW_STRING_ARRAY(interp, unsigned char, new_size);
 
 	    if (regex->codealloc)
 		memcpy(new_code, regex->code, 
