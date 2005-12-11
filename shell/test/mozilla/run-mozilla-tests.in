@@ -3,9 +3,12 @@
 # $Id$
 
 #-- **
-#   ** Change the following to point to see-shell or see-shell.static
+#   ** Change the following to an absolute path to 
+#   ** see-shell or see-shell.static
 #   ** 
-SHELLPROG="/tmp/b/shell/see-shell.static -c ext1 -c undefdef"
+SHELLPROG="@SHELLPROG@"
+MOZDIR="@MOZDIR@"
+CR="`echo | tr '\012' '\015'`"
 
 ulimit -c 0
 ulimit -t 600
@@ -15,13 +18,15 @@ isok () {
     test "$d" != "e4x" -a -f "$d"/shell.js 
 }
 
-if $SHELLPROG < /dev/null; then
+if $SHELLPROG -V < /dev/null; then
 	:
 else
 	echo "Cannot execute shell: $SHELLPROG" >&2
 	exit 1
 fi
 
+(
+cd "$MOZDIR"
 
 #-- scan for tests
 echo 'scanning tests...' >&2
@@ -49,8 +54,7 @@ for d in *; do
         for i in $e/*.js; do
 	    test -f "$i" || continue
 	    pos=`expr $pos + 1`
-	    echo -n "$pos of $count: $failed failed 
-" >&2
+	    echo -n "$pos of $count: $failed failed${CR}" >&2
 	    echo ""
 	    echo "** $pos $i **"
 	    echo ""
@@ -75,10 +79,16 @@ for d in *; do
 	    fi
 	done 
     done
-done | tee $0.out | awk '/^\*/ {name = $0;printed=0;} /FAILED!/ { if (!printed) {printed=1; print name;} print; }'
-
-
-# SO=`tput so`
-# RMSO=`tput rmso`
-# sed -e "s/^exception:/${SO}&${RMSO}/" -e "s/FAILED!/${SO}&${RMSO}/"
-
+done 
+) | 
+  tee $0.out | 
+  awk '/^\*/     { name = $0;				\
+  		   printed = 0; }			\
+       /FAILED!/ { if (!printed) { 			\
+                       printed = 1; 			\
+		       print name; 			\
+		       failed++; } 			\
+                   print; }				\
+       END       { print "Tests failed:", failed; 		\
+                   exit failed > 0 ? 1 : 0; }		\
+       '

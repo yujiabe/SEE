@@ -4,8 +4,12 @@ MOZROOT= :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot
 MOZROOTP= :pserver:anonymous:@cvs-mirror.mozilla.org:/cvsroot
 MOZPASS= .cvspass
 MOZDIR=	  mozilla.js.tests
-SEESHELL= ../../see-shell.static
-SEESHELLOPTS= -c ext1 -c undefdef
+
+SHELLDIR= $(shell cd ../.. && pwd)
+SHELLPROG= $(SHELLDIR)/see-shell.static
+SHELLOPTS= -c ext1 -c undefdef
+
+TESTS=	run-mozilla-tests
 
 check: $(MOZDIR)/Makefile $(SEESHELL)
 
@@ -16,5 +20,11 @@ $(MOZDIR)/Makefile: $(MOZPASS)
 $(MOZPASS):
 	CVS_PASSFILE=$(MOZPASS) cvs -d $(MOZROOTP) login
 
+run-mozilla-tests: run-mozilla-tests.in
+	sed -e 's!@SHELLPROG@!${SHELLPROG} ${SHELLOPTS}!g' \
+	    -e 's!@MOZDIR@!${MOZDIR}!g' \
+		< $^ > $@
+	chmod +x $@
+
 clean:
-	rm -rf $(MOZDIR) $(MOZPASS)
+	rm -rf $(MOZDIR) $(MOZPASS) run-mozilla-tests
