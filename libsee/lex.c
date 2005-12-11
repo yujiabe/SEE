@@ -643,6 +643,8 @@ static int
 Token(lex)
 	struct lex *lex;				/* 7.5 */
 {
+	struct SEE_interpreter *interp = lex->input->interpreter;
+
 	if (ATEOF)
 		return tEND;
 
@@ -675,7 +677,21 @@ Token(lex)
 			if (SEE_tok_keywords[i].str->length == s->length
 		         && SEE_string_cmp(SEE_tok_keywords[i].str, s) 
 			 == 0)
-			    return SEE_tok_keywords[i].token;
+			 {
+			    int token = SEE_tok_keywords[i].token;
+			    if (token == tRESERVED &&
+			        (interp->compatibility & SEE_COMPAT_EXT1))
+			    {
+#ifndef NDEBUG
+				dprintf("Warning: line %d: reserved token '",
+				    lex->next_lineno);
+				dprints(s);
+				dprintf("' treated as identifier\n");
+#endif
+			        break;
+			    }
+			    return token;
+			 }
 
 		s = SEE_intern(lex->input->interpreter, s);
 		SEE_SET_STRING(&lex->value, s);
