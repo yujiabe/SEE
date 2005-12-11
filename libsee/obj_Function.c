@@ -721,7 +721,7 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 
 	    SEE_OBJECT_GET(interp, a, STR(length), &v);
 	    the_argc = SEE_ToUint32(interp, &v);
-	    the_args = SEE_ALLOCA(the_argc, struct SEE_value);
+	    the_args = SEE_ALLOCA(interp, the_argc, struct SEE_value);
 
 	    for (i = 0; i < the_argc; i++) {
 		if (i == 0) s = SEE_string_new(interp, 0);
@@ -733,7 +733,7 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(apply_not_array));
 
-	the_argv = SEE_ALLOCA(the_argc, struct SEE_value *);
+	the_argv = SEE_ALLOCA(interp, the_argc, struct SEE_value *);
 	for (i = 0; i < the_argc; i++)
 	    the_argv[i] = &the_args[i];
 	SEE_OBJECT_CALL(interp, thisobj, thisarg, the_argc, the_argv, res);

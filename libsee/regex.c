@@ -1371,7 +1371,7 @@ pcode_run(interp, regex, addr, text, state)
 
 	SEE_ASSERT(interp, statesz == regex->statesz);
 
-	newstate = SEE_ALLOCA(statesz, char);
+	newstate = SEE_ALLOCA(interp, statesz, char);
 
 #define index (capture[0].end)
 
@@ -1686,7 +1686,7 @@ SEE_regex_match(interp, regex, text, index, capture_ret)
 	struct capture *capture_ret;
 {
 	int i, success;
-	char *state = SEE_ALLOCA(regex->statesz, char);
+	char *state = SEE_ALLOCA(interp, regex->statesz, char);
 	struct capture *capture = (struct capture *)state;
 
 #ifndef NDEBUG

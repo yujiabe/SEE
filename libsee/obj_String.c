@@ -649,8 +649,8 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 
 	if (SEE_VALUE_GET_TYPE(replacev) == SEE_OBJECT) {
 	    struct SEE_value **av, *vp;
-	    av = SEE_ALLOCA(ncaps + 2, struct SEE_value *);
-	    vp = SEE_ALLOCA(ncaps + 2, struct SEE_value);
+	    av = SEE_ALLOCA(interp, ncaps + 2, struct SEE_value *);
+	    vp = SEE_ALLOCA(interp, ncaps + 2, struct SEE_value);
 	    for (i = 0; i < ncaps + 2; i++)
 		av[i] = &vp[i];
 	    SEE_OBJECT_GET(interp, a, STR(zero_digit), &vp[0]);
@@ -843,7 +843,7 @@ string_proto_search(interp, self, thisobj, argc, argv, res)
 	s = object_to_string(interp, thisobj);
 	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 	ncaps = SEE_RegExp_count_captures(interp, regexp);
-	captures = SEE_ALLOCA(ncaps, struct capture);
+	captures = SEE_ALLOCA(interp, ncaps, struct capture);
 
 	/*
 	 * As this function is not supposed to touch the regexp object's
@@ -964,7 +964,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	    ncap = 1;
 	}
 	if (ncap)
-		captures = SEE_ALLOCA(ncap, struct capture);
+		captures = SEE_ALLOCA(interp, ncap, struct capture);
 /*7*/	if (lim == 0) return;
 /*8*/	if (SEE_VALUE_GET_TYPE(R) == SEE_UNDEFINED) goto step33;
 /*9*/	if (s == 0) goto step31;

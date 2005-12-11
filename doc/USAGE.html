@@ -387,7 +387,7 @@ returning a pointer of given type
 <pre>T * <dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
 T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
-T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(int length, type T);</pre>
+T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, int length, type T);</pre>
 
 <p>An usage example is:</p>
 <pre>char *buffer = SEE_NEW_STRING_ARRAY(interp, char, 30);</pre>

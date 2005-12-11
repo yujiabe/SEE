@@ -181,6 +181,6 @@ extern const unsigned char
 # endif
 #endif
 
-#define SEE_ALLOCA(n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)
+#define SEE_ALLOCA(i, n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)
 
 #endif /* _SEE_h_type_ */

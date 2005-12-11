@@ -294,7 +294,7 @@ SEE_string_vsprintf(interp, fmt, ap)
 
         len = vsnprintf(buf, 0, fmt, ap);
 	if (len) {
-		buf = SEE_ALLOCA(len + 1, char);
+		buf = SEE_ALLOCA(interp, len + 1, char);
 		vsnprintf(buf, len + 1, fmt, ap);
 	}
 

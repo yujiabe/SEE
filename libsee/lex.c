@@ -490,10 +490,11 @@ NumericLiteral(lex)
 	unsigned int i;
 	struct SEE_string *s;
 	char *numbuf, *endstr;
+	struct SEE_interpreter *interp = lex->input->interpreter;
 
 	seendigit = 0;
 	n = 0;
-	s = SEE_string_new(lex->input->interpreter, 0);
+	s = SEE_string_new(interp, 0);
 
 	if (NEXT == '0') {
 	    SKIP;
@@ -525,7 +526,7 @@ NumericLiteral(lex)
 	    SKIP;
 	}
 
-	if ((lex->input->interpreter->compatibility & SEE_COMPAT_EXT1) 
+	if ((interp->compatibility & SEE_COMPAT_EXT1) 
 	    && seendigit 
 	    && (ATEOF || (NEXT != '.' && NEXT != 'e' && NEXT != 'E'))
 	    && s->length > 1
@@ -580,7 +581,7 @@ NumericLiteral(lex)
 		SYNTAX_ERROR(STR(dec_literal_detritus));
 	}
 
-	numbuf = SEE_ALLOCA(s->length + 1, char);
+	numbuf = SEE_ALLOCA(interp, s->length + 1, char);
 	for (i = 0; i < s->length; i++)
 		numbuf[i] = s->data[i] & 0x7f;
 	numbuf[i] = '\0';
@@ -968,7 +969,7 @@ SEE_lex_number(interp, s, res)
 		    }
 		    if (!seendig) goto fail;
 		}
-		numbuf = SEE_ALLOCA(pos - start + 1, char);
+		numbuf = SEE_ALLOCA(interp, pos - start + 1, char);
 		for (i = 0; i < pos - start; i++)
 			numbuf[i] = s->data[i + start] & 0x7f;
 		numbuf[i] = '\0';

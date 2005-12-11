@@ -472,7 +472,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 		if (hasdigits)
 		    upto = i;
 	    }
-	    numbuf = SEE_ALLOCA(upto - start + 1, char);
+	    numbuf = SEE_ALLOCA(interp, upto - start + 1, char);
 	    for (i = start; i < upto; i++)
 		numbuf[i - start] = s->data[i] & 0x7f;
 	    numbuf[i - start] = '\0';
