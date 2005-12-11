@@ -191,6 +191,7 @@ struct parser {
 };
 
 #if WITH_PARSER_PRINT
+struct printer;
 struct printerclass {
 	void	(*print_string)(struct printer *, struct SEE_string *);
 	void	(*print_char)(struct printer *, SEE_char_t);
