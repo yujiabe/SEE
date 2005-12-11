@@ -1,10 +1,12 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
+  bug 2: Strings are marked so they are not scanned by the GC
+  bug 7: SEE_ALLOCA now takes an interpreter argument
   New features to enable/disable: parser-print parser-visit full-unicode
   Proper API (1.0) versioning
   Better parser internal consistency checks in debug mode (node cast checks)
-  Add a simple interactive debugger into see-shell
+  bug 3: Added a simple interactive debugger into see-shell
   Trace hook now exposes context structures for use with SEE_context_eval()
   Fixed bug where malformed unicode text could cause seg fault
   Changed licence (removed BSD advertising clause)
