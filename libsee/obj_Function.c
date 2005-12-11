@@ -159,21 +159,6 @@ static struct SEE_objectclass function_inst_class = {
 	function_inst_hasinstance		/* HasInstance */
 };
 
-/* object class for function common (master) instances */
-static struct SEE_objectclass function_common_inst_class = {
-	STR(Function),				/* Class */
-	SEE_native_get,				/* Get */
-	SEE_native_put,				/* Put */
-	SEE_native_canput,			/* CanPut */
-	SEE_native_hasproperty,			/* HasProperty */
-	SEE_native_delete,			/* Delete */
-	SEE_native_defaultvalue,		/* DefaultValue */
-	SEE_native_enumerator,			/* Enumerator */
-	function_inst_construct,		/* Construct */
-	function_inst_call,			/* Call */
-	function_inst_hasinstance		/* HasInstance */
-};
-
 /* object class for 'arguments' instances */
 static struct SEE_objectclass arguments_class = {
 	STR(Arguments),				/* Class */
@@ -210,9 +195,9 @@ struct SEE_objectclass SEE_activation_class = {
 	SEE_native_enumerator,			/* Enumerator */
 };
 
-/* structure of function instances */
+/* structure of function instances (13.1.2) */
 struct function_inst {
-	struct SEE_native native;
+	struct SEE_object object;
 	struct function  *function;
 	struct SEE_scope *scope;
 };
@@ -263,7 +248,7 @@ SEE_Function_init(interp)
 	function_inst_init((struct function_inst *)Function_prototype,
 		interp, f, interp->Global_scope);
 	Function_prototype->Prototype = interp->Object_prototype; /* 15.3.4 */
-	f->common->object.Prototype = interp->Object_prototype;	  /* 15.3.4 */
+	f->common->Prototype = interp->Object_prototype;	  /* 15.3.4 */
 
 	if (interp->compatibility & SEE_COMPAT_EXT1) {
 		/*
@@ -325,15 +310,10 @@ function_inst_init(fi, interp, f, scope)
 	struct function *f;
 	struct SEE_scope *scope;
 {
-	if (f->common == NULL)  {
-		SEE_native_init(&fi->native, interp,
-		    &function_common_inst_class,
-		    interp->Function_prototype);
-		f->common = &fi->native;
-	} else {
-		fi->native.object.objectclass = &function_inst_class;
-		fi->native.object.Prototype = interp->Function_prototype;
-	}
+	if (f->common == NULL) 
+		f->common = SEE_native_new(interp);
+	fi->object.objectclass = &function_inst_class;
+	fi->object.Prototype = interp->Function_prototype;
 	fi->function = f;
 	fi->scope = scope;
 }
@@ -348,18 +328,20 @@ SEE_function_inst_create(interp, f, scope)
 	struct function_inst *fi;
 
 	/*
-	 * We cache the first created Function instance of a 
+	 * We cache the first created function instance around a 
 	 * function structure, and return it if the scopes are
-	 * observationally equivalent.
+	 * observationally equivalent. This can save lots of memory.
+	 * Even on cache misses, the common object will still 
+	 * be shared, so the cache is trivially small.
 	 */
 	if (f->cache) {
-		/* Does the cached object have the same scope? */
+		/* Does the cached instance have the same scope? */
 		fi = (struct function_inst *)f->cache;
 		if (SEE_scope_eq(fi->scope, scope))
 			return f->cache;
 	}
 
-	fi = SEE_NEW(interp, struct function_inst);
+	fi = SEE_NEW(interp, struct function_inst);	/* 13.2(2) */
 	function_inst_init(fi, interp, f, scope);
 
 	if (!f->cache)
@@ -648,8 +630,9 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 		thisobj->objectclass->Construct != NULL)
 	    {
 		    s = SEE_string_sprintf(interp, 
-			"function () { /* constructor %p */ }", 
-			thisobj->objectclass->Construct);
+		    	"function () { /* constructor ");
+		    SEE_string_append(s, thisobj->objectclass->Class);
+		    SEE_string_append(s, STR(cfunction_body3));
 		    SEE_SET_STRING(res, s);
 		    return;
 	    }
@@ -671,7 +654,7 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 		}
 		SEE_string_append(s, f->params[i]);
 	}
-	/* XXX should get printing to work properly */
+
 	SEE_string_addch(s, ')');
 	SEE_string_addch(s, ' ');
 	SEE_string_addch(s, '{');

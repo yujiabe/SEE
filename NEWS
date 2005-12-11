@@ -1,6 +1,8 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
+  bug 9: corrected function instances' prototype.constructor property
+  Corrected timezone problem with Date.setMilliseconds()
   bug 2: Strings are marked so they are not scanned by the GC
   bug 7: SEE_ALLOCA now takes an interpreter argument
   New features to enable/disable: parser-print parser-visit full-unicode

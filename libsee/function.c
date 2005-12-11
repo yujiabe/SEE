@@ -76,6 +76,7 @@ SEE_function_make(interp, name, params, body)
 	int i;
 	struct var *v;
 	struct SEE_value val, r9;
+	struct SEE_object *F;
 
 	f = SEE_NEW(interp, struct function);
 
@@ -101,8 +102,8 @@ SEE_function_make(interp, name, params, body)
 	f->cache = NULL;
 	f->common = NULL;
 
-	/* 13.2 step 2: make object F, fills in f->common = F as side-effect. */
-	SEE_function_inst_create(interp, f, NULL);
+	/* 13.2 step 2: make object F */
+	F = SEE_function_inst_create(interp, f, NULL);
 
 	/*
 	 * NB: SEE_function_inst_create() will perform the equivalent
@@ -111,26 +112,26 @@ SEE_function_make(interp, name, params, body)
 
 	/* 13.2 step 8 + 15.3.5.1: add the 'length' property */
 	SEE_SET_NUMBER(&val, f->nparams);
-	SEE_OBJECT_PUT(interp, (struct SEE_object *)f->common, STR(length),
+	SEE_OBJECT_PUT(interp, F, STR(length),
 	    &val, SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY | SEE_ATTR_DONTENUM);
 
 	/* 13.2 step 9 - a prototype object */
 	SEE_SET_OBJECT(&r9, SEE_Object_new(interp));
 
 	/* 13.2 step 10 - the prototype's 'constructor' property */
-	SEE_SET_OBJECT(&val, (struct SEE_object *)f->common);
+	SEE_SET_OBJECT(&val, F);
 	SEE_OBJECT_PUT(interp, r9.u.object, STR(constructor), &val, 
 		SEE_ATTR_DONTENUM);
 
 	/* 13.2 step 11 + 15.3.5.2 - add the 'prototype' property */
-	SEE_OBJECT_PUT(interp, (struct SEE_object *)f->common, STR(prototype),
+	SEE_OBJECT_PUT(interp, F, STR(prototype),
 		&r9, SEE_ATTR_DONTDELETE); /* (see 15.3.5.2) */
 
 	/* f.arguments = null */
 	if (interp->compatibility & SEE_COMPAT_EXT1) {
 		struct SEE_value v;
 		SEE_SET_NULL(&v);
-		SEE_OBJECT_PUT(interp, (struct SEE_object *)f->common,
+		SEE_OBJECT_PUT(interp, F,
 			STR(arguments), &v, SEE_ATTR_DONTDELETE | 
 			SEE_ATTR_READONLY | SEE_ATTR_DONTENUM);
 	}
