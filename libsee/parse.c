@@ -113,9 +113,14 @@ int SEE_eval_debug = 0;
  * Abstract syntax tree basic structure
  */
 struct node;
-struct printer;
 
+#if WITH_PARSER_PRINT
+struct printer;
+#endif
+
+#if WITH_PARSER_VISIT
 typedef void (*visitor_fn_t)(struct node *, void *);
+#endif
 
 struct nodeclass {
 #ifndef NDEBUG
@@ -191,7 +196,6 @@ struct parser {
 };
 
 #if WITH_PARSER_PRINT
-struct printer;
 struct printerclass {
 	void	(*print_string)(struct printer *, struct SEE_string *);
 	void	(*print_char)(struct printer *, SEE_char_t);
@@ -612,11 +616,11 @@ static void printer_print_newline(struct printer *printer, int indent);
 static void printer_print_node(struct printer *printer, struct node *n);
 static void print_hex(struct printer *printer, int i);
 static void stdio_print_string(struct printer *printer, struct SEE_string *s);
-static void stdio_print_char(struct printer *printer, int c);
+static void stdio_print_char(struct printer *printer, SEE_char_t c);
 static void stdio_print_node(struct printer *printer, struct node *n);
 static struct printer *stdio_printer_new(struct SEE_interpreter *interp, FILE *output);
 static void string_print_string(struct printer *printer, struct SEE_string *s);
-static void string_print_char(struct printer *printer, int c);
+static void string_print_char(struct printer *printer, SEE_char_t c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp, struct SEE_string *string);
 static void print_functionbody(struct SEE_interpreter *interp, struct function *f, FILE *fp);
 #endif
