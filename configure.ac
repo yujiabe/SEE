@@ -445,8 +445,6 @@ dnl ------------------------------------------------------------
 dnl tests
 dnl
 
-AC_CONFIG_FILES([shell/test/test-grammar],
-	  [chmod +x $ac_file])
 
 dnl ------------------------------------------------------------
 dnl finalisation
