@@ -89,10 +89,11 @@ SEE_object_construct(interp, obj, thisobj, argc, argv, res)
 	SEE_try_context_t c;
 	int saved_recursion_limit = interp->recursion_limit;
 
-	if (interp->recursion_limit == 0)
+	if (interp->recursion_limit == 1) {
+	    interp->recursion_limit = 0;
 	    SEE_error_throw_string(interp, interp->Error,
 		STR(recursion_limit_reached));
-	else if (interp->recursion_limit > 0) 
+	} else if (interp->recursion_limit > 0) 
 	    interp->recursion_limit--;
 	SEE_TRY(interp, c) {
 	    _SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res);
