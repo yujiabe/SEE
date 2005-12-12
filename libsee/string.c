@@ -38,6 +38,12 @@
 # include <stdarg.h>
 #endif
 
+#if HAVE_LIMITS_H
+# include <limits.h>
+#else
+# define UINT_MAX (~(unsigned int)0)
+#endif
+
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/string.h>
@@ -49,7 +55,7 @@
 #include "stringdefs.h"
 
 static struct SEE_stringclass fixed_stringclass = {
-	0						/* growto */
+	0						/* growby */
 };
 
 /*
@@ -63,17 +69,17 @@ static struct SEE_stringclass fixed_stringclass = {
  */
 
 /*
- * Grow a string's data[] array to the given length
+ * Grow a string's data[] array by the given length increment
  */
 static void
-growto(s, minspace)
+growby(s, extra)
 	struct SEE_string *s;
-	unsigned int minspace;
+	unsigned int extra;
 {
-	if (!s->stringclass || !s->stringclass->growto)
+	if (!s->stringclass || !s->stringclass->growby)
 		SEE_error_throw_string(s->interpreter, s->interpreter->Error, 
 			STR(no_string_space));
-	(*s->stringclass->growto)(s, minspace);
+	(*s->stringclass->growby)(s, extra);
 }
 
 /*
@@ -161,7 +167,7 @@ SEE_string_addch(s, c)
 	struct SEE_string *s;
 	SEE_char_t c;
 {
-	growto(s, s->length + 1);
+	growby(s, 1);
 	s->data[s->length++] = c;
 }
 
@@ -174,8 +180,8 @@ SEE_string_append(s, t)
 	struct SEE_string *s;
 	const struct SEE_string *t;
 {
-	growto(s, s->length + t->length);
 	if (t->length) {
+	    growby(s, t->length);
 	    memcpy(s->data + s->length, t->data, 
 		t->length * sizeof (SEE_char_t));
 	    s->length += t->length;
@@ -326,24 +332,65 @@ struct simple_string {
 	unsigned int space;
 };
 
+/* Tunable parameters at build */
+#ifndef STRING_INITIAL_SIZE
+# define STRING_INITIAL_SIZE	512
+#endif
+#ifndef STRING_MAXIMUM_SIZE
+# define STRING_MAXIMUM_SIZE	UINT_MAX
+#endif
+#ifndef STRING_MAXIMUM_PADDING
+# define STRING_MAXIMUM_PADDING	4096
+#endif
+
+/*
+ * INITSPACE: initial length of a string
+ * MAXSPACE:  biggest string length possible with length type
+ * BIGSPACE:  largest string length allocation likely to succeed
+ */
+#define INITSPACE	(STRING_INITIAL_SIZE / sizeof (SEE_char_t))
+#define MAXSPACE	(STRING_MAXIMUM_SIZE / sizeof (SEE_char_t))
+#define BIGSPACE	((STRING_MAXIMUM_SIZE - STRING_MAXIMUM_PADDING) / sizeof (SEE_char_t))
+
 /* 
- * grows the string to have the required space in its array.
+ * grows the string storage to have at least current+extra elements of storage.
  * Simple strings never shrink. Grows in powers of two, starting at 256.
  */
 static void
-simple_growto(s, minspace)
+simple_growby(s, extra)
 	struct SEE_string *s;
-	unsigned int minspace;
+	unsigned int extra;
 {
 	struct simple_string *ss = (struct simple_string *)s;
-	int new_space;
+	unsigned int minspace, new_space;
 	SEE_char_t *new_data;
+	struct SEE_interpreter *interp = s->interpreter;
+
+	if (s->length > MAXSPACE - extra)
+		SEE_error_throw_string(interp, interp->Error,
+		                STR(string_limit_reached));
+	minspace = s->length + extra;
 
 	if (ss->space < minspace) {
-	    new_space = ss->space ? ss->space * 2 : 256;
-	    while (new_space < minspace)
-		new_space *= 2;
-	    new_data = SEE_NEW_STRING_ARRAY(s->interpreter, SEE_char_t, new_space);
+	    /*
+	     * The non-empty string space starts at INITSPACE, and then
+	     * doubles until it would exceepd BIGSPACE, at which point it
+	     * is set to BIGSPACE (the practical size limit of memory 
+	     * allocations). A further increase is permitted to MAXSPACE,
+	     * but the memory subsystem is expected to complain at that
+	     */
+	    new_space = ss->space;
+	    while (new_space < minspace) {
+		if (new_space == 0)
+		    new_space = INITSPACE;
+		else if (ss->space >= BIGSPACE)
+		    new_space = MAXSPACE;
+		else if (ss->space > BIGSPACE/2)
+		    new_space = BIGSPACE;
+		else
+		    new_space = new_space * 2;
+	    }
+	    new_data = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, new_space);
 	    if (s->length)
 		memcpy(new_data, s->data, s->length * sizeof (SEE_char_t));
 	    ss->string.data = new_data;
@@ -352,7 +399,7 @@ simple_growto(s, minspace)
 }
 
 static struct SEE_stringclass simple_stringclass = {
-	simple_growto					/* growto */
+	simple_growby					/* growby */
 };
 
 struct SEE_string *
@@ -369,7 +416,7 @@ SEE_string_new(interp, space)
 	ss->space = 0;
 	ss->string.stringclass = &simple_stringclass;
 	if (space)
-	    simple_growto((struct SEE_string *)ss, space);
+	    simple_growby((struct SEE_string *)ss, space);
 	return (struct SEE_string *)ss;
 }
 

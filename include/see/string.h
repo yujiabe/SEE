@@ -9,9 +9,10 @@
  * They have length and content, and may be 'owned' by the intern system.
  *
  * Like objects, a string class provides an implementation.
- * The implementation can optionally provide a 'growto' method that
- * is used by SEE_string_append() and SEE_string_addch() to grow the 
- * string, although care must be taken to ensure that the grown
+ * The implementation can optionally provide a 'growby' method that
+ * is used by SEE_string_append() and SEE_string_addch() to ensure the
+ * string length can be incremented by a given amount;
+ * although care must be taken to ensure that the grown
  * string's data is not in use elsewhere. 
  * Practically there are only two string implementations: growable and 
  * non-growable.
@@ -36,15 +37,15 @@ struct SEE_string {
 	struct SEE_interpreter	*interpreter;
 	int 			 flags;
 };
-#define SEE_STRING_FLAG_INTERNED 1
-#define SEE_STRING_FLAG_STATIC   2
+#define SEE_STRING_FLAG_INTERNED  1
+#define SEE_STRING_FLAG_STATIC    2
 
 #define SEE_STRING_DECL(chararray) \
 	{ sizeof (chararray) / sizeof (SEE_char_t), (chararray), \
 	  NULL, NULL, SEE_STRING_FLAG_STATIC }
 
 struct SEE_stringclass {
-	void (*growto)(struct SEE_string *, unsigned int);
+	void (*growby)(struct SEE_string *, unsigned int);
 };
 
 void	SEE_string_addch(struct SEE_string *s, SEE_char_t ch);

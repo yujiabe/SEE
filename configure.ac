@@ -49,7 +49,7 @@ dnl (This is for some windows compat)
 AC_CHECK_HEADERS([windows.h getopt.h],,,[;])
 
 dnl (And others)
-AC_CHECK_HEADERS([float.h],,,[;])
+AC_CHECK_HEADERS([float.h limits.h],,,[;])
 
 dnl ------------------------------------------------------------
 dnl C compiler features

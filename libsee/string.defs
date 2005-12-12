@@ -34,6 +34,7 @@ no_hasinstance = "Object does not support the 'instanceof' operator"
 bad_lvalue = "Left-hand-side of the assignment cannot be assigned to"
 regex_syntax_error = "Regular expression contained a syntax error"
 recursion_limit_reached = "Call limit was reached; runaway recursion?"
+string_limit_reached = "String too long"
 error
 
 #
