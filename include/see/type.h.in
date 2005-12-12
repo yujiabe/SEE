@@ -8,7 +8,14 @@
  * Machine-dependent types and definitions
  */
 
-#if HAVE_FLOAT_H
+#if @size_t@
+typedef SEE_size_t unsigned;
+#else
+# include <sys/types.h>
+# define SEE_size_t size_t
+#endif
+
+#if @HAVE_FLOAT_H@
 # include <float.h>
 #endif
 

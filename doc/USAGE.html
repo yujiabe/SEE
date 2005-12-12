@@ -337,8 +337,8 @@ SEE manages memory by calling through the following function pointers,
 that your host application can replace:
 </p>
 
-<pre>void * (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
-void * (*<dfn id="SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</dfn>)(struct SEE_interpreter *interp, unsigned int size);
+<pre>void * (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
+void * (*<dfn id="SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
 void   (*<dfn id="SEE_mem_free_hook">SEE_mem_free_hook</dfn>)(struct SEE_interpreter *interp, void *ptr);
 void   (*<dfn id="SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</dfn>)(struct SEE_interpreter *interp);</pre>
 

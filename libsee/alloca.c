@@ -47,7 +47,8 @@
  * Allocates short-term storage in an unknown interpreter context.
  */
 char *
-SEE_alloca(unsigned int sz)
+SEE_alloca(sz)
+	SEE_size_t sz;
 {
 	return (char *)(*SEE_mem_malloc_hook)((struct SEE_interpreter *)0, sz);
 }

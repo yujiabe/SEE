@@ -49,8 +49,8 @@
 static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
 #if defined(HAVE_GC_MALLOC)
-static void *malloc_gc(struct SEE_interpreter *, unsigned int);
-static void *malloc_string_gc(struct SEE_interpreter *, unsigned int);
+static void *malloc_gc(struct SEE_interpreter *, SEE_size_t);
+static void *malloc_string_gc(struct SEE_interpreter *, SEE_size_t);
 # define INITIAL_MALLOC		malloc_gc
 # define INITIAL_MALLOC_STRING	malloc_string_gc
 # define INITIAL_FREE		NULL
@@ -65,9 +65,9 @@ static void *malloc_string_gc(struct SEE_interpreter *, unsigned int);
  * Changing these will allow an application to wrap memory allocation
  * and handle out-of-memory conditions.
  */
-void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, unsigned int)
+void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, SEE_size_t)
 		= INITIAL_MALLOC;
-void * (*SEE_mem_malloc_string_hook)(struct SEE_interpreter *, unsigned int)
+void * (*SEE_mem_malloc_string_hook)(struct SEE_interpreter *, SEE_size_t)
 		= INITIAL_MALLOC_STRING;
 void (*SEE_mem_free_hook)(struct SEE_interpreter *, void *) 
 		= INITIAL_FREE;
@@ -101,7 +101,7 @@ extern void *GC_malloc_atomic(int);
 static void *
 malloc_gc(interp, size)
 	struct SEE_interpreter *interp;
-	unsigned int size;
+	SEE_size_t size;
 {
 	return GC_malloc(size);
 }
@@ -109,7 +109,7 @@ malloc_gc(interp, size)
 static void *
 malloc_string_gc(interp, size)
 	struct SEE_interpreter *interp;
-	unsigned int size;
+	SEE_size_t size;
 {
 	return GC_malloc_atomic(size);
 }
@@ -125,7 +125,7 @@ malloc_string_gc(interp, size)
 void *
 SEE_malloc(interp, size)
 	struct SEE_interpreter *interp;
-	unsigned int size;
+	SEE_size_t size;
 {
 	void *data;
 
@@ -146,7 +146,7 @@ SEE_malloc(interp, size)
 void *
 SEE_malloc_string(interp, size)
 	struct SEE_interpreter *interp;
-	unsigned int size;
+	SEE_size_t size;
 {
 	void *data;
 
