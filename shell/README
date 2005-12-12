@@ -10,9 +10,14 @@ an interactive (prompted) mode.
 
 Usage
 -----
-	shell [-g] [-d<debugflags>] [-c value] [-f file] [-h htmlfile] 
+	shell [-g] [-v] [-r <num>] [-d<debugflags>] [-c value] 
+	      [-f file] [-h htmlfile] 
 
 The '-g' option drops into the interactive debugger - see below for details.
+
+The '-v' option prints the library version and API version used.
+
+The '-r' option sets the function recursion limit. Default is -1 (indefinite).
 
 The '-f file' and '-h htmlfile' options can be specified multiple times.
 Each time they are specified, the given files are loaded and run.
