@@ -36,6 +36,10 @@
 # include <math.h>
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include <see/mem.h>
 #include <see/value.h>
 #include <see/string.h>
@@ -221,10 +225,22 @@ regexp_construct(interp, self, thisobj, argc, argv, res)
 		SEE_ToString(interp, argv[1], &v);
 		for (i = 0; i < v.u.string->length; i++)
 		    switch (v.u.string->data[i]) {
-		    case 'g':  ro->flags |= FLAG_GLOBAL; break;
-		    case 'i':  ro->flags |= FLAG_IGNORECASE; break;
-		    case 'm':  ro->flags |= FLAG_MULTILINE; break;
-		    default: break; /* ignore unknown flags */
+		    case 'g':  
+		    	if (ro->flags & FLAG_GLOBAL) goto badflag;
+		    	ro->flags |= FLAG_GLOBAL; 
+			break;
+		    case 'i':  
+		    	if (ro->flags & FLAG_IGNORECASE) goto badflag;
+		   	ro->flags |= FLAG_IGNORECASE;
+			break;
+		    case 'm':  
+		    	if (ro->flags & FLAG_MULTILINE) goto badflag;
+		   	ro->flags |= FLAG_MULTILINE;
+			break;
+		    default: 
+		badflag:
+			SEE_error_throw_string(interp, interp->SyntaxError, 
+			   STR(regexp_bad_flag));
 		    }
 	    }
 	}
