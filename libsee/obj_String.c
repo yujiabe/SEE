@@ -1116,7 +1116,7 @@ string_proto_toLocaleLowerCase(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	/* XXX TODO properly */
-	return string_proto_toLowerCase(interp, self, thisobj, 
+	string_proto_toLowerCase(interp, self, thisobj, 
 		argc, argv, res);
 }
 
