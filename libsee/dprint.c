@@ -44,9 +44,7 @@
 #endif
 
 #include <see/string.h>
-#include <see/interpreter.h>
-#include <see/object.h>
-#include <see/value.h>
+#include <see/debug.h>
 
 #include "dprint.h"
 
@@ -67,7 +65,7 @@ SEE_dprintf(const char *fmt, ...)
  * Prints a SEE string for debugging
  */
 void
-SEE_dprints(struct SEE_string *s)
+SEE_dprints(const struct SEE_string *s)
 {
 	(void)SEE_string_fputs(s, stderr);
 }
@@ -76,7 +74,7 @@ SEE_dprints(struct SEE_string *s)
  * Prints a SEE value for debugging
  */
 void
-SEE_dprintv(struct SEE_interpreter *interp, struct SEE_value *v)
+SEE_dprintv(struct SEE_interpreter *interp, const struct SEE_value *v)
 {
 	SEE_PrintValue(interp, v, stderr);
 }
