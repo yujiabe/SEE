@@ -111,7 +111,7 @@ SEE_string_substr(interp, s, start, len)
 
 	if (start < 0 
 	 || len < 0 
-	 || start + len > s->length)
+	 || (unsigned int)(start + len) > s->length)
 		SEE_error_throw_string(interp, interp->Error, STR(bad_arg));
 
 	subs = SEE_NEW(interp, struct SEE_string);
@@ -165,7 +165,7 @@ SEE_string_cmp(a, b)
 void
 SEE_string_addch(s, c)
 	struct SEE_string *s;
-	SEE_char_t c;
+	int c;				/* promoted SEE_char_t */
 {
 	growby(s, 1);
 	s->data[s->length++] = c;
@@ -244,7 +244,7 @@ SEE_string_fputs(s, f)
 	const struct SEE_string *s;
 	FILE *f;
 {
-	int i;
+	unsigned int i;
 	SEE_char_t ch, ch2;
 	struct SEE_interpreter *interp = s->interpreter;
 
@@ -429,7 +429,7 @@ SEE_string_literal(interp, s)
 	const struct SEE_string *s;
 {
 	struct SEE_string *lit;
-	int i;
+	unsigned int i;
 	SEE_char_t c;
 
 	if (s == NULL)

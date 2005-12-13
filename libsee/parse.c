@@ -105,6 +105,8 @@ int SEE_parse_debug = 0;
 int SEE_eval_debug = 0;
 #endif
 
+#define TRUST_GC_FREE 1			/* XXX removeme */
+
 /*------------------------------------------------------------
  * structure types
  */
@@ -198,7 +200,7 @@ struct parser {
 #if WITH_PARSER_PRINT
 struct printerclass {
 	void	(*print_string)(struct printer *, struct SEE_string *);
-	void	(*print_char)(struct printer *, SEE_char_t);
+	void	(*print_char)(struct printer *, int);
 	void	(*print_newline)(struct printer *, int);
 	void	(*print_node)(struct printer *, struct node *);
 };
@@ -244,7 +246,7 @@ struct TryStatement_node;
 struct Unary_node;
 struct VariableDeclaration_node;
 
-extern struct nodeclass Unary_nodeclass,
+static struct nodeclass Unary_nodeclass,
                         Binary_nodeclass,
                         Literal_nodeclass,
                         StringLiteral_nodeclass,
@@ -616,11 +618,11 @@ static void printer_print_newline(struct printer *printer, int indent);
 static void printer_print_node(struct printer *printer, struct node *n);
 static void print_hex(struct printer *printer, int i);
 static void stdio_print_string(struct printer *printer, struct SEE_string *s);
-static void stdio_print_char(struct printer *printer, SEE_char_t c);
+static void stdio_print_char(struct printer *printer, int c);
 static void stdio_print_node(struct printer *printer, struct node *n);
 static struct printer *stdio_printer_new(struct SEE_interpreter *interp, FILE *output);
 static void string_print_string(struct printer *printer, struct SEE_string *s);
-static void string_print_char(struct printer *printer, SEE_char_t c);
+static void string_print_char(struct printer *printer, int c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp, struct SEE_string *string);
 static void print_functionbody(struct SEE_interpreter *interp, struct function *f, FILE *fp);
 #endif
@@ -838,7 +840,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 #define PARSE(prod)					\
     ((void)(SEE_parse_debug ? 				\
 	dprintf("parse %s next=%s\n", #prod,		\
-	    SEE_tokenname(NEXT)) : 0),			\
+	    SEE_tokenname(NEXT)) : (void)0),			\
         prod##_parse(parser))
 #else
 #define PARSE(prod)					\
@@ -1034,7 +1036,9 @@ target_pop(parser, target)
 		t->next = NULL;
 		t->label = NULL;
 		t->target = NULL;
-		/* SEE_free(t); */
+#if TRUST_GC_FREE
+		SEE_free(parser->interpreter, t);
+#endif
 	}
 }
 
@@ -1106,7 +1110,9 @@ label_pop(parser, name)
 	l = parser->labels;
 	parser->labels = l->next;
 	l->next = NULL;
-	/* SEE_free(l); */
+#if TRUST_GC_FREE
+	SEE_free(parser->interpreter, l);
+#endif
 }
 
 /*
@@ -5887,7 +5893,9 @@ StatementList_eval(na, context, res)
 		EVAL(n->b, context, res);
 		if (res->u.completion.value == NULL)
 			res->u.completion.value = val;
-		/* else SEE_free(val); */
+#if TRUST_GC_FREE
+		else SEE_free(context->interpreter, val);
+#endif
 	}
 }
 
@@ -8822,7 +8830,7 @@ stdio_print_string(printer, s)
 static void
 stdio_print_char(printer, c)
 	struct printer *printer;
-	SEE_char_t c;
+	int c;		/* SEE_char_t promoted to int */
 {
 	struct stdio_printer *sp = (struct stdio_printer *)printer;
 
@@ -8887,7 +8895,7 @@ string_print_string(printer, s)
 static void
 string_print_char(printer, c)
 	struct printer *printer;
-	SEE_char_t c;
+	int c;		/* SEE_char_t promoted to int */
 {
 	struct string_printer *sp = (struct string_printer *)printer;
 

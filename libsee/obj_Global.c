@@ -125,10 +125,11 @@ static void global_writeval(struct SEE_interpreter *,
 #endif
 
 static void AddEscape(struct SEE_interpreter *, struct SEE_string *,
-	unsigned char);
+	unsigned int);
 static struct SEE_string *Encode(struct SEE_interpreter *,
 	struct SEE_string *, const unsigned char *);
-static SEE_char_t urihexval(struct SEE_interpreter *, SEE_char_t, SEE_char_t);
+static SEE_char_t urihexval(struct SEE_interpreter *, 
+	unsigned int, unsigned int);
 static struct SEE_string *Decode(struct SEE_interpreter *,
 	struct SEE_string *, const unsigned char *);
 
@@ -528,7 +529,7 @@ static void
 AddEscape(interp, R, i)
 	struct SEE_interpreter *interp;
 	struct SEE_string *R;
-	unsigned char i;
+	unsigned int i;		/* promoted unsigned char */
 {
 	char *hexstr = SEE_hexstr_uppercase;
 
@@ -601,7 +602,7 @@ static unsigned char hexbitmap[] =
 static SEE_char_t
 urihexval(interp, c1, c2)
 	struct SEE_interpreter *interp;
-	SEE_char_t c1, c2;
+	unsigned int c1, c2;	/* promoted SEE_char_t */
 {
 
 	if (ishex(c1) && ishex(c2))

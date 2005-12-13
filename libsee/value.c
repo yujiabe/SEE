@@ -208,7 +208,7 @@ SEE_ToUint32(interp, val)
 		i.u.number = fmod(i.u.number, 4294967296.0); /* 2^32 */
 		if (i.u.number < 0)
 			i.u.number += 4294967296.0;
-		return i.u.number;
+		return (SEE_uint32_t)i.u.number;
 	}
 }
 
@@ -227,9 +227,9 @@ SEE_ToUint16(interp, val)
 	else {
 		i.u.number = fmod(i.u.number, 65536.0);	/* 2^16 */
 		if (i.u.number < 0)
-			return i.u.number + 65536.0;
+			return (SEE_uint16_t)(i.u.number + 65536.0);
 		else
-			return i.u.number;
+			return (SEE_uint16_t)i.u.number;
 	}
 }
 
@@ -269,7 +269,7 @@ SEE_ToString(interp, val, res)
 
 			a = SEE_dtoa(val->u.number, DTOA_MODE_SHORT_SW, 31, 
 				&n, &sign, &endstr);
-			k = endstr - a;
+			k = (int)(endstr - a);
 			s = SEE_string_new(interp, 0);
 			SEE_ASSERT(interp, !sign);
 			if (k <= n && n <= 21) {

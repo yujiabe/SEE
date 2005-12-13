@@ -77,7 +77,8 @@ SEE_PrintValue(interp, v, f)
 	    SEE_PrintObject(interp, v->u.object, f);
 	    break;
 	case SEE_REFERENCE:
-	    fprintf(f, "<ref base=<object %p> prop=", v->u.reference.base);
+	    fprintf(f, "<ref base=<object %p> prop=", 
+	    	(void *)v->u.reference.base);
 	    SEE_string_fputs(v->u.reference.property, f);
 	    fprintf(f, ">");
 	    break;
@@ -165,7 +166,7 @@ SEE_PrintObject(interp, o, f)
 	else if (o == interp->Date_prototype)	known = "Date.prototype";
 	else					known = NULL;
 
-	fprintf(f, "<object %p", o);
+	fprintf(f, "<object %p", (void *)o);
 	if (known)
 		fprintf(f, " (%s)", known);
 	if (o && o->objectclass && !known) {
@@ -208,7 +209,7 @@ SEE_PrintString(interp, s, f)
 	    fprintf(f, "\"<%s%s%p>", 
 		    s->flags & SEE_STRING_FLAG_INTERNED ? "i" : "",
 		    s->flags & SEE_STRING_FLAG_STATIC ? "s" : "",
-		    s);
+		    (void *)s);
 	}
 }
 

@@ -501,7 +501,7 @@ regex_new(recontext)
 static void
 code_add(recontext, c)
 	struct recontext *recontext;
-	unsigned char c;
+	int c;
 {
 	struct regex *regex = recontext->regex;
 	struct SEE_interpreter *interp = recontext->interpreter;
@@ -1352,12 +1352,13 @@ pcode_run(interp, regex, addr, text, state)
 	char *state;
 {
 	SEE_boolean_t result;
-	int i=0, i2=0, i3=0, a=0;
+	int i=0, i2=0, i3=0;
+	unsigned int a=0;
 	unsigned char op;
 	SEE_unicode_t ch;
 	struct capture *capture;
 	int *counter, *mark, statesz;
-	int newaddr;
+	unsigned int newaddr;
 	char *newstate;
 
 	/* Compute the offsets into the state structure */
@@ -1378,7 +1379,7 @@ pcode_run(interp, regex, addr, text, state)
 	for (;;) {
 
 	    /* Catch bad branches */
-	    if (addr < 0 || addr >= regex->codelen)
+	    if (addr >= regex->codelen)
 	       SEE_error_throw_string(interp, interp->Error, 
 		  STR(internal_error));
 

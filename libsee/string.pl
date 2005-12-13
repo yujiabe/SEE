@@ -97,7 +97,11 @@ while (<F>) {
 		    : substr($&,0,2) eq "\\u" ? "0x$1"
 		    : "'$&'").",".($strlen % 10 == 0 ? "\n\t  " : " ")/eg;
 		$text =~ s/,[\n\t ]*$//;
-		print "static SEE_char_t s__${index}[] = {\n\t  ${text} };\n";
+		if ($strlen == 0) {
+			print "#define s__${index} (SEE_char_t *)0\n";
+		} else {
+			print "static SEE_char_t s__${index}[] = {\n\t  ${text} };\n";
+		}
 		if ($index > 0) { $tabs .= ","; }
 		$tabs .= "\n\t{ ${strlen}, s__${index}, NULL, NULL, SEE_STRING_FLAG_INTERNED }";
 	}
@@ -107,7 +111,7 @@ while (<F>) {
 if ($mode eq 'h') {
 	print "#define _SEE_STR_MAX ${index}\n";
 } else {
-	print ";\n\n";
+	print "\n\n";
 	print "struct SEE_string SEE_stringtab[] = {";
 	print $tabs;
 	print " };\n";

@@ -358,7 +358,8 @@ string_proto_charAt(interp, self, thisobj, argc, argv, res)
 	SEE_ToInteger(interp, argv[0], &vi);
 	if (SEE_NUMBER_ISFINITE(&vi) && vi.u.number >= 0 &&
 		vi.u.number < s->length)
-	    SEE_SET_STRING(res, SEE_string_substr(interp, s, vi.u.number, 1));
+	    SEE_SET_STRING(res, SEE_string_substr(interp, s, 
+	    	(unsigned int)vi.u.number, 1));
 	else
 	    SEE_SET_STRING(res, STR(empty_string));
 }
@@ -379,7 +380,7 @@ string_proto_charCodeAt(interp, self, thisobj, argc, argv, res)
 	if (SEE_NUMBER_ISFINITE(&vi) && vi.u.number >= 0 &&
 		vi.u.number < s->length)
 	{
-	    int pos = vi.u.number;
+	    unsigned int pos = (unsigned int)vi.u.number;
 	    SEE_SET_NUMBER(res, s->data[pos]);
 	} else
 	    SEE_SET_NUMBER(res, SEE_NaN);
@@ -414,7 +415,8 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_string *s;
 	struct SEE_value vss, vi;
-	int position, k, sslen, slen;
+	int position, k;
+	unsigned int sslen, slen;
 		
 	s = object_to_string(interp, thisobj);
 	slen = s->length;
@@ -428,12 +430,12 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 		position = 0;
 	else {
 		SEE_ToInteger(interp, argv[1], &vi);
-		position = vi.u.number;
+		position = (int)vi.u.number;
 	}
 	if (position < 0) position = 0;
 	if (position > slen) position = slen;
 	
-	for (k = position; k <= slen - sslen; k++)
+	for (k = position; k <= (int)slen - sslen; k++)
 	    if (memcmp(&s->data[k], vss.u.string->data,
 		sslen * sizeof vss.u.string->data[0]) == 0)
 	    {
@@ -453,7 +455,8 @@ string_proto_lastIndexOf(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_string *s, *ss;
 	struct SEE_value vss, vposition, v;
-	int k, sslen, slen, position;
+	int k, position;
+	unsigned int sslen, slen;
 		
 	s = object_to_string(interp, thisobj);
 	slen = s->length;
@@ -478,12 +481,12 @@ string_proto_lastIndexOf(interp, self, thisobj, argc, argv, res)
 		    position = slen + 1;
 		else {
 	            SEE_ToInteger(interp, &vposition, &v);
-	            position = v.u.number;
+	            position = (int)v.u.number;
 		}
 	    }
 	}
 
-	for (k = MIN(position - 1, slen - sslen); k >= 0; k--)
+	for (k = MIN(position - 1, (int)slen - sslen); k >= 0; k--)
 	    if (memcmp(s->data + k, ss->data, sslen * sizeof ss->data[0]) == 0)
 	    {
 		SEE_SET_NUMBER(res, k);
@@ -620,14 +623,15 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 static void
 replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 	struct SEE_interpreter *interp;
-	int *previndexp;
+	unsigned int *previndexp;
 	struct SEE_object *a;
 	struct SEE_string *out, *source;
 	struct SEE_value *replacev;
 	int ncaps;
 {
 	struct SEE_value v, v2;
-	int index, i, j, k, n;
+	int n;
+	unsigned int index, i, j, k;
 	struct SEE_string *ns = NULL;
 	struct SEE_string *ms = NULL;
 	struct SEE_string *replace;
@@ -739,7 +743,7 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s, *out = NULL;
 	SEE_boolean_t global;
 	int ncaps;
-	int previndex = 0;
+	unsigned int previndex = 0;
 	
 	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 	ncaps = SEE_RegExp_count_captures(interp, regexp);
