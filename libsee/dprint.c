@@ -52,7 +52,8 @@
  * Prints text for debugging
  */
 void
-SEE_dprintf(const char *fmt, ...)
+SEE_dprintf(fmt)
+	const char *fmt;
 {
 	va_list ap;
 
@@ -65,7 +66,8 @@ SEE_dprintf(const char *fmt, ...)
  * Prints a SEE string for debugging
  */
 void
-SEE_dprints(const struct SEE_string *s)
+SEE_dprints(s)
+	const struct SEE_string *s;
 {
 	(void)SEE_string_fputs(s, stderr);
 }
@@ -74,7 +76,9 @@ SEE_dprints(const struct SEE_string *s)
  * Prints a SEE value for debugging
  */
 void
-SEE_dprintv(struct SEE_interpreter *interp, const struct SEE_value *v)
+SEE_dprintv(interp, v)
+	struct SEE_interpreter *interp;
+	const struct SEE_value *v;
 {
 	SEE_PrintValue(interp, v, stderr);
 }
@@ -83,7 +87,9 @@ SEE_dprintv(struct SEE_interpreter *interp, const struct SEE_value *v)
  * Prints a SEE object for debugging
  */
 void
-SEE_dprinto(struct SEE_interpreter *interp, struct SEE_object *o)
+SEE_dprinto(interp, o)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
 {
 	SEE_PrintObject(interp, o, stderr);
 }
