@@ -1089,7 +1089,7 @@ date_defaultvalue(interp, obj, hint, res)
 		SEE_SET_OBJECT(&string_hint, interp->String);
 		hint = &string_hint;
 	}
-	return SEE_native_defaultvalue(interp, obj, hint, res);
+	SEE_native_defaultvalue(interp, obj, hint, res);
 }
 
 /* 15.9.4.2 */
