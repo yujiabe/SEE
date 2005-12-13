@@ -62,10 +62,10 @@ int SEE_native_debug = 0;
  */
 
 struct SEE_property {
-        struct SEE_property	*	next;
-        struct SEE_string *     name;
-        struct SEE_value        value;
-        int                     attr;
+        struct SEE_property *next;
+        struct SEE_string *name;
+        int attr;
+        struct SEE_value value;
 };
 
 /* Return a hash value for an interned string, in range [0..HASHLEN) */
