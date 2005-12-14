@@ -354,8 +354,8 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 				    d = floor(nf);
 				    nf -= d;
 			    }
-			    if (d < 10) SEE_string_addch(s, '0' + d);
-			    else        SEE_string_addch(s, 'a' + d - 10);
+			    if (d < 10) SEE_string_addch(s, '0' + (int)d);
+			    else        SEE_string_addch(s, 'a' + (int)d - 10);
 			};
 		}
 		if (expon) {
