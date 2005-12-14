@@ -668,7 +668,7 @@ now(interp)
 # else
 #  if HAVE_TIME
 	/* Lose millisecond precision. */
-	t = time(0) * 1000f;
+	t = time(0) * 1000.0;
 
 #  else
  #  warning "don't know how to get system time; using constant 0:00 Jan 1, 1970"
