@@ -62,7 +62,7 @@ struct array_object {
 };
 
 static void intstr_p(struct SEE_string *, SEE_uint32_t);
-static void intstr(struct SEE_interpreter *,struct SEE_string **, SEE_uint32_t);
+static struct SEE_string *intstr(struct SEE_interpreter *,struct SEE_string **, SEE_uint32_t);
 static void array_init(struct array_object *, struct SEE_interpreter *,
 	SEE_uint32_t);
 static void array_construct(struct SEE_interpreter *, struct SEE_object *,
@@ -248,17 +248,29 @@ intstr_p(s, i)
  * If sp is null, allocates a new empty string.
  * Clears the string *sp and puts unsigned integer i into it.
  */
-static void
+static struct SEE_string *
 intstr(interp, sp, i)
 	struct SEE_interpreter *interp;
 	struct SEE_string **sp;
 	SEE_uint32_t i;
 {
+	/* A small set of common, interned integers for speed */
+#define NCOMMON 10
+	static struct SEE_string *common_int[NCOMMON] = {
+		STR(zero_digit), STR(1), STR(2), STR(3), STR(4), 
+		STR(5), STR(6), STR(7), STR(8), STR(9)
+	};
+
+	if (i < NCOMMON)
+	    return common_int[i];
+
 	if (!*sp)
 		*sp = SEE_string_new(interp, 0);
 	else
 		(*sp)->length = 0;
 	intstr_p(*sp, i);
+	return *sp;
+#undef NCOMMON
 }
 
 /*
@@ -293,8 +305,7 @@ SEE_Array_push(interp, o, v)
 	struct SEE_string *s = NULL;
 
 	a = toarray(interp, o);
-	intstr(interp, &s, a->length);
-	SEE_native_put(interp, o, s, v, 0);
+	SEE_native_put(interp, o, intstr(interp, &s, a->length), v, 0);
 	a->length++;
 }
 
@@ -344,9 +355,8 @@ array_construct(interp, self, thisobj, argc, argv, res)
 	    ao = SEE_NEW(interp, struct array_object);
 	    array_init(ao, interp, argc);
 	    for (i = 0; i < argc; i++) {
-		intstr(interp, &s, i);
 		SEE_native_put(interp, (struct SEE_object *)&ao->native, 
-			s, argv[i], 0);
+			intstr(interp, &s, i), argv[i], 0);
 	    }
 	}
 	SEE_SET_OBJECT(res, (struct SEE_object *)ao);
@@ -391,8 +401,7 @@ array_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 	    for (i = 0; i < length; i++) {
 		if (i)
 		    SEE_string_append(s, separator);
-		intstr(interp, &n, i);
-		SEE_OBJECT_GET(interp, thisobj, n, &r6);
+		SEE_OBJECT_GET(interp, thisobj, intstr(interp, &n, i), &r6);
 		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
 		    SEE_ToObject(interp, &r6, &r7);
 		    SEE_OBJECT_GET(interp, r7.u.object, STR(toLocaleString),&v);
@@ -436,17 +445,16 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	    if (SEE_VALUE_GET_TYPE(E) == SEE_OBJECT && SEE_is_Array(E->u.object)) {
 		struct array_object *Ea = (struct array_object *)E->u.object;
 		for (k = 0; k < Ea->length; k++) {
-		    intstr(interp, &ns, k);
-		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, ns)) {
+		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, 
+			    intstr(interp, &ns, k))) {
 			SEE_OBJECT_GET(interp, E->u.object, ns, &v);
-			intstr(interp, &ns, n);
-			SEE_OBJECT_PUT(interp, A, ns, &v, 0);
+			SEE_OBJECT_PUT(interp, A, intstr(interp, &ns, n),
+			    &v, 0);
 		    }
 		    n++;
 		}
 	    } else {
-		intstr(interp, &ns, n);
-		SEE_OBJECT_PUT(interp, A, ns, E, 0);
+		SEE_OBJECT_PUT(interp, A, intstr(interp, &ns, n), E, 0);
 		n++;
 	    }
 	    if (i >= argc) break;
@@ -490,8 +498,7 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 	    for (i = 0; i < length; i++) {
 		if (i)
 		    SEE_string_append(s, separator);
-		intstr(interp, &n, i);
-		SEE_OBJECT_GET(interp, thisobj, n, &r6);
+		SEE_OBJECT_GET(interp, thisobj, intstr(interp, &n, i), &r6);
 		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
 		    SEE_ToString(interp, &r6, &r7);
 		    SEE_string_append(s, r7.u.string);
@@ -511,7 +518,7 @@ array_proto_pop(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_value v;
 	SEE_uint32_t i;
-	struct SEE_string *s = NULL;
+	struct SEE_string *s = NULL, *si;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	i = SEE_ToUint32(interp, &v);
@@ -521,9 +528,9 @@ array_proto_pop(interp, self, thisobj, argc, argv, res)
 		SEE_SET_UNDEFINED(res);
 		return;
 	}
-	intstr(interp, &s, i - 1);
-	SEE_OBJECT_GET(interp, thisobj, s, res);
-	SEE_OBJECT_DELETE(interp, thisobj, s);
+	si = intstr(interp, &s, i - 1);
+	SEE_OBJECT_GET(interp, thisobj, si, res);
+	SEE_OBJECT_DELETE(interp, thisobj, si);
 	SEE_SET_NUMBER(&v, i - 1);
 	SEE_OBJECT_PUT(interp, thisobj, STR(length), &v, 0);
 }
@@ -544,8 +551,8 @@ array_proto_push(interp, self, thisobj, argc, argv, res)
         SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
         n = SEE_ToUint32(interp, &v);
 	for (i = 0; i < argc; i++) {
-	    intstr(interp, &np, n);
-	    SEE_OBJECT_PUT(interp, thisobj, np, argv[i], 0);
+	    SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &np, n), 
+	        argv[i], 0);
 	    n++;
 	}
 	SEE_SET_NUMBER(res, n);
@@ -561,7 +568,7 @@ array_proto_reverse(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	struct SEE_value v, r9, r10;
-	struct SEE_string *r7 = NULL, *r8 = NULL;
+	struct SEE_string *r7, *r7s = NULL, *r8, *r8s = NULL;
 	SEE_uint32_t k, r2, r3, r6;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
@@ -569,8 +576,8 @@ array_proto_reverse(interp, self, thisobj, argc, argv, res)
 	r3 = r2 / 2;	/* NB implicit floor() from integer div */
 	for (k = 0; k < r3; k++) {
 	    r6 = r2 - k - 1;
-	    intstr(interp, &r7, k);
-	    intstr(interp, &r8, r6);
+	    r7 = intstr(interp, &r7s, k);
+	    r8 = intstr(interp, &r8s, r6);
 	    SEE_OBJECT_GET(interp, thisobj, r7, &r9);
 	    SEE_OBJECT_GET(interp, thisobj, r8, &r10);
 	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, r8)) {
@@ -601,7 +608,7 @@ array_proto_shift(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	struct SEE_value v;
-	struct SEE_string *s = NULL;
+	struct SEE_string *s = NULL, *p;
 	SEE_uint32_t k, r2;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
@@ -614,18 +621,16 @@ array_proto_shift(interp, self, thisobj, argc, argv, res)
 	}
 	SEE_OBJECT_GET(interp, thisobj, STR(zero_digit), res);
 	for (k = 1; k < r2; k++) {
-	    intstr(interp, &s, k);
-	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-		SEE_OBJECT_GET(interp, thisobj, s, &v);
-		intstr(interp, &s, k - 1);
-		SEE_OBJECT_PUT(interp, thisobj, s, &v, 0);
+	    p = intstr(interp, &s, k);
+	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, p)) {
+		SEE_OBJECT_GET(interp, thisobj, p, &v);
+		SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &s, k - 1), 
+		    &v, 0);
 	    } else {
-		intstr(interp, &s, k - 1);
-		SEE_OBJECT_DELETE(interp, thisobj, s);
+		SEE_OBJECT_DELETE(interp, thisobj, intstr(interp, &s, k - 1));
 	    }
 	}
-	intstr(interp, &s, r2 - 1);
-	SEE_OBJECT_DELETE(interp, thisobj, s);
+	SEE_OBJECT_DELETE(interp, thisobj, intstr(interp, &s, r2 - 1));
 	SEE_SET_NUMBER(&v, r2 - 1);
 	SEE_OBJECT_PUT(interp, thisobj, STR(length), &v, 0);
 }
@@ -640,7 +645,7 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_object *A;
 	SEE_uint32_t r3, r5, r8, k, n;
-	struct SEE_string *s = NULL;
+	struct SEE_string *s = NULL, *p;
 	struct SEE_value v;
 
 	if (argc < 1) {
@@ -665,11 +670,10 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 				  : MIN(v.u.number, r3);
 	}
 	for (k = r5, n = 0; k < r8; k++, n++) {
-	    intstr(interp, &s, k);
-	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-		SEE_OBJECT_GET(interp, thisobj, s, &v);
-		intstr(interp, &s, n);
-		SEE_OBJECT_PUT(interp, A, s, &v, 0);
+	    p = intstr(interp, &s, k);
+	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, p)) {
+		SEE_OBJECT_GET(interp, thisobj, p, &v);
+		SEE_OBJECT_PUT(interp, A, intstr(interp, &s, n), &v, 0);
 	    }
 	}
 	SEE_SET_NUMBER(&v, n);
@@ -731,12 +735,13 @@ qs_partition(interp, thisobj, lo, hi, cmpfn, s1, s2)
 {
 	struct SEE_value xv, iv, jv;
 	struct SEE_value *xvp = NULL, *ivp = NULL, *jvp = NULL;
+	struct SEE_string *s1p, *s2p;
 	SEE_uint32_t i = lo - 1;
 	SEE_uint32_t j = hi + 1;
 
-	intstr(interp, s1, lo - 1);
-	if (SEE_OBJECT_HASPROPERTY(interp, thisobj, *s1)) {
-		SEE_OBJECT_GET(interp, thisobj, *s1, &xv);
+	s1p = intstr(interp, s1, lo - 1);
+	if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s1p)) {
+		SEE_OBJECT_GET(interp, thisobj, s1p, &xv);
 		xvp = &xv;
 	} else
 		xvp = NULL;
@@ -745,9 +750,9 @@ qs_partition(interp, thisobj, lo, hi, cmpfn, s1, s2)
 	    do {
 		if (j == lo) break;
 		j--;
-		intstr(interp, s2, j - 1);
-		if (SEE_OBJECT_HASPROPERTY(interp, thisobj, *s2)) {
-			SEE_OBJECT_GET(interp, thisobj, *s2, &jv);
+		s2p = intstr(interp, s2, j - 1);
+		if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s2p)) {
+			SEE_OBJECT_GET(interp, thisobj, s2p, &jv);
 			jvp = &jv;
 		} else
 			jvp = NULL;
@@ -755,23 +760,23 @@ qs_partition(interp, thisobj, lo, hi, cmpfn, s1, s2)
 	    do {
 		if (i == hi) break;
 		i++;
-		intstr(interp, s1, i - 1);
-		if (SEE_OBJECT_HASPROPERTY(interp, thisobj, *s1)) {
-			SEE_OBJECT_GET(interp, thisobj, *s1, &iv);
+		s1p = intstr(interp, s1, i - 1);
+		if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s1p)) {
+			SEE_OBJECT_GET(interp, thisobj, s1p, &iv);
 			ivp = &iv;
 		} else
 			ivp = NULL;
 	    } while (SortCompare(interp, ivp, xvp, cmpfn) < 0);
 	    if (i < j) {
 		/*
-		 * At this stage, *s1 will always be "i" and *s2 will
+		 * At this stage, s1p will always be "i" and s2p will
 		 * always be "j".
 		 */
 
-		if (ivp) SEE_OBJECT_PUT(interp, thisobj, *s2, ivp, 0);
-		else	 SEE_OBJECT_DELETE(interp, thisobj, *s2);
-		if (jvp) SEE_OBJECT_PUT(interp, thisobj, *s1, &jv, 0);
-		else     SEE_OBJECT_DELETE(interp, thisobj, *s1);
+		if (ivp) SEE_OBJECT_PUT(interp, thisobj, s2p, ivp, 0);
+		else	 SEE_OBJECT_DELETE(interp, thisobj, s2p);
+		if (jvp) SEE_OBJECT_PUT(interp, thisobj, s1p, &jv, 0);
+		else     SEE_OBJECT_DELETE(interp, thisobj, s1p);
 	    } else
 		return j;
 	}
@@ -845,7 +850,7 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_object *A;
 	SEE_uint32_t r3, r5, r6, r17, k;
-	struct SEE_string *s = NULL;
+	struct SEE_string *s = NULL, *s9, *s11, *s22, *s33, *s39;
 
 /*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, NULL, &v);
 	A = v.u.object;
@@ -859,11 +864,11 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 	else SEE_ToInteger(interp, argv[1], &v);
 	r6 = MIN(MAX(v.u.number, 0), r3 - r5);
 /*7*/	for (k = 0; k < r6; k++) {
-/*9*/	    intstr(interp, &s, r5 + k);
-/*10*/	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-/*12*/		SEE_OBJECT_GET(interp, thisobj, s, &v);
-/*11*/		intstr(interp, &s, k);
-/*13*/		SEE_OBJECT_PUT(interp, A, s, &v, 0);
+/*9*/	    s9 = intstr(interp, &s, r5 + k);
+/*10*/	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s9)) {
+/*12*/		SEE_OBJECT_GET(interp, thisobj, s9, &v);
+/*11*/		s11 = intstr(interp, &s, k);
+/*13*/		SEE_OBJECT_PUT(interp, A, s11, &v, 0);
 	    }
 	}
 /*16*/	SEE_SET_NUMBER(&v, r6); SEE_OBJECT_PUT(interp, A, STR(length), &v, 0);
@@ -871,36 +876,36 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 /*18*/	if (r17 != r6) {
 /*19*/	    if (r17 <= r6) {
 /*20*/		for (k = r5; k < r3 - r6; k++) {
-/*22*/		    intstr(interp, &s, k + r6);
-/*23*/		    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-/*25*/			SEE_OBJECT_GET(interp, thisobj, s, &v);
-			intstr(interp, &s, k + r17);
-/*26*/			SEE_OBJECT_PUT(interp, thisobj, s, &v, 0);
+/*22*/		    s22 = intstr(interp, &s, k + r6);
+/*23*/		    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s22)) {
+/*25*/			SEE_OBJECT_GET(interp, thisobj, s22, &v);
+/*26*/			SEE_OBJECT_PUT(interp, thisobj, 
+			    intstr(interp, &s, k + r17), &v, 0);
 		    } else {
-			intstr(interp, &s, k + r17);
-/*28*/			SEE_OBJECT_DELETE(interp, thisobj, s);
+/*28*/			SEE_OBJECT_DELETE(interp, thisobj, 
+			    intstr(interp, &s, k + r17));
 		    }
 		}
 /*31*/		for (k = r3; k > r3-r6+r17; k--) {
-/*33*/		    intstr(interp, &s, k - 1);
-/*34*/		    SEE_OBJECT_DELETE(interp, thisobj, s);
+/*33*/		    s33 = intstr(interp, &s, k - 1);
+/*34*/		    SEE_OBJECT_DELETE(interp, thisobj, s33);
 		}
 	    } else
 /*37*/		for (k = r3 - r6; k > r5; k--) {
-/*39*/		    intstr(interp, &s, k + r6 - 1);
-/*41*/		    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-/*43*/			SEE_OBJECT_GET(interp, thisobj, s, &v);
-			intstr(interp, &s, k + r17 - 1);
-/*44*/			SEE_OBJECT_PUT(interp, thisobj, s, &v, 0);
+/*39*/		    s39 = intstr(interp, &s, k + r6 - 1);
+/*41*/		    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s39)) {
+/*43*/			SEE_OBJECT_GET(interp, thisobj, s39, &v);
+/*44*/			SEE_OBJECT_PUT(interp, thisobj, 
+			    intstr(interp, &s, k + r17 - 1), &v, 0);
 		    } else {
-			intstr(interp, &s, k + r17 - 1);
-/*45*/			SEE_OBJECT_DELETE(interp, thisobj, s);
+/*45*/			SEE_OBJECT_DELETE(interp, thisobj, 
+			    intstr(interp, &s, k + r17 - 1));
 		    }
 		}
 	}
 /*48*/	for (k = 2; k < argc; k++) {
-      	    intstr(interp, &s, k - 2 + r5);
-/*50*/	    SEE_OBJECT_PUT(interp, thisobj, s, argv[k], 0);
+/*50*/	    SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &s, k - 2 + r5),
+		argv[k], 0);
 	}
 /*53*/	SEE_SET_NUMBER(&v, r3-r6+r17);
 	SEE_OBJECT_PUT(interp, thisobj, STR(length), &v, 0);
@@ -917,25 +922,25 @@ array_proto_unshift(interp, self, thisobj, argc, argv, res)
 {
 	SEE_uint32_t r2, r3, k;
 	struct SEE_value v;
-	struct SEE_string *s = NULL;
+	struct SEE_string *s = NULL, *p;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	r2 = SEE_ToUint32(interp, &v);
 	r3 = argc;
 	for (k = r2; k > 0; k--) {
-	    intstr(interp, &s, k - 1);
-	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s)) {
-		SEE_OBJECT_GET(interp, thisobj, s, &v);
-		intstr(interp, &s, k + r3 - 1);
-		SEE_OBJECT_PUT(interp, thisobj, s, &v, 0);
+	    p = intstr(interp, &s, k - 1);
+	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, p)) {
+		SEE_OBJECT_GET(interp, thisobj, p, &v);
+		SEE_OBJECT_PUT(interp, thisobj, 
+		    intstr(interp, &s, k + r3 - 1), &v, 0);
 	    } else {
-		intstr(interp, &s, k + r3 - 1);
-		SEE_OBJECT_DELETE(interp, thisobj, s);
+		SEE_OBJECT_DELETE(interp, thisobj,
+		    intstr(interp, &s, k + r3 - 1));
 	    }
 	}
 	for (k = 0; k < r3; k++) {
-	    intstr(interp, &s, k);
-	    SEE_OBJECT_PUT(interp, thisobj, s, argv[k], 0);
+	    SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &s, k), 
+	        argv[k], 0);
 	}
 	SEE_SET_NUMBER(res, r2 + r3);
 	SEE_OBJECT_PUT(interp, thisobj, STR(length), res, 0);
