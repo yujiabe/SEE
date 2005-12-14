@@ -39,7 +39,7 @@ static int run_input(struct SEE_interpreter *, struct SEE_input *,
 	struct SEE_value *);
 static int run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
-static void debug(struct SEE_interpreter *, char);
+static void debug(struct SEE_interpreter *, int);
 static void trace(struct SEE_interpreter *, struct SEE_throw_location *,
 	struct SEE_context *);
 static void run_html(struct SEE_interpreter *, char *);
@@ -54,7 +54,7 @@ static struct debug *debugger;
 static void
 debug(interp, c)
 	struct SEE_interpreter *interp;
-	char c;
+	int c;			/* promoted char */
 {
 #ifndef NDEBUG
 	extern int SEE_native_debug, SEE_Error_debug, 
@@ -472,7 +472,7 @@ main(argc, argv)
 
 	if (error) {
 	    fprintf(stderr, 
-	        "usage: %s [-V] [-c flag] %s[-f file.js | -h file.html]...\n",
+	        "usage: %s [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
 		argv[0],
 #ifndef NDEBUG
 	        "[-d[ETcelnprv]] "
