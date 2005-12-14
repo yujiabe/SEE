@@ -473,7 +473,7 @@ YearFromTime(t0)
 	y += 1 * SEE_FLOOR(t / msPerY1);
 	t = modulo(t, msPerY1);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 #define AS(x) do {if (!(x)) \
 	dprintf("%s:%d: FAILURE: '%s'; y=%d t0=%g\n", \
 	__FILE__, __LINE__, #x, y, t0); } while(0)
