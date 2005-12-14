@@ -209,12 +209,12 @@ SEE_to_array_index(s, ip)
 	SEE_uint32_t *ip;
 {
 	SEE_uint32_t n = 0;
-	int i, digit;
+	unsigned int i, digit;
 
 	if (s->length == 0)
 		return 0;
 	/* Don't allow leading zeros */
-	if (s->data[0] == '0' && s->length > 1)
+	if (s->data[0] == '0' && s->length != 1)
 		return 0;
 	for (i = 0; i < s->length; i++) {
 	    if (s->data[i] < '0' || s->data[i] > '9')
