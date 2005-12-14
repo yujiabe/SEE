@@ -646,9 +646,8 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 	ms = v.u.string;
 
 	/* Copy the intermediate characters we missed */
-	if (index != *previndexp) 
-	    for (i = *previndexp; i < index; i++)
-		SEE_string_addch(out, source->data[i]);
+	for (i = *previndexp; i < index; i++)
+	    SEE_string_addch(out, source->data[i]);
 	*previndexp = index + ms->length;
 
 	if (SEE_VALUE_GET_TYPE(replacev) == SEE_OBJECT) {
