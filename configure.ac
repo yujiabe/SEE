@@ -98,7 +98,7 @@ AC_ARG_ENABLE(developer,
 
 if test x"$enable_developer" = x"yes"; then
     for flag in -Wall -Wmissing-declarations \
-    		 -Wmissing-prototypes  -Wtraditional
+    		 -Wmissing-prototypes  -Wtraditional -pedantic
     do
 	AC_MSG_CHECKING([for $flag])
         CFLAGS_save="$CFLAGS"
