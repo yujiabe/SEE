@@ -1030,7 +1030,7 @@ date_construct(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[0], &v);
 		year = v.u.number;
 		if (!SEE_NUMBER_ISNAN(&v)) {
-			SEE_int32_t year_int = ToInteger(interp, &v);
+			SEE_int32_t year_int = ToInteger(year);
 			if (0 <= year_int && year_int <= 99)
 				year += 1900;
 		}
@@ -1130,7 +1130,7 @@ date_UTC(interp, self, thisobj, argc, argv, res)
 	SEE_ToNumber(interp, argv[0], &v);
 	year = v.u.number;
 	if (!SEE_NUMBER_ISNAN(&v)) {
-	    SEE_int32_t year_int = ToInteger(interp, &v);
+	    SEE_int32_t year_int = ToInteger(year);
 	    if (0 <= year_int && year_int <= 99)
 		year += 1900;
 	}
