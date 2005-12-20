@@ -32,10 +32,6 @@
 # include <config.h>
 #endif
 
-#if STDC_HEADERS
-# include <math.h>
-#endif
-
 #include <see/mem.h>
 #include <see/value.h>
 #include <see/string.h>
@@ -48,6 +44,7 @@
 #include "stringdefs.h"
 #include "dtoa.h"
 #include "init.h"
+#include "nmath.h"
 
 /*
  * 15.7 The Number object.
@@ -58,6 +55,8 @@ struct number_object {
 	struct SEE_native native;
 	SEE_number_t number;		/* Value */
 };
+
+static void radix_tostring(struct SEE_string *, SEE_number_t, int);
 
 static struct number_object *tonumber(struct SEE_interpreter *,
 	struct SEE_object *);
@@ -169,13 +168,13 @@ SEE_Number_init(interp)
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	/* 15.7.3.6 Number.POSITIVE_INFINITY */
-	SEE_SET_NUMBER(&v, +SEE_Infinity);
+	SEE_SET_NUMBER(&v, SEE_Infinity);
 	SEE_OBJECT_PUT(interp, Number, STR(POSITIVE_INFINITY), &v,
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	SEE_native_init((struct SEE_native *)Number_prototype, interp,
 		&number_inst_class, interp->Object_prototype); /* 15.7.4 */
-	((struct number_object *)Number_prototype)->number = +0; /* 15.7.4 */
+	((struct number_object *)Number_prototype)->number = 0; /* 15.7.4 */
 
 	/* 15.7.4.1 Number.prototype.constructor */
 	SEE_SET_OBJECT(&v, Number);
@@ -219,7 +218,7 @@ number_construct(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 
 	if (argc == 0)
-		SEE_SET_NUMBER(&v, +0);
+		SEE_SET_NUMBER(&v, 0);
 	else
 		SEE_ToNumber(interp, argv[0], &v);
 
@@ -241,12 +240,10 @@ number_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	if (argc < 1)
-		SEE_SET_NUMBER(res, +0);
+		SEE_SET_NUMBER(res, 0);
 	else 
 		SEE_ToNumber(interp, argv[0], res);
 }
-
-static void radix_tostring(struct SEE_string *, SEE_number_t, int);
 
 static void
 radix_tostring(s, n, radix)
@@ -258,7 +255,7 @@ radix_tostring(s, n, radix)
 
 	if (n >= radix) {
 		radix_tostring(s, n / radix, radix);
-		n = fmod(n, radix);
+		n = fmod(n, (SEE_number_t)radix);
 	}
 	d = floor(n);
 	if (d < 10) SEE_string_addch(s, '0' + d);
@@ -300,7 +297,7 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 		SEE_number_t n = no->number, ni, nf;
 		int expon;
 
-		if (isnan(n)) {
+		if (SEE_ISNAN(n)) {
 			SEE_SET_STRING(res, STR(NaN));
 			return;
 		}
@@ -313,21 +310,23 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 			SEE_string_addch(s, '-');
 			n = -n;
 		}
-		if (!finite(n)) {
+		if (!SEE_ISFINITE(n)) {
 			SEE_string_append(s, STR(Infinity));
 			SEE_SET_STRING(res, s);
 			return;
 		}
 		if (n > 1e20 || n < 1e-6) {
-			expon = floor(log(n) / log(radix));
-			n /= pow(radix, expon);
+			expon = NUMBER_floor(NUMBER_log(n) / 
+				NUMBER_log((SEE_number_t)radix));
+			n /= NUMBER_pow((SEE_number_t)radix, 
+				(SEE_number_t)expon);
 			if (n == 0) {
 			    /* e.g.: Number(MAX_VALUE).toString(16) */
 			    SEE_string_append(s, STR(Infinity));
 			    SEE_SET_STRING(res, s);
 			    return;
 			}
-			if (!finite(n)) {
+			if (!SEE_ISFINITE(n)) {
 			    /* e.g.: Number(MIN_VALUE).toString(16) */
 			    SEE_SET_STRING(res, STR(zero_digit));
 			    return;
@@ -364,7 +363,7 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 				expon = -expon;
 				SEE_string_addch(s, '-');
 			}
-			radix_tostring(s, expon, 10);
+			radix_tostring(s, (SEE_number_t)expon, 10);
 		}
 
 		SEE_SET_STRING(res, s);
@@ -428,7 +427,7 @@ number_proto_toFixed(interp, self, thisobj, argc, argv, res)
 
 	no = tonumber(interp, thisobj);
 	x = no->number;
-	if (!finite(x) || x <= -1e21 || x >= 1e21) {
+	if (!SEE_ISFINITE(x) || x <= -1e21 || x >= 1e21) {
 	    SEE_SET_NUMBER(&v, x);
 	    SEE_ToString(interp, &v, res);
 	    return;

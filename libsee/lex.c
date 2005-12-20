@@ -35,7 +35,6 @@
 #if STDC_HEADERS
 # include <stdio.h>
 # include <stdlib.h>
-/* # include <math.h> */
 #endif
 
 #if HAVE_STRING_H
@@ -58,6 +57,7 @@
 #include "unicode.h"
 #include "dtoa.h"
 #include "dprint.h"
+#include "nmath.h"
 
 #ifndef NDEBUG
 int SEE_lex_debug = 0;
@@ -917,7 +917,7 @@ SEE_lex_number(interp, s, res)
 		SKIP; if (ATEOF || NEXT != 'i') goto fail;
 		SKIP; if (ATEOF || NEXT != 't') goto fail;
 		SKIP; if (ATEOF || NEXT != 'y') goto fail;
-		SKIP; n = SEE_Infinity;	/* n = pow(10,10000); */
+		SKIP; n = SEE_Infinity;
 	} else {
 		n = 0;
 		start = pos;
@@ -1002,7 +1002,7 @@ SEE_lex_number(interp, s, res)
 	while (!ATEOF && (is_WhiteSpace(NEXT) || is_LineTerminator(NEXT)))
 		SKIP;
 	if (ATEOF) {
-	    SEE_SET_NUMBER(res, copysign(n, sign));
+	    SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
 	    return 1;
 	}
 

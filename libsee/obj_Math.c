@@ -34,7 +34,6 @@
 
 #if STDC_HEADERS
 # include <stdlib.h>
-# include <math.h>
 #endif
 
 #include <see/mem.h>
@@ -48,14 +47,15 @@
 
 #include "stringdefs.h"
 #include "init.h"
+#include "nmath.h"
 
 /*
  * 15.8 The Math object.
  */
 
 #define SET_NO_RESULT(res)	SEE_SET_NUMBER(res, SEE_NaN)
-#define IS_NEGZERO(n)		((n) == 0 && copysign(1.0,n) < 0)
-#define IS_POSZERO(n)		((n) == 0 && copysign(1.0,n) > 0)
+#define IS_NEGZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) < 0)
+#define IS_POSZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) > 0)
 
 static void math_abs(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_object *,
@@ -197,7 +197,7 @@ math_abs(interp, self, thisobj, argc, argv, res)
 	else {
 		SEE_ToNumber(interp, argv[0], res);
 		if (!SEE_NUMBER_ISNAN(res))
-			res->u.number = copysign(res->u.number, +1);
+			res->u.number = NUMBER_copysign(res->u.number, 1.0);
 	}
 }
 
@@ -215,12 +215,12 @@ math_acos(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[0], res);
 		if (SEE_NUMBER_ISNAN(res))
 			;
-		else if (res->u.number < -1 || res->u.number > +1)
+		else if (res->u.number < -1 || res->u.number > 1)
 			SEE_SET_NUMBER(res, SEE_NaN);
 		else if (res->u.number == 1)
-			SEE_SET_NUMBER(res, +0);
+			SEE_SET_NUMBER(res, 0);
 		else
-			SEE_SET_NUMBER(res, acos(res->u.number));
+			SEE_SET_NUMBER(res, NUMBER_acos(res->u.number));
 	}
 }
 
@@ -239,12 +239,12 @@ math_asin(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[0], res);
 		if (SEE_NUMBER_ISNAN(res))
 			;
-		else if (res->u.number < -1 || res->u.number > +1)
+		else if (res->u.number < -1 || res->u.number > 1)
 			SEE_SET_NUMBER(res, SEE_NaN);
 		else if (res->u.number == 0)
 			;
 		else 
-			SEE_SET_NUMBER(res, asin(res->u.number));
+			SEE_SET_NUMBER(res, NUMBER_asin(res->u.number));
 	}
 }
 
@@ -265,7 +265,7 @@ math_atan(interp, self, thisobj, argc, argv, res)
 		if (v.u.number == 0)
 			SEE_SET_NUMBER(res, v.u.number);
 		else
-			SEE_SET_NUMBER(res, atan(v.u.number));
+			SEE_SET_NUMBER(res, NUMBER_atan(v.u.number));
 	}
 }
 
@@ -294,11 +294,11 @@ math_atan2(interp, self, thisobj, argc, argv, res)
 		 * the case where x is -0
 		 */
 		if (IS_POSZERO(y) && IS_NEGZERO(x))
-			SEE_SET_NUMBER(res, +M_PI);
+			SEE_SET_NUMBER(res, M_PI);
 		else if (IS_NEGZERO(y) && IS_NEGZERO(x))
 			SEE_SET_NUMBER(res, -M_PI);
 		else
-			SEE_SET_NUMBER(res, atan2(y, x));
+			SEE_SET_NUMBER(res, NUMBER_atan2(y, x));
 	}
 }
 
@@ -316,7 +316,7 @@ math_ceil(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, ceil(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_ceil(v.u.number));
 	}
 }
 
@@ -334,7 +334,7 @@ math_cos(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, cos(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_cos(v.u.number));
 	}
 }
 
@@ -355,7 +355,7 @@ math_exp(interp, self, thisobj, argc, argv, res)
 		if (SEE_NUMBER_ISINF(&v))
 			SEE_SET_NUMBER(res, v.u.number < 0 ? 0 : SEE_Infinity);
 		else
-			SEE_SET_NUMBER(res, exp(v.u.number));
+			SEE_SET_NUMBER(res, NUMBER_exp(v.u.number));
 	}
 }
 
@@ -373,7 +373,7 @@ math_floor(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, floor(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_floor(v.u.number));
 	}
 }
 
@@ -394,7 +394,7 @@ math_log(interp, self, thisobj, argc, argv, res)
 		if (v.u.number < 0)
 		    SEE_SET_NUMBER(res, SEE_NaN);
 		else
-		    SEE_SET_NUMBER(res, log(v.u.number));
+		    SEE_SET_NUMBER(res, NUMBER_log(v.u.number));
 	}
 }
 
@@ -428,7 +428,7 @@ math_min(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	SEE_number_t minnum = +SEE_Infinity;
+	SEE_number_t minnum = SEE_Infinity;
 	int i;
 
 	for (i = 0; i < argc; i++) {
@@ -459,13 +459,15 @@ math_pow(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[1], &v2);
 
 		if (IS_NEGZERO(v1.u.number) && v2.u.number < 0) 
-			SEE_SET_NUMBER(res, 
-			     copysign(fmod(v2.u.number,2), +1) == 1 
+			SEE_SET_NUMBER(res, NUMBER_copysign(
+			    NUMBER_fmod(v2.u.number, 2.0), 1.0) == 1 
 				? -SEE_Infinity : SEE_Infinity); 
 		else if (v1.u.number == 0 && v2.u.number < 0) 
-			SEE_SET_NUMBER(res, copysign(SEE_Infinity,v1.u.number));
+			SEE_SET_NUMBER(res, 
+				NUMBER_copysign(SEE_Infinity,v1.u.number));
 		else
-			SEE_SET_NUMBER(res, pow(v1.u.number, v2.u.number));
+			SEE_SET_NUMBER(res, 
+				NUMBER_pow(v1.u.number, v2.u.number));
 	}
 }
 
@@ -512,7 +514,7 @@ math_round(interp, self, thisobj, argc, argv, res)
 		if (IS_NEGZERO(x) || (x >= -0.5 && x < 0))
 		    SEE_SET_NUMBER(res, -0.0);
 		else
-		    SEE_SET_NUMBER(res, floor(v.u.number + 0.5));
+		    SEE_SET_NUMBER(res, NUMBER_floor(v.u.number + 0.5));
 	}
 }
 
@@ -530,7 +532,7 @@ math_sin(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, sin(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_sin(v.u.number));
 	}
 }
 
@@ -548,7 +550,7 @@ math_sqrt(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, sqrt(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_sqrt(v.u.number));
 	}
 }
 
@@ -566,6 +568,6 @@ math_tan(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		SEE_SET_NUMBER(res, tan(v.u.number));
+		SEE_SET_NUMBER(res, NUMBER_tan(v.u.number));
 	}
 }

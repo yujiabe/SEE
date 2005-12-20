@@ -34,7 +34,6 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
-# include <math.h>
 # include <string.h>
 #endif
 
@@ -50,6 +49,7 @@
 #include "lex.h"
 #include "stringdefs.h"
 #include "dtoa.h"
+#include "nmath.h"
 
 /*
  * Value type-converters and some numeric constants.
@@ -179,7 +179,8 @@ SEE_ToInteger(interp, val, res)
 	else if (SEE_NUMBER_ISINF(res) || res->u.number == 0.0)
 		; /* nothing */
 	else
-		res->u.number = copysign(floor(copysign(res->u.number, +1)),
+		res->u.number = NUMBER_copysign(floor(
+			NUMBER_copysign(res->u.number, 1.0)),
 				  	 res->u.number);
 
 }

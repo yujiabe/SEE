@@ -59,15 +59,7 @@
 #include "dtoa.h"
 #include "init.h"
 #include "dprint.h"
-
-#if SEE_NUMBER_IS_FLOAT
-# define POW(a,b)		powf(a,b)
-# define COPYSIGN(a,b)		copysignf(a,b)
-#endif
-#if SEE_NUMBER_IS_DOUBLE
-# define POW(a,b)		pow(a,b)
-# define COPYSIGN(a,b)		copysign(a,b)
-#endif
+#include "nmath.h"
 
 #define POSITIVE	(1)
 #define NEGATIVE	(-1)
@@ -364,7 +356,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	}
 	n = 0;
 	for (j = 0; j < i - start; j++) {
-		SEE_number_t factor = POW((SEE_number_t)R, (SEE_number_t)j);
+		SEE_number_t factor = NUMBER_pow((SEE_number_t)R, (SEE_number_t)j);
 		SEE_char_t ch;
 		int digit;
 
@@ -381,7 +373,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 			digit = ch - 'A' + 10;
 		n += factor * digit;
 	}
-	SEE_SET_NUMBER(res, COPYSIGN(n, sign));
+	SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
 }
 
 
@@ -484,7 +476,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 		return;
 	    }
 	}
-	SEE_SET_NUMBER(res, COPYSIGN(n, sign));
+	SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
 }
 
 

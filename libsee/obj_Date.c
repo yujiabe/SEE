@@ -33,7 +33,6 @@
 #endif
 
 #if STDC_HEADERS
-# include <math.h>
 # include <string.h>
 #endif
 
@@ -65,6 +64,7 @@
 #include "stringdefs.h"
 #include "init.h"
 #include "dprint.h"
+#include "nmath.h"
 
 /*
  * 15.9 The Date object.
@@ -95,7 +95,7 @@ struct date_object {
 #define minTime			(-maxTime)
 
 #define msPerDay 		(86400000.0)		/* 15.9.1.2 */
-#define Day(t) 			SEE_FLOOR((t) / msPerDay)/* 15.9.1.2 */
+#define Day(t) 			NUMBER_floor((t) / msPerDay)/* 15.9.1.2 */
 #define TimeWithinDay(t)	modulo(t, msPerDay)	/* 15.9.1.2 */
 
 #define DaysInYear(y) 					/* 15.9.1.3 */	\
@@ -118,9 +118,9 @@ static SEE_number_t DaylightSavingTA(SEE_number_t t);	/* 15.9.1.8(9) */
 #define UTC(t)		((t) - LocalTZA - DaylightSavingTA(t - LocalTZA))
 
 /* 15.9.1.10 */
-#define	HourFromTime(t)	modulo(SEE_FLOOR((t) / msPerHour), HoursPerDay)
-#define	MinFromTime(t)	modulo(SEE_FLOOR((t) / msPerMinute), MinutesPerHour)
-#define	SecFromTime(t)	modulo(SEE_FLOOR((t) / msPerSecond), SecondsPerMinute)
+#define	HourFromTime(t)	modulo(NUMBER_floor((t) / msPerHour), HoursPerDay)
+#define	MinFromTime(t)	modulo(NUMBER_floor((t) / msPerMinute), MinutesPerHour)
+#define	SecFromTime(t)	modulo(NUMBER_floor((t) / msPerSecond), SecondsPerMinute)
 #define	msFromTime(t)	modulo(t, msPerSecond)
 #define	HoursPerDay		24.0
 #define MinutesPerHour		60.0
@@ -327,7 +327,7 @@ static SEE_number_t
 modulo(a, b)
 	SEE_number_t a, b;
 {
-	SEE_number_t r = SEE_FMOD(a, b);
+	SEE_number_t r = NUMBER_fmod(a, b);
 	if (r < 0) r += b;
 	return r;
 }
@@ -446,8 +446,8 @@ static SEE_number_t
 DayFromYear(y)
 	SEE_number_t y;
 {
-	return 365.0 * (y-1970) + SEE_FLOOR((y-1969)/4) -
-		SEE_FLOOR((y-1901)/100) + SEE_FLOOR((y-1601)/400);
+	return 365.0 * (y-1970) + NUMBER_floor((y-1969)/4) -
+		NUMBER_floor((y-1901)/100) + NUMBER_floor((y-1601)/400);
 }
 
 /* 15.9.1.3 */
@@ -464,21 +464,21 @@ YearFromTime(t0)
 
 	y = 0;
 	t = t0 + T1970;
-	y += 400 * SEE_FLOOR(t / msPerY400);
+	y += 400 * NUMBER_floor(t / msPerY400);
 	t = modulo(t, msPerY400);
-	y += 100 * SEE_FLOOR(t / msPerY100);
+	y += 100 * NUMBER_floor(t / msPerY100);
 	t = modulo(t, msPerY100);
-	y += 4 * SEE_FLOOR(t / msPerY4);
+	y += 4 * NUMBER_floor(t / msPerY4);
 	t = modulo(t, msPerY4);
-	y += 1 * SEE_FLOOR(t / msPerY1);
+	y += 1 * NUMBER_floor(t / msPerY1);
 	t = modulo(t, msPerY1);
 
 #ifndef NDEBUG
 #define AS(x) do {if (!(x)) \
 	dprintf("%s:%d: FAILURE: '%s'; y=%d t0=%g\n", \
 	__FILE__, __LINE__, #x, y, t0); } while(0)
-AS(TimeFromYear(y) <= t0);
-AS(TimeFromYear(y+1) > t0);
+AS(TimeFromYear((SEE_number_t)y) <= t0);
+AS(TimeFromYear((SEE_number_t)(y+1)) > t0);
 #undef AS
 #endif
 
@@ -553,7 +553,7 @@ ToInteger(n)
 		return 0;
 	if (SEE_ISINF(n))
 		return n;
-	return SGN(n) * SEE_FLOOR(ABS(n));
+	return SGN(n) * NUMBER_floor(ABS(n));
 }
 
 /* 15.9.1.11 */
@@ -588,14 +588,14 @@ MakeDay(year, month, date)
 	r2 = ToInteger(year);
 	r3 = ToInteger(month);
 	r4 = ToInteger(date);
-	y = r2 + SEE_FLOOR(r3 / 12);
+	y = r2 + NUMBER_floor(r3 / 12);
 	m = modulo(r3, 12.0);
 
 	if (DayFromYear(y) < -100000000 ||
 	    DayFromYear(y) >  100000000)
 		return SEE_NaN;
 
-	ily = isleapyear((SEE_uint32_t)SEE_RINT(y));
+	ily = isleapyear((SEE_uint32_t)NUMBER_rint(y));
 	t = (DayFromYear(y) + (ily ? julian_ly:julian)[(int)m] - 1) * msPerDay;
 
 #ifndef NDEBUG
@@ -963,8 +963,8 @@ reprtime(interp, t)
 	hour = HourFromTime(t);
 	min = MinFromTime(t);
 	secms = modulo(t / msPerSecond, SecondsPerMinute);
-	sec10 = SEE_FLOOR(secms / 10);
-	secms = SEE_FMOD(secms, 10.0);
+	sec10 = NUMBER_floor(secms / 10);
+	secms = NUMBER_fmod(secms, 10.0);
 
 	return SEE_string_sprintf(interp,
 		"%02d:%02d:%d%g",
@@ -1277,7 +1277,8 @@ date_proto_getFullYear(interp, self, thisobj, argc, argv, res)
 	if (SEE_ISNAN(d->t))
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
-		SEE_SET_NUMBER(res, YearFromTime(LocalTime(d->t)));
+		SEE_SET_NUMBER(res, 
+		    (SEE_number_t)YearFromTime(LocalTime(d->t)));
 }
 
 /* 15.9.5.11 */
@@ -1293,7 +1294,8 @@ date_proto_getUTCFullYear(interp, self, thisobj, argc, argv, res)
 	if (SEE_ISNAN(d->t))
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
-		SEE_SET_NUMBER(res, YearFromTime(d->t));
+		SEE_SET_NUMBER(res, 
+		    (SEE_number_t)YearFromTime(d->t));
 }
 
 /* 15.9.5.12 */
@@ -2038,7 +2040,8 @@ date_proto_getYear(interp, self, thisobj, argc, argv, res)
 	if (SEE_ISNAN(d->t))
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
-		SEE_SET_NUMBER(res, YearFromTime(LocalTime(d->t)) - 1900);
+		SEE_SET_NUMBER(res, 
+		    (SEE_number_t)(YearFromTime(LocalTime(d->t)) - 1900));
 }
 
 /* B.2.5 */
@@ -2164,9 +2167,9 @@ static SEE_number_t
 DaylightSavingTA(t)
 	SEE_number_t t;
 {
-	SEE_number_t ysec = t - TimeFromYear(YearFromTime(t));
+	SEE_number_t ysec = t - TimeFromYear((SEE_number_t)YearFromTime(t));
 	int ily = InLeapYear(t);
-	int wstart = WeekDay(TimeFromYear(YearFromTime(t)));
+	int wstart = WeekDay(TimeFromYear((SEE_number_t)YearFromTime(t)));
 	int equiv_year = yearmap[ily][wstart];
 	struct tm tm;
 	time_t dst_time, nodst_time;

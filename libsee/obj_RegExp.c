@@ -32,10 +32,6 @@
 # include <config.h>
 #endif
 
-#if STDC_HEADERS
-# include <math.h>
-#endif
-
 #if HAVE_STRING_H
 # include <string.h>
 #endif
@@ -52,6 +48,7 @@
 #include "regex.h"
 #include "stringdefs.h"
 #include "init.h"
+#include "nmath.h"
 
 /*
  * 15.10 The RegExp object.

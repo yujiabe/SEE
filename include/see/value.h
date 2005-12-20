@@ -138,17 +138,11 @@ struct SEE_value {
 # define SEE_ISNAN(n)		isnanf(n)
 # define SEE_ISINF(n)		isinff(n)
 # define SEE_ISFINITE(n)	finitef(n)
-# define SEE_FLOOR(n)		floorf(n)
-# define SEE_FMOD(a,b)		fmodf(a,b)
-# define SEE_RINT(n)		rintf(n)
 #endif
 #if SEE_NUMBER_IS_DOUBLE
 # define SEE_ISNAN(n)    	isnan(n)
 # define SEE_ISINF(n)    	isinf(n)
 # define SEE_ISFINITE(n) 	finite(n)
-# define SEE_FLOOR(n)		floor(n)
-# define SEE_FMOD(a,b)		fmod(a,b)
-# define SEE_RINT(n)		rint(n)
 #endif
 #define SEE_NUMBER_ISNAN(v)    SEE_ISNAN((v)->u.number)
 #define SEE_NUMBER_ISINF(v)    SEE_ISINF((v)->u.number)
