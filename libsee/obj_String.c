@@ -48,6 +48,7 @@
 #include <see/debug.h>
 
 #include "stringdefs.h"
+#include "unicode.h"
 #include "array.h"
 #include "regex.h"
 #include "init.h"
@@ -1099,12 +1100,9 @@ string_proto_toLowerCase(interp, self, thisobj, argc, argv, res)
 	    return;
 	}
 
-	/* XXX TODO properly */
 	rs = SEE_string_new(interp, s->length);
 	for (i = 0; i < s->length; i++) {
-	    SEE_char_t c = s->data[i];
-	    if (c >= 'A' && c <= 'Z')
-		c = c - 'A' + 'a';
+	    SEE_char_t c = UNICODE_TOLOWER(s->data[i]);
 	    SEE_string_addch(rs, c);
 	}
 	SEE_SET_STRING(res, rs);
@@ -1134,7 +1132,6 @@ string_proto_toUpperCase(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s, *rs;
 	int i;
 
-	/* XXX TODO properly */
 	s = object_to_string(interp, thisobj);
 	if (s->length == 0) {
 	    SEE_SET_STRING(res, STR(empty_string));
@@ -1143,9 +1140,7 @@ string_proto_toUpperCase(interp, self, thisobj, argc, argv, res)
 
 	rs = SEE_string_new(interp, s->length);
 	for (i = 0; i < s->length; i++) {
-	    SEE_char_t c = s->data[i];
-	    if (c >= 'a' && c <= 'z')
-		c = c - 'a' + 'A';
+	    SEE_char_t c = UNICODE_TOUPPER(s->data[i]);
 	    SEE_string_addch(rs, c);
 	}
 	SEE_SET_STRING(res, rs);

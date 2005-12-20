@@ -16,10 +16,10 @@
  *	IS - identifier start (=Lu+Ll+Lt+Lm+Lo+Nl + '$' + '_')
  *	IP - identifier part  (=Lu+Ll+Lt+Lm+Lo+Nl+Mn+Mc+Nd+Pc + '$' + '_')
  */
-#define UNICODE_IS_Cf(c) _UNICODE_IS(c, SEE_unicode_Cf, 11)
-#define UNICODE_IS_Zs(c) _UNICODE_IS(c, SEE_unicode_Zs, 14)
-#define UNICODE_IS_IS(c) _UNICODE_IS(c, SEE_unicode_IS, 11)
-#define UNICODE_IS_IP(c) _UNICODE_IS(c, SEE_unicode_IP, 11)
+# define UNICODE_IS_Cf(c) _UNICODE_IS(c, SEE_unicode_Cf, 11)
+# define UNICODE_IS_Zs(c) _UNICODE_IS(c, SEE_unicode_Zs, 14)
+# define UNICODE_IS_IS(c) _UNICODE_IS(c, SEE_unicode_IS, 11)
+# define UNICODE_IS_IP(c) _UNICODE_IS(c, SEE_unicode_IP, 11)
 
 /*
  * The sparse bit tables would be 600kB in total size, but because
@@ -33,7 +33,7 @@ extern unsigned char* SEE_unicode_Cf[];
 extern unsigned char* SEE_unicode_Zs[];
 extern unsigned char* SEE_unicode_IS[];
 extern unsigned char* SEE_unicode_IP[];
-#define _UNICODE_IS(c, table, grp)				\
+# define _UNICODE_IS(c, table, grp)				\
 	((c) < _UNICODE_MAX && 					\
 		(table)[(c)>>(grp)] &&				\
 		(table[(c)>>(grp)][((c) >> 3) & ((1<<((grp)-3))-1)]	\
@@ -42,15 +42,23 @@ extern unsigned char* SEE_unicode_IP[];
 extern SEE_unicode_t  SEE_unicode_Zscodes[];
 extern int	      SEE_unicode_Zscodeslen;
 
+SEE_char_t SEE_unicase_tolower(SEE_char_t ch);
+SEE_char_t SEE_unicase_toupper(SEE_char_t ch);
+
+# define UNICODE_TOLOWER(ch)	SEE_unicase_tolower(ch)
+# define UNICODE_TOUPPER(ch)	SEE_unicase_toupper(ch)
+
 #else /* !WITH_UNICODE_TABLES */
 
-#include <ctype.h>
-#define UNICODE_IS_Cf(c)	((c) <= 0x7f && iscntrl((int)(c)))
-#define UNICODE_IS_Zs(c)	((c) <= 0x7f && isspace((int)(c)))
-#define UNICODE_IS_IS(c)	((c) <= 0x7f && \
+# include <ctype.h>
+# define UNICODE_IS_Cf(c)	((c) <= 0x7f && iscntrl((int)(c)))
+# define UNICODE_IS_Zs(c)	((c) <= 0x7f && isspace((int)(c)))
+# define UNICODE_IS_IS(c)	((c) <= 0x7f && \
 				 (isalpha((int)(c)) || (c)=='$' || (c)=='_'))
-#define UNICODE_IS_IP(c)	((c) <= 0x7f && \
+# define UNICODE_IS_IP(c)	((c) <= 0x7f && \
 				 (isalnum((int)(c)) || (c)=='$' || (c)=='_'))
+# define UNICODE_TOLOWER(c)	((c) <= 0x7f ? tolower((int)c) : (c))
+# define UNICODE_TOUPPER(c)	((c) <= 0x7f ? toupper((int)c) : (c))
 
 #endif /* ! WITH_UNICODE_TABLES */
 

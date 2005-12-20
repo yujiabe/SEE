@@ -7,7 +7,10 @@
 #
 
 UDATA=	UnicodeData.txt
+CDATA=  SpecialCasing.txt
 srcdir=	.
+
+all:	unicode.inc unicase.inc
 
 unicode.inc: gen genZscodes copyright ${UDATA}
 	( cat ${srcdir}/copyright; \
@@ -20,6 +23,12 @@ unicode.inc: gen genZscodes copyright ${UDATA}
 	 ${SHELL} ${srcdir}/genZscodes ${srcdir}/${UDATA}; \
 	 ) > $@
 	cp $@ ${srcdir}/../libsee/unicode.inc
+
+unicase.inc: gencase.pl ${UDATA} ${CDATA}
+	( cat ${srcdir}/copyright; \
+	  perl gencase.pl \
+	) > $@
+	cp $@ ${srcdir}/../libsee/unicase.inc
 
 #
 # I used this rule to analyze the best factoring ratio for the tables.
@@ -34,10 +43,10 @@ analyse: gen
 #
 # Get the latest unicode tables
 #
-UnicodeData.txt:
-	wget http://www.unicode.org/Public/UNIDATA/UnicodeData.txt
-SpecialCasing.txt:
-	wget http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt
+$(UDATA):
+	wget http://www.unicode.org/Public/UNIDATA/$(UDATA)
+$(CDATA):
+	wget http://www.unicode.org/Public/UNIDATA/$(CDATA)
 
 clean:
 	rm -f unicode.inc gen

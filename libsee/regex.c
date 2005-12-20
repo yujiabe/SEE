@@ -208,7 +208,6 @@ static void dprint_ch(SEE_unicode_t);
 #endif
 
 static SEE_unicode_t Canonicalize(struct regex *, SEE_unicode_t);
-static SEE_unicode_t upcase(SEE_unicode_t);
 static SEE_boolean_t pcode_run(struct SEE_interpreter *interp, struct regex *regex,
 	unsigned int addr, struct SEE_string *text, char *state);
 static void optimize_regex(struct SEE_interpreter *, struct regex *);
@@ -1150,7 +1149,7 @@ CanonicalizeClass(recontext, c)
   ccanon = CC_NEW();
   for (r = c->ranges; r; r = r->next)
      for (ch = r->lo; ch < r->hi; ch++) {
-	uch = upcase(ch);
+	uch = UNICODE_TOUPPER(ch);
 	CC_ADDCHAR(ccanon, uch);
      }
   return ccanon;
@@ -1313,32 +1312,14 @@ dprint_regex(regex)
  * pcode-execution
  */
 
-static SEE_unicode_t
-upcase(ch)
-	SEE_unicode_t ch;
-{
-	/*
-	 * NOTE: see the 'Canonicalize' function defined at the end
-	 * of 15.10.2.8
-	 */
-	/* XXX TODO properly (See also String.toLower et al)  */
-	/*
-	 * This function converts the given character c to uppercase
-	 * in the same way that "c".toUpperCase() would work. However
-	 * the conversion is rejected (and the original c returned) if:
-	 *  - the result of converting to uppercase is a string of length > 1
-	 *  - the result is an ASCII char (0..7f) and c was not ASCII.
-	 */
-	return (ch >= 'a' && ch <= 'z') ? ch - 'a' + 'A' : ch;
-}
-
+/* 15.10.2.8 */
 static SEE_unicode_t
 Canonicalize(regex, ch)
 	struct regex *regex;
 	SEE_unicode_t ch;
 {
         if (regex->flags & FLAG_IGNORECASE)
-		return upcase(ch);
+		return UNICODE_TOUPPER(ch);
 	else
 		return ch;
 }
