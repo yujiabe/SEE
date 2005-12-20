@@ -216,6 +216,14 @@ SEE_native_put(interp, o, p, val, attr)
 	    dprints(ip);
 	    dprintf(" <- ");
 	    dprintv(interp, val);
+	    if (attr) {
+	    	dprintf("{");
+		if (attr & SEE_ATTR_READONLY)   dprintf(" ReadOnly");
+		if (attr & SEE_ATTR_DONTENUM)   dprintf(" DontEnum");
+		if (attr & SEE_ATTR_DONTDELETE) dprintf(" DontDelete");
+		if (attr & SEE_ATTR_INTERNAL)   dprintf(" Internal");
+	    	dprintf(" }");
+	    }
 	    dprintf("\n");
 	}
 #endif
