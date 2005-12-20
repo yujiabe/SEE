@@ -6314,14 +6314,14 @@ IfStatement_print(na, printer)
 	PRINT(n->cond);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->btrue);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
 	if (n->bfalse) {
 	    PRINT_STRING(STR(else));
 	    PRINT_CHAR('{');
-	    PRINT_NEWLINE(+1);
+	    PRINT_NEWLINE(1);
 	    PRINT(n->bfalse);
 	    PRINT_CHAR('}');
 	    PRINT_NEWLINE(-1);
@@ -6484,7 +6484,7 @@ IterationStatement_dowhile_print(na, printer)
 		print_label(printer, n);
 	PRINT_STRING(STR(do));
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -6584,7 +6584,7 @@ IterationStatement_while_print(na, printer)
 	PRINT(n->cond);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -6681,7 +6681,7 @@ IterationStatement_for_print(na, printer)
 	if (n->incr) PRINT(n->incr);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -6794,7 +6794,7 @@ IterationStatement_forvar_print(na, printer)
 	if (n->incr) PRINT(n->incr);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -6874,7 +6874,7 @@ IterationStatement_forin_print(na, printer)
 	PRINT(n->list);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -6965,7 +6965,7 @@ IterationStatement_forvarin_print(na, printer)
 	PRINT(n->list);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->body);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -7428,7 +7428,7 @@ WithStatement_print(na, printer)
 	PRINT(n->a);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->b);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -7575,7 +7575,7 @@ SwitchStatement_print(na, printer)
 	PRINT_CHAR(')');
 	PRINT_CHAR(' ');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 
 	for (c = n->cases; c; c = c->next) {
 		if (c == n->defcase) {
@@ -7590,7 +7590,7 @@ SwitchStatement_print(na, printer)
 			PRINT_CHAR(':');
 			PRINT_NEWLINE(0);
 		}
-		PRINT_NEWLINE(+1);
+		PRINT_NEWLINE(1);
 		PRINT(c->body);
 		PRINT_NEWLINE(-1);
 	}
@@ -7857,7 +7857,7 @@ TryStatement_catch_print(na, printer)
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	PRINT_STRING(STR(try));
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->block);
 	PRINT_NEWLINE(-1);
 	PRINT_STRING(STR(catch));
@@ -7866,7 +7866,7 @@ TryStatement_catch_print(na, printer)
 	PRINT_STRING(n->ident);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->bcatch);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -7925,13 +7925,13 @@ TryStatement_finally_print(na, printer)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	PRINT_STRING(STR(try));
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->block);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
 	PRINT_STRING(STR(finally));
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->bfinally);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -8013,7 +8013,7 @@ TryStatement_catchfinally_print(na, printer)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	PRINT_STRING(STR(try));
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->block);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -8023,13 +8023,13 @@ TryStatement_catchfinally_print(na, printer)
 	PRINT_STRING(n->ident);
 	PRINT_CHAR(')');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->bcatch);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
 	PRINT_STRING(STR(finally));
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT(n->bfinally);
 	PRINT_CHAR('}');
 	PRINT_NEWLINE(-1);
@@ -8169,7 +8169,7 @@ Function_print(na, printer)
 	PRINT_CHAR(')');
 	PRINT_CHAR(' ');
 	PRINT_CHAR('{');
-	PRINT_NEWLINE(+1);
+	PRINT_NEWLINE(1);
 	PRINT((struct node *)n->function->body);
 	PRINT_NEWLINE(-1);
 	PRINT_CHAR('}');
