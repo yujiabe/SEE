@@ -10,5 +10,8 @@ SUBDIRS = include libsee shell doc
 EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO
 
 dist-hook:
-	(cd $(srcdir) && cvs2cl --stdout) | tr @ = > $(distdir)/ChangeLog
+	(cd $(srcdir) && \
+	 /tmp/svn2cl --strip-prefix=see/trunk \
+	    --include-rev --stdout . --revision=796:HEAD) \
+	 > $(distdir)/ChangeLog
 	test -s $(distdir)/ChangeLog
