@@ -39,12 +39,20 @@
 #include <see/mem.h>
 #include <see/interpreter.h>
 
+#include "dprint.h"
+
 /*
  * This module provides an interface abstraction for the memory
  * allocator. If configured properly, the default allocator is
  * the Boehm-GC collector. An application could see if a default
  * exists by testing (SEE_mem_malloc_hook != NULL).
  */
+
+#ifndef NDEBUG
+int SEE_mem_debug = 0;
+#undef SEE_malloc
+#undef SEE_malloc_string
+#endif
 
 static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
 
@@ -137,6 +145,38 @@ SEE_malloc(interp, size)
 	return data;
 }
 
+#ifndef NDEBUG
+void *
+SEE_malloc_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	void *data;
+
+	if (SEE_mem_debug)
+		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
+	data = SEE_malloc(interp, size);
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+	return data;
+}
+#else
+void *
+SEE_malloc_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	/* XXX print a warning here? */
+	return SEE_malloc(interp, size);
+}
+#endif
+
 /**
  * Allocates size bytes of garbage-collected, string storage.
  * This function is just like SEE_malloc(), except that the caller
@@ -160,6 +200,37 @@ SEE_malloc_string(interp, size)
 		(*SEE_mem_exhausted_hook)(interp);
 	return data;
 }
+
+#ifndef NDEBUG
+void *
+SEE_malloc_string_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	void *data;
+
+	if (SEE_mem_debug)
+		dprintf("malloc_string %u (%s:%d '%s')", size, file, line, arg);
+	data = SEE_malloc_string(interp, size);
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+	return data;
+}
+#else
+void *
+SEE_malloc_string_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	return SEE_malloc_string(interp, size);
+}
+#endif
 
 /*
  * Called when we *know* that previously allocated storage
