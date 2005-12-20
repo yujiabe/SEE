@@ -153,7 +153,7 @@ _SEE_intern_init(interp)
 	interp->intern_tab = intern_tab;
 
 	/* Add all the predefined strings to the intern table */
-	for (i = 0; i < _SEE_STR_MAX; i++) {
+	for (i = 0; i < SEE_nstringtab; i++) {
 		int h = hash(&SEE_stringtab[i]);
 		x = find(interp->intern_tab, &SEE_stringtab[i], h);
 		if (*x == NULL) 
@@ -173,7 +173,7 @@ SEE_intern(interp, s)
 	if (s == NULL)
 		return NULL;
 
-	if (s >= &SEE_stringtab[0] && s < &SEE_stringtab[_SEE_STR_MAX])
+	if (s >= &SEE_stringtab[0] && s < &SEE_stringtab[SEE_nstringtab])
 		return s;
 
 	if (s->flags & SEE_STRING_FLAG_INTERNED)

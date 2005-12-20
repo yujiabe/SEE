@@ -33,88 +33,119 @@
 #
 # Usage:   string.pl [h|c] string.defs
 #
-# Readss a file of string definitions and outputs C code that compiles
+# Reads a file of string definitions and outputs C code that compiles
 # to static UTF-16 strings. Each string definitions must fit one of these
 # forms:
 #
-#	<ident>
-#	<ident> = "text"
+#       <ident>
+#       <ident> = "<text>"
 #
 # Blank lines and lines starting with a hash ('#') are ignored.
 #
-# There are two modes: 'h' and 'c', corresponding to generation of
-# the C header file, or the C compilation unit.
+# Modes:
+#   'h': generate a C header file which defines 
+#            struct SEE_string *STR(<ident>);
+#            extern struct SEE_string SEE_stringtab[];
+#            extern int SEE_nstringtab;
+#   'c': generates a C file that implements the header using
+#        a static table of strings
 #
 
-$mode = $ARGV[0];
-$file = $ARGV[1];
-open(F, "<$file") || die "$file: $!\n";
+$mode = shift @ARGV;	#-- mode
 
-print "/* This file generated from ${file} */\n";
+#-- Phase 1: scan the string.defs file, recoridng the ident and text
+#
+%seen = ();	# mapping from <ident> to boolean indicating nonuniquenes
+@strings = ();	# mapping from index to {<ident>,<text>}
+while (<>) {
+	next if m/^\s*(#|$)/;	# ignore blank lines and comment lines
 
-if ($mode eq 'h') {
-	print 
-	      "#define STR(x) (&SEE_stringtab[SEE_STR_##x])\n".
-	      "struct SEE_string;\n".
-	      "extern struct SEE_string SEE_stringtab[];\n";
-} else {
-	
+	my $ident, $text;
+	if    (m/^\s*(\w+)\s*=\s*"(.*)"\s*$/) { ($ident,$text) = ($1,$2); }
+	elsif (m/^\s*(\w+)\s*$/)              { $ident = $text = $1; }
+	else { die "$ARGV:$.: malformed line\n"; }
+
+	die "$ARGV:$.: duplicate ident\n" if $seen{$ident};
+	$seen{$ident} = 1;
+
+	push(@strings, { 'ident' => $ident, 'text' => $text});
+#	print STDERR $strings[$#strings]->{'ident'} . "/" .
+#	             $strings[$#strings]->{'text'} . "\n";
 }
 
-$index = 0;
-$exitcode = 0;
-$tabs = "";
-%linedef = ();
-while (<F>) {
-	next if m/^\s*#/ or m/^\s*$/;
+if    ($mode eq "h") { &h_mode; }
+elsif ($mode eq "c") { &c_mode; }
+else                 { die "unknown mode $mode\n"; }
 
-	my $name, $text;
-
-	if (m/^\s*(\S+)\s*=\s*"(.*)"\s*;?\s*$/) {
-		$name = $1;
-		$text = $2;
-	} elsif (m/^\s*(\S+)\s*$/) {
-		$name = $text = $1;
-	} else {
-		die "${file}:$.: bad line\n";
+#-- returns an array of unicode codepoints from a <text> string
+sub text_to_unicode {
+	my $text = shift @_;
+	my $strlen = 0;
+	my @codepoints = ();
+	while ($text ne '') {
+	    if ($text =~ s/^\\u(....)//) { 
+	    	push(@codepoints, hex($1)); 
+	    } elsif ($text =~ s/^\\([0-7]{1,3})//) { 
+	    	push(@codepoints, oct($1));
+	    } elsif ($text =~ s/^\\(.)//) {
+	    	push(@codepoints, ord($1)); 
+	    } elsif ($text =~ s/^(.)//) {
+	    	push(@codepoints, ord($1)); 
+	    } 
 	}
-
-	if (defined($linedef{$name})) {
-		print STDERR "$file:$.: string '${name}' previously defined ".
-				"at line ".  $linedef{$name}. "\n";
-		$exitcode = 1;
-		next;
-	}
-	$linedef{$name} = $.;
-
-	if ($mode eq 'h') {
-		print "#define SEE_STR_${name} ${index}\n";
-	} else {
-		$strlen = 0;
-		$text =~ s/\\[0-7]{1,3}|\\u(....)|\\.|./
-		    $strlen++;
-		    ($& eq "'" ? "'\\''"
-		    : substr($&,0,2) eq "\\u" ? "0x$1"
-		    : "'$&'").",".($strlen % 10 == 0 ? "\n\t  " : " ")/eg;
-		$text =~ s/,[\n\t ]*$//;
-		if ($strlen == 0) {
-			print "#define s__${index} (SEE_char_t *)0\n";
-		} else {
-			print "static SEE_char_t s__${index}[] = {\n\t  ${text} };\n";
-		}
-		if ($index > 0) { $tabs .= ","; }
-		$tabs .= "\n\t{ ${strlen}, s__${index}, NULL, NULL, SEE_STRING_FLAG_INTERNED }";
-	}
-	$index++;
+	return @codepoints;
 }
 
-if ($mode eq 'h') {
-	print "#define _SEE_STR_MAX ${index}\n";
-} else {
-	print "\n\n";
-	print "struct SEE_string SEE_stringtab[] = {";
-	print $tabs;
-	print " };\n";
+#-- generates the .h text
+sub h_mode {
+	print "/* This is a generated file: do not edit */
+
+struct SEE_string;
+extern struct SEE_string SEE_stringtab[];
+extern unsigned int SEE_nstringtab;
+
+#define STR(x) (&SEE_stringtab[SEE_STR_##x])
+";
+	for ($i = 0; $i <= $#strings; $i++) {
+	    my $ident = $strings[$i]->{'ident'};
+	    print "#define SEE_STR_$ident $i\n";
+	}
 }
 
-exit($exitcode);
+#-- generates the .c text
+sub c_mode {
+	print "/* This is a generated file: do not edit */
+
+#include <see/string.h>
+
+#define STR_SEGMENT(offset,length) \\
+    { length, stringtext+offset, 0, 0, SEE_STRING_FLAG_STATIC }
+
+static SEE_char_t stringtext[] = {\n";
+	my @segment = ();
+	my @length = ();
+	my @codepoints = ();
+	my $prevlen = 0;
+	for ($i = 0; $i <= $#strings; $i++) {
+	    print ",\n" if $prevlen;
+	    my $text = $strings[$i]->{'text'};
+	    my @cp = &text_to_unicode($text);
+	    push(@segment, [$#codepoints + 1, $#cp + 1]);
+	    push(@codepoints, @cp);
+	    print "\t".join(",", @cp);
+	    $prevlen = $#cp + 1;
+	}
+	print "};
+struct SEE_string SEE_stringtab[] = {
+";
+	for ($i = 0; $i <= $#strings; $i++) {
+	    print ",\n" if $i;
+	    my ($offset,$length) = @{$segment[$i]};
+	    print "\tSTR_SEGMENT($offset, $length)";
+	}
+	print "};
+unsigned int SEE_nstringtab = ".($#strings + 1).";
+";
+}
+
+
