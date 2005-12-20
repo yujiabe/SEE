@@ -659,7 +659,7 @@ Token(lex)
 		struct SEE_string *s;
 		SEE_unicode_t c;
 
-		s = SEE_string_new(lex->input->interpreter, 0);
+		s = SEE_string_new(interp, 0);
 		do {
 			if (is_UnicodeEscape(lex)) {
 				c = UnicodeEscape(lex);
@@ -693,7 +693,7 @@ Token(lex)
 			    return token;
 			 }
 
-		s = SEE_intern(lex->input->interpreter, s);
+		s = SEE_intern(interp, s);
 		SEE_SET_STRING(&lex->value, s);
 		return tIDENT;
 	}
