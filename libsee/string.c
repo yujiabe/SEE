@@ -154,7 +154,7 @@ SEE_string_cmp(a, b)
 		return -1;
 	}
 	if (!blen)
-		return +1;
+		return 1;
 	return (*ap < *bp) ? -1 : 1;
 }
 
