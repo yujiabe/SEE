@@ -221,7 +221,7 @@ AC_CHECK_FUNCS([strdup GC_malloc getopt \
 		gettimeofday GetSystemTimeAsFileTime time \
 		localtime timegm
 		])
-AC_CHECK_FUNCS([gc_dump])
+AC_CHECK_FUNCS([GC_gcollect GC_dump])
 
 dnl ------------------------------------------------------------
 dnl miscellanea
