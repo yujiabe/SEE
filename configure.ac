@@ -91,7 +91,6 @@ dnl ------------------------------------------------------------
 dnl features
 dnl
 
-with_developer=default
 AC_ARG_ENABLE(developer,
     AC_HELP_STRING([--enable-developer],
 	           [Enable developer warnings and checks [default=no]]))
@@ -108,6 +107,16 @@ if test x"$enable_developer" = x"yes"; then
 			  [AC_MSG_RESULT(no)
 			   CFLAGS="$CFLAGS_save"])
     done
+fi
+
+AC_ARG_ENABLE(debug,
+    AC_HELP_STRING([--disable-debug],
+	           [Enable internal consistency checks [default=yes]]))
+if test x"$enable_debug" = x"no"; then
+    if test x"$enable_developer" = x"yes"; then
+        AC_MSG_WARN([Developer mode enabled, but debug was disabled!])
+    fi
+    CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
 
 AC_ARG_ENABLE(full-unicode,
