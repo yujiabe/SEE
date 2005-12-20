@@ -744,7 +744,7 @@ qs_partition(interp, thisobj, lo, hi, cmpfn, s1, s2)
 {
 	struct SEE_value xv, iv, jv;
 	struct SEE_value *xvp = NULL, *ivp = NULL, *jvp = NULL;
-	struct SEE_string *s1p, *s2p;
+	struct SEE_string *s1p, *s2p = NULL;
 	SEE_uint32_t i = lo - 1;
 	SEE_uint32_t j = hi + 1;
 
