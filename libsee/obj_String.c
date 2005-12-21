@@ -52,9 +52,7 @@
 #include "array.h"
 #include "regex.h"
 #include "init.h"
-
-#define MAX(a,b)  ((a) < (b) ? (b) : (a))
-#define MIN(a,b)  ((a) < (b) ? (a) : (b))
+#include "nmath.h"
 
 /*
  * The String object.
@@ -454,41 +452,44 @@ string_proto_lastIndexOf(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	struct SEE_string *s, *ss;
-	struct SEE_value vss, vposition, v;
-	int k, position;
-	unsigned int sslen, slen;
+	struct SEE_string *r1s, *r2s;
+	struct SEE_value r3v, r2v, r4v;
+	int k;
+	unsigned int r5, r6, r7;
 		
-	s = object_to_string(interp, thisobj);
-	slen = s->length;
+/*1*/	r1s = object_to_string(interp, thisobj);
 
-	if (argc < 1)
-	    SEE_SET_STRING(&vss, STR(undefined));
+/*2*/	if (argc > 0)
+	    SEE_ToString(interp, argv[0], &r2v);
 	else
-	    SEE_ToString(interp, argv[0], &vss);
-	ss = vss.u.string;
-	sslen = ss->length;
+	    SEE_SET_STRING(&r2v, STR(undefined));
+	r2s = r2v.u.string;
 
-	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
-            position = slen + 1;
-	else {
-	    SEE_ToNumber(interp, argv[1], &vposition);
-	    if (SEE_NUMBER_ISNAN(&vposition))
-	        position = slen;
-	    else {
-	        if (vposition.u.number < 0)
-		    position = 0;
-		else if (vposition.u.number > slen)
-		    position = slen + 1;
-		else {
-	            SEE_ToInteger(interp, &vposition, &v);
-	            position = (int)v.u.number;
-		}
-	    }
+/*3*/	if (argc > 1 && SEE_VALUE_GET_TYPE(argv[1]) != SEE_UNDEFINED)
+	    SEE_ToNumber(interp, argv[1], &r3v);
+	else 
+	    SEE_SET_NUMBER(&r3v, SEE_NaN);
+
+/*4*/	if (SEE_ISNAN(r3v.u.number))
+	    SEE_SET_NUMBER(&r4v, SEE_Infinity);
+	else
+	    SEE_ToInteger(interp, &r3v, &r4v);
+
+/*5*/	r5 = r1s->length;
+
+/*6*/	r6 = (unsigned int)MIN(MAX(r4v.u.number, 0), r5);
+
+/*7*/	r7 = r2s->length;
+
+/*8*/
+	if (r5 < r7) {
+		SEE_SET_NUMBER(res, -1);
+		return;
 	}
 
-	for (k = MIN(position - 1, (int)slen - sslen); k >= 0; k--)
-	    if (memcmp(s->data + k, ss->data, sslen * sizeof ss->data[0]) == 0)
+	for (k = MIN(r6, r5 - r7); k >= 0; k--)
+	    if (memcmp(r1s->data + k, r2s->data, 
+	    	r7 * sizeof (SEE_char_t)) == 0)
 	    {
 		SEE_SET_NUMBER(res, k);
 		return;
