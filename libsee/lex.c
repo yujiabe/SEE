@@ -105,8 +105,33 @@ int SEE_lex_debug = 0;
 #define NEGATIVE	(-1)
 #define POSITIVE	(1)
 
-static struct SEE_string * prefix_msg(struct SEE_string *, struct lex *);
+/* Prototypes */
+static struct SEE_string *prefix_msg(struct SEE_string *s, struct lex *lex);
+static void string_adducs32(struct SEE_string *s, SEE_unicode_t c);
+static int is_FormatControl(SEE_unicode_t c);
+static int is_WhiteSpace(SEE_unicode_t c);
+static int is_LineTerminator(SEE_unicode_t c);
+static int is_Letter(SEE_unicode_t c);
+static int is_UnicodeDigit(SEE_unicode_t c);
+static int is_HexDigit(SEE_unicode_t c);
+static int HexValue(SEE_unicode_t c);
+static int is_HexEscape(struct lex *lex);
+static int is_UnicodeEscape(struct lex *lex);
+static int is_IdentifierStart(struct lex *lex);
+static int is_IdentifierPart(struct lex *lex);
+static SEE_unicode_t HexEscape(struct lex *lex);
+static SEE_unicode_t UnicodeEscape(struct lex *lex);
+static int DivPunctuator(struct lex *lex);
+static int SGMLComment(struct lex *lex);
+static int Punctuator(struct lex *lex);
+static int StringLiteral(struct lex *lex);
+static int RegularExpressionLiteral(struct lex *lex, int prev);
+static int NumericLiteral(struct lex *lex);
+static int CommentDiv(struct lex *lex);
+static int Token(struct lex *lex);
+static int lex0(struct lex *lex);
 
+/* Returns ("line " + next_lineno + ": " + s) */
 static struct SEE_string *
 prefix_msg(s, lex)
 	struct SEE_string *s;
@@ -120,7 +145,7 @@ prefix_msg(s, lex)
 	return t;
 }
 
-/* Add unicode character c to the string s, using UTF-16 encoding */
+/* Adds unicode character c to the string s, using UTF-16 encoding */
 static void
 string_adducs32(s, c)
 	struct SEE_string *s;
@@ -183,6 +208,7 @@ is_HexDigit(c)
 		(c >= 'a' && c <= 'f'));
 }
 
+/* Returns the hexadecimal value of a character. Assumes char is a hex digit */
 static int
 HexValue(c)
 	SEE_unicode_t c;
@@ -440,10 +466,10 @@ StringLiteral(lex)
 }
 
 /*
- * 7.8.5 Scan for a regular expression.
+ * 7.8.5 Scans for a regular expression token.
  * Assumes prev (immediately previous token) is either tDIV or tDIVEQ.
- * Returns tREGEX or throws an exception.
- * The string created is of the form "/regex/flags"
+ * Returns tREGEX on success or throws an exception on failur.
+ * The string in lex->value is of the form "/regex/flags"
  */
 static int
 RegularExpressionLiteral(lex, prev)
@@ -704,11 +730,11 @@ Token(lex)
 
 
 /*
- * Scanner goal.
+ * Scanner grammar goal. Scans lex->input for a token, and returns it.
  *
  * May return multiple tLINETERMINATORs, but will never return tCOMMENT.
  * Scans the InputElementDiv production (never InputElementRegex).
- * If the scanner returns tDIV or tDIVEQ, and a regular expression is wanted,
+ * If this function returns tDIV or tDIVEQ, and a regular expression is wanted,
  * then SEE_lex_regex() should be called immediately.
  */
 static int
@@ -734,7 +760,7 @@ lex0(lex)
 	case '/':
 		ret = CommentDiv(lex);
 		if (ret == tCOMMENT)
-			goto again;
+			goto again;	/* Discard tCOMMENTs */
 		return ret;
 	case '\"':
 	case '\'':
@@ -765,7 +791,7 @@ lex0(lex)
  */
 
 /*
- * initialise a tokenizer structure
+ * Initialises a tokenizer structure
  */
 void
 SEE_lex_init(lex, inp)
@@ -783,9 +809,9 @@ SEE_lex_init(lex, inp)
  * Main interface to the lexical anaylser.
  *
  * We keep a one-token lookahead. 
- * Each call to this function generates a new lookahead 
+ * Each call to this function generates a new lookahead token
  * (in lex->next) and returns the previous one, so
- * the flags apply to the scanning of the NEXT token, 
+ * the lex flags apply to the scanning of the NEXT token, 
  * and NOT to the token being returned. (ie The caller should
  * generally refer to the resulting lex->next to make 
  * decisions. The value returned is merely a convenience.)
@@ -794,11 +820,11 @@ SEE_lex_init(lex, inp)
  * lex->next_follows_nl flag when a newline is seen immediately 
  * before lex->next. The parser should use this information to 
  * perform automatic semicolon insertion. Note that the defined
- * tLINETERMINATOR token is an internal scanner symbol only and 
- * is never returned by this function. 
+ * tLINETERMINATOR token is an internal scanner pseudo-token and 
+ * is never returned by this function. Use the next_follows_nl flag.
  *
  * As a special case, if end-of-file (tEND) does not follow 
- * a line terminator, this function pretends that it does.
+ * a line terminator, then this function pretends that it does.
  *
  * The lex->next_lineno field reflects the line number of
  * lex->next.
@@ -848,7 +874,8 @@ SEE_lex_next(lex)
 }
 
 /*
- * Convert the next token into a regular expression, if possible
+ * Converts the next token (just scanned) into a regular expression, 
+ * if possible.
  */
 void
 SEE_lex_regex(lex) 
@@ -860,9 +887,10 @@ SEE_lex_regex(lex)
 
 /*
  * 9.3.1
- * Scan a string to convert it into a number.
- * Stores result in res and returns non-zero on success.
- * (Only ever called by SEE_ToNumber())
+ * Scans a SEE_string to convert it into a number.
+ * On success, sets res to the resulting number and returns non-zero.
+ *
+ * This function is called by SEE_ToNumber().
  */
 int
 SEE_lex_number(interp, s, res)
@@ -877,7 +905,7 @@ SEE_lex_number(interp, s, res)
 	int start;
 	char *numbuf, *endstr;
 
-/* These work becuase we expect no surrogates */
+/* These work becuase we expect no Unicode surrogates in numbers */
 #undef ATEOF
 #undef NEXT
 #undef SKIP
