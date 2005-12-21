@@ -43,6 +43,7 @@
 #include <see/intern.h>
 #include <see/error.h>
 #include <see/interpreter.h>
+#include <see/system.h>
 
 #include "stringdefs.h"
 
@@ -161,6 +162,15 @@ _SEE_intern_init(interp)
 	}
 }
 
+static int
+is_uninternable(s)
+	struct SEE_string *s;
+{
+	return s == NULL || 
+	    (s->flags & SEE_STRING_FLAG_INTERNED) ||
+	    (s >= &SEE_stringtab[0] && s < &SEE_stringtab[SEE_nstringtab]);
+}
+
 /** Intern a string relative to an interpreter. Also reads the global table */
 struct SEE_string *
 SEE_intern(interp, s)
@@ -170,14 +180,10 @@ SEE_intern(interp, s)
 	struct intern **x;
 	unsigned int h;
 
-	if (s == NULL)
-		return NULL;
-
-	if (s >= &SEE_stringtab[0] && s < &SEE_stringtab[SEE_nstringtab])
+	if (is_uninternable(s))
 		return s;
 
-	if (s->flags & SEE_STRING_FLAG_INTERNED)
-		return s;
+	SEE_ASSERT(interp, s->interpreter == interp);
 
 	/* Look in system-wide intern table first */
 	h = hash(s);
@@ -188,6 +194,24 @@ SEE_intern(interp, s)
 			*x = make(interp, SEE_string_dup(interp, s));
 	}
 	return (*x)->string;
+
+}
+
+/*
+ * Interns a string and frees any duplicates
+ */
+void
+SEE_intern_and_free(interp, sp)
+	struct SEE_interpreter *interp;
+	struct SEE_string **sp;
+{
+	struct SEE_string *is;
+
+	if (is_uninternable(*sp))
+		return;
+	is = SEE_intern(interp, *sp);
+	SEE_string_free(interp, sp);
+	*sp = is;
 }
 
 /**
@@ -202,12 +226,12 @@ SEE_intern_global(s)
 
 #ifndef NDEBUG
 	if (global_intern_tab_locked)
-		(*SEE_abort)(NULL, "SEE_intern_global: table is now read-only");
+		SEE_ABORT(NULL, "SEE_intern_global: table is now read-only");
 #endif
 	x = find(&global_intern_tab, s, hash(s));
 #ifndef NDEBUG
 	if (*x)
-		(*SEE_abort)(NULL, "SEE_intern_global: duplicate string");
+		SEE_ABORT(NULL, "SEE_intern_global: duplicate string");
 #endif
 	*x = make(NULL, s);
 }

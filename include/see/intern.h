@@ -17,6 +17,12 @@ void _SEE_intern_init(struct SEE_interpreter *i);
 struct SEE_string *SEE_intern(struct SEE_interpreter *i, struct SEE_string *s);
 
 /*
+ * Internalises a string, and frees the original string.
+ * The string s must not be used by anywhere else at this stage.
+ */
+void SEE_intern_and_free(struct SEE_interpreter *i, struct SEE_string **s);
+
+/*
  * Internalises a string into the global table. Invalid if interpreter
  * instances exist
  */

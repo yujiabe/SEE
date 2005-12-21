@@ -486,3 +486,18 @@ SEE_string_literal(interp, s)
 	SEE_string_addch(lit, '\"');
 	return lit;
 }
+
+/*
+ * Frees a string. The caller must know that the string is not in 
+ * use in any other place. That includes substring references.
+ */
+void
+SEE_string_free(interp, sp)
+	struct SEE_interpreter *interp;
+	struct SEE_string **sp;
+{
+	if (*sp) {
+		SEE_free(interp, (void **)&(*sp)->data);
+		SEE_free(interp, (void **)sp);
+	}
+}

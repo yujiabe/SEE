@@ -32,102 +32,24 @@
 # include <config.h>
 #endif
 
-#if STDC_HEADERS
-# include <stdlib.h>
-#endif
-
 #include <see/mem.h>
-#include <see/interpreter.h>
+#include <see/system.h>
 
 #include "dprint.h"
 
-/*
- * This module provides an interface abstraction for the memory
- * allocator. If configured properly, the default allocator is
- * the Boehm-GC collector. An application could see if a default
- * exists by testing (SEE_mem_malloc_hook != NULL).
- */
-
 #ifndef NDEBUG
 int SEE_mem_debug = 0;
+#endif
+
 #undef SEE_malloc
 #undef SEE_malloc_string
-#endif
-
-static void memory_exhausted(struct SEE_interpreter *) SEE_dead;
-
-#if defined(HAVE_GC_MALLOC)
-static void *malloc_gc(struct SEE_interpreter *, SEE_size_t);
-static void *malloc_string_gc(struct SEE_interpreter *, SEE_size_t);
-# define INITIAL_MALLOC		malloc_gc
-# define INITIAL_MALLOC_STRING	malloc_string_gc
-# define INITIAL_FREE		NULL
-#else
-# define INITIAL_MALLOC		NULL	/* application must provide */
-# define INITIAL_MALLOC_STRING	NULL
-# define INITIAL_FREE		NULL
-#endif /* !HAVE_GC_MALLOC */
-
-/*
- * Application-visible memory allocator hooks.
- * Changing these will allow an application to wrap memory allocation
- * and handle out-of-memory conditions.
- */
-void * (*SEE_mem_malloc_hook)(struct SEE_interpreter *, SEE_size_t)
-		= INITIAL_MALLOC;
-void * (*SEE_mem_malloc_string_hook)(struct SEE_interpreter *, SEE_size_t)
-		= INITIAL_MALLOC_STRING;
-void (*SEE_mem_free_hook)(struct SEE_interpreter *, void *) 
-		= INITIAL_FREE;
-void (*SEE_mem_exhausted_hook)(struct SEE_interpreter *) SEE_dead
-		= memory_exhausted;
-
-/*------------------------------------------------------------
- * Simple exhaustion handling strategy: abort!
- */
-
-static void
-memory_exhausted(interp)
-	struct SEE_interpreter *interp;
-{
-	/* Call the interpreter's abort mechanism */
-	(*SEE_abort)(interp, "memory exhausted");
-}
-
-#if defined HAVE_GC_MALLOC
-/*------------------------------------------------------------
- * Boehm-GC wrapper
- */
-
-#if HAVE_GC_H
-# include <gc.h>
-#else
-extern void *GC_malloc(int);
-extern void *GC_malloc_atomic(int);
-#endif
-
-static void *
-malloc_gc(interp, size)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-{
-	return GC_malloc(size);
-}
-
-static void *
-malloc_string_gc(interp, size)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-{
-	return GC_malloc_atomic(size);
-}
-#endif /* HAVE_GC_MALLOC */
+#undef SEE_free
 
 /*------------------------------------------------------------
  * Wrappers around memory allocators that check for failure
  */
 
-/**
+/*
  * Allocates size bytes of garbage-collected storage.
  */
 void *
@@ -139,13 +61,13 @@ SEE_malloc(interp, size)
 
 	if (size == 0)
 		return NULL;
-	data = (*SEE_mem_malloc_hook)(interp, size);
+	data = (*SEE_system.malloc)(interp, size);
 	if (data == NULL) 
-		(*SEE_mem_exhausted_hook)(interp);
+		(*SEE_system.mem_exhausted)(interp);
 	return data;
 }
 
-/**
+/*
  * Allocates size bytes of garbage-collected, string storage.
  * This function is just like SEE_malloc(), except that the caller
  * guarantees that no pointers will be stored in the data. This
@@ -160,39 +82,34 @@ SEE_malloc_string(interp, size)
 
 	if (size == 0)
 		return NULL;
-	if (SEE_mem_malloc_string_hook)
-		data = (*SEE_mem_malloc_string_hook)(interp, size);
-	else
-		data = (*SEE_mem_malloc_hook)(interp, size); /* fallback */
+	data = (*SEE_system.malloc_string)(interp, size);
 	if (data == NULL) 
-		(*SEE_mem_exhausted_hook)(interp);
+		(*SEE_system.mem_exhausted)(interp);
 	return data;
 }
 
 /*
- * Called when we *know* that previously allocated storage
- * can be released. 
- *
- *   *** NOT RECOMMENDED TO BE USED ***
- *
- * (Much better is to allocate temp storage on the stack with SEE_ALLOCA().)
+ * Releases memory that the caller *knows* is unreachable.
  */
 void
-SEE_free(interp, ptr)
+SEE_free(interp, memp)
 	struct SEE_interpreter *interp;
-	void *ptr;
+	void **memp;
 {
-	if (SEE_mem_free_hook)
-		(*SEE_mem_free_hook)(interp, ptr);
+	if (*memp) {
+		(*SEE_system.free)(interp, *memp);
+		*memp = NULL;
+	}
 }
 
 /*
- * The debug variants exist for when the library is compiled with NDEBUG,
- * but applications are not. This is just a convenience. 
+ * The debug variants must not be protected by NDEBUG.
+ * This is for the case when the library is compiled with NDEBUG,
+ * but the library-user application is not.
  */
 
 void *
-SEE_malloc_debug(interp, size, file, line, arg)
+_SEE_malloc_debug(interp, size, file, line, arg)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
 	const char *file;
@@ -214,7 +131,7 @@ SEE_malloc_debug(interp, size, file, line, arg)
 }
 
 void *
-SEE_malloc_string_debug(interp, size, file, line, arg)
+_SEE_malloc_string_debug(interp, size, file, line, arg)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
 	const char *file;
@@ -233,4 +150,19 @@ SEE_malloc_string_debug(interp, size, file, line, arg)
 		dprintf(" -> %p\n", data);
 #endif
 	return data;
+}
+
+void
+_SEE_free_debug(interp, memp, file, line, arg)
+	struct SEE_interpreter *interp;
+	void **memp;
+	const char *file;
+	int line;
+	const char *arg;
+{
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("free %p (%s:%d '%s')", *memp, file, line, arg);
+#endif
+	SEE_free(interp, memp);
 }

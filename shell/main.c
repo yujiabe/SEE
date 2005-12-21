@@ -44,8 +44,6 @@ static int run_input(struct SEE_interpreter *, struct SEE_input *,
 static int run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
 static void run_html(struct SEE_interpreter *, char *);
-static void *dummy_malloc(struct SEE_interpreter *, unsigned int);
-static void init_dummy_malloc(void);
 static int compatvalue(const char *, int *);
 
 static struct debug *debugger;
@@ -327,30 +325,6 @@ run_html(interp, filename)
 }
 
 /*
- * A dummy garbage collecting memory allocator.
- * This allocator uses the non-reclaiming system allocator.
- * This configuration is provided here for programs that wish to
- * test the Simple ECMAScript Engine against a non-reclaiming
- * memory allocator. All memory is released only when the process exits.
- */
-static void *
-dummy_malloc(interp, sz)
-	struct SEE_interpreter *interp;
-	unsigned int sz;
-{
-	return malloc(sz);
-}
-
-/* Initialise SEE to use a non-reclaiming memory allocator. */
-static void
-init_dummy_malloc()
-{
-	fprintf(stderr, 
-	    "WARNING: no garbage collector. Using non-release malloc()\n");
-	SEE_mem_malloc_hook = dummy_malloc;
-}
-
-/*
  * Convert a compatability flag name into an integer bit-flag.
  * The following compatbility flags are understood (see the documentation
  * for more details). They may be prefixed with 'no' to turn them off.
@@ -414,10 +388,6 @@ main(argc, argv)
 	int globals_added = 0;
 	int document_added = 0;
 	char *s;
-
-	/* Initialise memory allocator only if default is not available */
-	if (SEE_mem_malloc_hook == NULL)
-		init_dummy_malloc();
 
 	/* Initialise the shell's global strings */
 	shell_strings();

@@ -278,16 +278,7 @@ intstr(interp, sp, i)
 	    return common_int[i];
 
 	if (!*sp)
-		*sp = SEE_string_new(interp, 
-			i < 0 ? 0 :
-			i < 100 ? 2 :
-			i < 1000 ? 3 :
-			i < 10000 ? 4 :
-			i < 100000 ? 5 :
-			i < 1000000 ? 6 :
-			i < 10000000 ? 7 :
-			i < 100000000 ? 8 :
-			i < 1000000000 ? 9 : 0);
+		*sp = SEE_string_new(interp, 9);
 	else
 		(*sp)->length = 0;
 	intstr_p(*sp, i);

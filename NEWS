@@ -1,6 +1,10 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
+  Memory debugging.
+  Qualified use of the GC's free function.
+  Better checking for some function availability.
+  Moved allocator/error handling into a single structure.
   bug 24: lastIndexOf() boundary condition
   bug 4: Unicode upper/lowercase support
   bug 11: check for overgrown strings
@@ -11,7 +15,7 @@ $Id$
   bug 2: Strings are marked so they are not scanned by the GC
   bug 7: SEE_ALLOCA now takes an interpreter argument
   New features to enable/disable: parser-print parser-visit full-unicode
-  Proper API (1.0) versioning
+  Proper API versioning (1.0)
   Better parser internal consistency checks in debug mode (node cast checks)
   bug 3: Added a simple interactive debugger into see-shell
   Trace hook now exposes context structures for use with SEE_context_eval()

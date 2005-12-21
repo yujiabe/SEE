@@ -105,8 +105,6 @@ int SEE_parse_debug = 0;
 int SEE_eval_debug = 0;
 #endif
 
-#define TRUST_GC_FREE 1			/* XXX removeme */
-
 /*------------------------------------------------------------
  * structure types
  */
@@ -1036,9 +1034,7 @@ target_pop(parser, target)
 		t->next = NULL;
 		t->label = NULL;
 		t->target = NULL;
-#if TRUST_GC_FREE
-		SEE_free(parser->interpreter, t);
-#endif
+		SEE_free(parser->interpreter, (void **)&t);
 	}
 }
 
@@ -1110,9 +1106,7 @@ label_pop(parser, name)
 	l = parser->labels;
 	parser->labels = l->next;
 	l->next = NULL;
-#if TRUST_GC_FREE
-	SEE_free(parser->interpreter, l);
-#endif
+	SEE_free(parser->interpreter, (void **)&l);
 }
 
 /*
@@ -5893,9 +5887,8 @@ StatementList_eval(na, context, res)
 		EVAL(n->b, context, res);
 		if (res->u.completion.value == NULL)
 			res->u.completion.value = val;
-#if TRUST_GC_FREE
-		else SEE_free(context->interpreter, val);
-#endif
+		else 
+			SEE_free(context->interpreter, (void **)&val);
 	}
 }
 

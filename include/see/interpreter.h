@@ -92,10 +92,4 @@ void SEE_interpreter_init(struct SEE_interpreter *i);
 /* Initialises an interpreter with specific behaviour */
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
 
-/*
- * This function is called when the interpreter encounters a
- * fatal condition. It should not return. It defaults to calling abort().
- */
-extern void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead;
-
 #endif /* _SEE_h_interpreter_ */

@@ -126,6 +126,7 @@ SEE_native_get(interp, o, p, res)
 	    dprinto(interp, o);
 	    dprintf(" ip=");
 	    dprints(ip);
+	    dprintf("(%p)", ip);
 	    if (*x) { 
 		dprintf(" -> ");
 		dprintv(interp, &(*x)->value);
@@ -219,6 +220,7 @@ SEE_native_put(interp, o, p, val, attr)
 	    dprinto(interp, o);
 	    dprintf(" ip=");
 	    dprints(ip);
+	    dprintf("(%p)", ip);
 	    dprintf(" <- ");
 	    dprintv(interp, val);
 	    if (attr) {

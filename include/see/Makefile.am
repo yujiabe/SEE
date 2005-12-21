@@ -6,8 +6,8 @@ PERL=@PERL@
 BUILT_SOURCES =         error.h try.h type.h
 pkginclude_HEADERS =	context.h cfunction.h debug.h error.h eval.h	\
                         input.h intern.h interpreter.h mem.h native.h	\
-                        no.h object.h see.h string.h try.h type.h	\
-			value.h version.h
+                        no.h object.h see.h string.h system.h try.h 	\
+			type.h value.h version.h
 
 
 # Rather than make our config.h be part of the API, we substitute

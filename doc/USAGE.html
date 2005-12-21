@@ -302,17 +302,27 @@ completely independent of each other in this way if you:
 <p>
 If SEE encounters an internal error (such as memory exhaustion,
 memory corruption, or a bug), it calls the global function pointer
-<code>SEE_abort</code>, 
+<code>SEE_system.abort</code>, 
 passing it a pointer to the interpreter in context (or <code>NULL</code>),
 and a short descriptive message.
-The <code>SEE_abort</code>
+The <code>SEE_system.abort</code>
 hook initially points to a wapper function that simply calls 
 the C library function <code>abort()</code>. You can set the hook
 early if you want to handle errors more gracefully.
 Its signature is:
 </p>
 
-<pre>extern void (*<dfn id="SEE_abort">SEE_abort</dfn>)(struct SEE_interpreter *interp, const char *msg);</pre>
+<pre>extern struct {
+    <i>...</i>
+    extern void (*<dfn id="SEE_system.abort">abort</dfn>)(struct SEE_interpreter *interp, const char *msg) _SEE_dead;
+    <i>...</i>
+} SEE_system;</pre>
+
+<p>
+A convenience macro, <code>SEE_ABORT()</code> is provided for 
+applications to call through this hook.
+</p>
+<pre>extern void (*<dfn id="SEE_ABORT">SEE_ABORT</dfn>)(struct SEE_interpreter *interp, const char *msg);</pre>
 
 <h2 id="mem">3 Memory management</h2>
 
@@ -325,23 +335,53 @@ before any interpreter instances are created.
 </p>
 
 <p>
-SEE manages memory by calling through the following function pointers,
-that your host application can replace:
+SEE manages memory by calling through the following function pointers
+stored in the global structure <code>SEE_system</code>.
+Your host application can replace them before it creates
+any interpreters.
 </p>
 
-<pre>void * (*<dfn id="SEE_mem_malloc_hook">SEE_mem_malloc_hook</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
-void * (*<dfn id="SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
-void   (*<dfn id="SEE_mem_free_hook">SEE_mem_free_hook</dfn>)(struct SEE_interpreter *interp, void *ptr);
-void   (*<dfn id="SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</dfn>)(struct SEE_interpreter *interp);</pre>
+<pre>extern struct {
+    <i>...</i>
+    void * (*<dfn id="SEE_system.malloc">malloc</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
+    void * (*<dfn id="SEE_system.malloc_string">malloc_string</dfn>)(struct SEE_interpreter *interp, SEE_size_t size);
+    void   (*<dfn id="SEE_system.free">free</dfn>)(struct SEE_interpreter *interp, void *ptr);
+    void   (*<dfn id="SEE_system.mem_exhausted">mem_exhausted</dfn>)(struct SEE_interpreter *interp);
+    <i>...</i>
+} SEE_system;</pre>
 
 <p>
-If SEE was compiled with Boehm-gc support, <code>SEE_mem_malloc_hook</code>
+These hooks are invoked through the following functions:
+</p>
+<ul>
+<li><code>SEE_malloc()</code>
+- allocate storage that is scanned during garbage collection
+<li><code>SEE_malloc_string()</code>
+- allocate storage for a string that will not contain pointers
+<li><code>SEE_free()</code>
+- release storage that you can guarantee is unreferenced from anywhere
+</ul>
+
+<pre>void * <dfn id="SEE_malloc">SEE_malloc</dfn>(struct SEE_interpreter *interp, SEE_size_t size);
+void * <dfn id="SEE_malloc_string">SEE_malloc_string</dfn>(struct SEE_interpreter *interp, SEE_size_t size);
+void <dfn id="SEE_free">SEE_free</dfn>(struct SEE_interpreter *interp, void **datap);</pre>
+
+<p>
+Notice that <code>SEE_free()</code> takes a pointer-to-a-pointer, unlike
+its counterpart in the <code>SEE_system</code> structure.
+The pointer will be set to NULL after freeing.
+Freeing a NULL pointer with <code>SEE_free()</code> has no effect.
+</p>
+
+<p>
+If SEE was compiled with Boehm-gc support, <code>SEE_system.malloc</code>
 is initialised to point to a wrapper
-around the <code>GC_malloc()</code> function, and
-<code>SEE_mem_malloc_hook</code> is initialised to point to a wrapper
-around <code>GC_malloc_atomic()</code>.
-Otherwise, both are initialised as <code>NULL</code> and your application must 
-set at least <code>SEE_mem_malloc_hook</code> before use.
+around the <code>GC_malloc()</code> function,
+<code>SEE_system.malloc_string</code> is initialised to point to a wrapper
+around <code>GC_malloc_atomic()</code>, and
+<code>SEE_system.free</code> is initialised to point to a wrapper
+around <code>GC_free()</code>.
+Otherwise, the functions will use the system <code>malloc()</code>.
 </p>
 
 <p>
@@ -350,13 +390,6 @@ these hooks may be called with a <code>NULL</code> interpreter argument,
 indicating unknown context.
 The malloc hooks must not throw exceptions,
 but should return <code>NULL</code> on failure.
-</p>
-
-<p class="note">
-&#9888; Note:
-Currently, <code>SEE_mem_free_hook</code> is unused,
-although future versions may use it.
-It should be left at its default value, NULL.
 </p>
 
 <p>
@@ -381,19 +414,19 @@ T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, 
 T * <dfn id="SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, int length, type T);</pre>
 
-<p>An usage example is:</p>
+<p>A usage example is:</p>
 <pre>char *buffer = SEE_NEW_STRING_ARRAY(interp, char, 30);</pre>
 
 <p>
 These macros check for a memory allocation failure indicated by the
-<code>SEE_mem_malloc_hook</code> returning NULL.
+system allocator returning NULL.
 In this event they will 
 assume an out-of-memory condition and call
-the <code>SEE_mem_exhausted_hook</code>.
+the <code>SEE_system.mem_exhausted()</code>.
 This hook defaults 
-to a function that simply calls <code>SEE_abort</code>. 
-Your application may prefer to change the <code>SEE_mem_exhausted_hook</code>
-to handle this situation more gracefully.
+to a function that simply calls <code>SEE_ABORT()</code>. 
+Your application may prefer to change the <code>mem_exhausted</code>
+hook to handle this situation more gracefully.
 </p>
 
 <p>
@@ -2163,7 +2196,7 @@ will occur.
 <table class="index">
 <tr>
 <td>
-<a href="#SEE_abort">SEE_abort</a><br>
+<a href="#SEE_ABORT">SEE_ABORT</a><br>
 <a href="#SEE_ALLOCA">SEE_ALLOCA</a><br>
 <a href="#SEE_CAUGHT">SEE_CAUGHT</a><br>
 <a href="#SEE_cfunction_make">SEE_cfunction_make</a><br>

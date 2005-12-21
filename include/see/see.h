@@ -25,6 +25,7 @@ extern "C" {
 #include <see/mem.h>
 #include <see/no.h>
 #include <see/string.h>
+#include <see/system.h>
 #include <see/try.h>
 #include <see/version.h>
 

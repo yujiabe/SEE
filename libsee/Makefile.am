@@ -13,8 +13,8 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c dprint.c enumerate.c \
                    obj_Date.c obj_Error.c obj_Function.c obj_Global.c	\
                    obj_Math.c obj_Number.c obj_Object.c obj_RegExp.c	\
                    obj_String.c object.c parse.c regex.c string.c 	\
-                   stringdefs.c tokens.c try.c unicase.c unicode.c	\
-                   value.c version.c
+                   stringdefs.c system.c tokens.c try.c unicase.c 	\
+		   unicode.c value.c version.c
 
 #cfunction.lo: stringdefs.h stringdefs.inc
 

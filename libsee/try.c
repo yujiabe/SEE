@@ -44,6 +44,7 @@
 #include <see/string.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+#include <see/system.h>
 
 #include "stringdefs.h"
 #include "dprint.h"
@@ -92,7 +93,7 @@ SEE_throw_abort(interp, v, file, line)
 	    dprintf("\n");
 	}
 #endif
-	(*SEE_abort)(interp, "exception thrown but no TRY block");
+	SEE_ABORT(interp, "exception thrown but no TRY block");
 }
 
 /**
@@ -139,5 +140,5 @@ SEE_throw()
 void
 longjmperror()
 {
-	(*SEE_abort)(NULL, "longjmp error");
+	SEE_ABORT(NULL, "longjmp error");
 }

@@ -719,7 +719,7 @@ Token(lex)
 			    return token;
 			 }
 
-		s = SEE_intern(interp, s);
+		SEE_intern_and_free(interp, &s);
 		SEE_SET_STRING(&lex->value, s);
 		return tIDENT;
 	}

@@ -37,72 +37,50 @@
 # include <stdlib.h>
 #endif
 
-#if TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  include <time.h>
-# endif
-#endif
-
+#include <see/cfunction.h>
+#include <see/context.h>
+#include <see/intern.h>
+#include <see/interpreter.h>
 #include <see/mem.h>
 #include <see/native.h>
-#include <see/interpreter.h>
-#include <see/cfunction.h>
-#include <see/intern.h>
-#include <see/context.h>
+#include <see/system.h>
 
 #include "init.h"
 
-static void interpreter_abort(struct SEE_interpreter *, const char *) SEE_dead;
-
 /**
- * The
- * .Fn SEE_interpreter_init
- * function (re)initialises the interpreter structure pointed to by
- * .Fa interp
- * using default compatibility flags.
+ * Initialises/reinitializes an interpreter structure
+ * using the default compatibility flags.
+ * The interpreter structure must be initialized at least once
+ * before it can be used.
  */
 void
 SEE_interpreter_init(interp)
 	struct SEE_interpreter *interp;
 {
 	SEE_interpreter_init_compat(interp, 
-		SEE_COMPAT_262_3B |
-		SEE_COMPAT_EXT1);
+		SEE_system.default_compat_flags);
 }
 
 /**
- * The
- * .Fn SEE_interpreter_init_compat
- * function (re)initialises the interpreter structure pointed to by
- * .Fa interp ,
- * using the bitwise-OR of flags in
- * .Fa compat_flags .
- * The compatibility flags are documented in the
- * .Pa COMPATIBILITY
- * file.
+ * Initialises/reinitializes an interpreter structure
+ * using the given compatibility flags.
+ * The interpreter structure must be initialized at least once
+ * before it can be used.
  */
 void
 SEE_interpreter_init_compat(interp, compat_flags)
 	struct SEE_interpreter *interp;
 	int compat_flags;
 {
-	if (SEE_mem_malloc_hook == NULL)
-		(*SEE_abort)(interp, "SEE_mem_malloc_hook is NULL");
-
 	interp->try_context = NULL;
 	interp->try_location = NULL;
 
 	interp->compatibility = compat_flags;
-	interp->random_seed = (unsigned int)interp ^ (unsigned int)time(0);
-	interp->trace = NULL;
+	interp->random_seed = (*SEE_system.random_seed)();
+	interp->trace = SEE_system.default_trace;
 	interp->traceback = NULL;
-	interp->locale = NULL;
-	interp->recursion_limit = -1;
+	interp->locale = SEE_system.default_locale;
+	interp->recursion_limit = SEE_system.default_recursion_limit;
 
 	/* Allocate object storage first, since dependencies are complex */
 	SEE_Array_alloc(interp);
@@ -117,6 +95,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_RegExp_alloc(interp);
 	SEE_String_alloc(interp);
 
+	/* Initialise the per-interpreter intern table now */
 	_SEE_intern_init(interp);
 
 	/* Initialise the objects; order *shouldn't* matter */
@@ -133,33 +112,4 @@ SEE_interpreter_init_compat(interp, compat_flags)
 
 	/* Function init needs to be called last since it uses the parser */
 	SEE_Function_init(interp);
-}
-
-/**
- * The
- * .Fv SEE_abort
- * global variable points to a non-returning function that is called
- * when the interpreter detects a fatal error. It defaults to a function
- * that writes a message to stderr and then calls
- * .Xr abort 3 .
- * It should be set by the application if more graceful handling is
- * required.
- * Note that the first parameter to the function may be NULL
- */
-void (*SEE_abort)(struct SEE_interpreter *i, const char *msg) SEE_dead =
-	interpreter_abort;
-
-/*
- * The default abort handler: we just print a fatal error message,
- * and die. Calling abort() will usually leave a core image that 
- * may be analysed for som port mortem debugging.
- */
-static void
-interpreter_abort(i, msg)
-	struct SEE_interpreter *i;		/* may be NULL */
-	const char *msg;
-{
-	if (msg)
-	    fprintf(stderr, "fatal error: %s\n", msg);
-	abort();
 }
