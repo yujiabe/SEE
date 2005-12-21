@@ -145,38 +145,6 @@ SEE_malloc(interp, size)
 	return data;
 }
 
-#ifndef NDEBUG
-void *
-SEE_malloc_debug(interp, size, file, line, arg)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-	const char *file;
-	int line;
-	const char *arg;
-{
-	void *data;
-
-	if (SEE_mem_debug)
-		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
-	data = SEE_malloc(interp, size);
-	if (SEE_mem_debug)
-		dprintf(" -> %p\n", data);
-	return data;
-}
-#else
-void *
-SEE_malloc_debug(interp, size, file, line, arg)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-	const char *file;
-	int line;
-	const char *arg;
-{
-	/* XXX print a warning here? */
-	return SEE_malloc(interp, size);
-}
-#endif
-
 /**
  * Allocates size bytes of garbage-collected, string storage.
  * This function is just like SEE_malloc(), except that the caller
@@ -201,37 +169,6 @@ SEE_malloc_string(interp, size)
 	return data;
 }
 
-#ifndef NDEBUG
-void *
-SEE_malloc_string_debug(interp, size, file, line, arg)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-	const char *file;
-	int line;
-	const char *arg;
-{
-	void *data;
-
-	if (SEE_mem_debug)
-		dprintf("malloc_string %u (%s:%d '%s')", size, file, line, arg);
-	data = SEE_malloc_string(interp, size);
-	if (SEE_mem_debug)
-		dprintf(" -> %p\n", data);
-	return data;
-}
-#else
-void *
-SEE_malloc_string_debug(interp, size, file, line, arg)
-	struct SEE_interpreter *interp;
-	SEE_size_t size;
-	const char *file;
-	int line;
-	const char *arg;
-{
-	return SEE_malloc_string(interp, size);
-}
-#endif
-
 /*
  * Called when we *know* that previously allocated storage
  * can be released. 
@@ -247,4 +184,53 @@ SEE_free(interp, ptr)
 {
 	if (SEE_mem_free_hook)
 		(*SEE_mem_free_hook)(interp, ptr);
+}
+
+/*
+ * The debug variants exist for when the library is compiled with NDEBUG,
+ * but applications are not. This is just a convenience. 
+ */
+
+void *
+SEE_malloc_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	void *data;
+
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
+#endif
+	data = SEE_malloc(interp, size);
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+#endif
+	return data;
+}
+
+void *
+SEE_malloc_string_debug(interp, size, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	void *data;
+
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("malloc_string %u (%s:%d '%s')", size, file, line, arg);
+#endif
+	data = SEE_malloc_string(interp, size);
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+#endif
+	return data;
 }
