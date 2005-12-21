@@ -42,8 +42,8 @@ extern unsigned char* SEE_unicode_IP[];
 extern SEE_unicode_t  SEE_unicode_Zscodes[];
 extern int	      SEE_unicode_Zscodeslen;
 
-SEE_char_t SEE_unicase_tolower(SEE_char_t ch);
-SEE_char_t SEE_unicase_toupper(SEE_char_t ch);
+SEE_char_t SEE_unicase_tolower(unsigned int ch);
+SEE_char_t SEE_unicase_toupper(unsigned int ch);
 
 # define UNICODE_TOLOWER(ch)	SEE_unicase_tolower(ch)
 # define UNICODE_TOUPPER(ch)	SEE_unicase_toupper(ch)

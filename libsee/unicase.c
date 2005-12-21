@@ -44,6 +44,9 @@ struct case_map {
     SEE_char_t from, to;
 };
 
+/* Prototypes */
+static SEE_char_t search(struct case_map *, unsigned int, unsigned int);
+
 # include "unicase.inc"
 
 # define lengthof(a) (sizeof a / sizeof (a)[0])
@@ -52,7 +55,7 @@ struct case_map {
 static SEE_char_t
 search(map, ch, maplen)
 	struct case_map *map;
-	SEE_char_t ch;
+	unsigned int ch;		/* promoted from SEE_char_t */
 	unsigned int maplen;
 {
 	unsigned int a, b, m;
@@ -75,13 +78,15 @@ search(map, ch, maplen)
 }
 
 SEE_char_t
-SEE_unicase_tolower(SEE_char_t ch)
+SEE_unicase_tolower(ch)
+	unsigned int ch;		/* promoted from SEE_char_t */
 {
 	return search(lowercase_map, ch, lengthof(lowercase_map));
 }
 
 SEE_char_t
-SEE_unicase_toupper(SEE_char_t ch)
+SEE_unicase_toupper(ch)
+	unsigned int ch;		/* promoted from SEE_char_t */
 {
 	return search(uppercase_map, ch, lengthof(uppercase_map));
 }
