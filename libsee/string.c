@@ -54,6 +54,9 @@
 
 #include "stringdefs.h"
 
+static void growby(struct SEE_string *s, unsigned int extra);
+static void simple_growby(struct SEE_string *s, unsigned int extra);
+
 static struct SEE_stringclass fixed_stringclass = {
 	0						/* growby */
 };

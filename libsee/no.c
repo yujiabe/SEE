@@ -43,6 +43,9 @@
 
 #include "stringdefs.h"
 
+static struct SEE_string *no_enum_next(struct SEE_interpreter *,
+	struct SEE_enum *, int *);
+
 /*------------------------------------------------------------
  * No-op methods
  */

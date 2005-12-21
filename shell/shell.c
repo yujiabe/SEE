@@ -32,9 +32,19 @@
 #include <see/see.h>
 #include "shell.h"
 
-static void print_fn(struct SEE_interpreter *,
-        struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
+/* Prototypes */
+static void print_fn(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void document_write(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+#if HAVE_GC_DUMP
+static void gc_dump_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+#endif
+#if HAVE_GC_GCOLLECT
+static void gc_gcollect_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+#endif
 
 /* Internalised constant strings for my convenience */
 static struct SEE_string *s_print;

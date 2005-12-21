@@ -72,58 +72,46 @@
  * to be reachable.)
  */
 
-static void global_eval(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_parseInt(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_parseFloat(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_isNaN(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_isFinite(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_decodeURI(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_decodeURIComponent(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void global_encodeURI(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_encodeURIComponent(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-
-static void global_escape(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_unescape(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-
+static void global_eval(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_parseInt(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_parseFloat(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_isNaN(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_isFinite(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_decodeURI(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_decodeURIComponent(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void global_encodeURI(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_encodeURIComponent(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void global_escape(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_unescape(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #ifndef NDEBUG
-static void global_write(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void global_writeval(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
+static void global_write(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void global_writeval(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #endif
 
-static void AddEscape(struct SEE_interpreter *, struct SEE_string *,
-	unsigned int);
-static struct SEE_string *Encode(struct SEE_interpreter *,
-	struct SEE_string *, const unsigned char *);
-static SEE_char_t urihexval(struct SEE_interpreter *, 
-	unsigned int, unsigned int);
-static struct SEE_string *Decode(struct SEE_interpreter *,
-	struct SEE_string *, const unsigned char *);
+static int is_StrWhiteSpace(int);
+static void AddEscape(struct SEE_interpreter *, struct SEE_string *, 
+        unsigned int);
+static struct SEE_string *Encode(struct SEE_interpreter *, 
+        struct SEE_string *, const unsigned char *);
+static SEE_char_t urihexval(struct SEE_interpreter *, unsigned int, 
+        unsigned int);
+static struct SEE_string *Decode(struct SEE_interpreter *, 
+        struct SEE_string *, const unsigned char *);
 
 static struct SEE_objectclass global_class = {
 	STR(global),			/* Class */

@@ -47,8 +47,13 @@
 #include "stringdefs.h"
 #include "dprint.h"
 
+static unsigned int hashfn(struct SEE_string *);
 static struct SEE_property **find(struct SEE_interpreter *,
 	struct SEE_object *, struct SEE_string *);
+static void native_enum_reset(struct SEE_interpreter *,
+	struct SEE_enum *);
+static struct SEE_string *native_enum_next(struct SEE_interpreter *,
+	struct SEE_enum *, int *);
 
 #ifndef NDEBUG
 int SEE_native_debug = 0;

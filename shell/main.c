@@ -35,14 +35,18 @@ extern int optind;
 #include "shell.h"
 #include "debug.h"
 
-static int run_input(struct SEE_interpreter *, struct SEE_input *,
-	struct SEE_value *);
+/* Prototypes */
+static void debug(struct SEE_interpreter *, int);
+static void trace(struct SEE_interpreter *, struct SEE_throw_location *, 
+        struct SEE_context *);
+static int run_input(struct SEE_interpreter *, struct SEE_input *, 
+        struct SEE_value *);
 static int run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
-static void debug(struct SEE_interpreter *, int);
-static void trace(struct SEE_interpreter *, struct SEE_throw_location *,
-	struct SEE_context *);
 static void run_html(struct SEE_interpreter *, char *);
+static void *dummy_malloc(struct SEE_interpreter *, unsigned int);
+static void init_dummy_malloc(void);
+static int compatvalue(const char *, int *);
 
 static struct debug *debugger;
 

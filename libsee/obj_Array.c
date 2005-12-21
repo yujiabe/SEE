@@ -61,21 +61,26 @@ struct array_object {
 	SEE_uint32_t length;
 };
 
+
+/* Prototypes */
 static void intstr_p(struct SEE_string *, SEE_uint32_t);
-static struct SEE_string *intstr(struct SEE_interpreter *,struct SEE_string **, SEE_uint32_t);
-static void array_init(struct array_object *, struct SEE_interpreter *,
-	SEE_uint32_t);
-static void array_construct(struct SEE_interpreter *, struct SEE_object *,
-	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static struct array_object *toarray(struct SEE_interpreter *, 
+static struct SEE_string *intstr(struct SEE_interpreter *, 
+	struct SEE_string **, SEE_uint32_t);
+static struct array_object *toarray(struct SEE_interpreter *,
 	struct SEE_object *);
 
-static void array_proto_toString(struct SEE_interpreter *, struct SEE_object *,
+static void array_init(struct array_object *, struct SEE_interpreter *, 
+	unsigned int);
+static void array_construct(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+
+static void array_proto_toString(struct SEE_interpreter *, 
+	struct SEE_object *, struct SEE_object *, int, struct SEE_value **,
+	struct SEE_value *);
 static void array_proto_toLocaleString(struct SEE_interpreter *, 
 	struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
 	struct SEE_value *);
-static void array_proto_concat(struct SEE_interpreter *, struct SEE_object *, 
+static void array_proto_concat(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void array_proto_join(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
@@ -85,24 +90,34 @@ static void array_proto_push(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void array_proto_reverse(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static void array_proto_shift(struct SEE_interpreter *, struct SEE_object *, 
+static void array_proto_shift(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void array_proto_slice(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static int SortCompare(struct SEE_interpreter *, struct SEE_value *,
+	struct SEE_value *, struct SEE_object *);
+static int qs_partition(struct SEE_interpreter *, struct SEE_object *,
+	SEE_uint32_t, SEE_uint32_t, struct SEE_object *, struct SEE_string **,
+	struct SEE_string **);
+static void qs_sort(struct SEE_interpreter *, struct SEE_object *,
+	SEE_uint32_t, SEE_uint32_t, struct SEE_object *, struct SEE_string **,
+	struct SEE_string **);
 static void array_proto_sort(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void array_proto_splice(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void array_proto_unshift(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void array_setlength(struct SEE_interpreter *, struct array_object *,
+	struct SEE_value *);
 
-static void array_get(struct SEE_interpreter *, struct SEE_object *, 
+static void array_get(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *, struct SEE_value *);
 static void array_put(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *, struct SEE_value *, int);
-static int  array_hasproperty(struct SEE_interpreter *, struct SEE_object *,
+static int array_hasproperty(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
-static int  array_delete(struct SEE_interpreter *, struct SEE_object *,
+static int array_delete(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_string *);
 
 /* object class for Array constructor */

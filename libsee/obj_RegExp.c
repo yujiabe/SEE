@@ -62,25 +62,22 @@ struct regexp_object {
 	struct regex *regex;
 };
 
-static struct regexp_object *toregexp(struct SEE_interpreter *,
-	struct SEE_object *);
+/* Prototypes */
+static struct regexp_object *toregexp(struct SEE_interpreter *, 
+        struct SEE_object *);
 
-static void regexp_construct(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void regexp_call(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
+static void regexp_construct(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void regexp_call(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
-static void regexp_proto_test(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void regexp_proto_exec(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void regexp_proto_toString(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
+static void regexp_proto_exec(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void regexp_proto_test(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void regexp_proto_toString(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 
 /* object class for RegExp constructor */
 static struct SEE_objectclass regexp_const_class = {

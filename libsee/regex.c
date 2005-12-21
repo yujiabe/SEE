@@ -172,19 +172,18 @@ struct recontext {
 #undef INFINITY /* XXX fixme - rename INFINITY in this file maybe? */
 #define INFINITY	(-1)
 
-/*
- * Prototypes
- */
+/* Prototypes */
 static struct charclass *cc_new(struct recontext *);
-static void cc_add_range(struct recontext *, struct charclass *,
-	SEE_unicode_t, SEE_unicode_t);
+static void cc_add_range(struct recontext *, struct charclass *, 
+        SEE_unicode_t, SEE_unicode_t);
 static void cc_invert(struct recontext *, struct charclass *);
 static void cc_add_cc(struct recontext *, struct charclass *, 
-	struct charclass *);
+        struct charclass *);
 static int cc_issingle(struct charclass *);
 static SEE_uint32_t cc_count(struct charclass *);
 static int cc_cmp(struct charclass *, struct charclass *);
 static int cc_intern(struct recontext *, struct charclass *);
+static int cc_contains(struct charclass *, SEE_unicode_t);
 static struct regex *regex_new(struct recontext *);
 static void code_add(struct recontext *, int);
 static void code_insert(struct recontext *, int, int);
@@ -197,19 +196,20 @@ static void Atom_parse(struct recontext *);
 static unsigned char HexDigit_parse(struct recontext *);
 static struct charclass *ClassEscape_parse(struct recontext *);
 static struct charclass *ClassAtom_parse(struct recontext *);
+static struct charclass *CanonicalizeClass(struct recontext *, 
+        struct charclass *);
 static struct charclass *CharacterClass_parse(struct recontext *);
-static struct charclass *CanonicalizeClass(struct recontext *, struct charclass *);
 
 #ifndef NDEBUG
-static int dprint_code(struct regex *, int);
-static void dprint_regex(struct regex *);
-static void dprint_cc(struct charclass *);
 static void dprint_ch(SEE_unicode_t);
+static void dprint_cc(struct charclass *);
+static int  dprint_code(struct regex *, int);
+static void dprint_regex(struct regex *);
 #endif
 
 static SEE_unicode_t Canonicalize(struct regex *, SEE_unicode_t);
-static SEE_boolean_t pcode_run(struct SEE_interpreter *interp, struct regex *regex,
-	unsigned int addr, struct SEE_string *text, char *state);
+static SEE_boolean_t pcode_run(struct SEE_interpreter *, struct regex *, 
+        unsigned int, struct SEE_string *, char *);
 static void optimize_regex(struct SEE_interpreter *, struct regex *);
 
 /*------------------------------------------------------------

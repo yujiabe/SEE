@@ -57,7 +57,7 @@
 
 #include "init.h"
 
-static void interpreter_abort(struct SEE_interpreter *i, const char *) SEE_dead;
+static void interpreter_abort(struct SEE_interpreter *, const char *) SEE_dead;
 
 /**
  * The

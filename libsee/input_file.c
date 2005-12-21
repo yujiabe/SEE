@@ -56,14 +56,24 @@
  * EOF is returned instead of returning a SEE_INPUT_BADCHAR.
  */
 
+#define LOOKAHEAD_MAX	4
 
-static void         input_file_close(struct SEE_input *);
+struct input_file {
+	struct SEE_input	inp;
+	FILE *		file;
+	unsigned char	lookahead_buf[LOOKAHEAD_MAX];
+	unsigned char	*lookahead_pos;
+	int		lookahead_len;
+};
+
+static int getbyte(struct input_file *);
 static SEE_unicode_t ucs32be_next(struct SEE_input *);
 static SEE_unicode_t ucs32le_next(struct SEE_input *);
-static SEE_unicode_t utf8_next(struct SEE_input *);
 static SEE_unicode_t utf16be_next(struct SEE_input *);
 static SEE_unicode_t utf16le_next(struct SEE_input *);
+static SEE_unicode_t utf8_next(struct SEE_input *);
 static SEE_unicode_t ascii_next(struct SEE_input *);
+static void input_file_close(struct SEE_input *);
 
 static struct SEE_inputclass 
    ucs32be_class = { ucs32be_next, input_file_close },
@@ -85,16 +95,6 @@ static struct bomtab {
 	{ 2,	{ 0xfe, 0xff },			&utf16be_class, "UTF-16BE" },
 	{ 2,	{ 0xff, 0xfe },			&utf16le_class, "UTF-16LE" },
 	{ 0,    { 0 },				&ascii_class,   NULL }
-};
-
-#define LOOKAHEAD_MAX	4
-
-struct input_file {
-	struct SEE_input	inp;
-	FILE *		file;
-	unsigned char	lookahead_buf[LOOKAHEAD_MAX];
-	unsigned char	*lookahead_pos;
-	int		lookahead_len;
 };
 
 /* Return next byte, or EOF (-1) */

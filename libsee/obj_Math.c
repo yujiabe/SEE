@@ -57,60 +57,42 @@
 #define IS_NEGZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) < 0)
 #define IS_POSZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) > 0)
 
-static void math_abs(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_acos(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_asin(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_atan(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_atan2(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_ceil(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_cos(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_exp(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_floor(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_log(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_max(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_min(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_pow(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_random(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_round(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_sin(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_sqrt(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void math_tan(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
+static void math_abs(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_acos(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_asin(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_atan(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_atan2(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_ceil(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_cos(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_exp(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_floor(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_log(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_max(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_min(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_pow(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_random(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_round(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_sin(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_sqrt(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void math_tan(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
 /* Math is a normal native object */
 static struct SEE_objectclass math_class = {

@@ -66,12 +66,14 @@ int SEE_Error_debug = 0;
  * -- 15.11
  */
 
-static void error_proto_toString(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void error_construct(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
+/* Prototypes */
+static struct SEE_object *init_error(struct SEE_interpreter *,
+	struct SEE_string *, struct SEE_object *, struct SEE_object *);
+static void error_proto_toString(struct SEE_interpreter *, 
+	struct SEE_object *, struct SEE_object *, int, struct SEE_value **,
+	struct SEE_value *);
+static void error_construct(struct SEE_interpreter *, struct SEE_object *,
+	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
 /* object class for Error constructors */
 static struct SEE_objectclass error_const_class = {

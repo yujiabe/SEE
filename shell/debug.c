@@ -42,34 +42,44 @@ struct cmd {
 	const char *doc;
 };
 
-/* Function prototypes */
+/* Prototypes */
+static struct breakpoint *bp_add(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, int, int);
+static void loc_print(FILE *, struct SEE_throw_location *);
+static int bp_delete(struct SEE_interpreter *, struct debug *, int);
+static void bp_print(struct SEE_interpreter *, struct breakpoint *, FILE *);
 static void trace_callback(struct SEE_interpreter *, 
-	struct SEE_throw_location *, struct SEE_context *context);
-static int should_break(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *);
-static int user_command(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *);
+        struct SEE_throw_location *, struct SEE_context *);
+static int location_matches(struct SEE_interpreter *, 
+        struct SEE_throw_location *, struct SEE_throw_location *);
+static int should_break(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *);
+static int location_parse(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_throw_location *, char **);
 
-static int cmd_where(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_step(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_cont(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_break(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_show(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_delete(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_eval(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_throw(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_help(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
-static int cmd_info(struct SEE_interpreter *, struct debug *,
-	struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_where(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_step(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_cont(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_break(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static void bp_show(struct SEE_interpreter *, struct breakpoint *);
+static int cmd_show(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_delete(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_eval(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_throw(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_help(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_info(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int user_command(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *);
 
 static struct cmd cmdtab[] = {
     { "break",	cmd_break,	"set a breakpoint" },

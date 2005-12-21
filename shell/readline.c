@@ -24,6 +24,9 @@
 #include <see/see.h>
 #include "shell.h"
 
+# if !HAVE_STRDUP
+static char *strdup(const char *);
+# endif
 
 # if !HAVE_STRDUP
 /* Duplicates a string using dynamically allocated memory. */

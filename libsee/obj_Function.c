@@ -70,65 +70,75 @@
  *   - the 'arguments object' (translates indicies into local vars)
  */
 
-struct function_inst *tofunction(struct SEE_interpreter *, struct SEE_object *);
-static void function_inst_init(struct function_inst *,
-	struct SEE_interpreter *, struct function *, struct SEE_scope *);
+/* structure of function instances (13.1.2) */
+struct function_inst {
+	struct SEE_object object;
+	struct function  *function;
+	struct SEE_scope *scope;
+};
 
-static void function_construct(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void function_inst_construct(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void function_inst_call(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static int function_inst_hasinstance(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_value *);
+/* structure of the 'arguments' objects */
+struct arguments {
+	struct SEE_native  native;
+	struct function   *function;
+	struct SEE_object *activation;
+	int argc;
+};
 
-static void function_inst_get(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *, 
-	struct SEE_value *);
-static void function_inst_put(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *, 
-	struct SEE_value *, int);
-static int  function_inst_canput(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-static int  function_inst_hasproperty(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-static int  function_inst_delete(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-static struct SEE_enum *function_inst_enumerator(struct SEE_interpreter *,
-	struct SEE_object *);
-
-static void function_proto_toString(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void function_proto_apply(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void function_proto_call(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-
-static void arguments_get(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *, 
-	struct SEE_value *);
-static void arguments_put(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *, 
-	struct SEE_value *, int);
-static int  arguments_canput(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-static int  arguments_hasproperty(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-static int  arguments_delete(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_string *);
-void arguments_defaultvalue(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_value *, struct SEE_value *);
-
-static struct arguments *arguments_create(struct SEE_interpreter*, 
-	struct function *, struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **);
+/* Prototypes */
+static struct function_inst *tofunction(struct SEE_interpreter *, 
+        struct SEE_object *);
+static void function_inst_init(struct function_inst *, 
+        struct SEE_interpreter *, struct function *, struct SEE_scope *);
+static void function_construct(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static int function_inst_hasinstance(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_value *);
+static void function_inst_call(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void function_inst_construct(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void function_proto_toString(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void function_proto_apply(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void function_proto_call(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static struct SEE_string *argument_rename(struct arguments *, 
+        struct SEE_string *);
+static void arguments_get(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *);
+static void arguments_put(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *, int);
+static int arguments_canput(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *);
+static int arguments_hasproperty(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_string *);
+static int arguments_delete(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *);
+static void arguments_defaultvalue(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_value *, struct SEE_value *);
+static struct arguments *arguments_create(struct SEE_interpreter *, 
+        struct function *, struct SEE_object *, struct SEE_object *, int, 
+        struct SEE_value **);
+static void function_inst_get(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *);
+static void function_inst_put(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *, int);
+static int function_inst_canput(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_string *);
+static int function_inst_hasproperty(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_string *);
+static int function_inst_delete(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_string *);
+static struct SEE_enum *function_inst_enumerator(struct SEE_interpreter *, 
+        struct SEE_object *);
 
 /* object class for Function constructor */
 static struct SEE_objectclass function_const_class = {
@@ -193,21 +203,6 @@ struct SEE_objectclass SEE_activation_class = {
 	SEE_native_delete,			/* Delete */
 	SEE_no_defaultvalue,			/* DefaultValue */
 	SEE_native_enumerator,			/* Enumerator */
-};
-
-/* structure of function instances (13.1.2) */
-struct function_inst {
-	struct SEE_object object;
-	struct function  *function;
-	struct SEE_scope *scope;
-};
-
-/* structure of the 'arguments' objects */
-struct arguments {
-	struct SEE_native  native;
-	struct function   *function;
-	struct SEE_object *activation;
-	int argc;
 };
 
 struct SEE_object *
@@ -291,7 +286,7 @@ SEE_Function_init(interp)
 
 
 /* Convert an object to a function instance, or raise a TypeError */
-struct function_inst *
+static struct function_inst *
 tofunction(interp, o)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
@@ -756,7 +751,7 @@ function_proto_call(interp, self, thisobj, argc, argv, res)
  * a valid argument index.
  */
 static struct SEE_string *
-arg_rename(a, s)
+argument_rename(a, s)
 	struct arguments *a;
 	struct SEE_string *s;
 {
@@ -785,7 +780,7 @@ arguments_get(interp, o, p, res)
 	struct SEE_value *res;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = arg_rename(a, p);
+	struct SEE_string *name = argument_rename(a, p);
 
 	if (name)
 		SEE_OBJECT_GET(interp, a->activation, name, res);
@@ -802,7 +797,7 @@ arguments_put(interp, o, p, val, attr)
 	int attr;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = arg_rename(a, p);
+	struct SEE_string *name = argument_rename(a, p);
 
 	if (name)
 		SEE_OBJECT_PUT(interp, a->activation, name, val, attr);
@@ -817,7 +812,7 @@ arguments_canput(interp, o, p)
 	struct SEE_string *p;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = arg_rename(a, p);
+	struct SEE_string *name = argument_rename(a, p);
 
 	if (name)
 		return SEE_OBJECT_CANPUT(interp, a->activation, name);
@@ -832,7 +827,7 @@ arguments_hasproperty(interp, o, p)
 	struct SEE_string *p;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = arg_rename(a, p);
+	struct SEE_string *name = argument_rename(a, p);
 
 	if (name)
 		return SEE_OBJECT_HASPROPERTY(interp, a->activation, name);
@@ -847,7 +842,7 @@ arguments_delete(interp, o, p)
 	struct SEE_string *p;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = arg_rename(a, p);
+	struct SEE_string *name = argument_rename(a, p);
 
 	if (name)
 		return SEE_OBJECT_DELETE(interp, a->activation, name);
@@ -855,7 +850,7 @@ arguments_delete(interp, o, p)
 		return SEE_native_delete(interp, o, p);
 }
 
-void
+static void
 arguments_defaultvalue(interp, o, hint, res)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;

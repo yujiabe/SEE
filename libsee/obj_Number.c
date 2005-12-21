@@ -56,36 +56,34 @@ struct number_object {
 	SEE_number_t number;		/* Value */
 };
 
+/* Prototypes */
 static void radix_tostring(struct SEE_string *, SEE_number_t, int);
+static struct number_object *tonumber(struct SEE_interpreter *, 
+        struct SEE_object *);
 
-static struct number_object *tonumber(struct SEE_interpreter *,
-	struct SEE_object *);
+static void number_construct(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void number_call(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
-static void number_construct(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void number_call(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-
-static void number_proto_toString(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void number_proto_toLocaleString(struct SEE_interpreter *,
-	struct SEE_object *, 
-	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static void number_proto_valueOf(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void number_proto_toFixed(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void number_proto_toExponential(struct SEE_interpreter *,
-	struct SEE_object *, 
-	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static void number_proto_toPrecision(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
+static void number_proto_toString(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void number_proto_toLocaleString(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void number_proto_valueOf(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void number_proto_toFixed(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void number_proto_toExponential(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void number_proto_toPrecision(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 
 /* object class for Number constructor */
 static struct SEE_objectclass number_const_class = {

@@ -61,26 +61,27 @@
 extern struct SEE_native SEE_obj_Function_prototype;
 extern struct SEE_native SEE_obj_Object;
 
-static void object_construct(struct SEE_interpreter *, struct SEE_object *,
-	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+/* Prototypes */
+static void object_construct(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void object_proto_toString(struct SEE_interpreter *, 
-	struct SEE_object *, struct SEE_object *, int, 
-	struct SEE_value **, struct SEE_value *);
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 static void object_proto_toLocaleString(struct SEE_interpreter *, 
-	struct SEE_object *, struct SEE_object *, int, 
-	struct SEE_value **, struct SEE_value *);
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 static void object_proto_valueOf(struct SEE_interpreter *, 
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 static void object_proto_hasOwnProperty(struct SEE_interpreter *, 
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
-static void object_proto_isPrototypeOf(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *,
-	int, struct SEE_value **, struct SEE_value *);
-static void object_proto_propertyIsEnumerable(struct SEE_interpreter *,
-	struct SEE_object *, struct SEE_object *, int,
-	struct SEE_value **, struct SEE_value *);
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void object_proto_isPrototypeOf(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
+static void object_proto_propertyIsEnumerable(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+        struct SEE_value *);
 
 static struct SEE_objectclass object_const_class = {
 	STR(ObjectConstructor),			/* Class */
