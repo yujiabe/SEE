@@ -46,4 +46,11 @@
 # define NUMBER_tan(a)		tan(a)
 #endif
 
+#ifndef MIN
+# define MIN(a,b)	((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+# define MAX(a,b)	((a) < (b) ? (b) : (a))
+#endif
+
 #endif /* _SEE_h_nmath */
