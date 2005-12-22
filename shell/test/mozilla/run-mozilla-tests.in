@@ -18,6 +18,15 @@ isok () {
     test "$d" != "e4x" -a -f "$d"/shell.js 
 }
 
+#-- return true if the test file is suitable
+if test $# -eq 0; then
+	istestok () { :; }
+else
+	# use $1 as a glob pattern to match against
+	eval "istestok () { case \"\$1\" in $1) : ;; *) false ;; esac; }"
+	shift
+fi
+
 if $SHELLPROG -V < /dev/null; then
 	:
 else
@@ -41,6 +50,7 @@ for d in *; do
 	test -d $e || continue
         for i in $e/*.js; do
 	    test -f "$i" || continue
+	    istestok "$i" || continue
 	    count=`expr $count + 1`
 	done
     done
@@ -57,6 +67,7 @@ for d in *; do
 	test -f "$e/shell.js" && earg="$arg -f $e/shell.js"
         for i in $e/*.js; do
 	    test -f "$i" || continue
+	    istestok "$i" || continue
 	    pos=`expr $pos + 1`
 	    echo -n "$pos of $count: $failed failed${CR}" >&2
 	    echo ""
@@ -93,6 +104,6 @@ done
 		       print name; 			\
 		       failed++; } 			\
                    print; }				\
-       END       { print "Tests failed:", failed; 		\
+       END       { print "\nTests failed:", failed; 		\
                    exit failed > 0 ? 1 : 0; }		\
-       '
+       ' failed=0
