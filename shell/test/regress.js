@@ -10,5 +10,6 @@ var upper = "ABCDEFGHIJ0123XYZ\uff3a";
 test(literal(lower)+".toUpperCase()", upper)
 test(literal(upper)+".toLowerCase()", lower)
 test("'foo'.lastIndexOf('o', 0)", -1)
+test("Function().__proto__", Function.prototype)
 
 finish()

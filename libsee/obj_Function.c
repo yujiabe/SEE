@@ -305,12 +305,15 @@ function_inst_init(fi, interp, f, scope)
 	struct function *f;
 	struct SEE_scope *scope;
 {
-	if (f->common == NULL) 
-		f->common = SEE_native_new(interp);
-	fi->object.objectclass = &function_inst_class;
-	fi->object.Prototype = interp->Function_prototype;
+	if (f->common == NULL) {
+		f->common = SEE_native_new(interp);	/* 13.2(2) */
+		f->common->Prototype = interp->Function_prototype;
+	}
+						/* 13.2(3&5&6|15&17&18): */
+	fi->object.objectclass = &function_inst_class;	
+	fi->object.Prototype = interp->Function_prototype; /* 13.2(4|16) */
 	fi->function = f;
-	fi->scope = scope;
+	fi->scope = scope;				/* 13.2(7|19) */
 }
 
 /* 13.2 create (or pull from cache) a function instance with given scope */
@@ -336,7 +339,7 @@ SEE_function_inst_create(interp, f, scope)
 			return f->cache;
 	}
 
-	fi = SEE_NEW(interp, struct function_inst);	/* 13.2(2) */
+	fi = SEE_NEW(interp, struct function_inst);
 	function_inst_init(fi, interp, f, scope);
 
 	if (!f->cache)
@@ -973,6 +976,7 @@ function_inst_put(interp, o, p, val, attr)
 {
 	struct SEE_object *common;
 
+	/* XXX setting __proto__ will ruin things */
 	common = (struct SEE_object *)tofunction(interp, o)->function->common;
 	SEE_OBJECT_PUT(interp, common, p, val, attr);
 }
