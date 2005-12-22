@@ -2051,6 +2051,10 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 
 <li>
 	Reserved words can be used as identifiers (with a warning message)
+<li>
+	Invalid quantifiers in regular expressions
+	(e.g. <code>/a{12x}/</code>) are treated as literals instead
+	of raising a SyntaxError.
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>

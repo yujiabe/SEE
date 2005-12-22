@@ -191,6 +191,7 @@ static void code_insert(struct recontext *, int, int);
 static void Disjunction_parse(struct recontext *);
 static void Alternative_parse(struct recontext *);
 static void Term_parse(struct recontext *);
+static int Quantifier_is_next(struct recontext *);
 static int Integer_parse(struct recontext *);
 static void Atom_parse(struct recontext *);
 static unsigned char HexDigit_parse(struct recontext *);
@@ -560,7 +561,7 @@ SEE_regex_parse(interp, source, flags)
 	recontext = SEE_NEW(interp, struct recontext);
 	recontext->interpreter = interp;
 	recontext->input = SEE_input_lookahead(
-		SEE_input_string(interp, source), 2);
+		SEE_input_string(interp, source), 24);
 	recontext->regex = regex = regex_new(recontext);
 	regex->flags = flags;
 
@@ -658,6 +659,56 @@ Alternative_parse(recontext)
  *	Atom Quantifier
  */
 
+/* We have 24 bytes of lookahead, which is sufficient to
+ * scan for {2147483647,2147483647}. Anything larger will
+ * overflow the signed int type on 32 bit systems.
+ */
+
+static int
+Quantifier_is_next(recontext)
+	struct recontext *recontext;
+{
+	int pos, len;
+	SEE_unicode_t lookahead[24];
+
+	if (NEXT != '{')
+	    return 0;
+
+	/*
+	 * Strict ECMA-262 says that '{' is NOT a Pattern character,
+	 * but Mozilla allows it 
+	 */
+	if (!(recontext->interpreter->compatibility & SEE_COMPAT_EXT1))
+	    return 1;
+
+	len = LOOKAHEAD(lookahead, 24);
+	pos = 1;
+
+	while (pos < len && 
+		lookahead[pos] >= '0' &&
+		lookahead[pos] <= '9')
+	    pos++;
+
+	if (pos < len && lookahead[pos] == ',')
+	    pos++;
+	else if (pos < len && lookahead[pos] == '}')
+	    return pos > 1;
+	else
+	    return 0;
+
+	while (pos < len && 
+		lookahead[pos] >= '0' &&
+		lookahead[pos] <= '9')
+	    pos++;
+
+	if (pos < len && lookahead[pos] == '}')
+	    pos++;
+	else
+	    return 0;
+
+	return 1;
+}
+
 static void
 Term_parse(recontext)
 	struct recontext *recontext;
@@ -674,12 +725,12 @@ Term_parse(recontext)
 	    SEE_unicode_t lookahead[2];
 
 	    lookahead_len = LOOKAHEAD(lookahead, 2);
-	    if (lookahead[1] == 'b') {
+	    if (lookahead_len > 1 && lookahead[1] == 'b') {
 		SKIP; SKIP;
 		CODE_ADD(OP_BRK);
 		return;
 	    }
-	    if (lookahead[1] == 'B') {
+	    if (lookahead_len > 1 && lookahead[1] == 'B') {
 		SKIP; SKIP;
 		CODE_ADD(OP_NBRK);
 		return;
@@ -713,7 +764,7 @@ Term_parse(recontext)
 		SKIP; min = 1; max = INFINITY;
 	} else if (NEXT == '?') {
 		SKIP; min = 0; max = 1;
-	} else if (NEXT == '{') /*}*/ {			
+	} else if (Quantifier_is_next(recontext)) {			
 		SKIP;
 		min = Integer_parse(recontext);
 		if (!ATEOF && NEXT == ',') {
