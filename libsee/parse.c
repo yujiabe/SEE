@@ -2898,8 +2898,10 @@ UnaryExpression_typeof_eval(na, context, res)
 	struct SEE_string *s;
 
 	EVAL(n->a, context, &r1);
-	if (SEE_VALUE_GET_TYPE(&r1) == SEE_REFERENCE && r1.u.reference.base == NULL) 
+	if (SEE_VALUE_GET_TYPE(&r1) == SEE_REFERENCE && r1.u.reference.base == NULL) {
 		SEE_SET_STRING(res, STR(undefined));
+		return;
+	}
 	GetValue(context, &r1, &r4);
 	switch (SEE_VALUE_GET_TYPE(&r4)) {
 	case SEE_UNDEFINED:	s = STR(undefined); break;

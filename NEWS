@@ -1,6 +1,7 @@
 $Id$
 
 1.3 [2005-06-09 BETA]
+  Fix typeof undefined references no longer throws ReferenceError
   Fix function instance prototype initialisation
   Regular expressions now treat invalid quantifiers as literal in EXT1
   Memory debugging.
