@@ -2,30 +2,16 @@
 Developers may be interested in testing SEE against the extremely
 comprehensive Mozilla test suite.
 
-1. Check out the Mozilla test suite 
+Doing a 'make check' in this directory will check out the current
+Mozilla test suite, configure the run-mozilla-tests script to
+use the see-shell binary, and then run all tests.
 
- Use the following commands to obtain the test files
+Why some of the mozilla tests fail
+----------------------------------
 
- $ cvs -d :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot login
- Password: <empty password: just hit enter>
- $ cvs -d :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot co mozilla/js/tests
+This section contains notes on why some tests failing are acceptable.
 
-2. Configure the RUN.mozilla script
-
- Copy the RUN.mozilla script from this directory into mozilla/js/tests/RUN, 
- then edit it to point to a see-shell executable that you have compiled.
- Often this is a reference directly into your SEE build directory, namely
- shell/see-shell.static.
-
-3. Run the RUN script
-
- Execute the RUN shell script from within mozilla/js/tests/.
- It writes all its output to $0.out (ie usually RUN.out)
- It writes progress information to stderr, and errors found to stdout.
-
-4. Why some of the mozilla tests fail
-
-* ecma/Date/15.9.5.10-1.js
+  ecma/Date/15.9.5.10-1.js
   ecma/Date/15.9.5.10-9.js 
   ecma/Date/15.9.5.12-1.js
   ecma/Date/...
@@ -34,5 +20,15 @@ comprehensive Mozilla test suite.
 	  doesn't say how to compute daylight savings or local timezone.
 	  These errors all seem to have local timezone calculation as the
 	  underlying cause.
+
+Bug numbers
+-----------
+
+ Many of the mozilla tests have a BUGNUMBER reference. Check out their
+ status in their bugzilla. For example,
+
+	 BUGNUMBER: 320483
+	 https://bugzilla.mozilla.org/show_bug.cgi?id=320483
+
 
 $Id$
