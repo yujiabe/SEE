@@ -29,13 +29,16 @@ function literal(v) {
 }
 
 /* Run a test, and check that the result is that expected */
-function test(expr, expected) {
+function testsub(expr, expected, kind) {
 
 	var result, msg, ok, result_str, expected_str;
 
 	try {
 		result = eval(expr);
-		ok = (result === expected);
+		if (kind == "===")
+			ok = (result === expected);
+		else
+			ok = (result == expected);
 	} catch (e) {
 		ok = (expected == "exception");
 		result = e.name;
@@ -58,6 +61,9 @@ function test(expr, expected) {
 	print(msg);
 	total++;
 }
+
+function test(expr, expected) { testsub(expr, expected, "==="); }
+function testeq(expr, expected) { testsub(expr, expected, "=="); }
 
 function finish() {
 
