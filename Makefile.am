@@ -7,9 +7,9 @@ PACKAGE=@PACKAGE_NAME@
 
 SUBDIRS = include libsee shell doc
 
-EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO
+EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
 
 ChangeLog:
 	svn2cl --strip-prefix=see/trunk \
-	    --include-rev --stdout . --revision=796:HEAD > $@
-	test -s $@
+	    --include-rev --stdout . --revision=796:HEAD > $@ || \
+	echo "No ChangeLog available" > $@
