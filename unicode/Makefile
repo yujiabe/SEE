@@ -44,9 +44,11 @@ analyse: gen
 # Get the latest unicode tables
 #
 $(UDATA):
-	wget http://www.unicode.org/Public/UNIDATA/$(UDATA)
+	#wget http://www.unicode.org/Public/UNIDATA/$(UDATA)
+	wget -O $@ http://www.unicode.org/Public/2.1-Update4/UnicodeData-2.1.9.txt
 $(CDATA):
-	wget http://www.unicode.org/Public/UNIDATA/$(CDATA)
+	#wget http://www.unicode.org/Public/UNIDATA/$(CDATA)
+	wget -O $@ http://www.unicode.org/Public/2.1-Update4/SpecialCasing-2.txt
 
 clean:
 	rm -f unicode.inc gen
