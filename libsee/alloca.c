@@ -50,6 +50,6 @@ char *
 SEE_alloca(sz)
 	SEE_size_t sz;
 {
-	return (char *)(*SEE_mem_malloc_hook)((struct SEE_interpreter *)0, sz);
+	return SEE_NEW_ARRAY(0, char, sz);
 }
 #endif /* !HAVE_ALLOCA */
