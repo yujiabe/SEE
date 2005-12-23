@@ -7,7 +7,7 @@ MOZDIR=	  mozilla.js.tests
 
 SHELLDIR= $(shell cd ../.. && pwd)
 SHELLPROG= $(SHELLDIR)/see-shell.static
-SHELLOPTS= -c ext1 -c undefdef
+SHELLOPTS= -c ext1
 
 TESTS=	run-mozilla-tests
 

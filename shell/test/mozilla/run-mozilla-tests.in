@@ -73,6 +73,7 @@ for d in *; do
 	    echo ""
 	    echo "** $pos $i **"
 	    echo ""
+	    echo ">> $SHELLPROG $earg -f $i"
 	    if $SHELLPROG $earg -f $i 2>&1; then
 	       case "$i" in 
 		  *-n.js) 
