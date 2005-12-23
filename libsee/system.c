@@ -212,16 +212,17 @@ simple_gc_free(interp, ptr)
  * System strongly assumes a garbage collector.
  * This is a stub function.
  */
-static void
+static void *
 simple_malloc(interp, size)
 	struct SEE_interpreter *interp;
+	SEE_size_t size;
 {
 #ifndef NDEBUG
 	static int warning_printed = 0;
 
 	if (!warning_printed) {
 		warning_printed++;
-		dprintf("WARNING: SEE is using non-release malloc\n");
+		dprintf("WARNING: SEE is using non-release malloc\n(A garbage collector library is highly recommended.)");
 	}
 
 #endif
