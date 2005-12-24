@@ -36,7 +36,7 @@ struct SEE_inputclass {
 
 struct SEE_input {
 	struct SEE_inputclass *inputclass;
-	SEE_boolean_t	   eof;		/* False when calling next() is valid */
+	SEE_boolean_t	   eof;		/* True means next() will be invalid */
 	SEE_unicode_t	   lookahead;	/* UCS-32 - what next() will return */
 	struct SEE_string *filename;	/* source origin desc (or NULL) */
 	int 		   first_lineno;

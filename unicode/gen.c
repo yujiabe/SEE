@@ -88,7 +88,8 @@ main(argc, argv)
 		/* printf("%x = %c%c\n", codepoint, class[0], class[1]); */
 
 		/* scan through argv[] to see if we match */
-		if (argv[2][0] == '$' && (codepoint == '$' || codepoint == '_'))
+		if (argv[2][0] == '$' && 
+		    (codepoint == '$' || codepoint == '_'))
 			; /* keep */
 		else {
 			for (i = 2; i < argc; i++)

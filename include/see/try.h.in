@@ -34,9 +34,9 @@
  *
  * The signatures for the macros are:
  *
- *   struct SEE_value * SEE_CAUGHT(SEE_try_context_t);
- *   void               SEE_THROW(struct SEE_interpreter *, struct SEE_valuet *)
- *   void               SEE_DEFAULT_CATCH(SEE_interpreter *, SEE_try_context_t)
+ *      struct SEE_value *SEE_CAUGHT(SEE_try_context_t);
+ *      void SEE_THROW(struct SEE_interpreter *, struct SEE_value *);
+ *      void SEE_DEFAULT_CATCH(SEE_interpreter *, SEE_try_context_t);
  *
  */
 
@@ -126,7 +126,7 @@ struct SEE_throw_location {
 struct SEE_try_context {
 	struct SEE_interpreter *interpreter;
 	volatile struct SEE_try_context *previous; /* try chain */
-	struct SEE_value thrown;		/* what was thrown during try */
+	struct SEE_value thrown;		/* value thrown during try */
 	int done;				/* true if try completed */
 	_SEE_JMPBUF env;			/* setjmp storage */
 	const char *throw_file;			/* (debugging) */

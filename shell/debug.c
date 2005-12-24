@@ -124,8 +124,8 @@ debug_eval(interp, debug, input, res)
 	struct SEE_value *res;
 {
 	void *save_host_data;
-	void (*save_trace)(struct SEE_interpreter *, struct SEE_throw_location *,
-		struct SEE_context *);
+	void (*save_trace)(struct SEE_interpreter *, 
+		struct SEE_throw_location *, struct SEE_context *);
 	SEE_try_context_t ctxt;
 
 	save_host_data = debug->save_host_data;
@@ -341,7 +341,8 @@ location_parse(interp, debug, loc, nloc, argp)
 			nloc->lineno = lineno;
 			ok = 1;
 		} else
-			fprintf(stderr, "missing ':<lineno>' after filename\n");
+			fprintf(stderr, 
+				"missing ':<lineno>' after filename\n");
 	} else 
 	    fprintf(stderr, "expected <filename>:<lineno>\n");
 	if (ok) {
@@ -499,8 +500,8 @@ cmd_eval(interp, debug, loc, context, arg)
 	struct SEE_value res;
 	struct SEE_string *str;
 
-	void (*save_trace)(struct SEE_interpreter *, struct SEE_throw_location *,
-		struct SEE_context *);
+	void (*save_trace)(struct SEE_interpreter *, 
+		struct SEE_throw_location *, struct SEE_context *);
 
 	if (!*arg) {
 		fprintf(stderr, "expected expression text\n");
@@ -538,8 +539,8 @@ cmd_throw(interp, debug, loc, context, arg)
 	struct SEE_value res;
 	struct SEE_string *str;
 
-	void (*save_trace)(struct SEE_interpreter *, struct SEE_throw_location *,
-		struct SEE_context *);
+	void (*save_trace)(struct SEE_interpreter *, 
+		struct SEE_throw_location *, struct SEE_context *);
 
 	if (!*arg) {
 		fprintf(stderr, "expected expression text\n");

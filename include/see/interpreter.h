@@ -77,10 +77,10 @@ struct SEE_interpreter {
 #define SEE_COMPAT_STRICT	0x0000	/* ECMA-262 3rd ed. */
 #define SEE_COMPAT_262_3B	0x0001	/* ECMA-262 3rd ed. Annex B */
 #define SEE_COMPAT_EXT1		0x0002	/* see1.0 (non-ecma) extensions */
-#define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undefined var */
+#define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undef var */
 #define SEE_COMPAT_UTF_UNSAFE	0x0008	/* accept 'valid but insecure' UTF */
 #define SEE_COMPAT_SGMLCOM	0x0010	/* treat '<!--' as a '//' comment */
-#define SEE_COMPAT_ARRAYJOIN1	0x0020	/* Bug-compatibility with array join */
+#define SEE_COMPAT_ARRAYJOIN1	0x0020	/* Bug-compat with array join */
 
 /* traceback call_type */
 #define SEE_CALLTYPE_CALL	1

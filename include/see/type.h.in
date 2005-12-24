@@ -135,7 +135,7 @@ typedef double SEE_number_t;
 # endif
 #endif
 
-typedef unsigned char     SEE_boolean_t;  /* 1 (or more) bit unsigned integer */
+typedef unsigned char     SEE_boolean_t;  /* non-zero means true */
 
 /* derived types */
 typedef SEE_uint16_t	  SEE_char_t;     /* UTF-16 encoding */

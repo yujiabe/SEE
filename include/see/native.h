@@ -48,7 +48,7 @@ int  SEE_native_getownattr(struct SEE_interpreter *i, struct SEE_object *obj,
 	struct SEE_string *prop);
 int  SEE_native_delete(struct SEE_interpreter *i, struct SEE_object *obj, 
 	struct SEE_string *prop);
-void SEE_native_defaultvalue(struct SEE_interpreter *i, struct SEE_object *obj, 
+void SEE_native_defaultvalue(struct SEE_interpreter *i, struct SEE_object *obj,
 	struct SEE_value *hint, struct SEE_value *res);
 struct SEE_enum *SEE_native_enumerator(struct SEE_interpreter *i, 
 	struct SEE_object *obj);

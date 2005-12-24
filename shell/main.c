@@ -431,7 +431,8 @@ main(argc, argv)
 		break;
 	    case 'r':
 		interp.recursion_limit = atoi(optarg);
-		printf("(Set recursion limit to %d)\n", interp.recursion_limit);
+		printf("(Set recursion limit to %d)\n", 
+			interp.recursion_limit);
 		break;
 	    case 'V':
 	    	printf("SEE API version: %u.%u\n", SEE_VERSION_API_MAJOR,
