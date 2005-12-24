@@ -574,7 +574,8 @@ SEE_regex_parse(interp, source, flags)
 	    regex->ncaptures)
 		SYNTAX_ERROR;
 
-	SEE_INPUT_CLOSE(recontext->input);	/* XXX - enclose in a 'finally'? */
+	/* XXX - should this close be enclosed in a 'finally'? */
+	SEE_INPUT_CLOSE(recontext->input);	
 
 	/* compute the size of a captures context */
 	regex->statesz = 
@@ -1431,7 +1432,9 @@ pcode_run(interp, regex, addr, text, state)
 		    if (x) dprintf(",");
 		    if (capture[x].start == -1) 
 			dprintf("undef"); 
-		    else if (capture[x].start + capture[x].end > text->length) {
+		    else if (capture[x].start + capture[x].end > 
+		    		text->length) 
+		    {
 			dprintf("bad<%x:%x>", 
 				capture[x].start, capture[x].end);
 		    } else {
@@ -1507,8 +1510,8 @@ pcode_run(interp, regex, addr, text, state)
 		    a = CODE_MAKEA(regex->code, addr);	/* address arg */
 		    addr += CODE_SZA;
 		    break;
-	    case OP_GOTO:	case OP_GS:		case OP_NS:		
-	    case OP_GF:		case OP_NF:		case OP_AS:		
+	    case OP_GOTO:	case OP_GS:		case OP_NS:
+	    case OP_GF:		case OP_NF:		case OP_AS:
 	    case OP_AF:		
 		    a = CODE_MAKEA(regex->code, addr);	/* address arg */
 		    addr += CODE_SZA;
@@ -1527,7 +1530,7 @@ pcode_run(interp, regex, addr, text, state)
 	    /* succeed if current character matches charclass. index++ */
 	    case OP_CHAR:	if (index < text->length) {
 				    ch = text->data[index++];
-				    /* Remember, strings are UTF-16 encoded! */
+				    /* N.B. strings are UTF-16 encoded! */
 				    if ((ch & 0xfc00) == 0xd800 &&
 				      index < text->length &&
 				      (text->data[index] & 0xfc00) == 0xdc00)
@@ -1638,28 +1641,28 @@ pcode_run(interp, regex, addr, text, state)
 
 	    /* succeed if we are at the beginning of a line */
 	    /* See 15.10.2.6 */
-	    case OP_BOL:	if (index == 0)				/* ^ */
+	    case OP_BOL:	if (index == 0)			       /* ^ */
 				    ; /* succeed */
 				else if ((regex->flags & FLAG_MULTILINE) == 0)
 				    return 0;
-				else if (text->data[index-1] == 0x000a	/* LF */
-				      || text->data[index-1] == 0x000d	/* CR */
-				      || text->data[index-1] == 0x2028	/* LS */
-				      || text->data[index-1] == 0x2029)	/* PS */
+				else if (text->data[index-1] == 0x000a	/*LF*/
+				      || text->data[index-1] == 0x000d	/*CR*/
+				      || text->data[index-1] == 0x2028	/*LS*/
+				      || text->data[index-1] == 0x2029)	/*PS*/
 				    ; /* succeed */
 				else
 				    return 0;
 				break;
 
 	    /* succeed if we are at the end of a line */
-	    case OP_EOL:	if (index == text->length)		/* $ */
+	    case OP_EOL:	if (index == text->length)	       /* $ */
 				    ; /* succeed */
 				else if ((regex->flags & FLAG_MULTILINE) == 0)
 				    return 0;
-				else if (text->data[index] == 0x000a	/* LF */
-				      || text->data[index] == 0x000d	/* CR */
-				      || text->data[index] == 0x2028	/* LS */
-				      || text->data[index] == 0x2029)	/* PS */
+				else if (text->data[index] == 0x000a	/*LF*/
+				      || text->data[index] == 0x000d	/*CR*/
+				      || text->data[index] == 0x2028	/*LS*/
+				      || text->data[index] == 0x2029)	/*PS*/
 				    ; /* succeed */
 				else
 				    return 0;

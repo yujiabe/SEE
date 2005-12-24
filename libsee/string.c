@@ -353,7 +353,8 @@ struct simple_string {
  */
 #define INITSPACE	(STRING_INITIAL_SIZE / sizeof (SEE_char_t))
 #define MAXSPACE	(STRING_MAXIMUM_SIZE / sizeof (SEE_char_t))
-#define BIGSPACE	((STRING_MAXIMUM_SIZE - STRING_MAXIMUM_PADDING) / sizeof (SEE_char_t))
+#define BIGSPACE	((STRING_MAXIMUM_SIZE - STRING_MAXIMUM_PADDING) / \
+			 sizeof (SEE_char_t))
 
 /* 
  * grows the string storage to have at least current+extra elements of storage.
@@ -467,19 +468,19 @@ SEE_string_literal(interp, s)
 				break;
 	    default:
 		if (c >= 0x20 && c < 0x7f)
-		    SEE_string_addch(lit, c);
+		   SEE_string_addch(lit, c);
 		else if (c < 0x100) {
-		    SEE_string_addch(lit, '\\');
-		    SEE_string_addch(lit, 'x');
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
+		   SEE_string_addch(lit, '\\');
+		   SEE_string_addch(lit, 'x');
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
 		} else {
-		    SEE_string_addch(lit, '\\');
-		    SEE_string_addch(lit, 'u');
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >>12) & 0xf]);
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 8) & 0xf]);
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
-		    SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
+		   SEE_string_addch(lit, '\\');
+		   SEE_string_addch(lit, 'u');
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[(c >>12) & 0xf]);
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 8) & 0xf]);
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[(c >> 4) & 0xf]);
+		   SEE_string_addch(lit, SEE_hexstr_lowercase[ c       & 0xf]);
 		}
 	    }
 	}

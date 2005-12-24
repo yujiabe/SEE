@@ -136,7 +136,8 @@ SEE_Object_init(interp)
 
 	/* Object.prototype.constructor */
 	SEE_SET_OBJECT(&v, Object);
-	SEE_OBJECT_PUT(interp, Object_prototype, STR(constructor), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, Object_prototype, STR(constructor), &v, 
+		SEE_ATTR_DEFAULT);
 
 #define PUTFUNC(name, len) \
     SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, object_proto_##name, 	\
@@ -168,7 +169,8 @@ SEE_Object_new(interp)
 {
 	struct SEE_value v;
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Object, interp->Object, 0, NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Object, interp->Object, 0, 
+		NULL, &v);
 	return v.u.object;
 }
 

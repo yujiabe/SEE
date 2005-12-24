@@ -498,7 +498,8 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	arguments = arguments_create(interp, fi->function, 
 		activation, self, argc, argv);
 	SEE_SET_OBJECT(&v, (struct SEE_object *)arguments);
-	SEE_OBJECT_PUT(interp, activation, STR(arguments), &v, SEE_ATTR_DONTDELETE);
+	SEE_OBJECT_PUT(interp, activation, STR(arguments), &v, 
+		SEE_ATTR_DONTDELETE);
 
 	/* 10.2.3 build the right scope chain now */
 	innerscope = SEE_NEW(interp, struct SEE_scope);
@@ -522,7 +523,8 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	 * saving the old value (It gets restored later)
 	 */
 	if (interp->compatibility & SEE_COMPAT_EXT1) {
-	    struct SEE_object *common = (struct SEE_object *)fi->function->common;
+	    struct SEE_object *common = 
+	    	(struct SEE_object *)fi->function->common;
 	    if (SEE_OBJECT_HASPROPERTY(interp, common, STR(arguments))) {
 		SEE_OBJECT_GET(interp, common, STR(arguments), &old_arguments);
 		old_arguments_attr = SEE_native_getownattr(interp, common,
@@ -541,7 +543,8 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 
 	/* Restore f.arguments */
 	if (interp->compatibility & SEE_COMPAT_EXT1) {
-	    struct SEE_object *common = (struct SEE_object *)fi->function->common;
+	    struct SEE_object *common = 
+	    	(struct SEE_object *)fi->function->common;
 	    if (old_arguments_saved)
 		SEE_OBJECT_PUT(interp, common, STR(arguments),
 		    &old_arguments, old_arguments_attr);
@@ -708,7 +711,8 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 		if (i == 0) s = SEE_string_new(interp, 0);
 		s->length = 0;
 		SEE_string_append_int(s, i);
-		SEE_OBJECT_GET(interp, (struct SEE_object *)a, s, &the_args[i]);
+		SEE_OBJECT_GET(interp, (struct SEE_object *)a, s, 
+			&the_args[i]);
 	    }
 	} else
 		SEE_error_throw_string(interp, interp->TypeError, 
@@ -935,7 +939,8 @@ arguments_create(interp, f, activation, callee, argc, argv)
 	    for (i = f->nparams; i < argc; i++) {
 		s->length = 0;
 		SEE_string_append_int(s, i);
-		SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, s, argv[i], 0);
+		SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, s, 
+			argv[i], 0);
 	    }
 	}
 	return arguments;

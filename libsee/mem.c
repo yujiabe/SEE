@@ -142,7 +142,8 @@ _SEE_malloc_string_debug(interp, size, file, line, arg)
 
 #ifndef NDEBUG
 	if (SEE_mem_debug)
-		dprintf("malloc_string %u (%s:%d '%s')", size, file, line, arg);
+		dprintf("malloc_string %u (%s:%d '%s')", size, file, 
+			line, arg);
 #endif
 	data = SEE_malloc_string(interp, size);
 #ifndef NDEBUG

@@ -74,7 +74,8 @@ struct propname_list {
 	int dontenum, depth;
 };
 
-static int make_list(struct SEE_interpreter *interp, struct SEE_object *o, int depth, struct propname_list **head);
+static int make_list(struct SEE_interpreter *interp, struct SEE_object *o, 
+        int depth, struct propname_list **head);
 static int slist_cmp_nice(const void *a, const void *b);
 static int slist_cmp_fast(const void *a, const void *b);
 

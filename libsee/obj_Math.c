@@ -127,10 +127,11 @@ SEE_Math_init(interp)
 	SEE_native_init((struct SEE_native *)Math, interp,
 		&math_class, interp->Object_prototype);
 
-#define PUTVAL(name, val) 					\
+#define PUTVAL(name, val) 						\
 	SEE_SET_NUMBER(&v, val); 					\
-	SEE_OBJECT_PUT(interp, Math, STR(name), &v,				\
-		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
+	SEE_OBJECT_PUT(interp, Math, STR(name), &v,			\
+		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | 		\
+		SEE_ATTR_READONLY);
 
 	PUTVAL(E, M_E)				/* 15.8.1.1 */
 	PUTVAL(LN10, M_LN10)			/* 15.8.1.2 */
@@ -141,10 +142,11 @@ SEE_Math_init(interp)
 	PUTVAL(SQRT1_2, M_SQRT1_2)		/* 15.8.1.7 */
 	PUTVAL(SQRT2, M_SQRT2)			/* 15.8.1.8 */
 
-#define PUTFUNC(name, len) \
+#define PUTFUNC(name, len) 						\
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, math_##name, 	\
 		STR(name), len));					\
-	SEE_OBJECT_PUT(interp, Math, STR(name), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, Math, STR(name), &v, 			\
+		SEE_ATTR_DEFAULT);
 
 	PUTFUNC(abs, 1)				/* 15.8.2.1 */
 	PUTFUNC(acos, 1)			/* 15.8.2.2 */

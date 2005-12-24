@@ -142,7 +142,8 @@ SEE_RegExp_init(interp)
 		&regexp_const_class, interp->Function_prototype);
 
 	SEE_SET_NUMBER(&v, 2);
-	SEE_OBJECT_PUT(interp, RegExp, STR(length), &v, SEE_ATTR_LENGTH); /* 15.10.5 */
+	SEE_OBJECT_PUT(interp, RegExp, STR(length), &v,		/* 15.10.5 */
+		SEE_ATTR_LENGTH);
 
 	/* 15.10.6 Regexp.prototype */
 	SEE_native_init((struct SEE_native *)RegExp_prototype, interp,
@@ -314,13 +315,15 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 	SEE_ToNumber(interp, &v, &iv);
 	if (!(ro->flags & FLAG_GLOBAL))
 		SEE_SET_NUMBER(&iv, 0);
-	if (SEE_NUMBER_ISINF(&iv) || iv.u.number < 0 || iv.u.number > S->length) {
+	if (SEE_NUMBER_ISINF(&iv) || 
+	    iv.u.number < 0 || iv.u.number > S->length) 
+	{
 		SEE_SET_NUMBER(&v, 0);
 		SEE_OBJECT_PUT(interp, thisobj, STR(lastIndex), &v, 0); 
 		SEE_SET_NULL(res);
 		return;
 	}
-	i = iv.u.number;	/* XXX what happens if this exceeds maxint? */
+	i = iv.u.number;
 
 	ncaptures = SEE_regex_count_captures(ro->regex);
 	SEE_ASSERT(interp, ncaptures > 0);
@@ -437,10 +440,13 @@ regexp_proto_toString(interp, self, thisobj, argc, argv, res)
 	int i;
 
 	/*
-	 * XXX (spec bug?) 15.10.6 says RegExp.prototype's [[Class]] is Object, and that
-	 * methods where thisobj's [[Class]] is not RegExp, it has to throw a TypeError.
-	 * Sadly, mozilla's test cases often want to print the RegExp.prototype.
-	 * This special case is handled here. (Technically, this is a spec violation!)
+	 * XXX (spec bug?) 15.10.6 says RegExp.prototype's [[Class]] is 
+	 * Object, and that methods where thisobj's [[Class]] is not RegExp,
+	 * it has to throw a TypeError.
+	 *
+	 * Sadly, mozilla's test cases often want to print the 
+	 * RegExp.prototype. This special case is handled here. (Technically,
+	 * this is a spec violation!)
 	 */
 	if (thisobj == interp->RegExp_prototype) {
 		s = SEE_string_new(interp, 0);

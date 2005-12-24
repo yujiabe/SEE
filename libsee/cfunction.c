@@ -77,8 +77,8 @@ struct cfunction {
 
 static void cfunction_get(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_string *, struct SEE_value *);
-static int cfunction_hasproperty(struct SEE_interpreter *, struct SEE_object *, 
-	struct SEE_string *);
+static int cfunction_hasproperty(struct SEE_interpreter *, 
+        struct SEE_object *, struct SEE_string *);
 static void cfunction_call(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 

@@ -120,7 +120,8 @@ static SEE_number_t DaylightSavingTA(SEE_number_t t);	/* 15.9.1.8(9) */
 /* 15.9.1.10 */
 #define	HourFromTime(t)	modulo(NUMBER_floor((t) / msPerHour), HoursPerDay)
 #define	MinFromTime(t)	modulo(NUMBER_floor((t) / msPerMinute), MinutesPerHour)
-#define	SecFromTime(t)	modulo(NUMBER_floor((t) / msPerSecond), SecondsPerMinute)
+#define	SecFromTime(t)	modulo(NUMBER_floor((t) / msPerSecond), \
+			       SecondsPerMinute)
 #define	msFromTime(t)	modulo(t, msPerSecond)
 #define	HoursPerDay		24.0
 #define MinutesPerHour		60.0
@@ -433,7 +434,8 @@ SEE_Date_init(interp)
 	PUTFUNC(toUTCString, 0)
 	if (interp->compatibility & SEE_COMPAT_262_3B) {
 	    /* toGMTString() == toUTCString() */
-	    SEE_OBJECT_PUT(interp, Date_prototype, STR(toGMTString), &v, SEE_ATTR_DEFAULT);
+	    SEE_OBJECT_PUT(interp, Date_prototype, STR(toGMTString), &v, 
+	    	SEE_ATTR_DEFAULT);
 
 	    PUTFUNC(getYear, 0)
 	    PUTFUNC(setYear, 1)

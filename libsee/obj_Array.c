@@ -185,7 +185,8 @@ SEE_Array_init(interp)
 
 	/* 15.4.4.1 Array.prototype.constructor = Array */
 	SEE_SET_OBJECT(&v, Array);
-	SEE_OBJECT_PUT(interp, Array_prototype, STR(constructor), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, Array_prototype, STR(constructor), &v, 
+		SEE_ATTR_DEFAULT);
 
 #define PUTFUNC(name, len) 						  \
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, array_proto_##name, \
@@ -415,9 +416,12 @@ array_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 		if (i)
 		    SEE_string_append(s, separator);
 		SEE_OBJECT_GET(interp, thisobj, intstr(interp, &n, i), &r6);
-		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
+		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || 
+		      SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) 
+		{
 		    SEE_ToObject(interp, &r6, &r7);
-		    SEE_OBJECT_GET(interp, r7.u.object, STR(toLocaleString),&v);
+		    SEE_OBJECT_GET(interp, r7.u.object, 
+		    	STR(toLocaleString),&v);
 		    if (SEE_VALUE_GET_TYPE(&v) != SEE_OBJECT ||
 				!SEE_OBJECT_HAS_CALL(v.u.object))
 			SEE_error_throw_string(interp, interp->TypeError,
@@ -448,14 +452,17 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	int i;
 	struct SEE_string *ns = NULL;
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, 
+		NULL, &v);
 	A = v.u.object;
 	n = 0;
 	SEE_SET_OBJECT(&thisv, thisobj);
 	E = &thisv;
 	i = 0;
 	for(;;) {
-	    if (SEE_VALUE_GET_TYPE(E) == SEE_OBJECT && SEE_is_Array(E->u.object)) {
+	    if (SEE_VALUE_GET_TYPE(E) == SEE_OBJECT && 
+	    	SEE_is_Array(E->u.object)) 
+	    {
 		struct array_object *Ea = (struct array_object *)E->u.object;
 		for (k = 0; k < Ea->length; k++) {
 		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, 
@@ -497,7 +504,8 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 		use_comma = (argc == 0);
 	else 
 		/* strict E262-3 behaviour: */
-		use_comma = (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED);
+		use_comma = (argc == 0 || 
+			     SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED);
 
 	if (use_comma)
 		separator = STR(comma);
@@ -512,7 +520,9 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 		if (i)
 		    SEE_string_append(s, separator);
 		SEE_OBJECT_GET(interp, thisobj, intstr(interp, &n, i), &r6);
-		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) {
+		if (!(SEE_VALUE_GET_TYPE(&r6) == SEE_UNDEFINED || 
+		      SEE_VALUE_GET_TYPE(&r6) == SEE_NULL)) 
+		{
 		    SEE_ToString(interp, &r6, &r7);
 		    SEE_string_append(s, r7.u.string);
 		}
@@ -666,7 +676,8 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 		return;
 	}
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
+		0, NULL, &v);
 	A = v.u.object;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
@@ -711,7 +722,8 @@ SortCompare(interp, x, y, cmpfn)
 	if (!x && !y)   return 0;
 	if (!x)		return 1;
 	if (!y)		return -1;
-	if (SEE_VALUE_GET_TYPE(x) == SEE_UNDEFINED && SEE_VALUE_GET_TYPE(y) == SEE_UNDEFINED) return 0;
+	if (SEE_VALUE_GET_TYPE(x) == SEE_UNDEFINED && 
+	    SEE_VALUE_GET_TYPE(y) == SEE_UNDEFINED) return 0;
 	if (SEE_VALUE_GET_TYPE(x) == SEE_UNDEFINED) return 1;
 	if (SEE_VALUE_GET_TYPE(y) == SEE_UNDEFINED) return -1;
 	if (cmpfn) {
@@ -719,9 +731,10 @@ SortCompare(interp, x, y, cmpfn)
 		arg[0] = x;
 		arg[1] = y;
 		SEE_OBJECT_CALL(interp, cmpfn, cmpfn, 2, arg, &vn);
-		if (SEE_VALUE_GET_TYPE(&vn) != SEE_NUMBER || SEE_NUMBER_ISNAN(&vn)) 
-		    SEE_error_throw_string(interp, interp->TypeError,
-			STR(array_sort_error));
+		if (SEE_VALUE_GET_TYPE(&vn) != SEE_NUMBER || 
+		    SEE_NUMBER_ISNAN(&vn)) 
+			SEE_error_throw_string(interp, interp->TypeError,
+			    STR(array_sort_error));
 		if (vn.u.number < 0) return -1;
 		if (vn.u.number > 0) return 1;
 		return 0;
@@ -865,7 +878,8 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t r3, r5, r6, r17, k;
 	struct SEE_string *s = NULL, *s9, *s11, *s22, *s33, *s39;
 
-/*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, NULL, &v);
+/*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
+		0, NULL, &v);
 	A = v.u.object;
 /*2*/	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 /*3*/	r3 = SEE_ToUint32(interp, &v);
@@ -985,7 +999,8 @@ array_setlength(interp, ao, val)
 
 	newlen = SEE_ToUint32(interp, val);
 	if (ao->length > newlen) {
-	    e = SEE_OBJECT_ENUMERATOR(interp, (struct SEE_object *)&ao->native);
+	    e = SEE_OBJECT_ENUMERATOR(interp, 
+	    	(struct SEE_object *)&ao->native);
 	    while ((s = SEE_ENUM_NEXT(interp, e, &flags))) 
 		if (SEE_to_array_index(s, &i) && i >= newlen) {
 		    name = SEE_NEW(interp, struct name);

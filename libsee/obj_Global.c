@@ -344,7 +344,8 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 	}
 	n = 0;
 	for (j = 0; j < i - start; j++) {
-		SEE_number_t factor = NUMBER_pow((SEE_number_t)R, (SEE_number_t)j);
+		SEE_number_t factor = 
+			NUMBER_pow((SEE_number_t)R, (SEE_number_t)j);
 		SEE_char_t ch;
 		int digit;
 

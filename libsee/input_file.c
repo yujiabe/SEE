@@ -352,7 +352,8 @@ SEE_input_file(interp, file, filename, label)
 	inpf->inp.interpreter = interp;
 	inpf->file = file;
 	if (filename)
-		inpf->inp.filename = SEE_string_sprintf(interp, "%s", filename);
+		inpf->inp.filename = SEE_string_sprintf(interp, 
+			"%s", filename);
 	else
 		inpf->inp.filename = NULL;
 	inpf->inp.first_lineno = 1;

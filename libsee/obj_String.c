@@ -219,7 +219,8 @@ SEE_String_init(interp)
 		SEE_ATTR_DEFAULT);
 
 	PUTFUNC(toString, 0)
-	SEE_OBJECT_PUT(interp, String_prototype, STR(valueOf), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, String_prototype, STR(valueOf), &v, 
+		SEE_ATTR_DEFAULT);
 					/* NB: .valueOf === .toString */
 	PUTFUNC(charAt, 1)
 	PUTFUNC(charCodeAt, 1)
@@ -599,7 +600,8 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    SEE_OBJECT_CALL(interp, reexec, regexp, 1, vpv, &vres);
 		    if (SEE_VALUE_GET_TYPE(&vres) == SEE_NULL)
 			break;
-		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
+		    SEE_ASSERT(interp, 
+		    	SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
 			SEE_is_Array(vres.u.object));
 		    SEE_OBJECT_GET(interp, vres.u.object, STR(zero_digit), &v);
 		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
@@ -612,7 +614,8 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    if (v.u.string->length == 0) {
 			/* Increment the index by one if it matched empty */
 			SEE_OBJECT_GET(interp, regexp, STR(lastIndex), &v);
-			SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
+			SEE_ASSERT(interp, 
+				SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
 			v.u.number += 1;
 			SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 		    }
@@ -800,7 +803,8 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 		    if (SEE_VALUE_GET_TYPE(&vres) == SEE_NULL)
 			break;
 
-		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
+		    SEE_ASSERT(interp, 
+		    	SEE_VALUE_GET_TYPE(&vres) == SEE_OBJECT && 
 			SEE_is_Array(vres.u.object));
 
 		    SEE_OBJECT_GET(interp, vres.u.object, STR(zero_digit), &v);
@@ -814,7 +818,8 @@ string_proto_replace(interp, self, thisobj, argc, argv, res)
 		    } else {
 			/* Increment the index by one if it matched empty */
 			SEE_OBJECT_GET(interp, regexp, STR(lastIndex), &v);
-			SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
+			SEE_ASSERT(interp, 
+				SEE_VALUE_GET_TYPE(&v) == SEE_NUMBER);
 			v.u.number += 1;
 			SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 		    }

@@ -146,7 +146,8 @@ init_error(interp, name, constructor, proto_proto)
 	/* 15.11.3.1 Error.prototype */
 	/* 15.11.7.6 NativeError.prototype */
 	SEE_SET_OBJECT(&v, proto);
-	SEE_OBJECT_PUT(interp, constructor, STR(prototype), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, constructor, STR(prototype), &v, 
+		SEE_ATTR_DEFAULT);
 
 	return proto;
 }
@@ -256,7 +257,9 @@ error_proto_toString(interp, self, thisobj, argc, argv, res)
 	    SEE_string_append(s, name.u.string);
 	else
 	    SEE_string_append(s, STR(Error));
-	if (SEE_VALUE_GET_TYPE(&message) == SEE_STRING && message.u.string->length > 0) {
+	if (SEE_VALUE_GET_TYPE(&message) == SEE_STRING && 
+	    message.u.string->length > 0) 
+	{
 	    SEE_string_addch(s, ':');
 	    SEE_string_addch(s, ' ');
 	    SEE_string_append(s, message.u.string);

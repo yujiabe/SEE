@@ -136,7 +136,8 @@ SEE_Boolean_init(interp)
 
 	/* 15.6.4.1 Boolean.prototype.constructor */
 	SEE_SET_OBJECT(&v, Boolean);
-	SEE_OBJECT_PUT(interp, Boolean_prototype, STR(constructor), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, Boolean_prototype, STR(constructor), &v, 
+		SEE_ATTR_DEFAULT);
 
 #define PUTFUNC(name, len)						    \
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, boolean_proto_##name, \

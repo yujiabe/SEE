@@ -176,7 +176,8 @@ SEE_Number_init(interp)
 
 	/* 15.7.4.1 Number.prototype.constructor */
 	SEE_SET_OBJECT(&v, Number);
-	SEE_OBJECT_PUT(interp, Number_prototype, STR(constructor), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, Number_prototype, STR(constructor), &v, 
+		SEE_ATTR_DEFAULT);
 
 #define PUTFUNC(name, len) \
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, 		\

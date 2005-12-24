@@ -181,7 +181,9 @@ SEE_native_put(interp, o, p, val, attr)
 	 * we can ignore any restrictions on extant
 	 * properties!
 	 */
-	if ((interp->compatibility & SEE_COMPAT_EXT1) && ip == STR(__proto__)) {
+	if ((interp->compatibility & SEE_COMPAT_EXT1) && 
+	    ip == STR(__proto__)) 
+	{
 		struct SEE_object *po;
 		if (SEE_VALUE_GET_TYPE(val) == SEE_NULL) {
 			o->Prototype = NULL;
@@ -345,13 +347,17 @@ SEE_native_defaultvalue(interp, o, hint, res)
 
 	if (effective_hint == interp->String) {
 		SEE_OBJECT_GET(interp, o, STR(toString), &v);
-		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && 
+		    SEE_OBJECT_HAS_CALL(v.u.object)) 
+		{
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		SEE_OBJECT_GET(interp, o, STR(valueOf), &v);
-		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && 
+		    SEE_OBJECT_HAS_CALL(v.u.object)) 
+		{
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
@@ -364,13 +370,17 @@ SEE_native_defaultvalue(interp, o, hint, res)
 				STR(defaultvalue_string_bad));
 	} else {
 		SEE_OBJECT_GET(interp, o, STR(valueOf), &v);
-		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && 
+		    SEE_OBJECT_HAS_CALL(v.u.object)) 
+		{
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
 		SEE_OBJECT_GET(interp, o, STR(toString), &v);
-		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && SEE_OBJECT_HAS_CALL(v.u.object)) {
+		if (SEE_VALUE_GET_TYPE(&v) == SEE_OBJECT && 
+		    SEE_OBJECT_HAS_CALL(v.u.object)) 
+		{
 			SEE_OBJECT_CALL(interp, v.u.object, o, 0, NULL, res);
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
