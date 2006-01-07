@@ -7110,13 +7110,13 @@ IterationStatement_forin_eval(na, context, res)
 		CAST_NODE(na, IterationStatement_forin);
 	struct SEE_interpreter *interp = context->interpreter;
 	struct SEE_value *v, r1, r2, r3, r5, r6;
-	struct SEE_string **props;
+	struct SEE_string **props0, **props;
 
 	EVAL(n->list, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToObject(interp, &r2, &r3);
 	v = NULL;
-	for (props = SEE_enumerate(interp, r3.u.object); 
+	for (props0 = props = SEE_enumerate(interp, r3.u.object); 
 	     *props; 
 	     props++)
 	{
@@ -7137,6 +7137,7 @@ IterationStatement_forin_eval(na, context, res)
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
 	}
+	SEE_enumerate_free(interp, props0);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
@@ -7199,7 +7200,7 @@ IterationStatement_forvarin_eval(na, context, res)
 		CAST_NODE(na, IterationStatement_forin);
 	struct SEE_interpreter *interp = context->interpreter;
 	struct SEE_value *v, r2, r3, r4, r6, r7;
-	struct SEE_string **props;
+	struct SEE_string **props0, **props;
 	struct VariableDeclaration_node *lhs 
 		= CAST_NODE(n->lhs, VariableDeclaration);
 
@@ -7208,7 +7209,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	GetValue(context, &r2, &r3);
 	SEE_ToObject(interp, &r3, &r4);
 	v = NULL;
-	for (props = SEE_enumerate(interp, r4.u.object);
+	for (props0 = props = SEE_enumerate(interp, r4.u.object);
 	     *props; 
 	     props++)
 	{
@@ -7230,6 +7231,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
 	}
+	SEE_enumerate_free(interp, props0);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 

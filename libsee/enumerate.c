@@ -197,3 +197,13 @@ SEE_enumerate(interp, o)
 
 	return res;
 }
+
+/* Fast release of memory allocated by SEE_enumerate. May be a no-op */
+void
+SEE_enumerate_free(interp, props)
+	struct SEE_interpreter *interp;
+	struct SEE_string **props;
+{
+	void *data = props;
+	SEE_free(interp, &data);
+}

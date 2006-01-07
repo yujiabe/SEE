@@ -9,5 +9,6 @@ struct SEE_object;
 
 struct SEE_string **SEE_enumerate(struct SEE_interpreter *i,
 	struct SEE_object *o);
+void SEE_enumerate_free(struct SEE_interpreter *i, struct SEE_string **props);
 
 #endif /* _SEE_h_enumerate_ */
