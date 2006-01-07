@@ -75,9 +75,14 @@ static unsigned int simple_random_seed(void);
 #if HAVE_GC_MALLOC
 static void *simple_gc_malloc(struct SEE_interpreter *, SEE_size_t);
 static void *simple_gc_malloc_string(struct SEE_interpreter *, SEE_size_t);
+static void *simple_gc_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
+        void (*)(struct SEE_interpreter *, void *, void *), void *);
 static void simple_gc_free(struct SEE_interpreter *, void *);
+static void simple_finalizer(GC_PTR, GC_PTR);
 #else
 static void *simple_malloc(struct SEE_interpreter *, SEE_size_t);
+static void *unimplemented_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
+        void (*)(struct SEE_interpreter *, void *, void *), void *);
 static void simple_free(struct SEE_interpreter *, void *);
 #endif
 static void simple_mem_exhausted(struct SEE_interpreter *) SEE_dead;
@@ -100,10 +105,12 @@ struct SEE_system SEE_system = {
 
 #if HAVE_GC_MALLOC
 	simple_gc_malloc,		/* malloc */
+	simple_gc_malloc_finalize,	/* malloc_finalize */
 	simple_gc_malloc_string,	/* malloc_string */
 	simple_gc_free,			/* free */
 #else
 	simple_malloc,			/* malloc */
+	unimplemented_malloc_finalize,	/* malloc_finalize */
 	simple_malloc,			/* malloc_string */
 	simple_free,			/* free */
 #endif
@@ -176,6 +183,56 @@ simple_gc_malloc(interp, size)
 }
 
 /*
+ * A private structure to hold finalization info. This is appended onto
+ * objects that are allocated with finalization requirements.
+ */
+struct finalize_info {
+	struct SEE_interpreter *interp;
+        void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+};
+
+static void
+simple_finalizer(p, cd)
+	GC_PTR p, cd;
+{
+	struct finalize_info *info = (struct finalize_info *)cd;
+	
+	(*info->finalizefn)(info->interp, (void *)p, info->closure);
+}
+
+static void *
+simple_gc_malloc_finalize(interp, size, finalizefn, closure)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+        void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+{
+	SEE_size_t padsz;
+	void *data;
+	struct finalize_info *info;
+
+	/* Round up to align the finalize_info */
+	padsz = size;
+	padsz += sizeof (struct finalize_info) - 1;
+	padsz -= padsz % sizeof (struct finalize_info);
+
+	/* Allocate, with space for the finalize_info */
+	data = GC_malloc(padsz + sizeof (struct finalize_info));
+
+	/* Fill in the finalize_info now */
+	info = (struct finalize_info *)((char *)data + padsz);
+	info->interp = interp;
+	info->finalizefn = finalizefn;
+	info->closure = closure;
+
+	/* Ask the GC to call the finalizer when data is unreachable */
+	GC_register_finalizer(data, simple_finalizer, info, NULL, NULL);
+
+	return data;
+}
+
+/*
  * Non-pointer memory allocator using Boehm GC
  */
 static void *
@@ -227,6 +284,16 @@ simple_malloc(interp, size)
 
 #endif
 	return malloc(size);
+}
+
+void *
+unimplemented_malloc_finalize(interp, size, finalizefn, closure)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+        void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+{
+	SEE_ABORT("malloc_finalize not implemented in SEE_system");
 }
 
 /*

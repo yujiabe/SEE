@@ -42,6 +42,7 @@ int SEE_mem_debug = 0;
 #endif
 
 #undef SEE_malloc
+#undef SEE_malloc_finalize
 #undef SEE_malloc_string
 #undef SEE_free
 
@@ -62,6 +63,28 @@ SEE_malloc(interp, size)
 	if (size == 0)
 		return NULL;
 	data = (*SEE_system.malloc)(interp, size);
+	if (data == NULL) 
+		(*SEE_system.mem_exhausted)(interp);
+	return data;
+}
+
+/*
+ * Allocates size bytes of garbage-collected storage, attaching
+ * a finalizer function that will be called when the storage becomes
+ * unreachable.
+ */
+void *
+SEE_malloc_finalize(interp, size, finalizefn, closure)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+{
+	void *data;
+
+	if (size == 0)
+		return NULL;
+	data = (*SEE_system.malloc_finalize)(interp, size, finalizefn, closure);
 	if (data == NULL) 
 		(*SEE_system.mem_exhausted)(interp);
 	return data;
@@ -123,6 +146,30 @@ _SEE_malloc_debug(interp, size, file, line, arg)
 		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
 #endif
 	data = SEE_malloc(interp, size);
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+#endif
+	return data;
+}
+
+void *
+_SEE_malloc_finalize_debug(interp, size, finalizefn, closure, file, line, arg)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+	const char *file;
+	int line;
+	const char *arg;
+{
+	void *data;
+
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
+#endif
+	data = SEE_malloc_finalize(interp, size, finalizefn, closure);
 #ifndef NDEBUG
 	if (SEE_mem_debug)
 		dprintf(" -> %p\n", data);

@@ -28,7 +28,10 @@ struct SEE_system {
 
 	/* Memory allocator */
 	void *(*malloc)(struct SEE_interpreter *, SEE_size_t);
+	void *(*malloc_finalize)(struct SEE_interpreter *, SEE_size_t,
+		void (*)(struct SEE_interpreter *, void *, void *), void *);
 	void *(*malloc_string)(struct SEE_interpreter *, SEE_size_t);
+
 	void (*free)(struct SEE_interpreter *, void *);
 	void (*mem_exhausted)(struct SEE_interpreter *) SEE_dead;
 
