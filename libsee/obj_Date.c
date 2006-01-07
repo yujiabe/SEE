@@ -103,13 +103,13 @@ struct date_object {
 static SEE_number_t DayFromYear(SEE_number_t);		/* 15.9.1.3 */
 #define TimeFromYear(y)					/* 15.9.1.3 */	\
 	(msPerDay * DayFromYear(y))
-static SEE_int32_t YearFromTime(SEE_number_t);		/* 15.9.1.3 */
+static SEE_number_t YearFromTime(SEE_number_t);		/* 15.9.1.3 */
 #define InLeapYear(t)	isleapyear(YearFromTime(t))	/* 15.9.1.3 */
-static int isleapyear(SEE_int32_t);
+static int isleapyear(SEE_number_t);
 #define DayWithinYear(t) \
-		(Day(t) - DayFromYear((SEE_number_t)YearFromTime(t)))
-static int MonthFromTime(SEE_number_t);			/* 15.9.1.4 */
-static int DateFromTime(SEE_number_t);			/* 15.9.1.5 */
+		(Day(t) - DayFromYear(YearFromTime(t)))
+static SEE_number_t MonthFromTime(SEE_number_t);	/* 15.9.1.4 */
+static SEE_number_t DateFromTime(SEE_number_t);			/* 15.9.1.5 */
 #define WeekDay(t)		modulo(Day(t) + 4, 7.0)	/* 15.9.1.6 */
 
 static SEE_number_t LocalTZA;				/* 15.9.1.7(8) */
@@ -453,16 +453,15 @@ DayFromYear(y)
 }
 
 /* 15.9.1.3 */
-static SEE_int32_t
+static SEE_number_t
 YearFromTime(t0)
 	SEE_number_t t0;
 {
 	/*
 	 * "return the largest integer y (closest to +Inf) such
-	 *  that TimeFromYear(y) <= t
+	 *  that TimeFromYear(y) <= t"
 	 */
-	SEE_int32_t y;
-	SEE_number_t t;
+	SEE_number_t y, t;
 
 	y = 0;
 	t = t0 + T1970;
@@ -477,10 +476,10 @@ YearFromTime(t0)
 
 #ifndef NDEBUG
 #define AS(x) do {if (!(x)) \
-	dprintf("%s:%d: FAILURE: '%s'; y=%d t0=%g\n", \
+	dprintf("%s:%d: FAILURE: '%s'; y=%g t0=%g\n", \
 	__FILE__, __LINE__, #x, y, t0); } while(0)
-AS(TimeFromYear((SEE_number_t)y) <= t0);
-AS(TimeFromYear((SEE_number_t)(y+1)) > t0);
+AS(TimeFromYear(y) <= t0);
+AS(TimeFromYear(y + 1) > t0);
 #undef AS
 #endif
 
@@ -490,16 +489,16 @@ AS(TimeFromYear((SEE_number_t)(y+1)) > t0);
 /* 15.9.1.3 */
 static int
 isleapyear(y)
-	SEE_int32_t y;
+	SEE_number_t y;
 {
-	if (y % 4 != 0)		return 0;
-	if (y % 100 != 0)	return 1;
-	if (y % 400 != 0)	return 0;
+	if (modulo(y, 4.0) != 0)	return 0;
+	if (modulo(y, 100.0) != 0)	return 1;
+	if (modulo(y, 400.0) != 0)	return 0;
 	return 1;
 }
 
 /* 15.9.1.4 */
-static int
+static SEE_number_t
 MonthFromTime(t)
 	SEE_number_t t;
 {
@@ -522,14 +521,14 @@ MonthFromTime(t)
 }
 
 /* 15.9.1.5 */
-static int
+static SEE_number_t
 DateFromTime(t)
 	SEE_number_t t;
 {
 	SEE_number_t dwy = DayWithinYear(t);
 	int ily = InLeapYear(t);
 	
-	switch (MonthFromTime(t)) {
+	switch ((int)MonthFromTime(t)) {
 	case 0:		return dwy + 1;
 	case 1:		return dwy - 30;
 	case 2:		return dwy - 58 - ily;
@@ -597,7 +596,7 @@ MakeDay(year, month, date)
 	    DayFromYear(y) >  100000000)
 		return SEE_NaN;
 
-	ily = isleapyear((SEE_uint32_t)NUMBER_rint(y));
+	ily = isleapyear(NUMBER_rint(y));
 	t = (DayFromYear(y) + (ily ? julian_ly:julian)[(int)m] - 1) * msPerDay;
 
 #ifndef NDEBUG
@@ -942,9 +941,9 @@ reprdate(interp, t)
 	if (SEE_ISNAN(t)) return repr_baddate(interp);
 
 	wkday = WeekDay(t);
-	day = DateFromTime(t);
-	month = MonthFromTime(t);
-	year = YearFromTime(t);
+	day = (SEE_int32_t)DateFromTime(t);
+	month = (SEE_int32_t)MonthFromTime(t);
+	year = (SEE_int32_t)YearFromTime(t);
 
 	return SEE_string_sprintf(interp,
 		"%.3s, %2d %.3s %d",
@@ -1280,7 +1279,7 @@ date_proto_getFullYear(interp, self, thisobj, argc, argv, res)
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
 		SEE_SET_NUMBER(res, 
-		    (SEE_number_t)YearFromTime(LocalTime(d->t)));
+		    YearFromTime(LocalTime(d->t)));
 }
 
 /* 15.9.5.11 */
@@ -1297,7 +1296,7 @@ date_proto_getUTCFullYear(interp, self, thisobj, argc, argv, res)
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
 		SEE_SET_NUMBER(res, 
-		    (SEE_number_t)YearFromTime(d->t));
+		    YearFromTime(d->t));
 }
 
 /* 15.9.5.12 */
@@ -1845,8 +1844,8 @@ date_proto_setDate(interp, self, thisobj, argc, argv, res)
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
 		d->t = TimeClip(UTC(MakeDate(MakeDay(
-			(SEE_number_t)YearFromTime(t),
-			(SEE_number_t)MonthFromTime(t), v.u.number),
+			YearFromTime(t),
+			MonthFromTime(t), v.u.number),
 			TimeWithinDay(t))
 		       ));
 	}
@@ -1870,8 +1869,8 @@ date_proto_setUTCDate(interp, self, thisobj, argc, argv, res)
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
 		d->t = TimeClip(   (MakeDate(MakeDay(
-			(SEE_number_t)YearFromTime(t), 
-			(SEE_number_t)MonthFromTime(t), v.u.number),
+			YearFromTime(t), 
+			MonthFromTime(t), v.u.number),
 			TimeWithinDay(t))
 		       ));
 	}
@@ -1903,7 +1902,7 @@ date_proto_setMonth(interp, self, thisobj, argc, argv, res)
 		}
 		SEE_ToNumber(interp, argv[0], &v);
 		d->t = TimeClip(UTC(MakeDate(MakeDay(
-			(SEE_number_t)YearFromTime(t), v.u.number, date),
+			YearFromTime(t), v.u.number, date),
 			TimeWithinDay(t))
 		       ));
 	}
@@ -1935,7 +1934,7 @@ date_proto_setUTCMonth(interp, self, thisobj, argc, argv, res)
 		}
 		SEE_ToNumber(interp, argv[0], &v);
 		d->t = TimeClip(   (MakeDate(MakeDay(
-			(SEE_number_t)YearFromTime(t), v.u.number, date),
+			YearFromTime(t), v.u.number, date),
 			TimeWithinDay(t))
 		       ));
 	}
@@ -2043,7 +2042,7 @@ date_proto_getYear(interp, self, thisobj, argc, argv, res)
 		SEE_SET_NUMBER(res, SEE_NaN);
 	else
 		SEE_SET_NUMBER(res, 
-		    (SEE_number_t)(YearFromTime(LocalTime(d->t)) - 1900));
+		    (YearFromTime(LocalTime(d->t)) - 1900));
 }
 
 /* B.2.5 */
@@ -2074,8 +2073,8 @@ date_proto_setYear(interp, self, thisobj, argc, argv, res)
 			year += 1900;
 		d->t = TimeClip(UTC(MakeDate(MakeDay(
 			year, 
-			(SEE_number_t)MonthFromTime(t), 
-			(SEE_number_t)DateFromTime(t)),
+			MonthFromTime(t), 
+			DateFromTime(t)),
 			TimeWithinDay(t))
 		       ));
 	}
@@ -2094,14 +2093,14 @@ date_proto_setYear(interp, self, thisobj, argc, argv, res)
  */
 
 /* Map from leapyearness/firstdayofweek to a year */
-static unsigned int yearmap[2][7];
+static SEE_number_t yearmap[2][7];
 
 /* Initialises the yearmap matrix based on the current year */
 static void
 init_yearmap() 
 {
 	int ily, wstart;
-	int year;
+	SEE_number_t year;
 	struct tm *tm;
 	time_t now = time(NULL);
 	int count;
@@ -2112,7 +2111,7 @@ init_yearmap()
 
 	count = 0;
 	while (count < 14) {
-	    wstart = WeekDay(TimeFromYear((SEE_number_t)year));
+	    wstart = WeekDay(TimeFromYear(year));
 	    ily = isleapyear(year);
 	    if (yearmap[ily][wstart] == 0) {
 		    yearmap[ily][wstart] = year;
@@ -2128,7 +2127,7 @@ init_localtza()
 {
 	struct tm tm, *utm;
 	time_t t;
-	int year = yearmap[0][0];
+	SEE_number_t year = yearmap[0][0];
 
 	/* Convert the first second of the year into a time_t */
 	t = time(NULL);
@@ -2138,7 +2137,7 @@ init_localtza()
 	tm.tm_hour = 0;
 	tm.tm_mday = 1;
 	tm.tm_mon = 0;
-	tm.tm_year = year - 1900;	/* pick any year in era */
+	tm.tm_year = (int)(year - 1900);	/* pick any year in era */
 	tm.tm_isdst = 0;
 	t = mktime(&tm);
 	/* assert(t != -1); */
@@ -2169,10 +2168,10 @@ static SEE_number_t
 DaylightSavingTA(t)
 	SEE_number_t t;
 {
-	SEE_number_t ysec = t - TimeFromYear((SEE_number_t)YearFromTime(t));
+	SEE_number_t ysec = t - TimeFromYear(YearFromTime(t));
 	int ily = InLeapYear(t);
-	int wstart = WeekDay(TimeFromYear((SEE_number_t)YearFromTime(t)));
-	int equiv_year = yearmap[ily][wstart];
+	int wstart = WeekDay(TimeFromYear(YearFromTime(t)));
+	SEE_number_t equiv_year = yearmap[ily][wstart];
 	struct tm tm;
 	time_t dst_time, nodst_time;
 
@@ -2182,7 +2181,7 @@ DaylightSavingTA(t)
 	tm.tm_hour = HourFromTime(ysec);
 	tm.tm_mday = DateFromTime(ysec);
 	tm.tm_mon = MonthFromTime(ysec) - 1;
-	tm.tm_year = equiv_year - 1900;
+	tm.tm_year = (int)(equiv_year - 1900);
 	tm.tm_isdst = -1;
 
 	if (tm.tm_isdst == 0) return 0;

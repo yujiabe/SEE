@@ -684,14 +684,18 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 	r3 = SEE_ToUint32(interp, &v);
 
 	SEE_ToInteger(interp, argv[0], &v);
-	r5 = (v.u.number < 0) ? MAX(r3 + v.u.number, 0)
-			      : MIN(v.u.number, r3);
+	r5 = -v.u.number > r3 ? 0 :
+	     v.u.number < 0   ? (SEE_uint32_t)(r3 + v.u.number) :
+	     v.u.number < r3  ? (SEE_uint32_t)v.u.number :
+	     			r3;
 	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 		r8 = r3;
 	else {
 	    SEE_ToInteger(interp, argv[1], &v);
-	    r8 = (v.u.number < 0) ? MAX(r3 + v.u.number, 0)
-				  : MIN(v.u.number, r3);
+	    r8 = -v.u.number > r3 ? 0 :
+	    	 v.u.number < 0   ? (SEE_uint32_t)(r3 + v.u.number) :
+	    	 v.u.number < r3  ? (SEE_uint32_t)v.u.number :
+		 		    r3;
 	}
 	for (k = r5, n = 0; k < r8; k++, n++) {
 	    p = intstr(interp, &s, k);
@@ -885,11 +889,13 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 /*3*/	r3 = SEE_ToUint32(interp, &v);
 /*4*/	if (argc < 1) SEE_SET_NUMBER(&v, 0);
 	else SEE_ToInteger(interp, argv[0], &v);
-/*5*/	r5 = (v.u.number < 0) ? MAX((r3+v.u.number), 0)
-			      : MIN(v.u.number, r3);
+/*5*/	r5 = -v.u.number > r3 ? 0 :
+	      v.u.number < 0  ? (SEE_uint32_t)(r3 + v.u.number) :
+	      v.u.number < r3 ? (SEE_uint32_t)v.u.number :
+	      		        r3;
 /*6*/	if (argc < 2) SEE_SET_NUMBER(&v, 0);
 	else SEE_ToInteger(interp, argv[1], &v);
-	r6 = MIN(MAX(v.u.number, 0), r3 - r5);
+	r6 = MIN(v.u.number < 0 ? 0 : (SEE_uint32_t)v.u.number, r3 - r5);
 /*7*/	for (k = 0; k < r6; k++) {
 /*9*/	    s9 = intstr(interp, &s, r5 + k);
 /*10*/	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, s9)) {
@@ -930,7 +936,7 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 		    }
 		}
 	}
-/*48*/	for (k = 2; k < argc; k++) {
+/*48*/	for (k = 2; k < (unsigned int)argc; k++) {
 /*50*/	    SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &s, k - 2 + r5),
 		argv[k], 0);
 	}
