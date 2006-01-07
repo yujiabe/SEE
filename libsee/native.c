@@ -398,11 +398,11 @@ SEE_native_defaultvalue(interp, o, hint, res)
  * Enumeration support.
  *
  * Object enumerators only reveal the names available
- * at the local level. Object enumertaors do not have to be
+ * at the local level. Object enumerators do not have to be
  * insert/delete-safe - i.e. they can assume that no change
  * to the object is made during enumeration.
  * Local properties with the DONTENUM flag set are still
- * enumerated, but the 'dont_enum' pointer is set to non-zero
+ * enumerated, but the 'dont_enum' out-argument is set to non-zero
  * when they are encountered.
  */
 struct native_enum {
