@@ -140,7 +140,7 @@ _SEE_intern_init(interp)
 	struct SEE_interpreter *interp;
 {
 	intern_tab_t *intern_tab;
-	int i;
+	unsigned int i;
 	struct intern **x;
 
 #ifndef NDEBUG
@@ -155,7 +155,7 @@ _SEE_intern_init(interp)
 
 	/* Add all the predefined strings to the intern table */
 	for (i = 0; i < SEE_nstringtab; i++) {
-		int h = hash(&SEE_stringtab[i]);
+		unsigned int h = hash(&SEE_stringtab[i]);
 		x = find(interp->intern_tab, &SEE_stringtab[i], h);
 		if (*x == NULL) 
 			*x = make(interp, &SEE_stringtab[i]);
