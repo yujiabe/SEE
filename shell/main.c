@@ -62,19 +62,19 @@ debug(interp, c)
 	extern int SEE_native_debug, SEE_Error_debug, 
 	SEE_parse_debug, SEE_lex_debug,
 	SEE_eval_debug, SEE_error_debug,
-	SEE_context_debug, SEE_regex_debug,
+	SEE_scope_debug, SEE_regex_debug,
 	SEE_mem_debug;
 
 	switch (c) {
 	case 'E': SEE_Error_debug = 1; break;
 	case 'T': interp->trace = trace; break;
-	case 'c': SEE_context_debug = 1; break;
 	case 'e': SEE_error_debug = 1; break;
 	case 'l': SEE_lex_debug = 1; break;
 	case 'm': SEE_mem_debug = 1; break;
 	case 'n': SEE_native_debug = 1; break;
 	case 'p': SEE_parse_debug = 1; break;
 	case 'r': SEE_regex_debug = 1; break;
+	case 's': SEE_scope_debug = 1; break;
 	case 'v': SEE_eval_debug = 1; break;
 	default:
 		fprintf(stderr, "unknown debug flag '%c'\n", c);
@@ -452,7 +452,7 @@ main(argc, argv)
 	        "usage: %s [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
 		argv[0],
 #ifndef NDEBUG
-	        "[-d[ETcelmnprv]] "
+	        "[-d[ETelmnprsv]] "
 #else
 		""
 #endif

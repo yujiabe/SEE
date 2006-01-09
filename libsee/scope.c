@@ -42,7 +42,7 @@
 #include "dprint.h"
 
 #ifndef NDEBUG
-int SEE_context_debug = 0;
+int SEE_scope_debug = 0;
 #endif
 
 /*
@@ -62,7 +62,7 @@ SEE_scope_lookup(interp, scope, ident, res)
 	for (; scope; scope = scope->next) {
 
 #ifndef NDEBUG
-	    if (SEE_context_debug) {
+	    if (SEE_scope_debug) {
 		dprintf("scope_lookup: searching for '");
 		dprints(ident);
 		dprintf("' in scope %p, obj = ", scope);
@@ -74,8 +74,8 @@ SEE_scope_lookup(interp, scope, ident, res)
 	    if (SEE_OBJECT_HASPROPERTY(interp, scope->obj, ident)) {
 		_SEE_SET_REFERENCE(res, scope->obj, ident);
 #ifndef NDEBUG
-	        if (SEE_context_debug) {
-		    dprintf("context_lookup: found '");
+	        if (SEE_scope_debug) {
+		    dprintf("SEE_scope_lookup: found '");
 		    dprints(ident);
 		    dprintf("' in ");
 		    dprinto(interp, scope->obj);
@@ -87,8 +87,8 @@ SEE_scope_lookup(interp, scope, ident, res)
 	}
 
 #ifndef NDEBUG
-	if (SEE_context_debug) {
-	    dprintf("context_lookup: not found: '");
+	if (SEE_scope_debug) {
+	    dprintf("SEE_scope_lookup: not found: '");
 	    dprints(ident);
 	    dprintf("'\n");
 	}
