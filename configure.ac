@@ -3,7 +3,8 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([see],[1.4],[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
-AM_INIT_AUTOMAKE([foreign])
+AUTOMAKE_OPTIONS="foreign"
+AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_FILES([Makefile
 		 include/Makefile
@@ -15,6 +16,10 @@ AC_CONFIG_FILES([Makefile
 		 shell/test/Makefile
 		 shell/test/mozilla/Makefile
 		 ])
+
+## -- fix brokenness with automake-1.4
+AC_SUBST(PACKAGE,see)
+AC_SUBST(VERSION,[$PACKAGE_VERSION])
 
 dnl ------------------------------------------------------------
 dnl programs required
