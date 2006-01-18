@@ -293,7 +293,7 @@ unimplemented_malloc_finalize(interp, size, finalizefn, closure)
         void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
 {
-	SEE_ABORT("malloc_finalize not implemented in SEE_system");
+	SEE_ABORT(interp, "malloc_finalize not implemented in SEE_system");
 }
 
 /*
