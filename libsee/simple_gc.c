@@ -49,6 +49,7 @@
 #endif
 
 #include <stdlib.h>
+#include "simple_gc.h"
 
 struct root {
 	char *base;
@@ -87,14 +88,6 @@ struct allocation {
 #define ALLOCATION_END(a) ((char *)(a) + (a)->extent) 
 
 #define ALIGN(a)	((a) & ~(sizeof (void *) - 1))
-
-void  gc_collect(void);
-void *gc_malloc(unsigned int sz);
-void *gc_malloc_atomic(unsigned int sz);
-void *gc_malloc_finalizer(unsigned int sz, void (*finalizer)(void *));
-void  gc_atexit(void);
-void  gc_add_root(void *base, unsigned int sz);
-void  gc_remove_root(void *base);
 
 static void sweep(void);
 static void sweep_sub(struct allocation *);
