@@ -7,7 +7,7 @@ EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
 
 ChangeLog:
 	svn2cl --strip-prefix=see/trunk \
-	    --include-rev --stdout . --revision=796:HEAD > $@ || \
+	    --include-rev --stdout $(srcdir) --revision=796:HEAD > $@ || \
 	echo "No ChangeLog available" > $@
 
 ## -- test that installation allows a simple program to work
