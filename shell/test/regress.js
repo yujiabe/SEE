@@ -15,6 +15,6 @@ test("typeof asjlkhadlsh", "undefined")
 
 function f() { return this; } 
 function g() { var h = f; return h(); } 
-test("g().toString()", this)
+test("g().toString()", this.toString())
 
 finish()
