@@ -18,7 +18,7 @@ please work with configure.ac primarily.
 
 RELEASE STEPS
 
-1. Update Changelog by running 'cvs2cl'
+1. Update Changelog by deleting it so it is rebuilt fresh
 2. Make sure that the package is configured (autoreconf --force --install)
 3. Create a temporary build dir (e.g. /tmp/b), cd there and run
    the configure script from the check-out directory.
