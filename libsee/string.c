@@ -53,6 +53,7 @@
 #include <see/value.h>
 
 #include "stringdefs.h"
+#include "printf.h"
 
 static void growby(struct SEE_string *s, unsigned int extra);
 static void simple_growby(struct SEE_string *s, unsigned int extra);
@@ -296,23 +297,13 @@ SEE_string_vsprintf(interp, fmt, ap)
 	const char *fmt;
 	va_list ap;
 {
-	char *buf = NULL;
-	int len;
-	struct SEE_string *str;
-	SEE_char_t *p;
-
-        len = vsnprintf(buf, 0, fmt, ap);
-	if (len) {
-		buf = SEE_ALLOCA(interp, len + 1, char);
-		vsnprintf(buf, len + 1, fmt, ap);
-	}
-
-	str = SEE_string_new(interp, len);
-	str->length = len;
-	for (p = str->data; len--; p++, buf++)
-	    *p = *(unsigned char *)buf & 0x007f;
-
-	return str;
+	struct SEE_string *s;
+	
+	s = SEE_NEW(interp, struct SEE_string);
+	_SEE_vsprintf(interp, s, fmt, ap);
+	s->stringclass = NULL;
+	s->interpreter = interp;
+	return s;
 }
 
 struct SEE_string *

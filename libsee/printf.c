@@ -117,6 +117,8 @@ _SEE_vsprintf(interp, s, fmt, ap)
 	    out = 0;
 	    fmtstart = fmt;
 	} else {
+	    if (outlen == 0)
+	    	break;
 	    va_copy(ap, ap0);
 	    fmt = fmtstart;
 	    outbuf = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, outlen);
@@ -334,18 +336,4 @@ _SEE_vsprintf(interp, s, fmt, ap)
     }
     s->data = outbuf;
     s->length = outlen;
-}
-
-
-void
-_SEE_sprintf(interp, s, fmt)
-	struct SEE_interpreter *interp;
-	struct SEE_string *s;
-	const char *fmt;
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	_SEE_vsprintf(interp, s, fmt, ap);
-	va_end(ap);
 }
