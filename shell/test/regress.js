@@ -13,4 +13,8 @@ test("'foo'.lastIndexOf('o', 0)", -1)
 test("Function().__proto__", Function.prototype)
 test("typeof asjlkhadlsh", "undefined")
 
+function f() { return this; } 
+function g() { var h = f; return h(); } 
+test("g().toString()", this)
+
 finish()
