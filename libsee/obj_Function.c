@@ -492,7 +492,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	}
 
 	/* 10.1.6 Create an activation object */
-	activation = SEE_Object_new(interp);
+	activation = SEE_activation_new(interp);
 
 	/* 10.1.6 Install an 'arguments' property */
 	arguments = arguments_create(interp, fi->function, 

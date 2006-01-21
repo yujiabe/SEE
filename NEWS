@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  bug 32: this is now properly sent to called functions
   Corrected some Unicode case translations
   Improved debugger for the shell
   Platform isolation of time functions, and abort
