@@ -43,6 +43,10 @@
 # include <stdio.h>
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include <see/type.h>
 #include <see/string.h>
 
@@ -264,14 +268,26 @@ SEE_tokenname_buf(token, buf, buflen)
 	int buflen;
 {
 	int i;
+	char tokch[4], *name;
+        int namelen;
 
 	for (i = 0; i < lengthof(tok_names); i++)
 		if (tok_names[i].token == token) {
-		    snprintf(buf, buflen, "%s", tok_names[i].name);
-		    return;
+		    name = tok_names[i].name;
+		    break;
 		}
-	if (token >= ' ' && token <= '~') 
-		snprintf(buf, buflen, "'%c'", (unsigned char)token);
-	else
-		snprintf(buf, buflen, "token %d", token);
+	else if (token >= ' ' && token <= '~') {
+		tokch[0] = '\'';
+		tokch[1] = (unsigned char)token;
+		tokch[2] = '\'';
+		tokch[3] = 0;
+		name = tokch;
+	} else 
+		name = "<bad token>";
+	namelen = strlen(tok_names[i].name);
+	if (namelen > buflen - 1)
+		namelen = buflen - 1;
+        memcpy(buf, tok_names[i].name, namelen);
+	buf[namelen] = 0;
+        return;
 }

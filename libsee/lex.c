@@ -355,7 +355,6 @@ Punctuator(lex)
 	SEE_unicode_t op[4];	/* ">>>=" is the longest punctuator */
 	struct token *t;
 	int j, len, oplen;
-	char buf[10], *badchar;
 	struct SEE_interpreter *interp = lex->input->interpreter;
 
 	if (ATEOF)
@@ -385,18 +384,15 @@ Punctuator(lex)
 	/*
 	 * Throw a descriptive error message
 	 */
-	if (op[0] == SEE_INPUT_BADCHAR) {
-		badchar = "malformed input";
-	} else if (op[0] >= ' ' && op[0] <= '~') {
-		buf[0] = op[0];
-		buf[1] = '\0';
-		badchar = buf;
-	} else {
-		snprintf(buf, sizeof buf, "\\u%04x", op[0]);
-		badchar = buf;
-	}
-	SYNTAX_ERROR(SEE_string_sprintf(interp, 
-		"unexpected character '%s'", badchar));
+	if (op[0] == SEE_INPUT_BADCHAR)
+		SYNTAX_ERROR(SEE_string_sprintf(interp, 
+			"malformed unicode input"));
+	else if (op[0] >= ' ' && op[0] <= '~')
+		SYNTAX_ERROR(SEE_string_sprintf(interp, 
+			"unexpected character '%c'", op[0]));
+	else
+		SYNTAX_ERROR(SEE_string_sprintf(interp, 
+			"unexpected character '\\u%04x'", op[0]));
 	/* NOTREACHED */
 }
 
