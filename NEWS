@@ -1,5 +1,11 @@
 $Id$
 
+1.4 [unreleased]
+  GC finalization support (not used by SEE classes, but supported by API)
+
+1.3.1 [2005-01-18]
+  bug 31: Fix header include installation
+  
 1.3 [2005-12-23]
   Fix typeof undefined references no longer throws ReferenceError
   Fix function instance prototype initialisation
