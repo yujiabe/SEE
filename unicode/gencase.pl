@@ -1,5 +1,6 @@
 #! /usr/bin/env perl
 
+$debug = 0;
 %lower = ();
 %upper = ();
 %special_upper = ();
@@ -20,18 +21,22 @@ while (<CASING>) {
 	next if m/^$/;
 	my @line = split(/\s*;\s*/);
 	my $cp = hex($line[0]);
-	my $l = hex($line[1]) or 0;
-	my $u = hex($line[3]) or 0;
+	my $l = hex($line[1]) or 0; $l=0 if $line[1] =~ m/\s/;
+	my $u = hex($line[3]) or 0; $u=0 if $line[3] =~ m/\s/;
 	if ($line[4] eq "")  {
 		#-- ignore character conversions that are multichar
-		$lower{$cp} = $l if $l != $cp and $l and $l !~ m/\s/;
-		$upper{$cp} = $u if $u != $cp and $u and $u !~ m/\s/;
+		$lower{$cp} = $l if $l != $cp and $l != 0;
+		$upper{$cp} = $u if $u != $cp and $u  != 0;
+		printf STDERR ("%x[%s]; %x[%s]; -; %x[%s]\n", 
+			$cp,$line[0], 
+			$lower{$cp}, $line[1],
+			$upper{$cp}, $line[3]) if $debug;
 	} else {
-		#print "$_\n";
+		# condition list is non-empty
 		$special_lower{$cp} = [$l,join(',',@line[4 .. $#line])]
-			if $l != $cp and $l and $l !~ m/\s/;
+			if $l != $cp and $l != 0;
 		$special_upper{$cp} = [$u,join(',',@line[4 .. $#line])]
-			if $u != $cp and $u and $u !~ m/\s/;
+			if $u != $cp and $u != 0;
 	}
 }
 
