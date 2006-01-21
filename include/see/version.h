@@ -44,7 +44,7 @@ const char *SEE_version(void);
  * elements are added, defaulting to "1.0". 
  *
  */
-#define SEE_VERSION_API_MAJOR	1
+#define SEE_VERSION_API_MAJOR	2
 #define SEE_VERSION_API_MINOR	0
 
 #endif /* _SEE_h_version */
