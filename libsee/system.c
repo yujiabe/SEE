@@ -64,8 +64,8 @@ extern void GC_free(void *);
 # endif
 #endif
 
-#include <see/system.h>
 #include <see/interpreter.h>
+#include <see/system.h>
 
 #include "dprint.h"
 #include "platform.h"
