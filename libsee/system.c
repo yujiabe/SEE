@@ -68,9 +68,9 @@ extern void GC_free(void *);
 #include <see/interpreter.h>
 
 #include "dprint.h"
+#include "platform.h"
 
 /* Prototypes */
-static void simple_abort(struct SEE_interpreter *, const char *) SEE_dead;
 static unsigned int simple_random_seed(void);
 #if HAVE_GC_MALLOC
 static void *simple_gc_malloc(struct SEE_interpreter *, SEE_size_t);
@@ -101,7 +101,7 @@ struct SEE_system SEE_system = {
 
 	simple_random_seed,		/* random_seed */
 
-	simple_abort,			/* abort */
+	_SEE_platform_abort,		/* abort */
 	NULL,				/* periodic */
 
 #if HAVE_GC_MALLOC
@@ -117,32 +117,6 @@ struct SEE_system SEE_system = {
 #endif
 	simple_mem_exhausted		/* mem_exhausted */
 };
-
-/*
- * A simple abort handler: we just try to print the error message,
- * and then die. Calling abort() will usually leave a core image that 
- * may be analysed for some port-mortem debugging.
- */
-static void
-simple_abort(interp, msg)
-	struct SEE_interpreter *interp;		/* may be NULL */
-	const char *msg;
-{
-
-#if STDC_HEADERS
-	if (msg)
-	    fprintf(stderr, "fatal error: %s\n", msg);
-#endif
-
-#if HAVE_ABORT
-	abort();
-#else
-# ifndef NDEBUG
-	dprintf("fatal error: %s\n", msg);
-# endif
-	exit(1);
-#endif
-}
 
 /*
  * A simple random number seed generator. It is not thread safe.
