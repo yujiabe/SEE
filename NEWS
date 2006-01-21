@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Corrected some Unicode case translations
   Improved debugger for the shell
   Platform isolation of time functions, and abort
   Correction in daylight savings estimation code
