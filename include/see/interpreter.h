@@ -12,6 +12,13 @@ struct SEE_throw_location;
 struct SEE_context;
 struct SEE_scope;
 
+enum SEE_trace_event {
+	SEE_TRACE_CALL,
+	SEE_TRACE_RETURN,
+	SEE_TRACE_STATEMENT,
+	SEE_TRACE_THROW
+};
+
 /*
  * This is the place to stick things that, once created
  * for an interpreter instance, should be kept around
@@ -70,7 +77,7 @@ struct SEE_interpreter {
 
 	/* Trace hook, called by interpreter at each step if not NULL */
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,
-			struct SEE_context *);
+			struct SEE_context *, enum SEE_trace_event);
 };
 
 /* Compatibility flags */

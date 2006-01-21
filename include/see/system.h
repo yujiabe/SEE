@@ -17,7 +17,8 @@ struct SEE_system {
 	int default_recursion_limit;		/* default: -1 (no limit) */
 	void (*default_trace)(struct SEE_interpreter *, 
 		struct SEE_throw_location *,
-		struct SEE_context *);		/* default: NULL */
+		struct SEE_context *,
+		enum SEE_trace_event);		/* default: NULL */
 	int default_compat_flags;
 
 	unsigned int (*random_seed)(void);
@@ -25,6 +26,9 @@ struct SEE_system {
 	/* Fatal error handler */
 	void (*abort)(struct SEE_interpreter *, 
 		const char *) SEE_dead;
+
+	/* Periodic execution callback */
+	void (*periodic)(struct SEE_interpreter *);
 
 	/* Memory allocator */
 	void *(*malloc)(struct SEE_interpreter *, SEE_size_t);

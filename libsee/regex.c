@@ -43,6 +43,7 @@
 #include <see/input.h>
 #include <see/error.h>
 #include <see/string.h>
+#include <see/system.h>
 
 #include "regex.h"
 #include "unicode.h"
@@ -1393,6 +1394,9 @@ pcode_run(interp, regex, addr, text, state)
 	int *counter, *mark, statesz;
 	unsigned int newaddr;
 	char *newstate;
+
+	if (SEE_system.periodic)
+	    (*SEE_system.periodic)(interp);
 
 	/* Compute the offsets into the state structure */
 	statesz = 0;

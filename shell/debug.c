@@ -26,11 +26,13 @@ struct breakpoint {
 struct debug {
 	void *save_host_data;
 	void (*save_trace)(struct SEE_interpreter *, 
-		struct SEE_throw_location *, struct SEE_context *);
-	struct SEE_throw_location last_location;
+		struct SEE_throw_location *, struct SEE_context *,
+		enum SEE_trace_event);
 	int break_immediately;
 	struct breakpoint *breakpoints;
 	int next_bp_id;
+	char *last_command;
+	struct SEE_throw_location *current_location;
 };
 
 /* Command table elements */
@@ -49,11 +51,12 @@ static void loc_print(FILE *, struct SEE_throw_location *);
 static int bp_delete(struct SEE_interpreter *, struct debug *, int);
 static void bp_print(struct SEE_interpreter *, struct breakpoint *, FILE *);
 static void trace_callback(struct SEE_interpreter *, 
-        struct SEE_throw_location *, struct SEE_context *);
+        struct SEE_throw_location *, struct SEE_context *, 
+	enum SEE_trace_event);
 static int location_matches(struct SEE_interpreter *, 
         struct SEE_throw_location *, struct SEE_throw_location *);
 static int should_break(struct SEE_interpreter *, struct debug *, 
-        struct SEE_throw_location *);
+        struct SEE_throw_location *, enum SEE_trace_event);
 static int location_parse(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_throw_location *, char **);
 
@@ -62,6 +65,8 @@ static int cmd_where(struct SEE_interpreter *, struct debug *,
 static int cmd_step(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_context *, char *);
 static int cmd_cont(struct SEE_interpreter *, struct debug *, 
+        struct SEE_throw_location *, struct SEE_context *, char *);
+static int cmd_list(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_context *, char *);
 static int cmd_break(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_context *, char *);
@@ -80,6 +85,8 @@ static int cmd_info(struct SEE_interpreter *, struct debug *,
         struct SEE_throw_location *, struct SEE_context *, char *);
 static int user_command(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_context *);
+static void loc_print_line(struct SEE_interpreter *, struct debug *, 
+	FILE *, struct SEE_throw_location *);
 
 static struct cmd cmdtab[] = {
     { "break",	cmd_break,	"set a breakpoint" },
@@ -88,8 +95,9 @@ static struct cmd cmdtab[] = {
     { "eval",	cmd_eval,	"evaluate an expression" },
     { "help",	cmd_help,	"print this information" },
     { "info",	cmd_info,	"print context information" },
+    { "list",	cmd_list,	"show nearby lines" },
     { "show",	cmd_show,	"show current breakpoints" },
-    { "step",	cmd_step,	"run until next line change" },
+    { "step",	cmd_step,	"run until statement change" },
     { "throw",	cmd_throw,	"evaluate an expression and throw it" },
     { "where",	cmd_where,	"show traceback" },
     { NULL }
@@ -108,7 +116,6 @@ debug_new(interp)
 	struct debug *debug;
 	
 	debug = SEE_NEW(interp, struct debug);
-	debug->last_location.filename = NULL;
 	debug->break_immediately = 1;
 	debug->breakpoints = NULL;
 	debug->next_bp_id = 0;
@@ -125,13 +132,16 @@ debug_eval(interp, debug, input, res)
 {
 	void *save_host_data;
 	void (*save_trace)(struct SEE_interpreter *, 
-		struct SEE_throw_location *, struct SEE_context *);
+		struct SEE_throw_location *, struct SEE_context *,
+		enum SEE_trace_event);
 	SEE_try_context_t ctxt;
 
+	fprintf(stderr, "debugger: starting\n");
 	save_host_data = debug->save_host_data;
 	save_trace = debug->save_trace;
 	debug->save_host_data = interp->host_data;
 	debug->save_trace = interp->trace;
+	debug->last_command = NULL;
 	interp->host_data = debug;
 	interp->trace = trace_callback;
 	SEE_TRY(interp, ctxt) {
@@ -142,6 +152,10 @@ debug_eval(interp, debug, input, res)
 	interp->trace = debug->save_trace;
 	debug->save_host_data = save_host_data;
 	debug->save_trace = save_trace;
+	if (debug->last_command)
+		free(debug->last_command);
+	fprintf(stderr, "debugger: exiting\n");
+
 	SEE_DEFAULT_CATCH(interp, ctxt);
 }
 
@@ -223,10 +237,11 @@ bp_print(interp, bp, file)
  * Transfers control to the user if a breakpoint is hit.
  */
 static void
-trace_callback(interp, loc, context)
+trace_callback(interp, loc, context, event)
 	struct SEE_interpreter *interp;
 	struct SEE_throw_location *loc;
 	struct SEE_context *context;
+	enum SEE_trace_event event;
 {
 	struct debug *debug;
 	SEE_try_context_t ctxt;
@@ -238,30 +253,28 @@ trace_callback(interp, loc, context)
 		interp->host_data = debug->save_host_data;
 		interp->trace = debug->save_trace;
 		SEE_TRY(interp, ctxt) {
-			(*interp->trace)(interp, loc, context);
+			(*interp->trace)(interp, loc, context, event);
 		}
 		interp->host_data = debug;
 		interp->trace = trace_callback;
 		SEE_DEFAULT_CATCH(interp, ctxt);
 	}
 
-	/* Ignore trace calls resulting on the same line */
-	if (!loc && !debug->last_location.filename)
-		return;
-	if (debug->last_location.filename && loc &&
-	    debug->last_location.filename == loc->filename &&
-	    debug->last_location.lineno == loc->lineno)
-	    	return;
-	if (loc) {
-		debug->last_location.filename = loc->filename;
-		debug->last_location.lineno = loc->lineno;
-	} else
-		debug->last_location.filename = NULL;
-
+/*
+	fprintf(stderr, "event: %s\n",
+		event == SEE_TRACE_CALL ? "call" :
+		event == SEE_TRACE_RETURN ? "return" :
+		event == SEE_TRACE_STATEMENT ? "statement" :
+		event == SEE_TRACE_THROW ? "throw" :
+		"?");
+*/
 	/* Invoke the command prompt on breakpoints */
-	if (should_break(interp, debug, loc))
+	if (should_break(interp, debug, loc, event)) {
+		debug->current_location = loc;
+		loc_print_line(interp, debug, stderr, loc);
 		while (!user_command(interp, debug, loc, context))
 			{ /* nothing */ }
+	}
 }
 
 /* Returns true if the current location is matched by the user location */
@@ -277,12 +290,16 @@ location_matches(interp, curloc, usrloc)
 
 /* Returns true if a breakpoint was hit, and the debugger should intercede */
 static int
-should_break(interp, debug, loc)
+should_break(interp, debug, loc, event)
 	struct SEE_interpreter *interp;
 	struct debug *debug;
 	struct SEE_throw_location *loc;
+	enum SEE_trace_event event;
 {
 	struct breakpoint *bp, **lbp;
+
+	if (event != SEE_TRACE_STATEMENT)
+	    return 0;
 
 	/* Break if the break_immediately flag is set */
 	if (debug->break_immediately) {
@@ -393,6 +410,25 @@ cmd_cont(interp, debug, loc, context, arg)
 }
 
 static int
+cmd_list(interp, debug, loc, context, arg)
+	struct SEE_interpreter *interp;
+	struct debug *debug;
+	struct SEE_throw_location *loc;
+	struct SEE_context *context;
+	char *arg;
+{
+	struct SEE_throw_location rloc;
+	int offset;
+
+	memcpy(&rloc, loc, sizeof rloc);
+	for (offset = -3; offset <= 3; offset++) {
+	    rloc.lineno = loc->lineno + offset;
+	    loc_print_line(interp, debug, stderr, &rloc);
+	}
+	return 0;
+}
+
+static int
 cmd_break(interp, debug, loc, context, arg)
 	struct SEE_interpreter *interp;
 	struct debug *debug;
@@ -405,7 +441,7 @@ cmd_break(interp, debug, loc, context, arg)
 
 	if (location_parse(interp, debug, loc, &bloc, &arg)) {
 		bp = bp_add(interp, debug, &bloc, 0, 0);
-		fprintf(stderr, "added breakpoint: ");
+		fprintf(stderr, "debugger: added breakpoint: ");
 		bp_print(interp, bp, stderr);
 		fprintf(stderr, "\n");
 	}
@@ -425,7 +461,7 @@ debug_add_bp(interp, debug, filename, lineno)
 	loc.filename = SEE_string_sprintf(interp, "%s", filename);
 	loc.lineno = lineno;
 	bp = bp_add(interp, debug, &loc, 0, 0);
-	fprintf(stderr, "added breakpoint: ");
+	fprintf(stderr, "debugger: added breakpoint: ");
 	bp_print(interp, bp, stderr);
 	fprintf(stderr, "\n");
 }
@@ -454,9 +490,9 @@ cmd_show(interp, debug, loc, context, arg)
 	char *arg;
 {
 	if (!debug->breakpoints)
-		fprintf(stderr, "no breakpoints\n");
+		fprintf(stderr, "debugger: no breakpoints\n");
 	else {
-		fprintf(stderr, "current breakpoints:\n");
+		fprintf(stderr, "debugger: current breakpoints:\n");
 		bp_show(interp, debug->breakpoints);
 	}
 	return 0;
@@ -475,16 +511,16 @@ cmd_delete(interp, debug, loc, context, arg)
 
 	p = arg;
 	if (!*p || !isdigit(*p)) {
-		fprintf(stderr, "expected number\n");
+		fprintf(stderr, "debugger: expected number\n");
 		return 0;
 	}
 	id = 0;
 	while (*p && isdigit(*p))
 		id = 10 *id + (*p++ - '0');
 	if (bp_delete(interp, debug, id))
-		fprintf(stderr, "breakpoint #%d deleted\n", id);
+		fprintf(stderr, "debugger: breakpoint #%d deleted\n", id);
 	else
-		fprintf(stderr, "error: unknown breakpoint #%d\n", id);
+		fprintf(stderr, "debugger: unknown breakpoint #%d\n", id);
 	return 0;
 }
 
@@ -501,10 +537,11 @@ cmd_eval(interp, debug, loc, context, arg)
 	struct SEE_string *str;
 
 	void (*save_trace)(struct SEE_interpreter *, 
-		struct SEE_throw_location *, struct SEE_context *);
+		struct SEE_throw_location *, struct SEE_context *,
+		enum SEE_trace_event);
 
 	if (!*arg) {
-		fprintf(stderr, "expected expression text\n");
+		fprintf(stderr, "debugger: expected expression text\n");
 		return 0;
 	}
 	str = SEE_string_sprintf(interp, "%s", arg);
@@ -515,7 +552,7 @@ cmd_eval(interp, debug, loc, context, arg)
 	}
 	interp->trace = save_trace;
 	if (SEE_CAUGHT(ctxt)) {
-		fprintf(stderr, " exception: ");
+		fprintf(stderr, "debugger: caught exception ");
 		SEE_PrintValue(interp, SEE_CAUGHT(ctxt), stderr);
 		fprintf(stderr, "\n");
 	} else {
@@ -540,10 +577,11 @@ cmd_throw(interp, debug, loc, context, arg)
 	struct SEE_string *str;
 
 	void (*save_trace)(struct SEE_interpreter *, 
-		struct SEE_throw_location *, struct SEE_context *);
+		struct SEE_throw_location *, struct SEE_context *,
+		enum SEE_trace_event);
 
 	if (!*arg) {
-		fprintf(stderr, "expected expression text\n");
+		fprintf(stderr, "debugger: missing expression argument\n");
 		return 0;
 	}
 	str = SEE_string_sprintf(interp, "%s", arg);
@@ -556,14 +594,16 @@ cmd_throw(interp, debug, loc, context, arg)
 	if (SEE_CAUGHT(ctxt)) {
 		char *yn;
 
-		fprintf(stderr, "An exception occured while evaluating the expression\n  exception: ");
+		fprintf(stderr, "debugger: exception while evaluating expr: ");
 		SEE_PrintValue(interp, SEE_CAUGHT(ctxt), stderr);
 		fprintf(stderr, "\n");
-		yn = readline("Throw this exception instead? [n]: ");
-		if (yn && (*yn == 'y' || *yn == 'Y'))
+		yn = readline("debugger: throw this exception instead? [n]: ");
+		if (yn && (*yn == 'y' || *yn == 'Y')) {
+			fprintf(stderr, "debugger: throwing...\n");
 			SEE_DEFAULT_CATCH(interp, ctxt);
+		}
 	} else {
-		fprintf(stderr, "throwing ");
+		fprintf(stderr, "debugger: throwing ");
 		SEE_PrintValue(interp, &res, stderr);
 		fprintf(stderr, " ...\n");
 		SEE_THROW(interp, &res);
@@ -581,6 +621,8 @@ cmd_help(interp, debug, loc, context, arg)
 	char *arg;
 {
 	int i;
+
+	fprintf(stderr, "debugger: command table follows\n");
 	for (i = 0; cmdtab[i].name; i++)
 		fprintf(stderr, "   %-20s%s\n",
 			cmdtab[i].name, cmdtab[i].doc);
@@ -595,19 +637,19 @@ cmd_info(interp, debug, loc, context, arg)
 	struct SEE_context *context;
 	char *arg;
 {
-	fprintf(stderr, "context info:\n");
-	fprintf(stderr, "  activation = ");
+	fprintf(stderr, "debugger: context info follows\n");
+	fprintf(stderr, "   activation = ");
 	SEE_PrintObject(interp, context->activation, stderr);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "  variable = ");
+	fprintf(stderr, "   variable = ");
 	SEE_PrintObject(interp, context->variable, stderr);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "  varattr = < %s%s%s%s>\n",
+	fprintf(stderr, "   varattr = < %s%s%s%s>\n",
 		context->varattr & SEE_ATTR_READONLY ? "readonly " : "",
 		context->varattr & SEE_ATTR_DONTENUM ? "dontenum " : "",
 		context->varattr & SEE_ATTR_DONTDELETE ? "dontdelete " : "",
 		context->varattr & SEE_ATTR_INTERNAL ? "internal " : "");
-	fprintf(stderr, "  this = ");
+	fprintf(stderr, "   this = ");
 	SEE_PrintObject(interp, context->thisobj, stderr);
 	fprintf(stderr, "\n");
 	return 0;
@@ -630,13 +672,24 @@ user_command(interp, debug, loc, context)
 	loc_print(stderr, loc);
 	line = readline(" % ");
 	if (!line) {
-		fprintf(stderr, "end-of-file in debugger; terminating\n");
+		fprintf(stderr, "debugger: end-of-file received\n");
 		exit(1);
+	}
+	if (!*line) {
+	    if (debug->last_command) {
+		free(line);
+		line = strdup(debug->last_command);
+	    }
+	} else {
+	    if (debug->last_command)
+	        free(debug->last_command);
+	    debug->last_command = strdup(line);
 	}
 	p = line;
 	while (*p && isspace(*p)) p++;	/* skip leading whitespace */
 
 	cmd = p;			/* extract initial command word */
+	if (*p && !isspace(*p)) p++;
 	while (*p && isalnum(*p)) p++;
 	if (*p) *p++ = '\0';
 	while (*p && isspace(*p)) p++;	/* skip following whitespace */
@@ -649,8 +702,66 @@ user_command(interp, debug, loc, context)
 		    break;
 		}
 	    if (!cmdtab[i].name)
-	    	fprintf(stderr, "unknown command '%s'\n", cmd);
+	    	fprintf(stderr, "debugger: unknown command '%s'\n", cmd);
 	}
 	free(line);
 	return result;
+}
+
+/* Prints the line from a source file, or nothing if it is not found */
+static void
+loc_print_line(interp, debug, out, loc)
+	struct SEE_interpreter *interp;
+	struct debug *debug;
+	FILE *out;
+	struct SEE_throw_location *loc;
+{
+	FILE *f;
+	char path[4096];
+	int i, ch, lineno;
+	struct breakpoint *bp;
+	char clchar, bpchar;
+
+	if (!loc->filename)
+	    return;
+	if (loc->filename->length >= sizeof path - 1)
+	    return;
+	for (i = 0; i < loc->filename->length; i++) {
+	    if (loc->filename->data[i] > 0x7f)
+	    	return;
+	    path[i] = loc->filename->data[i] & 0x7f;
+	}
+	path[i] = 0;
+
+	f = fopen(path, "r");
+	if (!f)
+	    return;
+
+	lineno = 1;
+	while (lineno != loc->lineno)  {
+	    ch = fgetc(f);
+	    if (ch == EOF)
+	       return;
+	    if (ch == '\n')
+	        lineno++;
+	}
+
+	/* Put a * at the front if this line is a breakpoint */
+	bpchar = ' ';
+	for (bp = debug->breakpoints; bp; bp = bp->next) 
+	    if (location_matches(interp, loc, &bp->loc)) 
+	        bpchar = '*';
+
+	clchar = ' ';
+	if (location_matches(interp, loc, debug->current_location))
+		clchar = '>';
+
+	fprintf(out, "%c%c%3d: ", bpchar, clchar, lineno);
+	while ((ch = fgetc(f)) != EOF) {
+	    if (ch == '\n')
+	        break;
+	    fputc(ch, out);
+	}
+	fputc('\n', out);
+	fclose(f);
 }

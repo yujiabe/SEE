@@ -102,6 +102,7 @@ struct SEE_system SEE_system = {
 	simple_random_seed,		/* random_seed */
 
 	simple_abort,			/* abort */
+	NULL,				/* periodic */
 
 #if HAVE_GC_MALLOC
 	simple_gc_malloc,		/* malloc */

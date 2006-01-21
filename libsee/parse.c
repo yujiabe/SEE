@@ -90,6 +90,7 @@
 #include <see/debug.h>
 #include <see/interpreter.h>
 #include <see/context.h>
+#include <see/system.h>
 
 #include "lex.h"
 #include "parse.h"
@@ -352,7 +353,7 @@ static void label_pop(struct parser *parser, struct SEE_string *name);
 static void *target_lookup(struct parser *parser, struct SEE_string *name, 
         int type);
 static int lookahead(struct parser *parser, int n);
-static void trace_event(struct SEE_context *ctxt);
+static void trace_event(struct SEE_context *ctxt, enum SEE_trace_event);
 static struct SEE_traceback *traceback_enter(struct SEE_interpreter *interp, 
         struct SEE_object *callee, struct SEE_throw_location *loc, 
         int call_type);
@@ -962,6 +963,18 @@ static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 		EXPECTX(';', "';', '}' or newline");	\
     } while (0)
 
+/* Trace a statement-level event, or an eval() */
+#define TRACE(node, ctxt, event)				\
+    do {						\
+	if (ctxt) {					\
+            if (SEE_system.periodic)			\
+	    	(*SEE_system.periodic)((ctxt)->interpreter); \
+	    (ctxt)->interpreter->try_location =		\
+		&(node)->location;			\
+	    trace_event(ctxt, event);				\
+	}						\
+    } while (0)
+
 /*
  * Macros for accessing the abstract syntax tree
  */
@@ -969,59 +982,48 @@ static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 #ifndef NDEBUG
 
 # if !HAVE___FUNCTION__
+   /* Some trickery to stringize the __LINE__ macro */
 #  define X_STR2(s) #s
 #  define X_STR(s) X_STR2(s)
 #  define __FUNCTION__   __FILE__ ":" X_STR(__LINE__)
 # endif
 
-# define EVAL(node, ctxt, res)				\
-    do {						\
-	struct SEE_throw_location * _loc_save = NULL;	\
+# define EVAL_DEBUG_ENTER(node)				\
 	if (SEE_eval_debug) 				\
 	    dprintf("eval: %s enter %p\n", 		\
-		__FUNCTION__, node);			\
-	if (ctxt) {					\
-	  _loc_save = (ctxt)->interpreter->try_location;\
-	  (ctxt)->interpreter->try_location =		\
-		&(node)->location;			\
-	  if (_loc_save != &(node)->location)		\
-	    trace_event(ctxt);				\
-	}						\
-	(*(node)->nodeclass->eval)(node, ctxt, res);	\
+		__FUNCTION__, node);
+
+# define EVAL_DEBUG_LEAVE(node, ctxt, res)		\
 	if (SEE_eval_debug && (ctxt)) {			\
 	    dprintf("eval: %s leave %p -> %p = ", 	\
 		__FUNCTION__, node, (void *)(res));	\
 	    dprintv((ctxt)->interpreter, res);		\
 	    dprintf("\n");				\
-	}						\
-	if (ctxt) {					\
-	  (ctxt)->interpreter->try_location = _loc_save;\
-	  if (_loc_save != &(node)->location)		\
-	    trace_event(ctxt);				\
-	}						\
-    } while (0)
+	}
 
 #else /* NDEBUG */
+
+# define EVAL_DEBUG_ENTER(node)
+# define EVAL_DEBUG_LEAVE(node)
+
+#endif /* NDEBUG */
 
 # define EVAL(node, ctxt, res)				\
     do {						\
 	struct SEE_throw_location * _loc_save = NULL;	\
+	EVAL_DEBUG_ENTER(node)				\
 	if (ctxt) {					\
 	  _loc_save = (ctxt)->interpreter->try_location;\
 	  (ctxt)->interpreter->try_location =		\
 		&(node)->location;			\
-	  if (_loc_save != &(node)->location)		\
-	    trace_event(ctxt);				\
 	}						\
 	(*(node)->nodeclass->eval)(node, ctxt, res);	\
-	if (ctxt) {					\
-	  (ctxt)->interpreter->try_location = _loc_save;\
-	  if (_loc_save != &(node)->location)		\
-	    trace_event(ctxt);				\
-	}						\
+	EVAL_DEBUG_LEAVE(node, ctxt, res)		\
     } while (0)
-
-#endif /* NDEBUG */
+  /*
+   * Note: there is no need to restore the _loc_save in
+   * a try-finally block
+   */
 
 #define FPROC(node, ctxt)				\
     do {						\
@@ -1434,12 +1436,13 @@ lookahead(parser, n)
  * This need only be called when try_location changes.
  */
 static void
-trace_event(ctxt)
+trace_event(ctxt, event)
 	struct SEE_context *ctxt;
+	enum SEE_trace_event event;
 {
 	if (ctxt->interpreter->trace)
 	    (*ctxt->interpreter->trace)(ctxt->interpreter,
-		ctxt->interpreter->try_location, ctxt);
+		ctxt->interpreter->try_location, ctxt, event);
 }
 
 /*
@@ -1800,9 +1803,15 @@ RegularExpressionLiteral_eval(na, context, res)
 	struct RegularExpressionLiteral_node *n = 
 		CAST_NODE(na, RegularExpressionLiteral);
 	struct SEE_interpreter *interp = context->interpreter;
+	struct SEE_traceback *tb;
 
+        tb = traceback_enter(interp, interp->RegExp, &n->node.location,
+		SEE_CALLTYPE_CONSTRUCT);
+	TRACE(na, context, SEE_TRACE_CALL);
 	SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp, 
 		2, n->argv, res);
+	TRACE(na, context, SEE_TRACE_RETURN);
+        traceback_leave(interp, tb);
 }
 
 #if WITH_PARSER_PRINT
@@ -2024,11 +2033,18 @@ ArrayLiteral_eval(na, context, res)
 	struct SEE_value expv, elv;
 	struct SEE_string *ind;
 	struct SEE_interpreter *interp = context->interpreter;
+	struct SEE_traceback *tb;
 
 	ind = SEE_string_new(interp, 16);
 
+        tb = traceback_enter(interp, interp->Array, &n->node.location,
+		SEE_CALLTYPE_CONSTRUCT);
+	TRACE(na, context, SEE_TRACE_CALL);
 	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
 		0, NULL, res);
+	TRACE(na, context, SEE_TRACE_RETURN);
+        traceback_leave(interp, tb);
+
 	for (element = n->first; element; element = element->next) {
 		EVAL(element->expr, context, &expv);
 		GetValue(context, &expv, &elv);
@@ -2481,8 +2497,10 @@ MemberExpression_new_eval(na, context, res)
 			STR(not_a_constructor));
         tb = traceback_enter(interp, r2.u.object, &n->node.location,
 		SEE_CALLTYPE_CONSTRUCT);
+	TRACE(na, context, SEE_TRACE_CALL);
 	SEE_OBJECT_CONSTRUCT(interp, r2.u.object, r2.u.object, 
 		argc, argv, res);
+	TRACE(na, context, SEE_TRACE_RETURN);
 	traceback_leave(interp, tb);
 }
 
@@ -2754,6 +2772,7 @@ CallExpression_eval(na, context, res)
 		r7 = r6;
         tb = traceback_enter(interp, r3.u.object, &n->node.location,
 		SEE_CALLTYPE_CALL);
+	TRACE(na, context, SEE_TRACE_CALL);
 	if (r3.u.object == interp->Global_eval) {
 	    /* The special 'eval' function' */
 	    eval(context, r7, argc, argv, res);
@@ -2763,6 +2782,7 @@ CallExpression_eval(na, context, res)
 #endif
 	    SEE_OBJECT_CALL(interp, r3.u.object, r7, argc, argv, res);
 	}
+	TRACE(na, context, SEE_TRACE_RETURN);
         traceback_leave(interp, tb);
 }
 
@@ -6239,6 +6259,8 @@ VariableStatement_eval(na, context, res)
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	struct SEE_value v;
+
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, &v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
@@ -6444,11 +6466,12 @@ VariableDeclaration_parse(parser)
 
 /* 12.3 */
 static void
-EmptyStatement_eval(n, context, res)
-	struct node *n;
+EmptyStatement_eval(na, context, res)
+	struct node *na;
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 }
 
@@ -6498,6 +6521,8 @@ ExpressionStatement_eval(na, context, res)
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	struct SEE_value *v = SEE_NEW(context->interpreter, struct SEE_value);
+
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
@@ -6560,6 +6585,8 @@ IfStatement_eval(na, context, res)
 {
 	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
 	struct SEE_value r1, r2, r3;
+
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->cond, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToBoolean(context->interpreter, &r2, &r3);
@@ -6736,7 +6763,8 @@ step2:	EVAL(n->body, context, res);
 	}
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 	    return;
- step7: EVAL(n->cond, context, &r7);
+ step7: TRACE(na, context, SEE_TRACE_STATEMENT);
+ 	EVAL(n->cond, context, &r7);
 	GetValue(context, &r7, &r8);
 	SEE_ToBoolean(context->interpreter, &r8, &r9);
 	if (r9.u.boolean)
@@ -6752,6 +6780,7 @@ IterationStatement_dowhile_print(na, printer)
 {
 	struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
+
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(do));
@@ -6779,6 +6808,7 @@ IterationStatement_while_visit(na, v, va)
 {
         struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
+
 	VISIT(n->cond, v, va);
 	VISIT(n->body, v, va);
 }
@@ -6791,6 +6821,7 @@ IterationStatement_dowhile_isconst(na, interp)
 {
         struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
+
 	if (ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
@@ -6820,7 +6851,8 @@ IterationStatement_while_eval(na, context, res)
 	struct SEE_value *v, r2, r3, r4;
 
 	v = NULL;
- step2: EVAL(n->cond, context, &r2);
+ step2: TRACE(na, context, SEE_TRACE_STATEMENT);
+ 	EVAL(n->cond, context, &r2);
 	GetValue(context, &r2, &r3);
 	SEE_ToBoolean(context->interpreter, &r3, &r4);
 	if (!r4.u.boolean) {
@@ -6852,6 +6884,7 @@ IterationStatement_while_print(na, printer)
 {
 	struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
+
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(while));
@@ -6909,16 +6942,19 @@ IterationStatement_for_eval(na, context, res)
 	struct SEE_value *v, r2, r3, r6, r7, r8, r16, r17;
 
 	if (n->init) {
+	    TRACE(n->init, context, SEE_TRACE_STATEMENT);
 	    EVAL(n->init, context, &r2);
 	    GetValue(context, &r2, &r3);		/* r3 not used */
 	}
 	v = NULL;
  step5:	if (n->cond) {
+	    TRACE(n->cond, context, SEE_TRACE_STATEMENT);
 	    EVAL(n->cond, context, &r6);
 	    GetValue(context, &r6, &r7);
 	    SEE_ToBoolean(context->interpreter, &r7, &r8);
 	    if (!r8.u.boolean) goto step19;
-	}
+	} else
+	    TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
@@ -6931,6 +6967,7 @@ IterationStatement_for_eval(na, context, res)
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
 step15: if (n->incr) {
+	    TRACE(n->incr, context, SEE_TRACE_STATEMENT);
 	    EVAL(n->incr, context, &r16);
 	    GetValue(context, &r16, &r17);	/* r17 not used */
 	}
@@ -6946,6 +6983,7 @@ IterationStatement_for_print(na, printer)
 {
 	struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
+
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(for));
@@ -6976,6 +7014,7 @@ IterationStatement_for_visit(na, v, va)
 {
 	struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
+
 	if (n->init) VISIT(n->init, v, va);
 	if (n->cond) VISIT(n->cond, v, va);
 	if (n->incr) VISIT(n->incr, v, va);
@@ -6990,6 +7029,7 @@ IterationStatement_for_isconst(na, interp)
 {
         struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
+
 	if (n->cond && ISCONST(n->cond, interp)) {
 		struct SEE_value r1, r3;
 		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
@@ -7026,14 +7066,17 @@ IterationStatement_forvar_eval(na, context, res)
 		CAST_NODE(na, IterationStatement_for);
 	struct SEE_value *v, r1, r4, r5, r6, r14, r15;
 
+	TRACE(n->init, context, SEE_TRACE_STATEMENT);
 	EVAL(n->init, context, &r1);
 	v = NULL;
  step3: if (n->cond) {
+	    TRACE(n->cond, context, SEE_TRACE_STATEMENT);
 	    EVAL(n->cond, context, &r4);
 	    GetValue(context, &r4, &r5);
 	    SEE_ToBoolean(context->interpreter, &r5, &r6);
 	    if (!r6.u.boolean) goto step17; /* XXX spec bug: says step 14 */
-	}
+	} else
+	    TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
@@ -7046,6 +7089,7 @@ IterationStatement_forvar_eval(na, context, res)
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
 step13: if (n->incr) {
+	    TRACE(n->incr, context, SEE_TRACE_STATEMENT);
 	    EVAL(n->incr, context, &r14);
 	    GetValue(context, &r14, &r15); 		/* value not used */
 	}
@@ -7061,6 +7105,7 @@ IterationStatement_forvar_print(na, printer)
 {
 	struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
+		
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(for));
@@ -7112,6 +7157,7 @@ IterationStatement_forin_eval(na, context, res)
 	struct SEE_value *v, r1, r2, r3, r5, r6;
 	struct SEE_string **props0, **props;
 
+        TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->list, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToObject(interp, &r2, &r3);
@@ -7149,6 +7195,7 @@ IterationStatement_forin_print(na, printer)
 {
 	struct IterationStatement_forin_node *n = 
 		CAST_NODE(na, IterationStatement_forin);
+
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(for));
@@ -7204,6 +7251,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	struct VariableDeclaration_node *lhs 
 		= CAST_NODE(n->lhs, VariableDeclaration);
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->lhs, context, NULL);
 	EVAL(n->list, context, &r2);
 	GetValue(context, &r2, &r3);
@@ -7243,6 +7291,7 @@ IterationStatement_forvarin_print(na, printer)
 {
 	struct IterationStatement_forin_node *n = 
 		CAST_NODE(na, IterationStatement_forin);
+
 	if (n->node.istarget)
 		print_label(printer, n);
 	PRINT_STRING(STR(for));
@@ -7425,6 +7474,8 @@ ContinueStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct ContinueStatement_node *n = CAST_NODE(na, ContinueStatement);
+
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_CONTINUE, NULL, n->target);
 }
 
@@ -7435,6 +7486,7 @@ ContinueStatement_print(na, printer)
 	struct printer *printer;
 {
 	struct ContinueStatement_node *n = CAST_NODE(na, ContinueStatement);
+
 	PRINT_STRING(STR(continue));
 	PRINT_CHAR(' ');
 	PRINT_CHAR('L');
@@ -7500,6 +7552,8 @@ BreakStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct BreakStatement_node *n = CAST_NODE(na, BreakStatement);
+
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_BREAK, NULL, n->target);
 }
 
@@ -7576,6 +7630,7 @@ ReturnStatement_eval(na, context, res)
 	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
 	struct SEE_value r2, *v;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->expr, context, &r2);
 	v = SEE_NEW(context->interpreter, struct SEE_value);
 	GetValue(context, &r2, v);
@@ -7623,9 +7678,9 @@ ReturnStatement_undef_eval(na, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-/*	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement); */
 	static struct SEE_value undef = { SEE_UNDEFINED };
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, &undef, NULL);
 }
 
@@ -7635,7 +7690,6 @@ ReturnStatement_undef_print(na, printer)
 	struct node *na; /* (struct ReturnStatement_node) */
 	struct printer *printer;
 {
-/*	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement); */
 	PRINT_STRING(STR(return));
 	PRINT_CHAR(';');
 	PRINT_NEWLINE(0);
@@ -7690,6 +7744,7 @@ WithStatement_eval(na, context, res)
 	struct SEE_value r1, r2, r3;
 	struct SEE_scope *s;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
 	SEE_ToObject(context->interpreter, &r2, &r3);
@@ -7838,6 +7893,7 @@ SwitchStatement_eval(na, context, res)
 	struct SwitchStatement_node *n = CAST_NODE(na, SwitchStatement);
 	struct SEE_value *v, r1, r2;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->cond, context, &r1);
 	GetValue(context, &r1, &r2);
 	SwitchStatement_caseblock(n, context, &r2, res);
@@ -8011,9 +8067,11 @@ ThrowStatement_eval(na, context, res)
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	struct SEE_value r1, r2;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
 
+	TRACE(na, context, SEE_TRACE_THROW);
 	SEE_THROW(context->interpreter, &r2);
 
 	/* NOTREACHED */
@@ -8131,12 +8189,15 @@ TryStatement_catch_eval(na, context, res)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_try_context_t ctxt;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	SEE_TRY(context->interpreter, ctxt)
 	    EVAL(n->block, context, res);
 	if (SEE_CAUGHT(ctxt))
 	    TryStatement_catch(n, context, SEE_CAUGHT(ctxt), res);
-	if (res->u.completion.type == SEE_COMPLETION_THROW)
+	if (res->u.completion.type == SEE_COMPLETION_THROW) {
+	    TRACE(na, context, SEE_TRACE_THROW);
 	    SEE_THROW(context->interpreter, res->u.completion.value);
+	}
 }
 
 #if WITH_PARSER_PRINT
@@ -8194,6 +8255,7 @@ TryStatement_finally_eval(na, context, res)
 	struct SEE_value r2;
 	SEE_try_context_t ctxt;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	SEE_TRY(context->interpreter, ctxt)
 	    EVAL(n->block, context, res);
 	if (SEE_CAUGHT(ctxt))
@@ -8202,8 +8264,10 @@ TryStatement_finally_eval(na, context, res)
 	EVAL(n->bfinally, context, &r2);
 	if (r2.u.completion.type != SEE_COMPLETION_NORMAL)
 	    SEE_VALUE_COPY(res, &r2); 		/* break, return etc */
-	if (res->u.completion.type == SEE_COMPLETION_THROW)
+	if (res->u.completion.type == SEE_COMPLETION_THROW) {
+	    TRACE(na, context, SEE_TRACE_THROW);
 	    SEE_THROW(context->interpreter, res->u.completion.value);
+	}
 }
 
 #if WITH_PARSER_PRINT
@@ -8260,6 +8324,7 @@ TryStatement_catchfinally_eval(na, context, res)
 	SEE_try_context_t ctxt, ctxt2;
 	struct SEE_interpreter *interp = context->interpreter;
 
+	TRACE(na, context, SEE_TRACE_STATEMENT);
 	SEE_TRY(interp, ctxt)
 /*1*/	    EVAL(n->block, context, &r1);
 	if (SEE_CAUGHT(ctxt)) 
@@ -8288,9 +8353,10 @@ TryStatement_catchfinally_eval(na, context, res)
 		retv = &r6;
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(retv) == SEE_COMPLETION);
 		
-	if (retv->u.completion.type == SEE_COMPLETION_THROW)
+	if (retv->u.completion.type == SEE_COMPLETION_THROW) {
+	    TRACE(na, context, SEE_TRACE_THROW);
 	    SEE_THROW(interp, retv->u.completion.value);
-	else 
+	} else 
 	    SEE_VALUE_COPY(res, retv);
 }
 
