@@ -36,6 +36,10 @@
 # include <stdlib.h>
 #endif
 
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
