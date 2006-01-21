@@ -113,8 +113,9 @@ static SEE_char_t urihexval(struct SEE_interpreter *, unsigned int,
 static struct SEE_string *Decode(struct SEE_interpreter *, 
         struct SEE_string *, const unsigned char *);
 
+/* Note: [[Class]] is not "Global" but "global" for mozilla compatibility */
 static struct SEE_objectclass global_class = {
-	"Global",			/* Class */
+	"global",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
