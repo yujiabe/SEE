@@ -40,7 +40,6 @@ error
 #
 # some errors from the string module
 #
-out_of_memory =	"No more memory left"
 no_string_space = "No string space left"
 bad_utf16_string = "Invalid UTF-16 sequence was found in the string"
 unknown_file = "<input>"
@@ -82,8 +81,7 @@ toLocaleString_notfunc   = "'toLocaleString' property is not a function"
 toLocaleString_notstring = "toLocaleString() property did not return a string"
 
 
-# The default Function program body
-default_function_body = "return undefined;"
+# Function body strings
 implementation_dependent = "ECMA-262 'implementation dependent' result"
 
 #
@@ -91,7 +89,6 @@ implementation_dependent = "ECMA-262 'implementation dependent' result"
 #
 empty_string = ""
 zero_digit = "0"
-object_lbracket = "[object "
 comma = ","
 write
 writeval
@@ -113,8 +110,6 @@ URIError
 #
 # Strings used by functions
 #
-Activation
-Arguments
 arguments
 callee
 
@@ -178,7 +173,6 @@ toUTCString
 #
 # names used by Global
 #
-Global
 Object
 Function
 Array
@@ -188,16 +182,6 @@ Number
 Date
 RegExp
 Math
-
-ObjectConstructor
-FunctionConstructor
-ErrorConstructor
-ArrayConstructor
-StringConstructor
-BooleanConstructor
-NumberConstructor
-DateConstructor
-RegExpConstructor
 
 #
 # constants and methods names of built-in objects
@@ -315,9 +299,7 @@ escaped_lit_nl = "Backslash immediately followed by end of line"
 invalid_esc_x =	 "Invalid \\x escape"
 invalid_esc_u =	 "Invalid \\u escape"
 hex_literal_detritus = "Unexpected characters after hexadecimal literal"
-oct_literal_detritus = "Unexpected characters after octal literal"
 dec_literal_detritus = "Unexpected characters after decimal literal"
-number_too_long = "Number is too long"
 eof_in_c_comment = "Comment is missing its closing '*/'"
 eof_in_regex = "Regular expression missing final '/'"
 broken_regex = "Regular expression missing final '/'"
@@ -394,7 +376,6 @@ false
 # compatibility strings
 #
 __proto__
-__parent__
 
 #
 # cfunction strings

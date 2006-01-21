@@ -128,7 +128,7 @@ static struct SEE_string *object_to_string(struct SEE_interpreter *,
 
 /* object class for String constructor */
 static struct SEE_objectclass string_const_class = {
-	STR(StringConstructor),		/* Class */
+	"StringConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -142,7 +142,7 @@ static struct SEE_objectclass string_const_class = {
 
 /* object class for String.prototype and string instances */
 static struct SEE_objectclass string_inst_class = {
-	STR(String),			/* Class */
+	"String",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

@@ -73,7 +73,7 @@ static void boolean_proto_valueOf(struct SEE_interpreter *,
 
 /* object class for Boolean constructor */
 static struct SEE_objectclass boolean_const_class = {
-	STR(BooleanConstructor),	/* Class */
+	"BooleanConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -87,7 +87,7 @@ static struct SEE_objectclass boolean_const_class = {
 
 /* object class for Boolean.prototype and number instances */
 static struct SEE_objectclass boolean_inst_class = {
-	STR(Boolean),			/* Class */
+	"Boolean",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

@@ -170,9 +170,7 @@ SEE_PrintObject(interp, o, f)
 	if (known)
 		fprintf(f, " (%s)", known);
 	if (o && o->objectclass && !known) {
-		fprintf(f, " \"");
-		SEE_string_fputs(o->objectclass->Class, f);
-		fprintf(f, "\"");
+		fprintf(f, " \"%s\"", o->objectclass->Class);
 	}
 	fprintf(f, ">");
 }
@@ -232,13 +230,11 @@ SEE_PrintTraceback(interp, f)
 		fo = tb->callee;
 		if (fo == NULL)
 		    fprintf(f, "?");
-		else if (tb->call_type == SEE_CALLTYPE_CONSTRUCT) {
-		    fprintf(f, "new ");
-		    if (fo->objectclass->Class != NULL)
-			SEE_string_fputs(fo->objectclass->Class, f);
-		    else
-			fprintf(f, "?");
-		} else if (tb->call_type == SEE_CALLTYPE_CALL) {
+		else if (tb->call_type == SEE_CALLTYPE_CONSTRUCT)
+		    fprintf(f, "new %s", fo->objectclass->Class 
+			    ? fo->objectclass->Class 
+			    : "?");
+		else if (tb->call_type == SEE_CALLTYPE_CALL) {
 		    fprintf(f, "call ");
 		    /* XXX is fo == interp->Global_eval case handled OK? */
 		    fname = SEE_function_getname(interp, fo);

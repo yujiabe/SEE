@@ -300,7 +300,7 @@ static void init_time(void);
 
 /* object class for Date constructor */
 static struct SEE_objectclass date_const_class = {
-	STR(DateConstructor),		/* Class */
+	"DateConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -314,7 +314,7 @@ static struct SEE_objectclass date_const_class = {
 
 /* object class for Date.prototype and date instances */
 static struct SEE_objectclass date_inst_class = {
-	STR(Date),			/* Class */
+	"Date",				/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

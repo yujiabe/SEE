@@ -81,7 +81,7 @@ static void regexp_proto_toString(struct SEE_interpreter *,
 
 /* object class for RegExp constructor */
 static struct SEE_objectclass regexp_const_class = {
-	STR(RegExpConstructor),		/* Class */
+	"RegExpConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -95,7 +95,7 @@ static struct SEE_objectclass regexp_const_class = {
 
 /* object class for RegExp.prototype */
 static struct SEE_objectclass regexp_proto_class = {
-	STR(Object),			/* Class 15.10.6 */
+	"Object",			/* Class 15.10.6 */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -107,7 +107,7 @@ static struct SEE_objectclass regexp_proto_class = {
 
 /* object class for regexp instances */
 static struct SEE_objectclass regexp_inst_class = {
-	STR(RegExp),			/* Class */
+	"RegExp",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

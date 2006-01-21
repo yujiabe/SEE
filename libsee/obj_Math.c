@@ -96,7 +96,7 @@ static void math_tan(struct SEE_interpreter *, struct SEE_object *,
 
 /* Math is a normal native object */
 static struct SEE_objectclass math_class = {
-	STR(Math),			/* Class */
+	"Math",				/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

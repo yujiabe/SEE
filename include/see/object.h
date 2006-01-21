@@ -49,7 +49,7 @@ typedef struct SEE_enum *(*SEE_enumerator_fn_t)(struct SEE_interpreter *i,
  * or HasInstance. Unimplemented optional methods are indicated as NULL.
  */
 struct SEE_objectclass {
-	struct SEE_string *	Class;			/* [[Class]] */
+	const char *		Class;			/* [[Class]] */
 	SEE_get_fn_t		Get;			/* [[Get]] */
 	SEE_put_fn_t		Put;			/* [[Put]] */
 	SEE_boolean_fn_t	CanPut;			/* [[CanPut]] */

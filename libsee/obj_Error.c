@@ -77,7 +77,7 @@ static void error_construct(struct SEE_interpreter *, struct SEE_object *,
 
 /* object class for Error constructors */
 static struct SEE_objectclass error_const_class = {
-	STR(ErrorConstructor),			/* Class */
+	"ErrorConstructor",			/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -91,7 +91,7 @@ static struct SEE_objectclass error_const_class = {
 
 /* object class for Error.prototype */
 static struct SEE_objectclass error_inst_class = {
-	STR(Error),				/* Class */
+	"Error",				/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */

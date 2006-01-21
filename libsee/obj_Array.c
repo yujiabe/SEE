@@ -120,7 +120,7 @@ static int array_delete(struct SEE_interpreter *, struct SEE_object *,
 
 /* object class for Array constructor */
 static struct SEE_objectclass array_const_class = {
-	STR(ArrayConstructor),		/* Class */
+	"ArrayConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -134,7 +134,7 @@ static struct SEE_objectclass array_const_class = {
 
 /* object class for array instances */
 static struct SEE_objectclass array_inst_class = {
-	STR(Array),			/* Class */
+	"Array",			/* Class */
 	array_get,			/* Get */
 	array_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

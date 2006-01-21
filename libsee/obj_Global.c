@@ -114,7 +114,7 @@ static struct SEE_string *Decode(struct SEE_interpreter *,
         struct SEE_string *, const unsigned char *);
 
 static struct SEE_objectclass global_class = {
-	STR(global),			/* Class */
+	"Global",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

@@ -84,7 +84,7 @@ static void object_proto_propertyIsEnumerable(struct SEE_interpreter *,
         struct SEE_value *);
 
 static struct SEE_objectclass object_const_class = {
-	STR(ObjectConstructor),			/* Class */
+	"ObjectConstructor",			/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -97,7 +97,7 @@ static struct SEE_objectclass object_const_class = {
 };
 
 static struct SEE_objectclass object_inst_class = {
-	STR(Object),				/* Class */
+	"Object",				/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -221,11 +221,12 @@ object_proto_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv;
 	struct SEE_value *res;
 {
-	struct SEE_string *s = SEE_string_new(interp, 32);
+	struct SEE_string *s;
 
-	SEE_string_append(s, STR(object_lbracket)); /* "[object " */
-	SEE_string_append(s, thisobj->objectclass->Class);
-	SEE_string_addch(s, ']');
+	s = SEE_string_sprintf(interp, "[object %s]",
+		thisobj && thisobj->objectclass && thisobj->objectclass->Class
+		? thisobj->objectclass->Class 
+		: "(null)");
 	SEE_SET_STRING(res, s);
 }
 

@@ -87,7 +87,7 @@ static void number_proto_toPrecision(struct SEE_interpreter *,
 
 /* object class for Number constructor */
 static struct SEE_objectclass number_const_class = {
-	STR(NumberConstructor),		/* Class */
+	"NumberConstructor",		/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */
@@ -101,7 +101,7 @@ static struct SEE_objectclass number_const_class = {
 
 /* object class for Number.prototype and number instances */
 static struct SEE_objectclass number_inst_class = {
-	STR(Number),			/* Class */
+	"Number",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
 	SEE_native_canput,		/* CanPut */

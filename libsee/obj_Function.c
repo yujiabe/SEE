@@ -142,7 +142,7 @@ static struct SEE_enum *function_inst_enumerator(struct SEE_interpreter *,
 
 /* object class for Function constructor */
 static struct SEE_objectclass function_const_class = {
-	STR(FunctionConstructor),		/* Class */
+	"FunctionConstructor",			/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -156,7 +156,7 @@ static struct SEE_objectclass function_const_class = {
 
 /* object class for function delegate instances */
 static struct SEE_objectclass function_inst_class = {
-	STR(Function),				/* Class */
+	"Function",				/* Class */
 	function_inst_get,			/* Get */
 	function_inst_put,			/* Put */
 	function_inst_canput,			/* CanPut */
@@ -171,7 +171,7 @@ static struct SEE_objectclass function_inst_class = {
 
 /* object class for 'arguments' instances */
 static struct SEE_objectclass arguments_class = {
-	STR(Arguments),				/* Class */
+	"Arguments",				/* Class */
 	arguments_get,				/* Get */
 	arguments_put,				/* Put */
 	arguments_canput,			/* CanPut */
@@ -183,7 +183,7 @@ static struct SEE_objectclass arguments_class = {
 
 /* object class for objects created by instance constructs (13.2.2) */
 static struct SEE_objectclass inst_inst_class = {
-	STR(Object),				/* Class 13.2.2(2) */
+	"Object",				/* Class 13.2.2(2) */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -195,7 +195,7 @@ static struct SEE_objectclass inst_inst_class = {
 
 /* object class for activation objects (10.2.3) */
 struct SEE_objectclass SEE_activation_class = {
-	STR(Activation),			/* Class */
+	"Activation",				/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
@@ -631,9 +631,10 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 		thisobj->objectclass->Construct != NULL)
 	    {
 		    s = SEE_string_sprintf(interp, 
-		    	"function () { /* constructor ");
-		    SEE_string_append(s, thisobj->objectclass->Class);
-		    SEE_string_append(s, STR(cfunction_body3));
+		    	"function () { /* constructor %s */ }",
+			    thisobj->objectclass->Class
+			    ? thisobj->objectclass->Class
+			    : "?");
 		    SEE_SET_STRING(res, s);
 		    return;
 	    }

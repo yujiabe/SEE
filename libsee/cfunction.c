@@ -86,7 +86,7 @@ static void cfunction_call(struct SEE_interpreter *, struct SEE_object *,
  * CFunction object class
  */
 struct SEE_objectclass SEE_cfunction_class = {
-	STR(Function),		/* Class */
+	"Function",		/* Class */
 	cfunction_get,		/* Get */
 	SEE_no_put,		/* Put */
 	SEE_no_canput,		/* CanPut */

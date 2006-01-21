@@ -470,7 +470,7 @@ SEE_native_enumerator(interp, o)
  */
 
 static struct SEE_objectclass native_class = {
-	STR(native),				/* Class */
+	"native",				/* Class */
 	SEE_native_get,				/* Get */
 	SEE_native_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
