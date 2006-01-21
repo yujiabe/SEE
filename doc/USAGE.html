@@ -1523,7 +1523,7 @@ provides the object's behaviour. The class structure looks like this:
 </p>
 
 <pre><dfn id="struct_SEE_objectclass">struct SEE_objectclass</dfn> {
-        struct SEE_string *     Class;          <i>/* mandatory */</i>
+        const char *            Class;          <i>/* mandatory */</i>
         SEE_get_fn_t            Get;            <i>/* mandatory */</i>
         SEE_put_fn_t            Put;            <i>/* mandatory */</i>
         SEE_boolean_fn_t        CanPut;         <i>/* mandatory */</i>
