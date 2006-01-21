@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([see],[1.4],[leonard@users.sourceforge.net])
+AC_INIT([see],[2.0],[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
 AUTOMAKE_OPTIONS="foreign"
@@ -232,8 +232,8 @@ fi
 
 dnl -- functions that have workarounds written for
 AC_CHECK_FUNCS([strdup GC_malloc getopt \
-		gettimeofday GetSystemTimeAsFileTime time \
-		localtime timegm
+		time gettimeofday GetSystemTimeAsFileTime \
+		localtime mktime
 		])
 AC_CHECK_FUNCS([GC_gcollect GC_dump GC_malloc_string GC_free])
 
