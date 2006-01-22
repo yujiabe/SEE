@@ -415,8 +415,8 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_string *s;
 	struct SEE_value vss, vi;
-	int position, k;
-	unsigned int sslen, slen;
+	int position;
+	unsigned int k, sslen, slen;
 		
 	s = object_to_string(interp, thisobj);
 	slen = s->length;
@@ -435,13 +435,14 @@ string_proto_indexOf(interp, self, thisobj, argc, argv, res)
 	if (position < 0) position = 0;
 	if (position > slen) position = slen;
 	
-	for (k = position; k <= (int)slen - sslen; k++)
-	    if (memcmp(&s->data[k], vss.u.string->data,
-		sslen * sizeof vss.u.string->data[0]) == 0)
-	    {
-		SEE_SET_NUMBER(res, k);
-		return;
-	    }
+	if (slen >= sslen)
+	    for (k = (unsigned int)position; k <= slen - sslen; k++)
+	        if (memcmp(&s->data[k], vss.u.string->data,
+		    sslen * sizeof vss.u.string->data[0]) == 0)
+	        {
+		    SEE_SET_NUMBER(res, k);
+		    return;
+	        }
 	SEE_SET_NUMBER(res, -1);
 }
 

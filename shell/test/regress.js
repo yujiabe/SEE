@@ -13,8 +13,13 @@ test("'foo'.lastIndexOf('o', 0)", -1)
 test("Function().__proto__", Function.prototype)
 test("typeof asjlkhadlsh", "undefined")
 
+/* bug 32 */
 function f() { return this; } 
 function g() { var h = f; return h(); } 
 test("g().toString()", this.toString())
+
+/* bug 33 */
+test("(new String()).indexOf()", -1)
+
 
 finish()
