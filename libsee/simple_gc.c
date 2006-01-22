@@ -104,6 +104,7 @@ static char *allocation_min;
 static char *allocation_max;
 static unsigned int allocation_total_size;
 static unsigned int allocation_total_count;
+static unsigned int collect_at = 1024;		/* collect at this size */
 static struct root *user_roots;
 
 /*
@@ -114,7 +115,6 @@ static void
 allocation_insert(new_node)
 	struct allocation *new_node;
 {
-	struct allocation **a;
 	struct allocation **root = &allocation_root;
 	struct allocation **last_imbalance = NULL;
 	struct allocation **n;
@@ -354,6 +354,12 @@ allocate(len, init_state, finalizer)
 	    return NULL;
 	}
 
+	/* Collect when we have allocated twice as much as last time */
+	if (allocation_total_size >= collect_at) {
+	    gc_collect();
+	    collect_at *= 2;
+	}
+
 	/* Call system malloc, or collect if it is exhausted */
 	newa = (struct allocation *)malloc(sizeof *newa + len);
 	if (!newa) {
@@ -363,14 +369,15 @@ allocate(len, init_state, finalizer)
 	        return NULL;
 	}
 
+	/* Fill in the object's header and insert it */
 	newa->extent = sizeof *newa + len;
 	newa->state = init_state;
 	newa->finalizer = finalizer;
 	allocation_insert(newa);
 
+	/* Accounting */
 	allocation_total_size += ALLOCATION_LENGTH(newa);
 	allocation_total_count++;
-
 	if (!allocation_min || ALLOCATION_BASE(newa) < allocation_min)
 		allocation_min = ALLOCATION_BASE(newa);
 	if (ALLOCATION_END(newa) >= allocation_max)
