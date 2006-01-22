@@ -284,10 +284,10 @@ SEE_tokenname_buf(token, buf, buflen)
 		name = tokch;
 	} else 
 		name = "<bad token>";
-	namelen = strlen(tok_names[i].name);
+	namelen = strlen(name);
 	if (namelen > buflen - 1)
 		namelen = buflen - 1;
-        memcpy(buf, tok_names[i].name, namelen);
+        memcpy(buf, name, namelen);
 	buf[namelen] = 0;
         return;
 }
