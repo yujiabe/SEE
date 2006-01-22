@@ -286,38 +286,6 @@ SEE_string_fputs(s, f)
 	return EOF;
 }
 
-/*
- * sprintf-like interface to new strings.
- * Assumes the format yields 7-bit ASCII (and not UTF-8!).
- * (Also assumes a va_list can be passed multiple times to vsnprintf!)
- */
-struct SEE_string *
-SEE_string_vsprintf(interp, fmt, ap)
-	struct SEE_interpreter *interp;
-	const char *fmt;
-	va_list ap;
-{
-	struct SEE_string *s;
-	
-	s = SEE_NEW(interp, struct SEE_string);
-	_SEE_vsprintf(interp, s, fmt, ap);
-	s->stringclass = NULL;
-	s->interpreter = interp;
-	return s;
-}
-
-struct SEE_string *
-SEE_string_sprintf(struct SEE_interpreter *interp, const char *fmt, ...)
-{
-	va_list ap;
-	struct SEE_string *s;
-
-	va_start(ap, fmt);
-	s = SEE_string_vsprintf(interp, fmt, ap);
-	va_end(ap);
-	return s;
-}
-
 /*------------------------------------------------------------
  * The simple string class
  */
@@ -413,6 +381,38 @@ SEE_string_new(interp, space)
 	if (space)
 	    simple_growby((struct SEE_string *)ss, space);
 	return (struct SEE_string *)ss;
+}
+
+/*
+ * sprintf-like interface to new strings.
+ * Assumes the format yields 7-bit ASCII (and not UTF-8!).
+ * (Also assumes a va_list can be passed multiple times to vsnprintf!)
+ * Returns a simple string that can be grown.
+ */
+struct SEE_string *
+SEE_string_vsprintf(interp, fmt, ap)
+	struct SEE_interpreter *interp;
+	const char *fmt;
+	va_list ap;
+{
+	struct simple_string *ss;
+	
+	ss = (struct simple_string *)SEE_string_new(interp, 0);
+	_SEE_vsprintf(interp, &ss->string, fmt, ap);
+	ss->space = ss->string.length;
+	return (struct SEE_string *)ss;
+}
+
+struct SEE_string *
+SEE_string_sprintf(struct SEE_interpreter *interp, const char *fmt, ...)
+{
+	va_list ap;
+	struct SEE_string *s;
+
+	va_start(ap, fmt);
+	s = SEE_string_vsprintf(interp, fmt, ap);
+	va_end(ap);
+	return s;
 }
 
 /**
