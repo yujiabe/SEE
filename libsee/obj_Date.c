@@ -700,39 +700,70 @@ parsetime(interp, str)
 	 *
 	 * If the GMT suffix is missing, the date is assumed to be
 	 * in the local timezone.
+	 *	"wkd, dd Mmm yyyy hh:mm:ss"  - assume local timezone
+	 *	"wkd, dd Mmm yyyy hh:mm"     - assume local tz ss=00
+	 *	"wkd, dd Mmm yyyy"           - assume local tz 00:00:00
+	 *
+	 * Also, the day and month may be swapped around:
+	 *      "wkd Mmm dd yyyy hh:mm:ss"   - Netscape-style
+	 *
+	 * The "GMT" can be followed by an offset
 	 */
 
-	int i, d, m, y, yneg, hr, min, sec;
+	int i, d, m, y, yneg, hr, min, sec, wd;
 	int len = str->length;
 	SEE_char_t *s = str->data;
 	static char mname[] = "janfebmaraprmayjunjulaugsepoctnovdec";
+	static char wname[] = "sunmontuewedthufrisat";
 	SEE_number_t t;
 		
 
 	i = 0;
 	while (i < len && ISWHITE(s[i])) i++;
 
-	if (i + 3 < len && ISLETTER(s[i]) && ISLETTER(s[i+1]) &&
-			   ISLETTER(s[i+2]) && s[i+3] == ',')
+	if (i + 2 < len && ISLETTER(s[i]) && ISLETTER(s[i+1]) &&
+			   ISLETTER(s[i+2]))
 	{
-		i += 4;						/* Wkday, */
-		while (i < len && ISWHITE(s[i])) i++;		/* space? */
+		for (wd = 0; wd < 7; wd++)
+		    if (wname[wd*3] == TOLOWER(s[i]) &&
+		        wname[wd*3+1] == TOLOWER(s[i+1]) &&
+		        wname[wd*3+2] == TOLOWER(s[i+2]))
+			    break;
+		if (wd < 7) {
+		    i += 3;					/* Wkday */
+		    if (i < len && s[i] == ',') i++;		/* ','? */
+		    while (i < len && ISWHITE(s[i])) i++;	/* space? */
+		}
 	}
 
-	if (!(i < len && ISDIGIT(s[i]))) return SEE_NaN;	/* day */
-	for (d = 0; i < len && ISDIGIT(s[i]); i++)
+	if (i < len && ISDIGIT(s[i])) {
+	    for (d = 0; i < len && ISDIGIT(s[i]); i++)		/* day */
 		d = 10 * d + s[i] - '0';
-	if (d < 1 || d > 31) return SEE_NaN;
-	if (!(i < len && ISWHITE(s[i]))) return SEE_NaN;	/* space */
-	while (i < len && ISWHITE(s[i])) i++;
-	if (!(i + 3 < len)) return SEE_NaN;			/* month */
-	for (m = 0; m < 12; m++) 
+	    if (!(i < len && ISWHITE(s[i]))) return SEE_NaN;	/* space */
+	    while (i < len && ISWHITE(s[i])) i++;
+	    if (!(i + 3 < len)) return SEE_NaN;			/* month */
+	    for (m = 0; m < 12; m++) 
 		if (mname[m*3] == TOLOWER(s[i]) &&
 		    mname[m*3+1] == TOLOWER(s[i+1]) &&
 		    mname[m*3+2] == TOLOWER(s[i+2]))
 			break;
+	    i += 3;
+	} else {
+	    if (!(i + 3 < len)) return SEE_NaN;			/* month */
+	    for (m = 0; m < 12; m++) 
+		if (mname[m*3] == TOLOWER(s[i]) &&
+		    mname[m*3+1] == TOLOWER(s[i+1]) &&
+		    mname[m*3+2] == TOLOWER(s[i+2]))
+			break;
+	    i += 3;
+	    if (!(i < len && ISWHITE(s[i]))) return SEE_NaN;	/* space */
+	    while (i < len && ISWHITE(s[i])) i++;
+	    if (!(i < len && ISDIGIT(s[i]))) return SEE_NaN;	/* day */
+	    for (d = 0; i < len && ISDIGIT(s[i]); i++)
+		d = 10 * d + s[i] - '0';
+	}
+	if (d < 1 || d > 31) return SEE_NaN;
 	if (m >= 12) return SEE_NaN;
-	i += 3;
 	if (!(i < len && ISWHITE(s[i]))) return SEE_NaN;	/* space */
 	while (i < len && ISWHITE(s[i])) i++;
 	if (i < len && s[i] == '-') {				/* -? */
@@ -745,20 +776,27 @@ parsetime(interp, str)
 	for (y = 0; i < len && ISDIGIT(s[i]); i++)
 		y = 10 * y + s[i] - '0';
 	if (yneg) y = -y;
-	if (!(i < len && ISWHITE(s[i]))) return SEE_NaN;	/* space */
-	while (i < len && ISWHITE(s[i])) i++;
 
-	if (!(i + 7 < len &&				/* hh:mm:ss */
+	hr = min = sec = 0;
+	if (i < len && ISWHITE(s[i])) {
+	    while (i < len && ISWHITE(s[i])) i++;		/* space+ */
+	    if (i + 4 < len &&					/* hh:mm? */
 	      ISDIGIT(s[i+0]) && ISDIGIT(s[i+1]) && s[i+2] == ':' &&
-	      ISDIGIT(s[i+3]) && ISDIGIT(s[i+4]) && s[i+5] == ':' &&
-	      ISDIGIT(s[i+6]) && ISDIGIT(s[i+7])))
-		return SEE_NaN;
-	hr  = (s[i+0]-'0') * 10 + (s[i+1]-'0');
-	min = (s[i+3]-'0') * 10 + (s[i+4]-'0');
-	sec = (s[i+6]-'0') * 10 + (s[i+7]-'0');
+	      ISDIGIT(s[i+3]) && ISDIGIT(s[i+4]))
+	    {
+	        hr  = (s[i+0]-'0') * 10 + (s[i+1]-'0');
+	        min = (s[i+3]-'0') * 10 + (s[i+4]-'0');
+	        i += 5;
+	        if (i + 2 < len &&				/* :ss? */
+		    s[i+0] == ':' && ISDIGIT(s[i+1]) && ISDIGIT(s[i+2])) 
+	        {
+	    	    sec = (s[i+1]-'0') * 10 + (s[i+2]-'0');
+		    i += 3;
+	        }
+	    }
+	}
 	if (hr >= 24 || min >= 60 || sec >= 60)
 		return SEE_NaN;
-	i += 8;
 
 	t = MakeDate(
 		MakeDay((SEE_number_t)y, (SEE_number_t)m, (SEE_number_t)d),
@@ -770,9 +808,18 @@ parsetime(interp, str)
 	 * otherwise assume date is in local timezone and convert to UTC.
 	 */
 	while (i < len && ISWHITE(s[i])) i++;			/* space */
-	if (i + 2 < len && s[i] == 'G' && s[i+1] == 'M' && s[i+2] == 'T')
+	if (i + 2 < len && s[i] == 'G' && s[i+1] == 'M' && s[i+2] == 'T') {
 		i += 3;
-	else
+		if (i + 4 < len && (s[i+0] == '-' || s[i+0] == '+') &&
+		    ISDIGIT(s[i+1]) && ISDIGIT(s[i+2]) &&
+		    s[i+3] == '0' && s[i+4] == '0')
+		{
+		    int gmtoff = (s[i+1]-'0') * 10 + (s[i+2]-'0');
+		    if (s[i+0] == '-') gmtoff = -gmtoff;
+		    t -= msPerHour * gmtoff;
+		    i += 5;
+		}
+	} else
 		t = UTC(interp, t);
 
 	/* XXX extra text is ignored */
@@ -790,7 +837,8 @@ parse_netscape_time(interp, str)
 	 * strings of the form '1/1/1999 12:30 AM'
 	 */
 
-	int i, d, m, y, yneg, hr=0, min=0, sec=0;
+	int i, d, m, y, hr=0, min=0, sec=0;
+	int n[3], j;
 	int len = str->length;
 	SEE_char_t *s = str->data;
 	SEE_number_t t;
@@ -798,35 +846,39 @@ parse_netscape_time(interp, str)
 	i = 0;
 	while (i < len && ISWHITE(s[i])) i++;
 
-	d = 0;
-	if (!(i < len && ISDIGIT(s[i]))) goto fail;
-	for (d = 0; i < len && ISDIGIT(s[i]); i++)
-		d = d * 10 + s[i] - '0';
+	for (j = 0; j < 3; j++) {
+	    int isneg;
+	    if (j) {
+		while (i < len && ISWHITE(s[i])) i++;
+		if (!(i < len && s[i] == '/')) goto fail; i++;
+		while (i < len && ISWHITE(s[i])) i++;
+	    }
+	    n[j] = 0;
+	    if (i < len && s[i] == '-') { i++; isneg = 1; } else isneg = 0;
+	    if (!(i < len && ISDIGIT(s[i]))) goto fail;
+	    for (n[j] = 0; i < len && ISDIGIT(s[i]); i++)
+		    n[j] = n[j] * 10 + s[i] - '0';
+	    if (isneg)
+	    	n[j] = -n[j];
+	}
+	if (n[0] >= 70 && n[1] >= 70) goto fail;
+	if (n[0] >= 70) {
+		y = n[0] + 1900;
+		m = n[1];
+		d = n[2];
+	} else {
+		m = n[0];
+		d = n[1];
+		y = n[2];
+		if (y < 100) y += 1900;
+	}
 
+	hr = min = sec = 0;
+
+	if (!(i < len && ISWHITE(s[i]))) goto done;
 	while (i < len && ISWHITE(s[i])) i++;
-	if (!(i < len && s[i] == '/')) goto fail; i++;
-	while (i < len && ISWHITE(s[i])) i++;
 
-	m = 0;
-	if (!(i < len && ISDIGIT(s[i]))) goto fail;
-	for (m = 0; i < len && ISDIGIT(s[i]); i++)
-		m = m * 10 + s[i] - '0';
-
-	while (i < len && ISWHITE(s[i])) i++;
-	if (!(i < len && s[i] == '/')) goto fail; i++;
-	while (i < len && ISWHITE(s[i])) i++;
-
-	if (i < len && s[i] == '-') { i++; yneg = 1; } else yneg = 0;
-
-	y = 0;
-	if (!(i < len && ISDIGIT(s[i]))) goto fail;
-	for (y = 0; i < len && ISDIGIT(s[i]); i++)
-		y = y * 10 + s[i] - '0';
-
-	if (!(i < len && ISWHITE(s[i]))) goto fail;
-	while (i < len && ISWHITE(s[i])) i++;
-
-	if (!(i < len && ISDIGIT(s[i]))) goto fail;
+	if (!(i < len && ISDIGIT(s[i]))) goto done;
 	for (hr = 0; i < len && ISDIGIT(s[i]); i++)
 		hr = hr * 10 + s[i] - '0';
 
@@ -834,7 +886,6 @@ parse_netscape_time(interp, str)
 	if (!(i < len && s[i] == ':')) goto done; i++;
 	while (i < len && ISWHITE(s[i])) i++;
 
-	min = 0;
 	if (!(i < len && ISDIGIT(s[i]))) goto fail;
 	for (min = 0; i < len && ISDIGIT(s[i]); i++)
 		min = min * 10 + s[i] - '0';
@@ -843,7 +894,6 @@ parse_netscape_time(interp, str)
 	if (!(i < len && s[i] == ':')) goto ampm; i++;
 	while (i < len && ISWHITE(s[i])) i++;
 
-	sec = 0;
 	if (!(i < len && ISDIGIT(s[i]))) goto fail;
 	for (sec = 0; i < len && ISDIGIT(s[i]); i++)
 		sec = sec * 10 + s[i] - '0';
@@ -864,8 +914,10 @@ parse_netscape_time(interp, str)
 	}
 
   done:
+  /*
 	if (hr > 24 || min >= 60 || sec >= 60) goto fail;
 	if (m < 1 || m > 12 || d < 1 || d > 31) goto fail;
+    */
 
 	t = MakeDate(
 	    MakeDay((SEE_number_t)y, (SEE_number_t)(m - 1), (SEE_number_t)d),
@@ -903,11 +955,15 @@ reprdatetime(interp, t, utc)
 	int utc;
 {
 	SEE_int32_t wkday, day, month, year, hour, min, sec;
+	int gmtoff;
 
 	if (SEE_ISNAN(t)) return repr_baddate(interp);
 
-	if (!utc)
+	if (!utc) {
 		t = LocalTime(interp, t);
+		gmtoff = (int)((t - LocalTime(interp, t)) / msPerMinute);
+	} else
+		gmtoff = 0;
 
 	wkday = WeekDay(t);
 	day = DateFromTime(t);
@@ -917,9 +973,22 @@ reprdatetime(interp, t, utc)
 	min = MinFromTime(t);
 	sec = SecFromTime(t);
 
+
+        if (interp->compatibility & SEE_COMPAT_EXT1) {
+	    if (utc)
+		return SEE_string_sprintf(interp,
+			"%.3s, %02d %.3s %04d %02d:%02d:%02d GMT",
+			&wkdayname[wkday * 3], day, &monthname[month * 3],
+			year, hour, min, sec);
+	    return SEE_string_sprintf(interp,
+	    	"%.3s %.3s %02d %04d %02d:%02d:%02d GMT%+03d00",
+		&wkdayname[wkday * 3], &monthname[month * 3],
+		day, year, hour, min, sec, -gmtoff / 60);
+	}
+
 	/* "Sun, 12 Oct 2003 07:19:24" */
 	return SEE_string_sprintf(interp,
-		"%.3s, %2d %.3s %d %02d:%02d:%02d%s",
+		"%.3s, %2d %.3s %4d %02d:%02d:%02d%s",
 		&wkdayname[wkday * 3], day, &monthname[month * 3],
 		year, hour, min, sec, utc ? " GMT" : "");
 }
@@ -961,8 +1030,8 @@ reprtime(interp, t)
 	secms = NUMBER_fmod(secms, 10.0);
 
 	return SEE_string_sprintf(interp,
-		"%02d:%02d:%d%g",
-		hour, min, sec10, secms);
+		"%02d:%02d:%02d",
+		hour, min, sec10, NUMBER_floor(secms));
 }
 
 /* Return a date object or raise a type error */
