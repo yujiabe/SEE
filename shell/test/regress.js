@@ -1,9 +1,8 @@
 
 describe("Regression tests from bugzilla.")
 
-/* bug 9 */
 function foo () { 1; }
-test(foo.prototype.constructor, foo)
+test(foo.prototype.constructor, foo)			/* bug 9 */
 
 var lower = "abcdefghij0123xyz\uff5a";
 var upper = "ABCDEFGHIJ0123XYZ\uff3a";
@@ -13,13 +12,11 @@ test("'foo'.lastIndexOf('o', 0)", -1)
 test("Function().__proto__", Function.prototype)
 test("typeof asjlkhadlsh", "undefined")
 
-/* bug 32 */
 function f() { return this; } 
 function g() { var h = f; return h(); } 
-test("g().toString()", this.toString())
+test("g().toString()", this.toString())			/* bug 32 */
 
-/* bug 33 */
-test("(new String()).indexOf()", -1)
-
+test("(new String()).indexOf()", -1)			/* bug 33 */
+test("-\"\\u20001234\\u2001\"", -1234)			/* r960 */
 
 finish()
