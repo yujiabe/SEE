@@ -962,9 +962,9 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 /*4*/	s = S->length;
 /*5*/	p = 0;
 /*6*/	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED) {
-	    SEE_SET_UNDEFINED(&separatorv);
+	    SEE_SET_STRING(&separatorv, STR(undefined));
 	    R = &separatorv;
-	    ncap = 0;
+	    ncap = 1;
 	} else if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
 		   SEE_is_RegExp(argv[0]->u.object)) {
 	    R = argv[0];
@@ -977,7 +977,9 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	if (ncap)
 		captures = SEE_ALLOCA(interp, ncap, struct capture);
 /*7*/	if (lim == 0) return;
-/*8*/	if (SEE_VALUE_GET_TYPE(R) == SEE_UNDEFINED) goto step33;
+/*8*/	if (argc < 1 || (SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED &&
+		!(interp->compatibility & SEE_COMPAT_EXT1)))
+	    goto step33;
 /*9*/	if (s == 0) goto step31;
 step10:	q = p;
 step11:	if (q == s) goto step28;
