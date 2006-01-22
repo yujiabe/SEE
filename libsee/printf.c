@@ -126,10 +126,10 @@ _SEE_vsprintf(interp, s, fmt, ap)
 	}
 
 	while (*fmt) {
-	    int pad_zero = 0;
+	    int pad_zero, pad_plus;
 	    int width = UNDEF;
 	    int precis = UNDEF;
-	    int left = 0, minus;
+	    int pad_left, minus;
 	    const char *fmtrestart;
 
 	    if (*fmt != '%' || fmt[1] == 0) {	/* Literal char */
@@ -145,15 +145,26 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		continue;
 	    }
 
-	    if (*fmt == '-') {			/* "%-" left-aligned */
-		left = 1;
-		fmt++;
-		if (*fmt == '0')		/* "%-0" is illegal */
-		   goto badform;
-	    } else if (*fmt == '0') {		/* "%0" zero padding */
-		pad_zero = 1;
+	    pad_left = 0;
+	    pad_zero = 0;
+	    pad_plus = 0;
+	    while (*fmt == '-' ||
+	    	   *fmt == '0' ||
+		   *fmt == '+' ||
+		   *fmt == ' ' ||
+		   *fmt == '#')
+	    {
+	        switch (*fmt) {
+		case '-': pad_left = 1; break;
+		case '0': pad_zero = 1; break;
+		case '+': pad_plus = 1; break;
+		case '#': /* ignore */
+		case ' ': /* ignore */
+		}
 		fmt++;
 	    }
+	    if (pad_left && pad_zero)
+	        goto badform;
 
 	    if (*fmt == '*') {			/* "%*" -> read later */
 		width = STAR;
@@ -211,12 +222,12 @@ _SEE_vsprintf(interp, s, fmt, ap)
 
 		/* Figure out the width of the representation */
 		nlen = baselen(uint, base);
-		if (minus) nlen++;
+		if (minus || pad_plus) nlen++;
 
 		/* Grow the width to fit the representation (we don't trunc) */
 		if (width < 0 || width < nlen) 
 		    width = nlen;
-		if (minus) { 
+		if (minus || pad_plus) { 
 		    nlen--;
 		    width--;
 		}
@@ -225,16 +236,19 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		if (pad_zero) {
 		    if (minus) 
 			OUTPUT('-');			/* "-000" */
+		    else if (pad_plus)
+			OUTPUT('+');
 		    for (i = 0; i < width - nlen; i++)
 			OUTPUT('0');
-		} else if (!left) {
-		    for (i = 0; i < width - nlen; i++)	/* "   -" */
-			OUTPUT(' ');
+		} else {
+		    if (!pad_left)
+			    for (i = 0; i < width - nlen; i++)	/* "   -" */
+				OUTPUT(' ');
 		    if (minus) 
 			OUTPUT('-');
-		} else 
-		    if (minus)
-			OUTPUT('-');
+		    else if (pad_plus)
+			OUTPUT('+');
+		}
 		
 		/* Perform left-to-right conversion (slow?) */
 		factor = 1;
@@ -251,7 +265,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		}
 
 		/* Perform right-hand padding */
-		if (left)
+		if (pad_left)
 		    for (i = 0; i < width - nlen; i++)
 			OUTPUT(' ');
 		break;
@@ -301,7 +315,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		if (width < 0 || width < slen)
 		    width = slen;
 		/* Figure out padding */
-		if (!left) {
+		if (!pad_left) {
 		    if (!out)
 		        outlen += width - slen;
 		    else 
@@ -318,7 +332,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		    for (i = 0; i < slen; i++)
 		        *out++ = str[i];
 		/* Perform right-hand-side padding */
-		if (left) {
+		if (pad_left) {
 		    if (!out)
 		    	outlen += width - slen;
 		    else
