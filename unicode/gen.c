@@ -23,7 +23,7 @@ main(argc, argv)
 	char *argv[];
 {
 	FILE *f;
-	char *s, *start;
+	char *s, *start, *end;
 	size_t len;
 	unsigned int codepoint;
 	unsigned char *bit;
@@ -64,43 +64,62 @@ main(argc, argv)
 
 	while ((start = fgetln(f, &len))) {
 		s = start;
-		if (s[len-1] == '\n')
+		if (len > 0 && s[len-1] == '\n')
 			len--;
+		end = start + len;
 
+#define SKIPTO(ch) do {						\
+	while (s < end && *s != (ch))				\
+		s++;						\
+    } while (0)
+#define SKIP(ch) do {						\
+	while (s < end && isspace(*s))				\
+		s++;						\
+	if (s >= end)						\
+		errx(1, "bad line"); 				\
+	if (*s != (ch)) 					\
+		errx(1, "expected %c but got %c", ch, *s); 	\
+	s++;							\
+	while (s < end && isspace(*s))				\
+		s++;						\
+    } while (0)
+
+		/* Scan the hex value of the current line's codepoint */
 		codepoint = 0;
-		for (; *s != ';'; s++) {
+		while (s < end && *s != ';') {
 		    unsigned int d = (*s >= 'A') ? *s - 'A' + 10 : *s - '0';
 		    if (d < 0 || d > 15)
 			errx(1, "bad codepoint char %c", *s);
 		    codepoint = (codepoint << 4) | d;
+		    s++;
 		}
-		s++;
 		if (codepoint >= _UNICODE_MAX)
 			errx(1, "codepoint too big 0x%x", codepoint);
+		SKIP(';');
 
 		/* Skip name field */
-		for (; *s != ';'; s++);
-		s++;
+		SKIPTO(';');
+		SKIP(';');
 
 		class[0] = *s++;
 		class[1] = *s++;
 
 		/* printf("%x = %c%c\n", codepoint, class[0], class[1]); */
 
-		/* scan through argv[] to see if we match */
-		if (argv[2][0] == '$' && 
-		    (codepoint == '$' || codepoint == '_'))
-			; /* keep */
-		else {
-			for (i = 2; i < argc; i++)
-			    if (argv[i][0] == class[0] &&
-				argv[i][1] == class[1])
-				    break;
-			if (i == argc)
-				continue;
-		}
+		/* Is the class[] mentioned in the argument list */
+		if (codepoint == '_' || codepoint == '$')
+		    for (i = 2; i < argc; i++)
+		        if (argv[i][0] == '$' &&
+			    argv[i][1] == '_')
+			       goto ok;
+		for (i = 2; i < argc; i++)
+		    if (argv[i][0] == class[0] &&
+			argv[i][1] == class[1])
+			    goto ok;
+		continue;
+	ok:
 
-		bit[codepoint >> 3] = 1 << (codepoint & 7);
+		bit[codepoint >> 3] |= 1 << (codepoint & 7);
 		bitcount++;
 	}
 	if (ferror(f)) err(1, "%s", datapath);

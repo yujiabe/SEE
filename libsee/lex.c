@@ -111,8 +111,6 @@ static void string_adducs32(struct SEE_string *s, SEE_unicode_t c);
 static int is_FormatControl(SEE_unicode_t c);
 static int is_WhiteSpace(SEE_unicode_t c);
 static int is_LineTerminator(SEE_unicode_t c);
-static int is_Letter(SEE_unicode_t c);
-static int is_UnicodeDigit(SEE_unicode_t c);
 static int is_HexDigit(SEE_unicode_t c);
 static int HexValue(SEE_unicode_t c);
 static int is_HexEscape(struct lex *lex);
@@ -166,7 +164,7 @@ static int
 is_FormatControl(c)
 	SEE_unicode_t c;			/* 7.1 */
 {
-	return 0;		/* XXX category Cf or L or R */
+	return UNICODE_IS_Cf(c);	/* category Cf or L or R */
 }
 
 static int
@@ -174,7 +172,7 @@ is_WhiteSpace(c)
 	SEE_unicode_t c;			/* 7.2 */
 {
 	return (c == 0x0009 || c == 0x000B || c == 0x000C || c == 0x0020 
-		|| c == 0x00A0 /* XXX || category Zs */);
+		|| c == 0x00A0 || UNICODE_IS_Zs(c));
 }
 
 static int
@@ -182,21 +180,6 @@ is_LineTerminator(c)
 	SEE_unicode_t c;			/* 7.3 */
 {
 	return (c == 0x000A || c == 0x000D || c == 0x2028 || c == 0x2029);
-}
-
-static int
-is_Letter(c)
-	SEE_unicode_t c;				/* 7.6 */
-{
-	/* XXX should check for unicode categories Lu Ll Lt Lm Lo */
-	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
-}
-
-static int
-is_UnicodeDigit(c)
-	SEE_unicode_t c;
-{
-	return (c >= '0' && c <= '9');	/* XXX */
 }
 
 static int
@@ -255,11 +238,13 @@ is_IdentifierStart(lex)
 	struct lex *lex;			/* 7.6 */
 {
 	SEE_unicode_t c;
+
 	if (ATEOF)
 		return 0;
+	if (is_UnicodeEscape(lex))
+		return 1;
 	c = NEXT;
-	return (c == '$' || c == '_' || 
-		is_Letter(c) || is_UnicodeEscape(lex));
+	return UNICODE_IS_IS(c);
 }
 
 static int
@@ -270,12 +255,10 @@ is_IdentifierPart(lex)
 
 	if (ATEOF)
 		return 0;
-	if (is_IdentifierStart(lex))
+	if (is_UnicodeEscape(lex))
 		return 1;
 	c = NEXT;
-	return is_UnicodeDigit(c) 
-		/* XXX  || is combining mark || is connector punct */
-		;
+	return UNICODE_IS_IP(c);
 }
 
 static SEE_unicode_t
@@ -313,6 +296,7 @@ UnicodeEscape(lex)
 	 * codepoint, you would have to use a UTF-16 surrogate, but
 	 * this is problematic. Better would be to augment ECMA-262
 	 * with a \Uxxxxxxxx escape, such as Python provides.
+	 * (spec bug?)
 	 */
 }
 
