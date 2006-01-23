@@ -4509,7 +4509,7 @@ EqualityExpression_eq(interp, x, y, res)
 		    y->u.string) == 0);
 		return;
 	    case SEE_BOOLEAN:
-		SEE_SET_BOOLEAN(res, x->u.boolean == y->u.boolean);
+		SEE_SET_BOOLEAN(res, !x->u.boolean == !y->u.boolean);
 		return;
 	    case SEE_OBJECT:
 		SEE_SET_BOOLEAN(res, 

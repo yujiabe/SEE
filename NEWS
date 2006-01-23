@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  bug 34: some boolean true values (eg from Regexp) do not compare equal
   bug 33: indexOf() corrected when substring is longer than string
   bug 32: thisobj not set for called functions
   Corrected some Unicode case translations
