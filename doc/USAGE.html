@@ -2055,6 +2055,10 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	Invalid quantifiers in regular expressions
 	(e.g. <code>/a{12x}/</code>) are treated as literals instead
 	of raising a SyntaxError.
+<li>
+	<code class="js">RegExp</code> supports the [[HasInstance]] operator,
+	meaning that <code class="js">/x*/ instanceof RegExp</code>
+	will work.
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>

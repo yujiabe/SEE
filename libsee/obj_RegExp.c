@@ -70,6 +70,8 @@ static void regexp_construct(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void regexp_call(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static int regexp_hasinstance(struct SEE_interpreter *, struct SEE_object *,
+	struct SEE_value *);
 
 static void regexp_proto_exec(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
@@ -88,9 +90,10 @@ static struct SEE_objectclass regexp_const_class = {
 	SEE_native_hasproperty,		/* HasProperty */
 	SEE_native_delete,		/* Delete */
 	SEE_native_defaultvalue,	/* DefaultValue */
-	SEE_native_enumerator,		/* DefaultValue */
+	SEE_native_enumerator,		/* enumerator */
 	regexp_construct,		/* Construct */
-	regexp_call			/* Call */
+	regexp_call,			/* Call */
+	regexp_hasinstance		/* HasInstance */
 };
 
 /* object class for RegExp.prototype */
@@ -286,6 +289,20 @@ regexp_call(interp, self, thisobj, argc, argv, res)
 	        SEE_VALUE_COPY(res, argv[0]);
 	else
 		SEE_OBJECT_CONSTRUCT(interp, self, thisobj, argc, argv, res);
+}
+
+static int 
+regexp_hasinstance(interp, self, value)
+	struct SEE_interpreter *interp;
+	struct SEE_object *self;
+	struct SEE_value *value;
+{
+	if (interp->compatibility & SEE_COMPAT_EXT1)
+		return SEE_VALUE_GET_TYPE(value) == SEE_OBJECT &&
+		       value->u.object->objectclass == &regexp_inst_class;
+	 else
+		SEE_error_throw_string(interp, interp->TypeError, 
+		   STR(no_hasinstance));
 }
 
 /* 15.10.6.2 RegExp.prototype.exec() */
