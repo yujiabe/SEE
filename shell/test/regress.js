@@ -18,5 +18,6 @@ test("g().toString()", this.toString())			/* bug 32 */
 
 test("(new String()).indexOf()", -1)			/* bug 33 */
 test("-\"\\u20001234\\u2001\"", -1234)			/* r960 */
+test("/m/i.ignoreCase == true", true)			/* bug 34 */
 
 finish()
