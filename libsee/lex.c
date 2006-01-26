@@ -448,7 +448,7 @@ StringLiteral(lex)
 /*
  * 7.8.5 Scans for a regular expression token.
  * Assumes prev (immediately previous token) is either tDIV or tDIVEQ.
- * Returns tREGEX on success or throws an exception on failur.
+ * Returns tREGEX on success or throws an exception on failure.
  * The string in lex->value is of the form "/regex/flags"
  */
 static int
@@ -457,16 +457,25 @@ RegularExpressionLiteral(lex, prev)
 	int prev;
 {
 	struct SEE_string *s;
+	int incc = 0;
+	struct SEE_interpreter *interp = lex->input->interpreter;
 
-	s = SEE_string_new(lex->input->interpreter, 0);
+	s = SEE_string_new(interp, 0);
 	SEE_string_addch(s, '/');
 	if (prev == tDIVEQ)
 		SEE_string_addch(s, '=');
-	while (!ATEOF && NEXT != '/') {
+	while (!ATEOF) {
+		if (NEXT == '/' && 
+		    (!incc || !(interp->compatibility & SEE_COMPAT_EXT1)))
+			break;
 		if (NEXT == '\\') {
 			SEE_string_addch(s, '\\');
 			SKIP;
 			if (ATEOF) break;
+		} else {
+			/* Track charclasses for EXT1 compat */
+			if (NEXT == '[') incc = 1;
+			if (NEXT == ']') incc = 0;
 		}
 		if (is_LineTerminator(NEXT))
 			SYNTAX_ERROR(STR(broken_regex));

@@ -2059,6 +2059,11 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">RegExp</code> supports the [[HasInstance]] operator,
 	meaning that <code class="js">/x*/ instanceof RegExp</code>
 	will work.
+<li>
+	Change the token grammar to recognise simple character classes 
+	in literal regular expressions.
+	This means the expression <code class="js">/[/]/</code> will
+	be parsed as if it were <code class="js">/[\/]/</code>.
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>
