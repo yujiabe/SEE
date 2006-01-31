@@ -23,9 +23,15 @@ struct SEE_string *SEE_intern(struct SEE_interpreter *i, struct SEE_string *s);
 void SEE_intern_and_free(struct SEE_interpreter *i, struct SEE_string **s);
 
 /*
- * Internalises a string into the global table. Invalid if interpreter
- * instances exist
+ * Returns an interned SEE_string containing the ASCII string promoted to
+ * unicode. All the characters in s must be ASCII (ie between 1 and 127 incl.)
  */
-void SEE_intern_global(struct SEE_string *s);
+struct SEE_string *SEE_intern_ascii(struct SEE_interpreter *i, const char *s);
+
+/*
+ * Internalises an ASCII string into the global table. 
+ * Invalid if interpreter instances exist.
+ */
+struct SEE_string *SEE_intern_global(const char *s);
 
 #endif /* _SEE_h_intern_ */

@@ -96,6 +96,19 @@ struct SEE_object {
 #define SEE_OBJECT_ENUMERATOR(interp, obj)				\
 	(*(obj)->objectclass->enumerator)(interp, obj)
 
+/* Convenience macros that use ASCII C strings for names */
+struct SEE_string *SEE_intern_ascii(struct SEE_interpreter *, const char *);
+#define SEE_OBJECT_GETA(interp, obj, name, res)				\
+	SEE_OBJECT_GET(interp, obj, SEE_intern_ascii(interp, name), res)
+#define SEE_OBJECT_PUTA(interp, obj, name, val, attrs)			\
+	SEE_OBJECT_PUT(interp, obj, SEE_intern_ascii(interp, name), val, attrs)
+#define SEE_OBJECT_CANPUTA(interp, obj, name)				\
+	SEE_OBJECT_CANPUT(interp, obj, SEE_intern_ascii(interp, name))
+#define SEE_OBJECT_HASPROPERTYA(interp, obj, name)			\
+	SEE_OBJECT_HASPROPERTY(interp, obj, SEE_intern_ascii(interp, name))
+#define SEE_OBJECT_DELETEA(interp, obj, name)				\
+	SEE_OBJECT_DELETE(interp, obj, SEE_intern_ascii(interp, name))
+
 #define SEE_OBJECT_HAS_CALL(obj)	((obj)->objectclass->Call)
 #define SEE_OBJECT_HAS_CONSTRUCT(obj)	((obj)->objectclass->Construct)
 #define SEE_OBJECT_HAS_HASINSTANCE(obj)	((obj)->objectclass->HasInstance)

@@ -222,7 +222,7 @@ run_interactive(interp)
 		len = strlen(line);
 	    }
 	    inp = SEE_input_utf8(interp, line);
-	    inp->filename = s_interactive;
+	    inp->filename = SEE_intern_ascii(interp, "<interactive>");
 	    if (run_input(interp, inp, &res)) {
 		printf(" = ");
 		SEE_PrintValue(interp, &res, stdout);
@@ -394,6 +394,7 @@ main(argc, argv)
 
 	/* Initialise our interpreter */
 	SEE_interpreter_init(&interp);
+	interp.compatibility = SEE_COMPAT_STRICT;
 
 	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:r:V")) != -1)
 	    switch (ch) {

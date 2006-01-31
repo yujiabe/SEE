@@ -46,6 +46,7 @@
 #include <see/system.h>
 
 #include "stringdefs.h"
+#include "dprint.h"
 
 /*
  * Internalised strings.
@@ -82,12 +83,15 @@ static struct intern *  make(struct SEE_interpreter *, struct SEE_string *);
 static unsigned int     hash(struct SEE_string *);
 static struct intern ** find(intern_tab_t *, struct SEE_string *,
 			     unsigned int);
+static void global_init(void);
 
 /** System-wide intern table */
 static intern_tab_t	global_intern_tab;
+static int		global_intern_tab_initialized;
 
 #ifndef NDEBUG
 static int		global_intern_tab_locked = 0;
+int			SEE_debug_intern;
 #endif
 
 /**
@@ -119,6 +123,22 @@ hash(s)
 	return h % HASHTABSZ;
 }
 
+/** Compute the hash value of an ASCII string */
+static unsigned int
+hash_ascii(s, lenret)
+	const char *s;
+	unsigned int *lenret;
+{
+	unsigned int j, h = 0;
+	const char *t;
+
+	for (j = 0, t = s; j < HASHLENMAX && *t; j++, t++)
+		h = (h << 1) ^ *t;
+	while (*t) t++;
+	*lenret = t - s;
+	return h % HASHTABSZ;
+}
+
 /** Find an interned string */
 static struct intern **
 find(intern_tab, s, hash)
@@ -134,6 +154,38 @@ find(intern_tab, s, hash)
 	return x;
 }
 
+/** Returns true if an SEE_string contains the ASCII string s */
+static int
+ascii_eq(str, s)
+	struct SEE_string *str;
+	const char *s;
+{
+	unsigned int len = str->length;
+	SEE_char_t *c = str->data;
+
+	while (len--)
+		if (!*s)
+			return 0;
+		else if (*c++ != *s++)
+			return 0;
+	return *s == 0;
+}
+
+/** Find an interned string */
+static struct intern **
+find_ascii(intern_tab, s, hash)
+	intern_tab_t *intern_tab;
+	const char *s;
+	unsigned int hash;
+{
+	struct intern **x;
+
+	x = &(*intern_tab)[hash];
+	while (*x && !ascii_eq((*x)->string, s))
+		x = &((*x)->next);
+	return x;
+}
+
 /** Create an interpreter-local intern table */
 void
 _SEE_intern_init(interp)
@@ -141,8 +193,8 @@ _SEE_intern_init(interp)
 {
 	intern_tab_t *intern_tab;
 	unsigned int i;
-	struct intern **x;
 
+	global_init();
 #ifndef NDEBUG
 	global_intern_tab_locked = 1;
 #endif
@@ -152,14 +204,6 @@ _SEE_intern_init(interp)
 		(*intern_tab)[i] = NULL;
 
 	interp->intern_tab = intern_tab;
-
-	/* Add all the predefined strings to the intern table */
-	for (i = 0; i < SEE_nstringtab; i++) {
-		unsigned int h = hash(&SEE_stringtab[i]);
-		x = find(interp->intern_tab, &SEE_stringtab[i], h);
-		if (*x == NULL) 
-			*x = make(interp, &SEE_stringtab[i]);
-	}
 }
 
 static int
@@ -171,7 +215,14 @@ is_uninternable(s)
 	    (s >= &SEE_stringtab[0] && s < &SEE_stringtab[SEE_nstringtab]);
 }
 
-/** Intern a string relative to an interpreter. Also reads the global table */
+/**
+ * Intern a string relative to an interpreter. Also reads the global table
+ * Note that a different pointer to s is *ALWAYS* returned unless s was
+ * originally returned by SEE_intern. In other words, on the first occurrence
+ * of a string, it is duplicated. This makes it save to intern strings that
+ * are later changed. However, you MUST not alter strings returned from
+ * this function.
+ */
 struct SEE_string *
 SEE_intern(interp, s)
 	struct SEE_interpreter *interp;
@@ -179,26 +230,96 @@ SEE_intern(interp, s)
 {
 	struct intern **x;
 	unsigned int h;
+#ifndef NDEBUG
+	const char *where;
+# define WHERE(f) do { if (SEE_debug_intern) where=f; } while (0)
+#else
+# define WHERE(f) /* nothing */
+#endif
 
-	if (is_uninternable(s))
+	if (is_uninternable(s)) {
+#ifndef NDEBUG
+		if (SEE_debug_intern) {
+		    dprintf("INTERN ");
+		    dprints(s);
+		    dprintf(" -> %p [interned]\n", s);
+		}
+#endif
 		return s;
+	}
 
 	SEE_ASSERT(interp, s->interpreter == interp);
 
 	/* Look in system-wide intern table first */
 	h = hash(s);
 	x = find(&global_intern_tab, s, h);
+	WHERE("global");
 	if (!*x) {
 		x = find(interp->intern_tab, s, h);
-		if (!*x)
+		WHERE("local");
+		if (!*x) {
 			*x = make(interp, SEE_string_dup(interp, s));
+			WHERE("new");
+		}
 	}
+#ifndef NDEBUG
+	if (SEE_debug_intern) {
+	    dprintf("INTERN ");
+	    dprints(s);
+	    dprintf(" -> %p [%s h=%d]\n", (*x)->string, where, h);
+	}
+#endif
 	return (*x)->string;
 
 }
 
+/** Efficiently convert an ASCII C string into a SEE string and internalise */
+struct SEE_string *
+SEE_intern_ascii(interp, s)
+	struct SEE_interpreter *interp;
+	const char *s;
+{
+	struct SEE_string *str;
+	const char *t;
+	SEE_char_t *c;
+	unsigned int h, len;
+	struct intern **x;
+#ifndef NDEBUG
+	const char *where;
+#endif
+
+	SEE_ASSERT(interp, s != NULL);
+
+	h = hash_ascii(s, &len);
+	x = find_ascii(&global_intern_tab, s, h);
+	WHERE("global");
+	if (!*x) {
+	    x = find_ascii(interp->intern_tab, s, h);
+	    WHERE("local");
+	    if (!*x) {
+		WHERE("new");
+		str = SEE_NEW(interp, struct SEE_string);
+		str->length = len;
+		str->data = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, len);
+		for (c = str->data, t = s; *t;)
+			*c++ = *t++;
+		str->interpreter = interp;
+		str->stringclass = NULL;
+		str->flags = 0;
+	    	SEE_ASSERT(interp, hash(str) == h);
+		*x = make(interp, str);
+		}
+	    }
+#ifndef NDEBUG
+	if (SEE_debug_intern)
+	    dprintf("INTERN %s -> %p [%s h=%d ascii]\n", 
+		s, (*x)->string, where, h);
+#endif
+	return (*x)->string;
+}
+
 /*
- * Interns a string and frees any duplicates
+ * Interns a string, and frees the original string.
  */
 void
 SEE_intern_and_free(interp, sp)
@@ -207,31 +328,73 @@ SEE_intern_and_free(interp, sp)
 {
 	struct SEE_string *is;
 
-	if (is_uninternable(*sp))
+	if (is_uninternable(*sp)) {
+#ifndef NDEBUG
+		if (SEE_debug_intern) {
+		    dprintf("INTERN ");
+		    dprints(*sp);
+		    dprintf(" -> %p [hit & free]\n", *sp);
+		}
+#endif
 		return;
+	}
 	is = SEE_intern(interp, *sp);
 	SEE_string_free(interp, sp);
 	*sp = is;
 }
 
+static void
+global_init()
+{
+	unsigned int i, h;
+	struct intern **x;
+
+	if (global_intern_tab_initialized)
+		return;
+
+	/* Add all the predefined strings to the global intern table */
+	for (i = 0; i < SEE_nstringtab; i++) {
+		h = hash(&SEE_stringtab[i]);
+		x = find(&global_intern_tab, &SEE_stringtab[i], h);
+		if (*x == NULL) 
+			*x = make(NULL, &SEE_stringtab[i]);
+	}
+	global_intern_tab_initialized = 1;
+}
+
 /**
- * Adds a static string into the system-wide intern table.
+ * Adds an ASCII string into the system-wide intern table if
+ * not already there.
  * Should not be called after any interpeters are created.
  */
-void
+struct SEE_string *
 SEE_intern_global(s)
-	struct SEE_string *s;
+	const char *s;
 {
+	struct SEE_string *str;
+	const char *t;
+	SEE_char_t *c;
+	unsigned int h, len;
 	struct intern **x;
 
 #ifndef NDEBUG
 	if (global_intern_tab_locked)
 		SEE_ABORT(NULL, "SEE_intern_global: table is now read-only");
 #endif
-	x = find(&global_intern_tab, s, hash(s));
-#ifndef NDEBUG
-	if (*x)
-		SEE_ABORT(NULL, "SEE_intern_global: duplicate string");
-#endif
-	*x = make(NULL, s);
+	global_init();
+
+	h = hash_ascii(s, &len);
+	x = find_ascii(&global_intern_tab, s, h);
+	if (*x) return (*x)->string;
+
+	str = SEE_NEW(NULL, struct SEE_string);
+	str->length = len;
+	str->data = SEE_NEW_STRING_ARRAY(NULL, SEE_char_t, len);
+	for (c = str->data, t = s; *t;)
+		*c++ = *t++;
+	str->interpreter = NULL;
+	str->stringclass = NULL;
+	str->flags = 0;
+	*x = make(NULL, str);
+	return (*x)->string;
 }

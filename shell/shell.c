@@ -46,69 +46,24 @@ static void gc_gcollect_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #endif
 
-/* Internalised constant strings for my convenience */
-static struct SEE_string *s_print;
-static struct SEE_string *s_version;
-static struct SEE_string *s_document;
-static struct SEE_string *s_write;
-static struct SEE_string *s_navigator;
-static struct SEE_string *s_userAgent;
-static struct SEE_string *s_window;
-#if HAVE_GC_DUMP
-static struct SEE_string *s_gc_dump;
-#endif
-#if HAVE_GC_GCOLLECT
-static struct SEE_string *s_gc_gcollect;
-#endif
-struct SEE_string *s_interactive;
-
 /*
  * Adds useful symbols into the interpreter's internal symbol table. 
  * This speeds up access to the symbols and lets us use UTF-16 strings
- * natively when populating the object space.
+ * natively when populating the object space. It's not strictly necessary
+ * to do this.
  */
 void
 shell_strings()
 {
-	static SEE_char_t SA_print[] =    {'p','r','i','n','t'};
-	static struct SEE_string S_print = SEE_STRING_DECL(SA_print);
-	static SEE_char_t SA_version[] =  {'v','e','r','s','i','o','n'};
-	static struct SEE_string S_version = SEE_STRING_DECL(SA_version);
-	static SEE_char_t SA_document[] = {'d','o','c','u','m','e','n','t'};
-	static struct SEE_string S_document = SEE_STRING_DECL(SA_document);
-	static SEE_char_t SA_write[] =    {'w','r','i','t','e'};
-	static struct SEE_string S_write = SEE_STRING_DECL(SA_write);
-	static SEE_char_t SA_navigator[] ={'n','a','v','i','g','a','t','o','r'};
-	static struct SEE_string S_navigator = SEE_STRING_DECL(SA_navigator);
-	static SEE_char_t SA_userAgent[] ={'u','s','e','r','A','g','e','n','t'};
-	static struct SEE_string S_userAgent = SEE_STRING_DECL(SA_userAgent);
-	static SEE_char_t SA_window[] =   {'w','i','n','d','o','w'};
-	static struct SEE_string S_window = SEE_STRING_DECL(SA_window);
-#if HAVE_GC_DUMP
-	static SEE_char_t SA_gc_dump[] =   {'G','C','_','d','u','m','p'};
-	static struct SEE_string S_gc_dump = SEE_STRING_DECL(SA_gc_dump);
-#endif
-#if HAVE_GC_GCOLLECT
-	static SEE_char_t SA_gc_gcollect[]={'G','C','_','g','c','o','l','l','e','c','t'};
-	static struct SEE_string S_gc_gcollect = SEE_STRING_DECL(SA_gc_gcollect);
-#endif
-	static SEE_char_t SA_interactive[] = {'<','i','n','t','e','r','a','c','t','i','v','e','>'};
-	static struct SEE_string S_interactive = SEE_STRING_DECL(SA_interactive);
-
-	SEE_intern_global(s_print = &S_print);
-	SEE_intern_global(s_version = &S_version);
-	SEE_intern_global(s_document = &S_document);
-	SEE_intern_global(s_write = &S_write);
-	SEE_intern_global(s_navigator = &S_navigator);
-	SEE_intern_global(s_userAgent = &S_userAgent);
-	SEE_intern_global(s_window = &S_window);
-#if HAVE_GC_DUMP
-	SEE_intern_global(s_gc_dump = &S_gc_dump);
-#endif
-#if HAVE_GC_GCOLLECT
-	SEE_intern_global(s_gc_gcollect = &S_gc_gcollect);
-#endif
-	SEE_intern_global(s_interactive = &S_interactive);
+	SEE_intern_global("print");
+	SEE_intern_global("version");
+	SEE_intern_global("document");
+	SEE_intern_global("write");
+	SEE_intern_global("navigator");
+	SEE_intern_global("userAgent");
+	SEE_intern_global("window");
+	SEE_intern_global("gc_dump");
+	SEE_intern_global("gc_gcollect");
 }
 
 /*
@@ -175,30 +130,26 @@ void
 shell_add_globals(interp)
 	struct SEE_interpreter *interp;
 {
-	struct SEE_object *obj;
 	struct SEE_value v;
 
 	/* Create the print function, and attch to the Globals */
-	obj = SEE_cfunction_make(interp, print_fn, s_print, 1);
-	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, interp->Global, s_print, &v, 0);
+	SEE_CFUNCTION_PUTA(interp, interp->Global, 
+		"print", print_fn, 1, 0);
 
 #if HAVE_GC_DUMP
 	/* Create the gc_dump function, and attach to the Globals. */
-	obj = SEE_cfunction_make(interp, gc_dump_fn, s_gc_dump, 1);
-	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, interp->Global, s_gc_dump, &v, 0);
+	SEE_CFUNCTION_PUTA(interp, interp->Global, 
+		"gc_dump", gc_dump_fn, 0, 0);
 #endif
 
 #if HAVE_GC_GCOLLECT
 	/* Create the gc_gcollect function, and attach to the Globals. */
-	obj = SEE_cfunction_make(interp, gc_gcollect_fn, s_gc_gcollect, 1);
-	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, interp->Global, s_gc_gcollect, &v, 0);
+	SEE_CFUNCTION_PUTA(interp, interp->Global, 
+		"gc_collect", gc_gcollect_fn, 0, 0);
 #endif
 
 	SEE_SET_UNDEFINED(&v);
-	SEE_OBJECT_PUT(interp, interp->Global, s_version, &v, 0);
+	SEE_OBJECT_PUTA(interp, interp->Global, "version", &v, 0);
 }
 
 /*
@@ -233,30 +184,28 @@ void
 shell_add_document(interp)
 	struct SEE_interpreter *interp;
 {
-	struct SEE_object *obj, *document, *navigator;
+	struct SEE_object *document, *navigator;
 	struct SEE_value v;
 
 	/* Create a dummy 'document' object. Add it to the global space */
 	document = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, document);
-	SEE_OBJECT_PUT(interp, interp->Global, s_document, &v, 0);
+	SEE_OBJECT_PUTA(interp, interp->Global, "document", &v, 0);
 
 	/* Create a 'write' method and attach to 'document'. */
-	obj = SEE_cfunction_make(interp, document_write, s_write, 1);
-	SEE_SET_OBJECT(&v, obj);
-	SEE_OBJECT_PUT(interp, document, s_write, &v, 0);
+	SEE_CFUNCTION_PUTA(interp, document, "write", document_write, 1, 0);
 
 	/* Create a 'navigator' object and attach to the global space */
 	navigator = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, navigator);
-	SEE_OBJECT_PUT(interp, interp->Global, s_navigator, &v, 0);
+	SEE_OBJECT_PUTA(interp, interp->Global, "navigator", &v, 0);
 
 	/* Create a string and attach as 'navigator.userAgent' */
 	SEE_SET_STRING(&v, SEE_string_sprintf(interp, 
 		"SEE-shell (%s-%s)", PACKAGE, VERSION));
-	SEE_OBJECT_PUT(interp, navigator, s_userAgent, &v, 0);
+	SEE_OBJECT_PUTA(interp, navigator, "userAgent", &v, 0);
 
 	/* Create a dummy 'window' object */
 	SEE_SET_OBJECT(&v, interp->Global);
-	SEE_OBJECT_PUT(interp, interp->Global, s_window, &v, 0);
+	SEE_OBJECT_PUTA(interp, interp->Global, "window", &v, 0);
 }

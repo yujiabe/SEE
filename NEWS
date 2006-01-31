@@ -1,6 +1,10 @@
 $Id$
 
 2.0 [unreleased]
+  Added many ASCII string functions to the API for convenience
+  Compat: Allow /[/]/ to be parsed as a regex literal in EXT1.
+  Error.prototype and NativeError.prototype attributes now match standard
+  bug 35: labelled blocks could not be targets of break
   Compat: Allow [[HasInstance]] for RegExp, i.e. /x*/ instanceof RegExp
   bug 34: some boolean true values (eg from Regexp) do not compare equal
   bug 33: indexOf() corrected when substring is longer than string

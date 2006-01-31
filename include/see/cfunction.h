@@ -13,4 +13,17 @@ struct SEE_string;
 struct SEE_object *SEE_cfunction_make(struct SEE_interpreter *i,
 	SEE_call_fn_t func, struct SEE_string *name, int length);
 
+#define SEE_CFUNCTION_PUTA(interp, obj, name, func, length, attr) \
+	do { 							\
+		struct SEE_value _SEE_v;			\
+		struct SEE_object *_SEE_obj;			\
+		struct SEE_string *_SEE_name;			\
+		_SEE_name = SEE_intern_ascii(interp, name);	\
+		_SEE_obj = SEE_cfunction_make(interp, func, 	\
+			_SEE_name, length);			\
+		SEE_SET_OBJECT(&_SEE_v, _SEE_obj);		\
+		SEE_OBJECT_PUT(interp, obj, _SEE_name, &_SEE_v, \
+			attr);					\
+	} while (0)
+
 #endif /* _SEE_h_cfunction_ */
