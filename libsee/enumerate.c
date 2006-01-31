@@ -166,7 +166,7 @@ SEE_enumerate(interp, o)
 	 * an array, and sort it. (Comparison function
 	 * is constant time).
 	 */
-	slist = SEE_ALLOCA(interp, count, struct propname_list *);
+	slist = SEE_ALLOCA(interp, struct propname_list *, count);
 	for (sp = slist; head; head = head->next)
 		*sp++ = head;
 	qsort(slist, count, sizeof slist[0], 

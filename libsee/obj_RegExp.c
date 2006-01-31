@@ -344,7 +344,7 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 
 	ncaptures = SEE_regex_count_captures(ro->regex);
 	SEE_ASSERT(interp, ncaptures > 0);
-	captures = SEE_ALLOCA(interp, ncaptures, struct capture);
+	captures = SEE_STRING_ALLOCA(interp, struct capture, ncaptures);
 	while (!SEE_regex_match(interp, ro->regex, S, i, captures)) {
 		i++;
 		if (i > S->length) {
@@ -360,8 +360,8 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 		SEE_OBJECT_PUT(interp, thisobj, STR(lastIndex), &v, 0);
 	}
 
-	el = SEE_ALLOCA(interp, ncaptures, struct SEE_value);
-	elv = SEE_ALLOCA(interp, ncaptures, struct SEE_value *);
+	el = SEE_ALLOCA(interp, struct SEE_value, ncaptures);
+	elv = SEE_ALLOCA(interp, struct SEE_value *, ncaptures);
 	for (i = 0; i < ncaptures; i++) {
 	    if (CAPTURE_IS_UNDEFINED(captures[i]))
 		SEE_SET_UNDEFINED(&el[i]);

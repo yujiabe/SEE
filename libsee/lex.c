@@ -596,7 +596,7 @@ NumericLiteral(lex)
 		SYNTAX_ERROR(STR(dec_literal_detritus));
 	}
 
-	numbuf = SEE_ALLOCA(interp, s->length + 1, char);
+	numbuf = SEE_STRING_ALLOCA(interp, char, s->length + 1);
 	for (i = 0; i < s->length; i++)
 		numbuf[i] = s->data[i] & 0x7f;
 	numbuf[i] = '\0';
@@ -1002,7 +1002,7 @@ SEE_lex_number(interp, s, res)
 		    }
 		    if (!seendig) goto fail;
 		}
-		numbuf = SEE_ALLOCA(interp, pos - start + 1, char);
+		numbuf = SEE_STRING_ALLOCA(interp, char, pos - start + 1);
 		for (i = 0; i < pos - start; i++)
 			numbuf[i] = s->data[i + start] & 0x7f;
 		numbuf[i] = '\0';

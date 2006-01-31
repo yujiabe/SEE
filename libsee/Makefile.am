@@ -23,7 +23,7 @@ noinst_HEADERS=    array.h cfunction_private.h dprint.h dtoa.h 		\
 		   scope.h tokens.h unicase.inc unicode.h unicode.inc	\
 		   stringdefs.h stringdefs.inc
 
-libsee_la_LIBADD=  @LIBOBJS@ @ALLOCA@
+libsee_la_LIBADD=  @LIBOBJS@
 
 EXTRA_DIST=	   string.pl string.defs
 PERL=		   @PERL@

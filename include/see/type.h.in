@@ -141,11 +141,13 @@ typedef unsigned char     SEE_boolean_t;  /* non-zero means true */
 typedef SEE_uint16_t	  SEE_char_t;     /* UTF-16 encoding */
 typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 
-/* an attribute indicating which functions never return */
-#if HAVE_ATTRIBUTE_NORETURN
+/* attributes that assist the compiler */
+#if __GNUC__
 # define SEE_dead	__attribute__((__noreturn__))
+# define _SEE_malloc	__attribute__((__malloc__))
 #else
 # define SEE_dead	/* nothing */
+# define _SEE_malloc	/* nothing */
 #endif
 
 /* IEEE-754 constants defined in value.o */
@@ -155,7 +157,7 @@ extern const unsigned char
 	SEE_literal_Max[8],
 	SEE_literal_Min[8];
 
-#if HAVE_CONSTANT_HEX_FLOAT && HAVE_CONSTANT_NAN_DIV && HAVE_CONSTANT_INF_DIV
+#if @HAVE_CONSTANT_HEX_FLOAT@ && @HAVE_CONSTANT_NAN_DIV@ && @HAVE_CONSTANT_INF_DIV@
 # define SEE_NaN		((SEE_number_t) (0.0 / 0.0))
 # define SEE_Infinity		((SEE_number_t) (1.0 / 0.0))
 # define SEE_MinNumber		((SEE_number_t) 0x1p-1074)
@@ -168,7 +170,9 @@ extern const unsigned char
 #endif
 
 /* On-stack allocation */
-#if STDC_HEADERS
+#define SEE_ALLOCA(i,t,n)  (t *)((n) ? alloca((n) * sizeof (t)) : 0)
+#define SEE_STRING_ALLOCA(i,t,n)  SEE_ALLOCA(i,t,n)
+#if @STDC_HEADERS@
 # include <stdlib.h>
 #endif
 #ifndef __GNUC__
@@ -180,14 +184,15 @@ extern const unsigned char
 #  else
 #   ifndef alloca 		/* predefined by HP cc +Olibcalls */
 #    ifndef @HAVE_ALLOCA@
-      char *SEE_alloca(/* unsigned int */);
-#     define alloca SEE_alloca	/* use gc memory as last resort */
+#     undef SEE_ALLOCA
+#     define SEE_ALLOCA(i,t,n) SEE_NEW_ARRAY(i,t,n)
+#     undef SEE_STRING_ALLOCA
+#     define SEE_STRING_ALLOCA(i,t,n) SEE_NEW_STRING_ARRAY(i,t,n)
 #    endif
 #   endif
 #  endif
 # endif
 #endif
 
-#define SEE_ALLOCA(i, n, t)	(t *)((n) ? alloca((n) * sizeof (t)) : 0)
 
 #endif /* _SEE_h_type_ */

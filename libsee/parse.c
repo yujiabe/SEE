@@ -2450,8 +2450,8 @@ MemberExpression_new_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	if (n->args) {
 		argc = n->args->argc;
-		args = SEE_ALLOCA(interp, argc, struct SEE_value);
-		argv = SEE_ALLOCA(interp, argc, struct SEE_value *);
+		args = SEE_ALLOCA(interp, struct SEE_value, argc);
+		argv = SEE_ALLOCA(interp, struct SEE_value *, argc);
 		Arguments_eval((struct node *)n->args, context, args);
 		for (i = 0; i < argc; i++)
 			argv[i] = &args[i];
@@ -2715,8 +2715,8 @@ CallExpression_eval(na, context, res)
 	EVAL(n->exp, context, &r1);
 	argc = n->args->argc;
 	if (argc) {
-		args = SEE_ALLOCA(interp, argc, struct SEE_value);
-		argv = SEE_ALLOCA(interp, argc, struct SEE_value *);
+		args = SEE_ALLOCA(interp, struct SEE_value, argc);
+		argv = SEE_ALLOCA(interp, struct SEE_value *, argc);
 		Arguments_eval((struct node *)n->args, context, args);
 		for (i = 0; i < argc; i++)
 			argv[i] = &args[i];

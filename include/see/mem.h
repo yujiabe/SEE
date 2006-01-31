@@ -8,11 +8,14 @@
 
 struct SEE_interpreter;
 
-void *	SEE_malloc(struct SEE_interpreter *i, SEE_size_t sz);
-void *	SEE_malloc_string(struct SEE_interpreter *i, SEE_size_t sz);
+void *	SEE_malloc(struct SEE_interpreter *i, SEE_size_t sz) 
+		_SEE_malloc;
+void *	SEE_malloc_string(struct SEE_interpreter *i, SEE_size_t sz) 
+		_SEE_malloc;
 void *	SEE_malloc_finalize(struct SEE_interpreter *i, SEE_size_t sz,
 		void (*finalizefn)(struct SEE_interpreter *i, void *p,
-			void *closure), void *closure);
+			void *closure), void *closure) 
+		_SEE_malloc;
 void  	SEE_free(struct SEE_interpreter *i, void **memp);
 
 #ifndef NDEBUG
