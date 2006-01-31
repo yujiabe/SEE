@@ -9,9 +9,10 @@
         table    { display: block; 
                    float: none;
                    position: relative; 
-                   left: 10%; 
-		   width: 80%; }
-        table    { border-collapse: collapse; border: thin solid black; }
+                   margin-left: 10%;
+		   }
+        table    { border-collapse: collapse; 
+		   border: none /* thin solid black */; }
         table tr { border: thin solid black; }
         table th { background: #f0f0f0;
                    border-bottom: thin solid black; }
@@ -51,9 +52,9 @@
 <h1>Using SEE, the Simple ECMAScript Engine</h1>
 
 <p>
-by David Leonard, 2005
+by David Leonard, 2006
 <br>
-for SEE version 1.3
+for SEE version 2.0
 </p>
 
 
@@ -407,12 +408,16 @@ returning a pointer of given type
 - a gc-efficient form of <code>SEE_NEW_ARRAY()</code>, where you guarantee that the elements will not contain pointers
 <li><code>SEE_ALLOCA()</code>
 - allocate storage for an array on the stack (see <code>alloca()</code>)
+<li><code>SEE_STRING_ALLOCA()</code>
+- like <code>SEE_ALLOCA()</code>, except used to hint that the allocated
+elements will not contain pointers
 </ul>
 
 <pre>T * <dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
 T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
-T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, int length, type T);</pre>
+T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);
+T * <dfn id="SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);</pre>
 
 <p>A usage example is:</p>
 <pre>char *buffer = SEE_NEW_STRING_ARRAY(interp, char, 30);</pre>
@@ -1141,17 +1146,6 @@ To manipulate a string, first create a new string using one of the following:
         <code>vprintf</code>-like arguments (forced to 7-bit ASCII)
 </ul>
 
-<pre>struct SEE_string *<dfn id="SEE_string_new">SEE_string_new</dfn>(struct SEE_interpreter *interp,
-                unsigned int space);
-struct SEE_string *<dfn id="SEE_string_dup">SEE_string_dup</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s);
-struct SEE_string *<dfn id="SEE_string_concat">SEE_string_concat</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s1, struct SEE_string *s2);
-struct SEE_string *<dfn id="SEE_string_sprintf">SEE_string_sprintf</dfn>(struct SEE_interpreter *interp,
-                const char *fmt, ...);
-struct SEE_string *<dfn id="SEE_string_vsprintf">SEE_string_vsprintf</dfn>(struct SEE_interpreter *interp,
-                const char *fmt, va_list ap);</pre>
-
 <p>
 And then, before passing your new string to any other function, append 
 characters to it using the following:
@@ -1164,16 +1158,12 @@ characters to it using the following:
                                                 representation in base 10
 </ul>
 
-<pre>void <dfn id="SEE_string_addch">SEE_string_addch</dfn>(struct SEE_string *s, SEE_char_t ch);
-void <dfn id="SEE_string_append">SEE_string_append</dfn>(struct SEE_string *s, const struct SEE_string *sffx);
-void <dfn id="SEE_string_append_int">SEE_string_append_int</dfn>(struct SEE_string *s, int i);</pre>
-
 <p>
-Once a new string has been passed to any other SEE function, it is generally
-unwise to modify its contents in any way.
-It is OK to share a string
-between different interpreters if the string is guaranteed not to be
-modified, and the garbage collector can cope with it.
+Once a new string has been passed to any other SEE function, it should not
+have its contents modified in any way.
+Strings should not be shared
+between different interpreters, unless created with 
+<code>SEE_intern_global()</code> (<a href="#staticstr">&sect;5.3.1</a>).
 </p>
 
 <p>
@@ -1185,12 +1175,71 @@ you will need to write your own converter function. Use the implementation of
 the basis for such a converter.
 </p>
 
-<p class="note">
-&#9888; Note:
-The <code>SEE_string_sprintf()</code> and
-<code>SEE_string_vsprintf()</code> functions only generate Unicode
-characters that lie in the 7-bit ASCII subset of Unicode.
+<p>
+The functions 
+<code>SEE_string_sprintf()</code> and <code>SEE_string_vsprintf()</code>
+do not exactly have the same formats
+as the standard <code>printf()</code> function, although they are
+substantially similar. 
+Follows is a table of understood formats:
 </p>
+
+<table>
+<thead>
+<tr><th>Format</th>
+    <th>Type</th>
+    <th>Comment</th></tr>
+</thead>
+<tbody>
+<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>d</code></td>
+    <td><code>signed int</td>
+    <td>decimal</td></tr>
+<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>u</code></td>
+    <td><code>unsigned int<code></td>
+    <td>decimal</td></tr>
+<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>x</code></td>
+    <td><code>unsigned int</code></td>
+    <td>hexadecimal (base 16)</td></tr>
+<tr><td><code>%c</code></td>
+    <td><code>char</code></td>
+    <td>0x00..0x7f only</td></tr>
+<tr><td><code>%C</code></td>
+    <td><code>SEE_char_t</code></td></tr>
+<tr><td><code>%<i>[</i>-<i>][#][</i>.<i>#]</i>s</code></td>
+    <td><code>const char *</code></td>
+    <td>each 0x00..0x7f only</td></tr>
+<tr><td><code>%<i>[</i>-<i>][#][</i>.<i>#]</i>S</code></td>
+    <td><code>struct SEE_string *</code></td></tr>
+<tr><td><code>%<i>[</i>-<i>][#]</i>p</code></td>
+    <td><code>void *</code></td></tr>
+<tr><td><code>%%</code></td>
+    <td></td>
+    <td>single <code>%</code></td></tr>
+</tbody>
+</table>
+
+<p>
+Where a <code><i>#</i></code> appears in the format, either a positive
+integer in base 10 may be supplied to indicate padding or precision, 
+or the special character <q><code>*</code></q> can be used instead
+to indicate that the next <code>int</code> argument provides the value. 
+Please see your system's documentation on <code>printf()</code>.
+</p>
+
+<pre>struct SEE_string *<dfn id="SEE_string_new">SEE_string_new</dfn>(struct SEE_interpreter *interp,
+                unsigned int space);
+struct SEE_string *<dfn id="SEE_string_dup">SEE_string_dup</dfn>(struct SEE_interpreter *interp,
+                struct SEE_string *s);
+struct SEE_string *<dfn id="SEE_string_concat">SEE_string_concat</dfn>(struct SEE_interpreter *interp,
+                struct SEE_string *s1, struct SEE_string *s2);
+struct SEE_string *<dfn id="SEE_string_sprintf">SEE_string_sprintf</dfn>(struct SEE_interpreter *interp,
+                const char *fmt, ...);
+struct SEE_string *<dfn id="SEE_string_vsprintf">SEE_string_vsprintf</dfn>(struct SEE_interpreter *interp,
+                const char *fmt, va_list ap);</pre>
+
+<pre>void <dfn id="SEE_string_addch">SEE_string_addch</dfn>(struct SEE_string *s, SEE_char_t ch);
+void <dfn id="SEE_string_append">SEE_string_append</dfn>(struct SEE_string *s, const struct SEE_string *sffx);
+void <dfn id="SEE_string_append_int">SEE_string_append_int</dfn>(struct SEE_string *s, int i);</pre>
 
 <p>
 Other string functions provided are:
@@ -1231,8 +1280,17 @@ are likely to be intern'ed already. (For example, all property names in
 the standard library are.)
 </p>
 
+<p>
+The function <code>SEE_intern_ascii()</code> is a convenience function
+that first converts the C string into a <code>SEE_string</code> before
+intern'ing. The C string must be an ASCII string terminated by a null
+character. ASCII characters occupy the range 1 through 127 inclusive.
+</p>
+
 <pre>struct SEE_string *<dfn id="SEE_intern">SEE_intern</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s);</pre>
+                struct SEE_string *s);
+struct SEE_string *<dfn id="SEE_intern_ascii">SEE_intern_ascii</dfn>(struct SEE_interpreter *interp,
+                const char *s);</pre>
 
 <h4 id="staticstr">5.3.2 Statically initialised strings</h4>
 
@@ -1269,13 +1327,15 @@ ASCII strings during the build process.
 
 <p>
 If an application wishes to internalise strings <em>across interpreters</em>,
-it must add all its global strings into the global
+it can add all its global strings into the global
 intern table <strong>before creating any interpreters</strong>.
 This is done by calling
-<code>SEE_intern_global()</code> for each global string.
+<code>SEE_intern_global()</code> for each string.
+Doing this can save a moderate amount of overhead, and can
+improve performance if the intern'ed string needs to be used often.
 </p>
 
-<pre>void <dfn id="SEE_intern_global">SEE_intern_global</dfn>(struct SEE_string *str);</pre>
+<pre>struct SEE_string * <dfn id="SEE_intern_global">SEE_intern_global</dfn>(const char *str);</pre>
 
 <p>
 When creating global strings, the application can either use
@@ -2234,6 +2294,7 @@ will occur.
 <td>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
+<a href="#SEE_intern_ascii">SEE_intern_ascii</a><br>
 <a href="#SEE_intern_global">SEE_intern_global</a><br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
 <a href="#SEE_interpreter_init_compat">SEE_interpreter_init_compat</a><br>
@@ -2251,8 +2312,8 @@ will occur.
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
-<a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <td>
+<a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
@@ -2272,8 +2333,8 @@ will occur.
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
-<a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <td>
+<a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
@@ -2282,6 +2343,7 @@ will occur.
 <a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
 <a href="#SEE_string_addch">SEE_string_addch</a><br>
+<a href="#SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</a><br>
 <a href="#SEE_string_append">SEE_string_append</a><br>
 <a href="#SEE_string_append_int">SEE_string_append_int</a><br>
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
@@ -2292,9 +2354,9 @@ will occur.
 <a href="#SEE_string_new">SEE_string_new</a><br>
 <a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
+<td>
 <a href="#SEE_string_vsprintf">SEE_string_vsprintf</a><br>
 <a href="#SEE_THROW">SEE_THROW</a><br>
-<td>
 <a href="#SEE_ToBoolean">SEE_ToBoolean</a><br>
 <a href="#SEE_ToInt32">SEE_ToInt32</a><br>
 <a href="#SEE_ToInteger">SEE_ToInteger</a><br>
