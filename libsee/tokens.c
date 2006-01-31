@@ -268,7 +268,8 @@ SEE_tokenname_buf(token, buf, buflen)
 	int buflen;
 {
 	int i;
-	char tokch[4], *name;
+	char tokch[4];
+	const char *name;
         int namelen;
 
 	for (i = 0; i < lengthof(tok_names); i++)

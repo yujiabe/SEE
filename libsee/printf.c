@@ -158,8 +158,8 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		case '-': pad_left = 1; break;
 		case '0': pad_zero = 1; break;
 		case '+': pad_plus = 1; break;
-		case '#': /* ignore */
-		case ' ': /* ignore */
+		case '#': break; /* ignore */
+		case ' ': break; /* ignore */
 		}
 		fmt++;
 	    }
