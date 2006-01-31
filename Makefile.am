@@ -1,6 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
+AUTOMAKE_OPTIONS= foreign
+
 SUBDIRS = include libsee shell doc
 
 EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
