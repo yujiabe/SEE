@@ -999,7 +999,7 @@ static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 #else /* NDEBUG */
 
 # define EVAL_DEBUG_ENTER(node)
-# define EVAL_DEBUG_LEAVE(node)
+# define EVAL_DEBUG_LEAVE(node, ctxt, res)
 
 #endif /* NDEBUG */
 
