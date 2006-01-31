@@ -147,7 +147,7 @@ init_error(interp, name, constructor, proto_proto)
 	/* 15.11.7.6 NativeError.prototype */
 	SEE_SET_OBJECT(&v, proto);
 	SEE_OBJECT_PUT(interp, constructor, STR(prototype), &v, 
-		SEE_ATTR_DEFAULT);
+		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	return proto;
 }
