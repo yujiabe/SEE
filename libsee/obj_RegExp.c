@@ -148,7 +148,7 @@ SEE_RegExp_init(interp)
 	SEE_OBJECT_PUT(interp, RegExp, STR(length), &v,		/* 15.10.5 */
 		SEE_ATTR_LENGTH);
 
-	/* 15.10.6 Regexp.prototype */
+	/* 15.10.6 RegExp.prototype */
 	SEE_native_init((struct SEE_native *)RegExp_prototype, interp,
 		&regexp_proto_class, interp->Object_prototype); 
 
