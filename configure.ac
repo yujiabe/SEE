@@ -3,7 +3,6 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([see],[2.0],[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
-AUTOMAKE_OPTIONS="foreign"
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_FILES([Makefile
@@ -18,7 +17,7 @@ AC_CONFIG_FILES([Makefile
 		 ])
 
 ## -- fix brokenness with automake-1.4
-AC_SUBST(PACKAGE,see)
+AC_SUBST(PACKAGE,[$PACKAGE_NAME])
 AC_SUBST(VERSION,[$PACKAGE_VERSION])
 
 dnl ------------------------------------------------------------
@@ -196,8 +195,8 @@ dnl ------------------------------------------------------------
 dnl std lib functions
 dnl
 
-AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
+AC_CHECK_FUNCS([alloca])
 
 AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within
 
@@ -240,19 +239,6 @@ AC_CHECK_FUNCS([GC_gcollect GC_dump GC_malloc_string GC_free])
 dnl ------------------------------------------------------------
 dnl miscellanea
 dnl
-
-dnl
-dnl no-return functions: helps the compiler optimise
-dnl
-
-AC_CACHE_CHECK([for attribute((noreturn))], [ac_cv_cc_attribute_noreturn],
-	[AC_TRY_RUN([void f() __attribute__((__noreturn__));
-		     void exit();
-		     void f() { exit(0); for(;;); }
-		     int main() { f(); exit(1); }],
-		    [ac_cv_cc_attribute_noreturn=yes],
-		    [ac_cv_cc_attribute_noreturn=no])])
-test $ac_cv_cc_attribute_noreturn = yes && AC_DEFINE(HAVE_ATTRIBUTE_NORETURN)
 
 dnl
 dnl NaN and Infinity as inline expressions: another optimisation
