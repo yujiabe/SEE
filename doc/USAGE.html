@@ -1154,6 +1154,7 @@ characters to it using the following:
 <ul>
   <li><code>SEE_string_addch()</code> - append a UTF-16 character
   <li><code>SEE_string_append()</code> - append contents of another string
+  <li><code>SEE_string_append_ascii()</code> - convert 7bit ASCII to Unicode and append to another string
   <li><code>SEE_string_append_int()</code> - append a signed integer's
                                                 representation in base 10
 </ul>
@@ -1239,6 +1240,7 @@ struct SEE_string *<dfn id="SEE_string_vsprintf">SEE_string_vsprintf</dfn>(struc
 
 <pre>void <dfn id="SEE_string_addch">SEE_string_addch</dfn>(struct SEE_string *s, SEE_char_t ch);
 void <dfn id="SEE_string_append">SEE_string_append</dfn>(struct SEE_string *s, const struct SEE_string *sffx);
+void <dfn id="SEE_string_append_ascii">SEE_string_append</dfn>(struct SEE_string *s, const char *);
 void <dfn id="SEE_string_append_int">SEE_string_append_int</dfn>(struct SEE_string *s, int i);</pre>
 
 <p>
@@ -2345,6 +2347,7 @@ will occur.
 <a href="#SEE_string_addch">SEE_string_addch</a><br>
 <a href="#SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</a><br>
 <a href="#SEE_string_append">SEE_string_append</a><br>
+<a href="#SEE_string_append_ascii">SEE_string_append_ascii</a><br>
 <a href="#SEE_string_append_int">SEE_string_append_int</a><br>
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
@@ -2353,8 +2356,8 @@ will occur.
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
 <a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
-<a href="#SEE_string_substr">SEE_string_substr</a><br>
 <td>
+<a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_vsprintf">SEE_string_vsprintf</a><br>
 <a href="#SEE_THROW">SEE_THROW</a><br>
 <a href="#SEE_ToBoolean">SEE_ToBoolean</a><br>

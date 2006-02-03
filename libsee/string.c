@@ -193,6 +193,26 @@ SEE_string_append(s, t)
 }
 
 /*
+ * Append 7-bit ascii string to the end of string s.
+ * MODIFIES 's'!
+ */
+void
+SEE_string_append_ascii(s, ascii)
+	struct SEE_string *s;
+	const char *ascii;
+{
+	const char *p;
+
+	for (p = ascii; *p; p++)
+		SEE_ASSERT(s->interpreter, !(*p & 0x80));
+	if (p - ascii) {
+	    growby(s, p - ascii);
+	    for (p = ascii; *p; p++)
+	    	s->data[s->length++] = *p;
+	}
+}
+
+/*
  * Append an integer onto the end of string s
  * MODIFIES 's'!
  */
