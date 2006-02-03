@@ -231,7 +231,7 @@ SEE_intern(interp, s)
 	struct intern **x;
 	unsigned int h;
 #ifndef NDEBUG
-	const char *where;
+	const char *where = NULL;
 # define WHERE(f) do { if (SEE_debug_intern) where=f; } while (0)
 #else
 # define WHERE(f) /* nothing */
@@ -285,7 +285,7 @@ SEE_intern_ascii(interp, s)
 	unsigned int h, len;
 	struct intern **x;
 #ifndef NDEBUG
-	const char *where;
+	const char *where = NULL;
 #endif
 
 	SEE_ASSERT(interp, s != NULL);
