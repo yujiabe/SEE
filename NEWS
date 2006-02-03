@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Added compat() function to the shell which changes compatibility flags.
   Added many ASCII string functions to the API for convenience
   Compat: Allow /[/]/ to be parsed as a regex literal in EXT1.
   Error.prototype and NativeError.prototype attributes now match standard

@@ -7,6 +7,7 @@
  *		  string argument and prints it, followed
  *		  by a newline.
  *  version	- an undefined value, used to satisfy some tests.
+ *  compat      - changes the compat flags. Returns old compat flags
  *
  * In HTML mode the following objects are provided:
  *
@@ -18,6 +19,9 @@
  *
  * If the functions GC_dump and GC_gcollect are found during configure,
  * then the shell adds them as GC_dump and GC_gcollect.
+ *
+ *  gc_dump
+ *  gc_gcollect
  *
  */
 
@@ -31,11 +35,14 @@
 
 #include <see/see.h>
 #include "shell.h"
+#include "compat.h"
 
 /* Prototypes */
 static void print_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static void document_write(struct SEE_interpreter *, struct SEE_object *, 
+static void document_write_fn(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void compat_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #if HAVE_GC_DUMP
 static void gc_dump_fn(struct SEE_interpreter *, struct SEE_object *,
@@ -88,6 +95,43 @@ print_fn(interp, self, thisobj, argc, argv, res)
         SEE_SET_UNDEFINED(res);
 }
 
+/*
+ * A function to modify the compatibility flags at runtime.
+ */
+static void
+compat_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+        struct SEE_value v;
+	char *buf;
+	int i;
+	struct SEE_string *old;
+	
+	old = compat_tostring(interp, interp->compatibility);
+	if (argc > 0 && SEE_VALUE_GET_TYPE(argv[0]) != SEE_UNDEFINED) {
+		SEE_ToString(interp, argv[0], &v);
+
+		/* Convert argument to an ASCII C string */
+		buf = SEE_STRING_ALLOCA(interp, char, v.u.string->length + 1);
+		for (i = 0; i < v.u.string->length; i++)
+		    if (v.u.string->data[i] > 0x7f)
+		        SEE_error_throw(interp, interp->RangeError, 
+			   "argument is not ASCII");
+		    else
+		    	buf[i] = v.u.string->data[i] & 0x7f;
+		buf[i] = '\0';
+
+		if (compat_fromstring(buf, &interp->compatibility) == -1)
+		        SEE_error_throw(interp, interp->Error, 
+			   "invalid flags");
+	}
+
+        SEE_SET_STRING(res, old);
+}
+
 #if HAVE_GC_DUMP
 void GC_dump(void);
 /*
@@ -136,6 +180,9 @@ shell_add_globals(interp)
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
 		"print", print_fn, 1, 0);
 
+	SEE_CFUNCTION_PUTA(interp, interp->Global, 
+		"compat", compat_fn, 1, 0);
+
 #if HAVE_GC_DUMP
 	/* Create the gc_dump function, and attach to the Globals. */
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
@@ -157,7 +204,7 @@ shell_add_globals(interp)
  * No newline is appended.
  */
 static void
-document_write(interp, self, thisobj, argc, argv, res)
+document_write_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
         struct SEE_object *self, *thisobj;
         int argc;
@@ -193,7 +240,7 @@ shell_add_document(interp)
 	SEE_OBJECT_PUTA(interp, interp->Global, "document", &v, 0);
 
 	/* Create a 'write' method and attach to 'document'. */
-	SEE_CFUNCTION_PUTA(interp, document, "write", document_write, 1, 0);
+	SEE_CFUNCTION_PUTA(interp, document, "write", document_write_fn, 1, 0);
 
 	/* Create a 'navigator' object and attach to the global space */
 	navigator = SEE_Object_new(interp);

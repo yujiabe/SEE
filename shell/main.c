@@ -33,18 +33,18 @@ extern int optind;
 
 #include <see/see.h>
 #include "shell.h"
+#include "compat.h"
 #include "debug.h"
 
 /* Prototypes */
 static void debug(struct SEE_interpreter *, int);
 static void trace(struct SEE_interpreter *, struct SEE_throw_location *, 
-        struct SEE_context *);
+        struct SEE_context *, enum SEE_trace_event);
 static int run_input(struct SEE_interpreter *, struct SEE_input *, 
         struct SEE_value *);
 static int run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
 static void run_html(struct SEE_interpreter *, char *);
-static int compatvalue(const char *, int *);
 
 static struct debug *debugger;
 
@@ -89,13 +89,19 @@ debug(interp, c)
  * the program parse tree.
  */
 static void
-trace(interp, loc, context)
+trace(interp, loc, context, event)
 	struct SEE_interpreter *interp;
 	struct SEE_throw_location *loc;
 	struct SEE_context *context;
+	enum SEE_trace_event event;
 {
 	if (loc) {
-	    fprintf(stderr, "trace: ");
+	    fprintf(stderr, "trace: %s ",
+	    	event == SEE_TRACE_CALL ? "CALL" :
+	    	event == SEE_TRACE_RETURN ? "RETURN" :
+	    	event == SEE_TRACE_STATEMENT ? "STATEMENT" :
+	    	event == SEE_TRACE_THROW ? "THROW" :
+		"???");
 	    if (loc->filename) {
 		SEE_string_fputs(loc->filename, stderr);
 		fprintf(stderr, ", ");
@@ -324,59 +330,6 @@ run_html(interp, filename)
 	fclose(f);
 }
 
-/*
- * Convert a compatability flag name into an integer bit-flag.
- * The following compatbility flags are understood (see the documentation
- * for more details). They may be prefixed with 'no' to turn them off.
- *
- *  sgmlcom      - treat SGML comments in program text as normal comments
- *  utf_unsafe   - pass through invalid UTF-8 characters without error
- *  undefdef     - return undefined for unknown names instead of throwing
- *  262_3b       - provide the optional functions in section 3B of standard
- *  ext1         - enable local SEE extension set number 1
- *  arrayjoin1   - emulate old array.join(undefined) bug
- */
-static int
-compatvalue(name, compatibility)
-	const char *name;
-	int *compatibility;
-{
-	static struct { const char *name; int flag; } names[] = {
-		{ "sgmlcom",	SEE_COMPAT_SGMLCOM },
-		{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE },
-		{ "undefdef",	SEE_COMPAT_UNDEFDEF },
-		{ "262_3b",	SEE_COMPAT_262_3B },
-		{ "ext1",	SEE_COMPAT_EXT1 },
-		{ "arrayjoin1",	SEE_COMPAT_ARRAYJOIN1 },
-	};
-	int i;
-	int no = 0;
-	int bit = 0;
-
-	if (name[0] == 'n' && name[1] == 'o') {
-		name += 2;
-		no = 1;
-	}
-	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
-		if (strcmp(name, names[i].name) == 0) {
-			bit = names[i].flag;
-			break;
-		}
-	if (name[0] >= '0' && name[0] <= '9')
-		bit = atoi(name);
-	else if (bit == 0) {
-		fprintf(stderr, "WARNING: unknown compatability flag '%s'\n",
-		    name);
-		return -1;
-	}
-
-	if (no)
-		*compatibility &= ~bit;
-	else
-		*compatibility |= bit;
-	return 0;
-}
-
 int
 main(argc, argv)
 	int argc;
@@ -399,7 +352,7 @@ main(argc, argv)
 	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:r:V")) != -1)
 	    switch (ch) {
 	    case 'c':
-		if (compatvalue(optarg, &interp.compatibility) == -1)
+		if (compat_tovalue(optarg, &interp.compatibility) == -1)
 		    error = 1;
 		break;
 	    case 'd':
