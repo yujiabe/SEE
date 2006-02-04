@@ -637,6 +637,7 @@ static struct var *FormalParameterList_parse(struct parser *parser);
 static void FunctionBody_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
 static struct node *FunctionBody_parse(struct parser *parser);
+static struct node *FunctionStatement_parse(struct parser *parser);
 static struct function *Program_parse(struct parser *parser);
 static void SourceElements_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
@@ -6054,13 +6055,10 @@ Statement_parse(parser)
 	case tTRY:
 		return PARSE(TryStatement);
 	case tFUNCTION:
-		/*
-		 * Note: FunctionDeclarations are syntactically disallowed
-		 * at this level. Even ExpressionStatement (12.4)
-		 * is guarded with a lookahead that doesnt include
-		 * tFunction.
-		 */
-		ERRORm("function declaration not allowed here");
+		if ((parser->interpreter->compatibility & SEE_COMPAT_EXT1))
+		    if (lookahead(parser, 1) != '(')
+			return PARSE(FunctionStatement);
+		ERRORm("function keyword not allowed here");
 	case tIDENT:
 		if (lookahead(parser, 1) == ':')
 			return PARSE(LabelledStatement);
@@ -6515,7 +6513,6 @@ ExpressionStatement_parse(parser)
 {
 	struct Unary_node *n;
 
-	/* if (NEXT == '{' || NEXT == tFUNCTION) ERROR; */
 	n = NEW_NODE(struct Unary_node, &ExpressionStatement_nodeclass);
 	n->a = PARSE(Expression);
 	EXPECT_SEMICOLON;
@@ -8787,6 +8784,41 @@ FunctionBody_parse(parser)
 }
 
 /*
+ * JavaScript 1.5 function statements. (Not part of ECMA-262)
+ * The statement 'function foo (args) { body };' becomes syntactically
+ * equivalent to 'foo = function foo (args) { body };' The Netscape
+ * documentation calls these 'conditional functions', as their intent
+ * is to be used like this:
+ *    if (0) function foo() { abc };
+ *    else   function foo() { xyz };
+ */
+static struct node *
+FunctionStatement_parse(parser)
+	struct parser *parser;
+{
+	struct Function_node *f;
+	struct PrimaryExpression_ident_node *i;
+	struct AssignmentExpression_node *an;
+	struct Unary_node *e;
+
+	f = (struct Function_node *)FunctionExpression_parse(parser);
+
+	i = NEW_NODE(struct PrimaryExpression_ident_node,
+		&PrimaryExpression_ident_nodeclass);
+	i->string = f->function->name;
+
+	an = NEW_NODE(struct AssignmentExpression_node, 
+			&AssignmentExpression_simple_nodeclass);
+	an->lhs = (struct node *)i;
+	an->expr = (struct node *)f;
+
+	e = NEW_NODE(struct Unary_node, &ExpressionStatement_nodeclass);
+	e->a = (struct node *)an;
+
+	return (struct node *)e;
+}
+
+/*
  *	-- 14
  *
  *	Program
@@ -8974,14 +9006,17 @@ SourceElements_parse(parser)
 	for (;;) 
 	    switch (NEXT) {
 	    case tFUNCTION:
-		*f = SEE_NEW(parser->interpreter, struct SourceElement);
-		(*f)->node = PARSE(FunctionDeclaration);
-		f = &(*f)->next;
+		if (lookahead(parser, 1) != '(') {
+		    *f = SEE_NEW(parser->interpreter, struct SourceElement);
+		    (*f)->node = PARSE(FunctionDeclaration);
+		    f = &(*f)->next;
 #ifndef NDEBUG
-		if (SEE_parse_debug) 
-		    dprintf("SourceElements_parse: got function\n");
+		    if (SEE_parse_debug) 
+		        dprintf("SourceElements_parse: got function\n");
 #endif
-		break;
+		    break;
+		}
+		/* else it's a function expression */
 	    /* The 'first's of Statement */
 	    case tTHIS: case tIDENT: case tSTRING: case tNUMBER:
 	    case tNULL: case tTRUE: case tFALSE:
