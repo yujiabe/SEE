@@ -32,15 +32,18 @@
  * Currently contains intel/unix-specific specific parts, that could
  * be replaced for other systems.
  *
- * gc_malloc - Allocates memory that will be scanned for pointers.
- * gc_malloc_atomic - Allocates memory with content that wont be scanned.
- * gc_malloc_finalizer - Allocates scannable with finalizer function
+ * sgc_malloc - Allocates memory that will be scanned for pointers.
+ * sgc_malloc_atomic - Allocates memory with content that wont be scanned.
+ * sgc_malloc_finalizer - Allocates scannable with finalizer function
  *                        that will be called when collected.
- * gc_atexit - Runs all finalizers and frees all objects.
- * gc_collect - Perform a collection now, instead of waiting until 
+ * sgc_atexit - Runs all finalizers and frees all objects.
+ * sgc_collect - Perform a collection now, instead of waiting until 
  *			malloc() returns NULL.
- * gc_add_root - Add foreign memory to scan.
- * gc_remove_root - Remove memory previously added with gc_add_root().
+ * sgc_add_root - Add foreign memory to scan.
+ * sgc_remove_root - Remove memory previously added with sgc_add_root().
+ *
+ * TODO:
+ *   stack and BSS detection for different platforms
  */
 
 #ifdef TEST
@@ -48,39 +51,44 @@
 # include <unistd.h>
 #endif
 
-#include <stdlib.h>
+#if STDC_INCLUDES
+# include <stdlib.h>
+#endif
+
+#include <see/try.h>
+
 #include "simple_gc.h"
 
+/* Linked list of roots. A root is a memory segment that is always reachable */
 struct root {
 	char *base;
 	unsigned int extent;
 	struct root *next;
 };
 
+/* Binary tree of allocations. Allocations are collectable memory segments */
 struct allocation {
 	struct allocation *side[2];
-	unsigned int state;
+	unsigned int state;	/* mark state and AVL flags */
 	unsigned int extent;	/* sizeof of struct + allocation length */
 	void (*finalizer)(void *);
 	/* char data[]; */
 };
-#define STATE_BALANCE   3		/* AVL balance property of the node */
+
+/* State flags */
+#define STATE_AVL       3		/* AVL balance property of the node */
+#define  LEFT	           0
+#define  RIGHT	           1
+#define  BALANCED          2
 #define STATE_MARKED	4		/* Marked during scan() */
 #define STATE_ATOMIC	8		/* Guaranteed not to contain pointers */
-
-#define NORMAL	0
 
 #define IS_MARKED(a)	 ((a)->state & STATE_MARKED)
 #define SET_MARK(a)	 (a)->state |= STATE_MARKED
 #define CLEAR_MARK(a)	 (a)->state &= ~STATE_MARKED
-
 #define IS_ATOMIC(a)	 ((a)->state & STATE_ATOMIC)
-
-#define BALANCE_OF(a)	 ((a)->state & STATE_BALANCE) 
-#define SET_BALANCE(a,b) (a)->state = ((a)->state & ~STATE_BALANCE) | (b)
-#define LEFT	 0
-#define RIGHT	 1
-#define BALANCED 2
+#define GET_BALANCE(a)	 ((a)->state & STATE_AVL) 
+#define SET_BALANCE(a,b) (a)->state = ((a)->state & ~STATE_AVL) | (b)
 
 /* The allocation data immediately follows the allocation */
 #define ALLOCATION_BASE(a) ((char *)(a) + sizeof (struct allocation))
@@ -92,12 +100,12 @@ struct allocation {
 static void sweep(void);
 static void sweep_sub(struct allocation *);
 static void run_finalizers(void);
+static void machdep_scan(void);
 static void scan(char *base, unsigned int len);
 static void allocation_insert(struct allocation *);
 static void allocation_free(struct allocation *);
 static void *allocate(unsigned int sz, int state, void (*finalizer)(void *));
 
-static char *stack_top;				/* top of stack */
 static struct allocation *allocation_root;	/* allocated objects */
 static struct allocation *allocation_finalizing; /* objects pending finalizer */
 static char *allocation_min;
@@ -131,7 +139,7 @@ allocation_insert(new_node)
 	 */
 	n = root;
 	while (*n) {
-	    if (BALANCE_OF(*n) != BALANCED)
+	    if (GET_BALANCE(*n) != BALANCED)
 	    	last_imbalance = n;
 	    n = &(*n)->side[new_node < *n];
 	}
@@ -139,12 +147,12 @@ allocation_insert(new_node)
 
 	if (last_imbalance) {
 	    n = last_imbalance;
-	    if (BALANCE_OF(*n) == BALANCED) {
+	    if (GET_BALANCE(*n) == BALANCED) {
 	    	/* nothing to do, root node is balanced */
 	    } else {
 	    	unsigned int dir = new_node < *n;
 		struct allocation **n1 = &(*n)->side[dir];
-	        if (BALANCE_OF(*n) != dir) {
+	        if (GET_BALANCE(*n) != dir) {
 		    /* counter-imbalance is corrected to balanced */
 		    SET_BALANCE(*n, BALANCED);
 		    n = n1;
@@ -199,30 +207,80 @@ allocation_insert(new_node)
 
 }
 
+/*
+ * Machine-dependent root scan.
+ */
+#if __unix__
+static void
+machdep_scan()
+{
+	/* 1. Stack */
+#if __i386__ && __GNUC__
+	/* Intel; assumes stack top never changes (ie no threads) */
+	char *bottom;
+	static char *top = NULL;
+	__asm__("mov %%ebp, %0" : "=g"(bottom));
+	if (!top) {
+		char *sp = bottom;
+		while (*(char **)sp > sp)
+			sp = *(char **)sp;
+		top = sp;
+	}
+	scan(bottom, top - bottom);
+#else
+  /* TODO - stack finders for other architectures */
+ # warning "Unable to add stack to root set on this architecture"
+#endif
+
+	/* 2. Static variables */
+#if __unix__ || unix
+# if __linux__ || sun
+#  define __fini _fini
+# endif
+# if hppa || __hppa__
+#  define _init	__data_start
+#  define __fini _edata
+# endif
+# define data_start	_init
+# define data_end	__fini
+# define bss_start	_edata
+# define bss_end	_end
+	{
+	    extern char data_start[], data_end[], bss_start[], bss_end[];
+	    scan(data_start, data_end - data_start);
+	    scan(bss_start, bss_end - bss_start);
+	}
+#else /* not unix */
+ # warning "Unable to add static storage to root set on this system"
+#endif 
+
+    /* Dynamically loaded libraries */
+    /* TODO - detected shared libraries? */
+}
+#endif /* unix */
+
 /* Scans the stack, BSS and user roots and then sweeps the allocation tree */
 void
-gc_collect() 
+sgc_collect() 
 {
-	char *stack_bottom;
 	struct root *root;
-	extern char _edata, _end;
+	_SEE_JMPBUF jmpbuf;
+#if TEST
+	unsigned int osize = allocation_total_size;
+	unsigned int ocount = allocation_total_count;
+fprintf(stderr, "[collecting...");
+#endif
 
 	/*
 	 * Phase 1: Scan and mark
 	 */
 
-	if (stack_top) {
-	    /* Scan the stack of an intel process */
-	    __asm__("mov %%ebp, %0" : "=g"(stack_bottom));
-	    scan(stack_bottom, stack_top - stack_bottom);
-	}
+	/* Scan the unspilt registers */
+	_SEE_SETJMP(jmpbuf);
+        scan((char *)&jmpbuf, sizeof jmpbuf);
 
-	/*
-	 * Scan the BSS of an a.out executable. These
-	 * _e* variables are defined on Unix systems with 
-	 * a.out 
-	 */
-	scan(&_edata, &_end - &_edata);
+	/* Scan the stack, data and BSS */
+	machdep_scan();
 
 	/* Scan the user-supplied roots */
 	for (root = user_roots; root; root = root->next)
@@ -237,6 +295,12 @@ gc_collect()
 
 	/* Deal with objects left on the finalizing list */
 	run_finalizers();
+
+#if TEST
+fprintf(stderr, "freed %d objects %d bytes]\n", 
+	ocount - allocation_total_count,
+	osize - allocation_total_size);
+#endif
 }
 
 /*
@@ -283,6 +347,7 @@ sweep_sub(a)
 	    sweep_sub(side[1]);
 }
 
+/* Finalize the allocations on the allocation_finalizing list then free them */
 static void
 run_finalizers()
 {
@@ -308,16 +373,12 @@ scan(base, len)
 	char **p;
 
 	for (p = (char **)ALIGN((unsigned int)base); 
-	     (char *)p < base + len; 
+	     (char *)p + sizeof *p < base + len; 
 	     p++)
 	{
-#if 0 /* ifdef TEST */
-	    static unsigned int count;
-	    if (count++ % 1024)
-	    	putchar('.');
-#endif
 	    if (*p >= allocation_min && *p < allocation_max)
 	    {
+	    	/* Looks like a pointer into an allocation; search O(log(n)) */
 	    	struct allocation *a = allocation_root;
 	        while (a) 
 			if (*p < (char *)a)
@@ -325,7 +386,7 @@ scan(base, len)
 			else if (*p >= ALLOCATION_END(a))
 				a = a->side[LEFT];
 			else {
-			    /* Discovered a pointer into the data */
+			    /* Found the allocation pointed to */
 			    if (!IS_MARKED(a) && *p >= ALLOCATION_BASE(a)) {
 				SET_MARK(a);
 				if (!IS_ATOMIC(a))
@@ -338,7 +399,7 @@ scan(base, len)
 	}
 }
 
-/* Creates a new garbage-collectable allocation and adds to tree */
+/* Creates a new allocation */
 static void *
 allocate(len, init_state, finalizer)
 	unsigned int len;
@@ -349,31 +410,31 @@ allocate(len, init_state, finalizer)
 
 	/* Don't allocate empty objects */
 	if (len == 0) {
-	    if (finalizer)
-	    	(*finalizer)(NULL);
+	    /* NB: finalizer is NOT run */
 	    return NULL;
 	}
 
 	/* Collect when we have allocated twice as much as last time */
 	if (allocation_total_size >= collect_at) {
-	    gc_collect();
-	    collect_at *= 2;
+	    sgc_collect();
+	    collect_at = collect_at * 3 / 2;
+	    /* if (collect_at < 1024) collect_at = 1024; */
 	}
 
-	/* Call system malloc, or collect if it is exhausted */
+	/* Call system malloc; if exhausted, collect and retry */
 	newa = (struct allocation *)malloc(sizeof *newa + len);
 	if (!newa) {
-	    gc_collect();
+	    sgc_collect();
 	    newa = (struct allocation *)malloc(sizeof *newa + len);
 	    if (!newa)
 	        return NULL;
 	}
 
-	/* Fill in the object's header and insert it */
+	/* Fill in the allocation header and insert into allocation tree */
 	newa->extent = sizeof *newa + len;
 	newa->state = init_state;
 	newa->finalizer = finalizer;
-	allocation_insert(newa);
+	allocation_insert(newa); /* O(log(n)) */
 
 	/* Accounting */
 	allocation_total_size += ALLOCATION_LENGTH(newa);
@@ -386,7 +447,7 @@ allocate(len, init_state, finalizer)
 	return ALLOCATION_BASE(newa);
 }
 
-/* Called when an allocation is deemed unreachable */
+/* Called when an allocation is deemed unreachable after sweeping */
 static void
 allocation_free(a)
 	struct allocation *a;
@@ -394,8 +455,9 @@ allocation_free(a)
 	free(a);
 }
 
+/* Adds a memory segment to the list of roots scanned during collect */
 void
-gc_add_root(base, extent)
+sgc_add_root(base, extent)
 	void *base;
 	unsigned int extent;
 {
@@ -412,8 +474,9 @@ gc_add_root(base, extent)
 	}
 }
 
+/* Removes a previously added memory segment */
 void
-gc_remove_root(base)
+sgc_remove_root(base)
 	void *base;
 {
 	struct root **r;
@@ -427,30 +490,34 @@ gc_remove_root(base)
 	    }
 }
 
+/* Allocates collectable memory */
 void *
-gc_malloc(len)
+sgc_malloc(len)
 	unsigned int len;
 {
 	return allocate(len, 0, NULL);
 }
 
+/* Allocates collectable memory caller guarantees never to contain pointers */
 void *
-gc_malloc_atomic(len)
+sgc_malloc_atomic(len)
 	unsigned int len;
 {
 	return allocate(len, STATE_ATOMIC, NULL);
 }
 
+/* Allocates collectable memory attaching a finalizer callback function */
 void *
-gc_malloc_finalizer(len, finalizer)
+sgc_malloc_finalizer(len, finalizer)
 	unsigned int len;
 	void (*finalizer)(void *);
 {
 	return allocate(len, 0, finalizer);
 }
 
+/* Marks all objects as unreachable and runs finalizers */
 void
-gc_atexit()
+sgc_atexit()
 {
 	sweep();
 	run_finalizers();
@@ -458,6 +525,9 @@ gc_atexit()
 	run_finalizers();
 }
 
+/*------------------------------------------------------------
+ * Test stubs
+ */
 #ifdef TEST
 
 static void myfinalizer(void *);
@@ -466,7 +536,7 @@ static void info(void);
 static void
 info()
 {
-	printf("[%u bytes in %u objects]\n\n",
+	printf("[in use: %u bytes in %u objects]\n\n",
 		allocation_total_size, allocation_total_count);
 }
 
@@ -493,48 +563,42 @@ main()
 	unsigned long i;
 	double start, t;
 
-
-	/* Record the current stack base for scanning the stack */
-	__asm__("mov %%ebp, %0" : "=g"(stack_top));
-
-
 	setbuf(stdout, NULL);
 	atexit(info);
-	atexit(gc_atexit);
-
+	atexit(sgc_atexit);
 
 	printf("calling: p = allocate(100)\n");
-	p = gc_malloc(100);
+	p = sgc_malloc(100);
 	printf("  -> p = %p\n", p);
 	info();
 
 	printf("calling collect\n");
-	gc_collect();
+	sgc_collect();
 	info();
 
 	printf("setting p = NULL\n");
 	p = NULL;
-	gc_collect();
+	sgc_collect();
 	info();
 
-#define COUNT 1024*8
-#define SIZE  1024
+#define COUNT 1024*256
+#define SIZE  1024*2
 	printf("allocating %u objects of size %u:\n", COUNT, SIZE);
 	for (i = 0; i < COUNT; i++) {
-	    printf("\r\t%7u", i);
-	    gc_malloc(SIZE);
+/*	    printf("\r\t%7u", i); */
+	    sgc_malloc(SIZE);
 	}
-        printf(" done\n");
+/*	printf(" done\n"); */
 	info();
 
 	printf("calling collect\n");
 	start = now();
-	gc_collect();
+	sgc_collect();
 	printf(" collect took %f seconds\n", now() - start);
 	info();
 
 	printf("calling malloc_finalizer(300, myfinalizer)\n");
-	p2 = gc_malloc_finalizer(300, myfinalizer);
+	p2 = sgc_malloc_finalizer(300, myfinalizer);
 	info();
 
 	exit(0);
