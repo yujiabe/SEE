@@ -21,6 +21,7 @@ test("(new String()).indexOf()", -1)			/* bug 33 */
 test("-\"\\u20001234\\u2001\"", -1234)			/* r960 */
 test("/m/i.ignoreCase == true", true)			/* bug 34 */
 test("a: { do { break a } while (true) }",  void 0);	/* bug 35 */
-
+test("/foo/.test('foo')", true);			/* bug 40 */
+test("/foo/.test('bar')", false);			/* bug 40 */
 
 finish()
