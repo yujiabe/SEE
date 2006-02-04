@@ -9445,10 +9445,10 @@ SEE_context_eval(context, expr, res)
 	eval(context, context->interpreter->Global, 1, argv, res);
 }
 
-#if 0
 /*
  * A comparison function using the built-in operators for < and == 
  * Could be used as a better comparsion function for Array.sort().
+ * Currently used by RegExp.prototype.test()
  */
 int
 SEE_compare(interp, x, y)
@@ -9460,9 +9460,8 @@ SEE_compare(interp, x, y)
 	if (v.u.boolean)
 		return 0;
 	RelationalExpression_sub(interp, x, y, &v);
-	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED || !v.u.boolean)
+	if (SEE_VALUE_GET_TYPE(&v) == SEE_UNDEFINED || !v.u.boolean)
 		return 1;
 	else
 		return -1;
 }
-#endif

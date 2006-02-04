@@ -49,6 +49,7 @@
 #include "stringdefs.h"
 #include "init.h"
 #include "nmath.h"
+#include "parse.h"
 
 /*
  * 15.10 The RegExp object.
@@ -424,24 +425,22 @@ regexp_proto_test(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	struct SEE_value v;
+	struct SEE_value v, exec, a, undef, *exec_argv[1], null;
 
-	/*
-	 * spec bug: the spec says this method is supposed to be
-	 *
-	 * "equivalent to the expression
-	 *    RegExp.prototype.exec(string) != null."
-	 *
-	 * However, that expression would always give
-	 * a type error exception, since RegExp.prototype
-	 * does not have [[Class]] = "RegExp". The
-	 * interpretation here is that we use the 'exec'
-	 * method of the original RegExp.prototype object
-	 * and then check for a null result in a fast
-	 * way (see steps 1 and 3 of s11.9.3).
-	 */
-	regexp_proto_exec(interp, self, thisobj, argc, argv, &v);
-	SEE_SET_BOOLEAN(res, SEE_VALUE_GET_TYPE(&v) == SEE_NULL);
+	if (argc == 0) {
+	    SEE_SET_UNDEFINED(&undef);
+	    exec_argv[0] = &undef;
+	} else
+	    exec_argv[0] = argv[0];
+	    
+	SEE_OBJECT_GET(interp, interp->RegExp_prototype, STR(exec), &v);
+	SEE_ToObject(interp, &v, &exec);
+	if (!SEE_OBJECT_HAS_CALL(exec.u.object))
+		SEE_error_throw_string(interp, interp->TypeError, 
+		   STR(not_callable));
+	SEE_OBJECT_CALL(interp, exec.u.object, thisobj, 1, exec_argv, &a);
+	SEE_SET_NULL(&null);
+	SEE_SET_BOOLEAN(res, SEE_compare(interp, &a, &null) != 0);
 }
 
 /* 15.10.6.4 RegExp.prototype.toString() */
