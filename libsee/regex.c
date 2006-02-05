@@ -597,12 +597,20 @@ SEE_regex_parse(interp, source, flags)
 	return regex;
 }
 
-/* return the number of capture parentheses in the compiled regex */
+/* Returns the number of capture parentheses in the compiled regex */
 int
 SEE_regex_count_captures(regex)
 	struct regex *regex;
 {
 	return regex->ncaptures;
+}
+
+/* Returns the flags of the regex object */
+int
+SEE_regex_get_flags(regex)
+	struct regex *regex;
+{
+	return regex->flags;
 }
 
 /*
@@ -1717,6 +1725,10 @@ pcode_run(interp, regex, addr, text, state)
 }
 #undef index
 
+/*
+ * Executes the regex on the text beginning at index.
+ * Returns true of a match was successful.
+ */
 int
 SEE_regex_match(interp, regex, text, index, capture_ret)
 	struct SEE_interpreter *interp;

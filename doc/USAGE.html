@@ -2131,6 +2131,27 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">if (1) function foo (args) { body; }</code>.
 	The statement is considered by SEE to be syntactically identical to
 	<code class="js">if (1) foo = function foo (args) { body; }</code>.
+<li>
+	Regex execution leaves results in the 
+	<code class="js">RegExp</code> object, in the properteis
+	<code class="js">$1</code> ...
+	<code class="js">$9</code>,
+	<code class="js">$_</code>,
+	<code class="js">$*</code>,
+	<code class="js">$+</code>,
+	<code class="js">$`</code>,
+	<code class="js">$'</code>,
+	<code class="js">global</code>,
+	<code class="js">ignoreCase</code>,
+	<code class="js">input</code>,
+	<code class="js">lastIndex</code>,
+	<code class="js">lastMatch</code>,
+	<code class="js">lastParen</code>,
+	<code class="js">leftContext</code>,
+	<code class="js">multiline</code>,
+	<code class="js">rightContext</code>, and
+	<code class="js">source</code>.
+
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>

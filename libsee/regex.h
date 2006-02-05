@@ -21,6 +21,7 @@ struct capture {
 struct regex *SEE_regex_parse(struct SEE_interpreter *interp, 
 	struct SEE_string *pattern, int flags);
 int SEE_regex_count_captures(struct regex *regex);
+int SEE_regex_get_flags(struct regex *regex);
 int SEE_regex_match(struct SEE_interpreter *interp, 
 	struct regex *regex, struct SEE_string *text, 
 	unsigned int start, struct capture *captures);

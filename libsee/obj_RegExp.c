@@ -82,6 +82,10 @@ static void regexp_proto_toString(struct SEE_interpreter *,
         struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
         struct SEE_value *);
 
+static void regexp_set_static(struct SEE_interpreter *,
+	struct SEE_string *, struct regex *, struct capture *,
+	struct SEE_string *);
+
 /* object class for RegExp constructor */
 static struct SEE_objectclass regexp_const_class = {
 	"RegExpConstructor",		/* Class */
@@ -352,9 +356,14 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 		    SEE_SET_NUMBER(&v, 0);
 		    SEE_OBJECT_PUT(interp, thisobj, STR(lastIndex), &v, 0); 
 		    SEE_SET_NULL(res);
+		    for (i = 0; i < ncaptures; i++)
+			captures[i].end = -1;
+		    regexp_set_static(interp, S, ro->regex, captures, 
+		    	ro->source);
 		    return;
 		}
 	}
+	regexp_set_static(interp, S, ro->regex, captures, ro->source);
 
 	if ((ro->flags & FLAG_GLOBAL)) {
 		SEE_SET_NUMBER(&v, captures[0].end);
@@ -412,9 +421,17 @@ SEE_RegExp_match(interp, obj, text, start, captures)
 	struct capture *captures;
 {
 	struct regexp_object *ro;
+	int success;
+	unsigned int ncaptures, i;
 
 	ro = toregexp(interp, obj);
-	return SEE_regex_match(interp, ro->regex, text, start, captures);
+	ncaptures = SEE_regex_count_captures(ro->regex);
+	success = SEE_regex_match(interp, ro->regex, text, start, captures);
+	if (!success)
+	    for (i = 0; i < ncaptures; i++)
+		captures[i].end = -1;
+	regexp_set_static(interp, text, ro->regex, captures, ro->source);
+	return success;
 }
 
 /* 15.10.6.3 RegExp.prototype.test() */
@@ -497,4 +514,107 @@ regexp_proto_toString(interp, self, thisobj, argc, argv, res)
 	if (ro->flags & FLAG_MULTILINE)
 		SEE_string_addch(s, 'm');
 	SEE_SET_STRING(res, s);
+}
+
+/*
+ * Sets the static "$" variables of RegExp:
+ *  $1...$9,$_,$*,$+,$`,$',global,ignoreCase,input,lastIndex,
+ *  lastMatch,lastParen,leftContext,multiline,rightContext,source
+ */
+static void
+regexp_set_static(interp, S, regex, captures, source)
+        struct SEE_interpreter *interp;
+	struct SEE_string *S;
+	struct regex *regex;
+        struct capture *captures;
+	struct SEE_string *source;
+{
+        static struct SEE_string * property[] = {
+	    STR(dollar_ampersand),
+            STR(dollar_1), STR(dollar_2), STR(dollar_3),
+            STR(dollar_4), STR(dollar_5), STR(dollar_6),
+            STR(dollar_7), STR(dollar_8), STR(dollar_9),
+	};
+        int i, flags;
+	struct SEE_value v;
+	unsigned int ncaptures;
+	struct SEE_object *RegExp;
+	struct SEE_string *lastParen;
+
+	/* Only do all this for EXT1 */
+	if (interp->compatibility & SEE_COMPAT_EXT1 == 0)
+		return;
+
+	RegExp = interp->RegExp;
+	lastParen = STR(empty_string);
+	ncaptures = SEE_regex_count_captures(regex);
+	flags = SEE_regex_get_flags(regex);
+
+        for (i = 0; i < 10; i++) {
+	    if (i < ncaptures && !CAPTURE_IS_UNDEFINED(captures[i]))
+		SEE_SET_STRING(&v, SEE_string_substr(interp, S, 
+		    captures[i].start, captures[i].end - captures[i].start));
+	    else
+	    	SEE_SET_STRING(&v, STR(empty_string));
+	    if (i > 0 && i < ncaptures)
+	        lastParen = v.u.string;
+	    SEE_OBJECT_PUT(interp, RegExp, property[i], &v, 
+		SEE_ATTR_DEFAULT);
+	    if (property[i] == STR(dollar_ampersand))	/* $&, lastMatch */
+	        SEE_OBJECT_PUT(interp, RegExp, STR(lastMatch), &v, 
+		    SEE_ATTR_DEFAULT);
+	}
+
+	/* $*, multiline */
+	SEE_SET_BOOLEAN(&v, flags & FLAG_MULTILINE);
+	SEE_OBJECT_PUT(interp, RegExp, STR(dollar_star), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, RegExp, STR(multiline), &v, SEE_ATTR_DEFAULT);
+
+	/* $_, input */
+	SEE_SET_STRING(&v, S);
+	SEE_OBJECT_PUT(interp, RegExp, STR(dollar_underscore), &v, 
+		SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, RegExp, STR(input), &v, SEE_ATTR_DEFAULT);
+
+	/* $+, lastParen */
+	SEE_SET_STRING(&v, lastParen);
+	SEE_OBJECT_PUT(interp, RegExp, STR(dollar_plus), &v, SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, RegExp, STR(lastParen), &v, SEE_ATTR_DEFAULT);
+
+	/* $`, leftContext */
+	if (ncaptures && !CAPTURE_IS_UNDEFINED(captures[0]))
+		SEE_SET_STRING(&v, SEE_string_substr(interp, S, 0,
+		    captures[0].start));
+	else
+		SEE_SET_STRING(&v, STR(empty_string));
+	SEE_OBJECT_PUT(interp, RegExp, STR(dollar_backquote), &v, 
+		SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, RegExp, STR(leftContext), &v, SEE_ATTR_DEFAULT);
+
+	/* $', rightContext */
+	if (ncaptures && !CAPTURE_IS_UNDEFINED(captures[0]))
+		SEE_SET_STRING(&v, SEE_string_substr(interp, S, 
+		    captures[0].end, S->length - captures[0].end));
+	else
+		SEE_SET_STRING(&v, STR(empty_string));
+	SEE_OBJECT_PUT(interp, RegExp, STR(dollar_quote), &v, 
+		SEE_ATTR_DEFAULT);
+	SEE_OBJECT_PUT(interp, RegExp, STR(rightContext), &v, SEE_ATTR_DEFAULT);
+
+	/* global */
+	SEE_SET_BOOLEAN(&v, flags & FLAG_GLOBAL);
+	SEE_OBJECT_PUT(interp, RegExp, STR(global), &v, SEE_ATTR_DEFAULT);
+
+	/* ignoreCase */
+	SEE_SET_BOOLEAN(&v, flags & FLAG_IGNORECASE);
+	SEE_OBJECT_PUT(interp, RegExp, STR(ignoreCase), &v, SEE_ATTR_DEFAULT);
+
+	/* lastIndex */
+	SEE_SET_NUMBER(&v, ncaptures && !(flags & FLAG_GLOBAL) 
+		? captures[0].end : 0);
+	SEE_OBJECT_PUT(interp, RegExp, STR(lastIndex), &v, SEE_ATTR_DEFAULT);
+
+	/* source */
+	SEE_SET_STRING(&v, source);
+	SEE_OBJECT_PUT(interp, RegExp, STR(source), &v, SEE_ATTR_DEFAULT);
 }

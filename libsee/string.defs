@@ -396,3 +396,26 @@ cfunction_body3 = " */ }"
 7
 8
 9
+
+#
+# RegExp properties
+#
+dollar_underscore = "$_"
+dollar_star = "$*"
+dollar_ampersand = "$&"
+dollar_plus = "$+"
+dollar_backquote = "$`"
+dollar_quote = "$'"
+dollar_1 = "$1"
+dollar_2 = "$2"
+dollar_3 = "$3"
+dollar_4 = "$4"
+dollar_5 = "$5"
+dollar_6 = "$6"
+dollar_7 = "$7"
+dollar_8 = "$8"
+dollar_9 = "$9"
+lastMatch
+lastParen
+leftContext
+rightContext

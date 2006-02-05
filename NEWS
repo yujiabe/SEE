@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Added Regex.$1 etc, from JS1.2
   Added conditional functions from JS1.5
   Added compat() function to the shell which changes compatibility flags.
   Added many ASCII string functions to the API for convenience
