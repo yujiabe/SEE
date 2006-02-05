@@ -4549,7 +4549,7 @@ EqualityExpression_seq(context, x, y, res)
 		    y->u.string) == 0);
 		break;
 	    case SEE_BOOLEAN:
-		SEE_SET_BOOLEAN(res, x->u.boolean == y->u.boolean);
+		SEE_SET_BOOLEAN(res, !x->u.boolean == !y->u.boolean);
 		break;
 	    case SEE_OBJECT:
 		SEE_SET_BOOLEAN(res, 
