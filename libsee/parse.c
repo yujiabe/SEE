@@ -4362,7 +4362,8 @@ RelationalExpression_in_eval(na, context, res)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(in_not_object));
 	SEE_ToString(interp, &r2, &r6);
-	r7 = SEE_OBJECT_HASPROPERTY(interp, r4.u.object, r6.u.string);
+	r7 = SEE_OBJECT_HASPROPERTY(interp, r4.u.object, 
+		SEE_intern(interp, r6.u.string));
 	SEE_SET_BOOLEAN(res, r7);
 }
 

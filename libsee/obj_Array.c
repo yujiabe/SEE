@@ -41,6 +41,7 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/debug.h>
+#include <see/intern.h>
 
 #include "stringdefs.h"
 #include "array.h"
@@ -261,6 +262,7 @@ intstr_p(s, i)
 /*
  * If sp is null, allocates a new empty string.
  * Clears the string *sp and puts unsigned integer i into it.
+ * Returns an intern'd string
  */
 static struct SEE_string *
 intstr(interp, sp, i)
@@ -283,7 +285,7 @@ intstr(interp, sp, i)
 	else
 		(*sp)->length = 0;
 	intstr_p(*sp, i);
-	return *sp;
+	return SEE_intern(interp, *sp);
 #undef NCOMMON
 }
 

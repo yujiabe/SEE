@@ -272,6 +272,7 @@ object_proto_hasOwnProperty(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	struct SEE_value v;
+	struct SEE_string *is;
 	int hasit;
 
 	/* XXX - should be a nicer way of determining how to do this: */
@@ -279,7 +280,8 @@ object_proto_hasOwnProperty(interp, self, thisobj, argc, argv, res)
 	    thisobj->objectclass->HasProperty == SEE_native_hasproperty)
 	{
 		SEE_ToString(interp, argv[0], &v);
-		hasit = SEE_native_hasownproperty(interp, thisobj, v.u.string);
+		is = SEE_intern(interp, v.u.string);
+		hasit = SEE_native_hasownproperty(interp, thisobj, is);
 	} else
 		hasit = 0;
 	SEE_SET_BOOLEAN(res, hasit);
@@ -319,14 +321,16 @@ object_proto_propertyIsEnumerable(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	struct SEE_value v;
+	struct SEE_string *is;
 	int isenum = 0;
 
 	if (argc > 0 &&
 	    thisobj->objectclass->HasProperty == SEE_native_hasproperty)
 	{
 		SEE_ToString(interp, argv[0], &v);
-		isenum = SEE_native_hasownproperty(interp, thisobj, v.u.string)
-		    && (SEE_native_getownattr(interp, thisobj, v.u.string) & 
+		is = SEE_intern(interp, v.u.string);
+		isenum = SEE_native_hasownproperty(interp, thisobj, is)
+		    && (SEE_native_getownattr(interp, thisobj, is) & 
 			SEE_ATTR_DONTENUM) == 0;
 	}
 	SEE_SET_BOOLEAN(res, isenum);

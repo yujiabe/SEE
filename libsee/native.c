@@ -84,22 +84,22 @@ hashfn(s)
 
 /*
  * Find an object property, if it exists.
+ * Assumes property is interned.
  * Returns either a pointer to the pointer to the property,
  * or a pointer to the NULL pointer at the end of a hash list.
  * (ie never returns NULL);
  */
 static struct SEE_property **
-find(interp, o, p)
+find(interp, o, ip)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 {
 	struct SEE_native *n = (struct SEE_native *)o;
 	struct SEE_property **x;
-	struct SEE_string *ip;
 
-	SEE_ASSERT(interp, p != NULL);
-	ip = SEE_intern(interp, p);
+	SEE_ASSERT(interp, ip != NULL);
+	SEE_ASSERT(interp, ip->flags & SEE_STRING_FLAG_INTERNED);
 	x = &n->properties[hashfn(ip)];
 	while (*x && (*x)->name != ip)
 		x = &((*x)->next);
