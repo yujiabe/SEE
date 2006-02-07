@@ -39,6 +39,7 @@
 #include <see/mem.h>
 #include <see/native.h>
 #include <see/string.h>
+#include <see/intern.h>
 #include <see/cfunction.h>
 #include <see/interpreter.h>
 
