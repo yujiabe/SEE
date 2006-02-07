@@ -119,6 +119,10 @@ test("e instanceof Manager", false);
 
 test("{true;}", true);
 test(";", undefined);
+test("label:;", undefined);
+test("label:label2:;", undefined);
+test("label:label2:label3:;", undefined);
+test("label:label2:label3:break label;", undefined);
 test("{}", undefined);
 test("i=0; do { i++; } while(i<10); i", 10);
 test("i=0; while (i<10) { i++; }; i", 10);
@@ -148,6 +152,9 @@ test("x=y=0;try{" +
      " try { throw {a:1} } finally {x=2}; " +
      "} catch(e) {y=e.a}; x+y", 3);
 test("x=y=0; try{throw {a:2};y=1;} catch(e){x=e.a;y=-7;} finally{y=3}; x+y", 5);
+compat("ext1");
+test("var x='pass';a:{b:break a;x='fail';};x", 'pass');
+test("if (0) function foo(){}", undefined);
 
 
 finish()
