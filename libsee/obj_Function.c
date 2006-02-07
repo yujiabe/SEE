@@ -51,6 +51,7 @@
 #include <see/interpreter.h>
 #include <see/try.h>
 #include <see/context.h>
+#include <see/intern.h>
 
 #include "array.h"
 #include "cfunction_private.h"
@@ -59,6 +60,8 @@
 #include "stringdefs.h"
 #include "scope.h"
 #include "init.h"
+#include "nmath.h"
+
 
 /*
  * Function objects.
@@ -77,12 +80,22 @@ struct function_inst {
 	struct SEE_scope *scope;
 };
 
+struct arguments;
+
+/* structure of the 'activation' objects */
+struct activation {
+	struct SEE_native  native;
+	struct function   *function;
+	int argc;			/* length of actual parameters */
+	struct SEE_value  *argv;
+	struct SEE_object *arguments;	/* only needed for EXT1 compat */
+};
+
 /* structure of the 'arguments' objects */
 struct arguments {
 	struct SEE_native  native;
 	struct function   *function;
-	struct SEE_object *activation;
-	int argc;
+	struct activation *activation;
 };
 
 /* Prototypes */
@@ -110,23 +123,25 @@ static void function_proto_apply(struct SEE_interpreter *,
 static void function_proto_call(struct SEE_interpreter *, 
         struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
         struct SEE_value *);
-static struct SEE_string *argument_rename(struct arguments *, 
-        struct SEE_string *);
+
+static struct SEE_object *activation_create(struct SEE_interpreter *,
+	struct SEE_object *, struct function *, int, struct SEE_value **);
+static int activation_find_index(struct activation *, struct SEE_string *);
+static void activation_get(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *);
+static void activation_put(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *, struct SEE_value *, int);
+
+static int argument_index(struct arguments *, struct SEE_string *);
 static void arguments_get(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_string *, struct SEE_value *);
 static void arguments_put(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_string *, struct SEE_value *, int);
-static int arguments_canput(struct SEE_interpreter *, struct SEE_object *, 
-        struct SEE_string *);
-static int arguments_hasproperty(struct SEE_interpreter *, 
-        struct SEE_object *, struct SEE_string *);
-static int arguments_delete(struct SEE_interpreter *, struct SEE_object *, 
-        struct SEE_string *);
 static void arguments_defaultvalue(struct SEE_interpreter *, 
         struct SEE_object *, struct SEE_value *, struct SEE_value *);
-static struct arguments *arguments_create(struct SEE_interpreter *, 
-        struct function *, struct SEE_object *, struct SEE_object *, int, 
-        struct SEE_value **);
+static struct SEE_object *arguments_create(struct SEE_interpreter *, 
+        struct activation *, struct SEE_object *);
+
 static void function_inst_get(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_string *, struct SEE_value *);
 static void function_inst_put(struct SEE_interpreter *, struct SEE_object *, 
@@ -174,9 +189,9 @@ static struct SEE_objectclass arguments_class = {
 	"Arguments",				/* Class */
 	arguments_get,				/* Get */
 	arguments_put,				/* Put */
-	arguments_canput,			/* CanPut */
-	arguments_hasproperty,			/* HasProperty */
-	arguments_delete,			/* Delete */
+	SEE_native_canput,			/* CanPut */
+	SEE_native_hasproperty,			/* HasProperty */
+	SEE_native_delete,			/* Delete */
 	arguments_defaultvalue,			/* DefaultValue */
 	SEE_native_enumerator			/* Enumerator */
 };
@@ -196,25 +211,14 @@ static struct SEE_objectclass inst_inst_class = {
 /* object class for activation objects (10.2.3) */
 struct SEE_objectclass SEE_activation_class = {
 	"Activation",				/* Class */
-	SEE_native_get,				/* Get */
-	SEE_native_put,				/* Put */
+	activation_get,				/* Get */
+	activation_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
 	SEE_native_hasproperty,			/* HasProperty */
 	SEE_native_delete,			/* Delete */
 	SEE_no_defaultvalue,			/* DefaultValue */
 	SEE_native_enumerator,			/* Enumerator */
 };
-
-struct SEE_object *
-SEE_activation_new(interp)
-	struct SEE_interpreter * interp;
-{
-	struct SEE_object *obj;
-
-	obj = SEE_native_new(interp);
-	obj->objectclass = &SEE_activation_class;
-	return obj;
-}
 
 void
 SEE_Function_alloc(interp)
@@ -473,7 +477,6 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_context context;
 	struct function_inst *fi;
 	struct SEE_object *activation;
-	struct arguments *arguments;
 	struct SEE_value v;
 	struct SEE_scope *innerscope;
 	SEE_try_context_t ctxt;
@@ -492,14 +495,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	}
 
 	/* 10.1.6 Create an activation object */
-	activation = SEE_activation_new(interp);
-
-	/* 10.1.6 Install an 'arguments' property */
-	arguments = arguments_create(interp, fi->function, 
-		activation, self, argc, argv);
-	SEE_SET_OBJECT(&v, (struct SEE_object *)arguments);
-	SEE_OBJECT_PUT(interp, activation, STR(arguments), &v, 
-		SEE_ATTR_DONTDELETE);
+	activation = activation_create(interp, self, fi->function, argc, argv);
 
 	/* 10.2.3 build the right scope chain now */
 	innerscope = SEE_NEW(interp, struct SEE_scope);
@@ -509,14 +505,10 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	/* 10.2 enter a new execution context */
 	context.interpreter = interp;
 	context.activation = activation;
-	context.variable = activation;		/* see 10.2.3 */
+	context.variable = activation;	/* see 10.2.3 */
 	context.varattr = SEE_ATTR_DONTDELETE;
 	context.thisobj = thisobj ? thisobj : interp->Global;
 	context.scope = innerscope;
-
-	/* 10.1.3 Install the actual args into the activation object */
-	SEE_function_put_args(&context, fi->function, argc, argv);
-
 
 	/* 
 	 * Compatibility: set f.arguments to the arguments object too,
@@ -531,7 +523,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 			STR(arguments));
 		old_arguments_saved = 1;
 	    }
-	    SEE_SET_OBJECT(&v, (struct SEE_object *)arguments);
+	    SEE_SET_OBJECT(&v, ((struct activation *)activation)->arguments);
 	    SEE_OBJECT_PUT(interp, common, STR(arguments), &v, 
 		SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY | SEE_ATTR_DONTENUM);
 	}
@@ -749,17 +741,119 @@ function_proto_call(interp, self, thisobj, argc, argv, res)
 }
 
 /*------------------------------------------------------------
+ * The activation object
+ *
+ * This is just like a native object, used for holding the
+ * 'local' variables. However, we keep the actual argument variables
+ * in a separate array so that the arguments object can address them 
+ * directly. This is necessary because it is legal to have multiple
+ * arguments of the same name. Extraneous arguments are also kept in
+ * this array, but they are inaccessible through [[Get]] (because
+ * they have no name).
+ *
+ * 10.1.6
+ */
+
+static struct SEE_object *
+activation_create(interp, callee, function, argc, argv)
+	struct SEE_interpreter *interp;
+	struct SEE_object *callee;
+	struct function *function;
+	int argc;
+	struct SEE_value **argv;
+{
+	struct activation *activation;
+	int i;
+	struct SEE_value v, undef;
+
+	activation = SEE_NEW(interp, struct activation);
+	SEE_native_init(&activation->native, interp, &SEE_activation_class,
+		NULL);
+	activation->function = function;
+	activation->argc = argc;
+	activation->argv = SEE_NEW_ARRAY(interp, struct SEE_value, argc);
+
+	for (i = 0; i < argc; i++)
+		SEE_VALUE_COPY(&activation->argv[i], argv[i]);
+
+	/* 10.1.6 Initialize with an 'arguments' property */
+	activation->arguments = arguments_create(interp, activation, callee);
+	SEE_SET_OBJECT(&v, activation->arguments);
+	SEE_native_put(interp, (struct SEE_object *)&activation->native, 
+		STR(arguments), &v, SEE_ATTR_DONTDELETE);
+
+	/* Initialise all the formal parameters to undef */
+	SEE_SET_UNDEFINED(&undef);
+	for (i = 0; i < function->nparams; i++)
+	    SEE_native_put(interp, (struct SEE_object *)&activation->native, 
+		    function->params[i], &undef, SEE_ATTR_DONTDELETE);
+
+	return (struct SEE_object *)activation;
+}
+
+static int
+activation_find_index(activation, p)
+	struct activation *activation;
+	struct SEE_string *p;
+{
+	int i;
+
+	for (i = MIN(activation->argc, activation->function->nparams) - 1; 
+		i >= 0; i--)
+	    if (p == activation->function->params[i])
+	    	break;
+	return i;
+}
+
+static void
+activation_get(interp, o, p, res)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+	struct SEE_string *p;
+	struct SEE_value *res;
+{
+	struct SEE_string *ip = SEE_intern(interp, p);
+	struct activation *activation = (struct activation *)o;
+	int i = activation_find_index(activation, ip);
+
+	if (i >= 0)
+		SEE_VALUE_COPY(res, &activation->argv[i]);
+	else
+		SEE_native_get(interp, 
+		    (struct SEE_object *)&activation->native, ip, res);
+}
+
+static void
+activation_put(interp, o, p, val, attr)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+	struct SEE_string *p;
+	struct SEE_value *val;
+	int attr;
+{
+	struct SEE_string *ip = SEE_intern(interp, p);
+	struct activation *activation = (struct activation *)o;
+	int i = activation_find_index(activation, ip);
+
+	if (i >= 0)
+		SEE_VALUE_COPY(&activation->argv[i], val);
+	else
+		SEE_native_put(interp, 
+		    (struct SEE_object *)&activation->native, ip, val, attr);
+}
+
+
+/*------------------------------------------------------------
  * The arguments object
  * 10.1.8
  */
 
 /* 
- * Helper function that converts an integer name into the
- * formal parameter name. Returns NULL if the string s is not
- * a valid argument index.
+ * Helper function that converts an integer name into an
+ * integer index. Returns -1 if not an integer less than argc;
  */
-static struct SEE_string *
-argument_rename(a, s)
+static int
+argument_index(a, s)
 	struct arguments *a;
 	struct SEE_string *s;
 {
@@ -773,11 +867,9 @@ argument_rename(a, s)
 		if (s->data[i] >= '0' && s->data[i] <= '9')
 			value = 10 * value + s->data[i] - '0';
 		else
-			return NULL;
+			return -1;
 	}
-	if (i < a->function->nparams)
-		return a->function->params[i];
-	return NULL;
+	return value < a->activation->argc ? value : -1;
 }
 
 static void
@@ -788,10 +880,10 @@ arguments_get(interp, o, p, res)
 	struct SEE_value *res;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = argument_rename(a, p);
+	int i = argument_index(a, p);
 
-	if (name)
-		SEE_OBJECT_GET(interp, a->activation, name, res);
+	if (i != -1)
+		SEE_VALUE_COPY(res, &a->activation->argv[i]);
 	else
 		SEE_native_get(interp, o, p, res);
 }
@@ -805,57 +897,12 @@ arguments_put(interp, o, p, val, attr)
 	int attr;
 {
 	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = argument_rename(a, p);
+	int i = argument_index(a, p);
 
-	if (name)
-		SEE_OBJECT_PUT(interp, a->activation, name, val, attr);
+	if (i != -1)
+		SEE_VALUE_COPY(&a->activation->argv[i], val);
 	else
 		SEE_native_put(interp, o, p, val, attr);
-}
-
-static int
-arguments_canput(interp, o, p)
-	struct SEE_interpreter *interp;
-	struct SEE_object *o;
-	struct SEE_string *p;
-{
-	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = argument_rename(a, p);
-
-	if (name)
-		return SEE_OBJECT_CANPUT(interp, a->activation, name);
-	else
-		return SEE_native_canput(interp, o, p);
-}
-
-static int
-arguments_hasproperty(interp, o, p)
-	struct SEE_interpreter *interp;
-	struct SEE_object *o;
-	struct SEE_string *p;
-{
-	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = argument_rename(a, p);
-
-	if (name)
-		return SEE_OBJECT_HASPROPERTY(interp, a->activation, name);
-	else
-		return SEE_native_hasproperty(interp, o, p);
-}
-
-static int
-arguments_delete(interp, o, p)
-	struct SEE_interpreter *interp;
-	struct SEE_object *o;
-	struct SEE_string *p;
-{
-	struct arguments *a = (struct arguments *)o;
-	struct SEE_string *name = argument_rename(a, p);
-
-	if (name)
-		return SEE_OBJECT_DELETE(interp, a->activation, name);
-	else
-		return SEE_native_delete(interp, o, p);
 }
 
 static void
@@ -868,34 +915,23 @@ arguments_defaultvalue(interp, o, hint, res)
 	struct arguments *a = (struct arguments *)o;
 	struct SEE_string *s = SEE_string_new(interp, 0);
 	struct SEE_string *snum = NULL;
-	struct SEE_value v, vs;
-	int i, argc;
+	struct SEE_value vs;
+	int i;
 
 
 	if (interp->compatibility & SEE_COMPAT_EXT1) {
-	    argc = a->argc;
-	    if (argc < a->function->nparams)
-		argc = a->function->nparams;
 	    SEE_string_addch(s, '[');
-	    for (i = 0; i < argc; i++) {
+	    for (i = 0; i < a->activation->argc; i++) {
 		if (i) {
 		    SEE_string_addch(s, ',');
 		    SEE_string_addch(s, ' ');
 		}
-		if (i < a->function->nparams) {
-		    SEE_string_append(s, a->function->params[i]);
-		    SEE_string_addch(s, '=');
-		    SEE_OBJECT_GET(interp, a->activation, 
-			a->function->params[i], &v);
-		} else {
-		    if (!snum) snum = SEE_string_new(interp, 0);
-		    snum->length = 0;
-		    SEE_string_append_int(snum, i);
-		    SEE_string_append(s, snum);
-		    SEE_string_addch(s, '=');
-		    SEE_native_get(interp, o, snum, &v);
-		}
-		SEE_ToString(interp, &v, &vs);
+	        if (!snum) snum = SEE_string_new(interp, 0);
+	        snum->length = 0;
+	        SEE_string_append_int(snum, i);
+	        SEE_string_append(s, snum);
+		SEE_string_addch(s, '=');
+		SEE_ToString(interp, &a->activation->argv[i], &vs);
 		SEE_string_append(s, vs.u.string);
 	    }
 	    SEE_string_addch(s, ']');
@@ -905,16 +941,14 @@ arguments_defaultvalue(interp, o, hint, res)
 }
 
 /* 10.1.8 Create an arguments structure */
-static struct arguments *
-arguments_create(interp, f, activation, callee, argc, argv)
+static struct SEE_object *
+arguments_create(interp, activation, callee)
 	struct SEE_interpreter *interp;
-	struct function *f;
-	struct SEE_object *activation, *callee;
-	int argc;
-	struct SEE_value **argv;
+	struct activation *activation;
+	struct SEE_object *callee;
 {
 	struct arguments *arguments;
-	struct SEE_value v;
+	struct SEE_value v, undef;
 	struct SEE_string *s;
 	int i;
 
@@ -923,28 +957,35 @@ arguments_create(interp, f, activation, callee, argc, argv)
 		interp->Object_prototype);
 
 	arguments->activation = activation;
-	arguments->function = f;
-	arguments->argc = argc;
 
 	SEE_SET_OBJECT(&v, callee);
 	SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, STR(callee), &v,
 		SEE_ATTR_DONTENUM);
 
-	SEE_SET_NUMBER(&v, argc);
+	SEE_SET_NUMBER(&v, activation->argc);
 	SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, STR(length), &v,
 		SEE_ATTR_DONTENUM);
 
-	/* Copy the extraneous arguments */
-	if (argc > f->nparams) {
+	if (activation->argc) {
 	    s = SEE_string_new(interp, 4);
-	    for (i = f->nparams; i < argc; i++) {
+	    SEE_SET_UNDEFINED(&undef);
+	    for (i = 0; i < activation->argc; i++) {
 		s->length = 0;
 		SEE_string_append_int(s, i);
-		SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, s, 
-			argv[i], 0);
+		SEE_native_put(interp, (struct SEE_object *)&arguments->native,
+			s, &v, SEE_ATTR_DONTENUM);
 	    }
 	}
-	return arguments;
+
+	/* 
+	 * spec bug in 10.1.8: What happens when you delete 
+	 * one of the numbered arguments properties, and then 
+	 * put it back? The spec isn't clear on this.
+	 * This implementation restores its magic linkage to the
+	 * activation object and the formal parameter name.
+	 */
+
+	return (struct SEE_object *)arguments;
 }
 
 /*------------------------------------------------------------

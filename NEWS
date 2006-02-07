@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  bug 36: function arguments object now accesses args by index 
   Compat: octal escapes in regular expressions for EXT1
   API change: only [[Put]], [[Get]], [[Delete]] are allowed uninterned props
   Added Regex.$1 etc, from JS1.2
