@@ -2126,6 +2126,8 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	in literal regular expressions.
 	This means the expression <code class="js">/[/]/</code> will
 	be parsed as if it were <code class="js">/[\/]/</code>.
+	Also, three digit octal escape sequences beginning with 
+	<code class="js">\0</code> are understood.
 <li>
 	Permit conditional function declarations (JavaScript 1.5) of the form
 	<code class="js">if (1) function foo (args) { body; }</code>.

@@ -1078,7 +1078,7 @@ ClassEscape_parse(recontext)
 	struct recontext *recontext;
 {
 	struct charclass *c;
-	SEE_unicode_t ch;
+	SEE_unicode_t ch, lookahead[3];
 	int i;
 
 	/* EXPECT('\\'); */		/* backslash already skipped */
@@ -1086,6 +1086,21 @@ ClassEscape_parse(recontext)
 	c = CC_NEW();
 
 	if (NEXT >= '0' && NEXT <= '9') {
+
+	    /* \0oo - 3 digit octal escapes */
+	    if ((recontext->interpreter->compatibility & SEE_COMPAT_EXT1) &&
+	    	NEXT == '0' && LOOKAHEAD(lookahead, 3) >= 2 &&
+		lookahead[1] >= '0' && lookahead[1] < '8' &&
+		lookahead[2] >= '0' && lookahead[2] < '8')
+	    {
+		ch = (lookahead[1] - '0') * 8 + (lookahead[2] - '0');
+	        CC_ADDCHAR(c, ch);
+		SKIP;
+		SKIP;
+		SKIP;
+	        return c;
+	    }
+
 	    i = 0;
 	    while (!ATEOF && NEXT >= '0' && NEXT <= '9') {
 		i = 10 * i + NEXT - '0';
