@@ -96,6 +96,7 @@ struct arguments {
 	struct SEE_native  native;
 	struct function   *function;
 	struct activation *activation;
+	SEE_boolean_t	  *deleted;
 };
 
 /* Prototypes */
@@ -137,6 +138,8 @@ static void arguments_get(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_string *, struct SEE_value *);
 static void arguments_put(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_string *, struct SEE_value *, int);
+static int arguments_delete(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_string *);
 static void arguments_defaultvalue(struct SEE_interpreter *, 
         struct SEE_object *, struct SEE_value *, struct SEE_value *);
 static struct SEE_object *arguments_create(struct SEE_interpreter *, 
@@ -191,7 +194,7 @@ static struct SEE_objectclass arguments_class = {
 	arguments_put,				/* Put */
 	SEE_native_canput,			/* CanPut */
 	SEE_native_hasproperty,			/* HasProperty */
-	SEE_native_delete,			/* Delete */
+	arguments_delete,			/* Delete */
 	arguments_defaultvalue,			/* DefaultValue */
 	SEE_native_enumerator			/* Enumerator */
 };
@@ -771,10 +774,13 @@ activation_create(interp, callee, function, argc, argv)
 		NULL);
 	activation->function = function;
 	activation->argc = argc;
-	activation->argv = SEE_NEW_ARRAY(interp, struct SEE_value, argc);
+	activation->argv = SEE_NEW_ARRAY(interp, struct SEE_value, 
+		MAX(function->nparams, argc));
 
 	for (i = 0; i < argc; i++)
 		SEE_VALUE_COPY(&activation->argv[i], argv[i]);
+	for (; i < function->nparams; i++)
+		SEE_SET_UNDEFINED(&activation->argv[i]);
 
 	/* 10.1.6 Initialize with an 'arguments' property */
 	activation->arguments = arguments_create(interp, activation, callee);
@@ -798,8 +804,7 @@ activation_find_index(activation, p)
 {
 	int i;
 
-	for (i = MIN(activation->argc, activation->function->nparams) - 1; 
-		i >= 0; i--)
+	for (i = activation->function->nparams - 1; i >= 0; i--)
 	    if (p == activation->function->params[i])
 	    	break;
 	return i;
@@ -869,7 +874,26 @@ argument_index(a, s)
 		else
 			return -1;
 	}
-	return value < a->activation->argc ? value : -1;
+	
+	if (value >= a->activation->argc)
+		return -1;
+	if (a->deleted[value])
+		return -1;
+	return value;
+}
+
+static int
+arguments_delete(interp, o, p)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+	struct SEE_string *p;
+{
+	struct arguments *a = (struct arguments *)o;
+	int i = argument_index(a, p);
+
+	if (i != -1)
+		a->deleted[i] = 1;
+	return SEE_native_delete(interp, o, p);
 }
 
 static void
@@ -966,10 +990,14 @@ arguments_create(interp, activation, callee)
 	SEE_OBJECT_PUT(interp, (struct SEE_object *)arguments, STR(length), &v,
 		SEE_ATTR_DONTENUM);
 
+	arguments->deleted = SEE_NEW_ARRAY(interp, SEE_boolean_t, 
+		activation->argc);
+
 	if (activation->argc) {
 	    s = SEE_string_new(interp, 4);
 	    SEE_SET_UNDEFINED(&undef);
 	    for (i = 0; i < activation->argc; i++) {
+		arguments->deleted[i] = 0;
 		s->length = 0;
 		SEE_string_append_int(s, i);
 		SEE_native_put(interp, (struct SEE_object *)&arguments->native,
@@ -981,8 +1009,10 @@ arguments_create(interp, activation, callee)
 	 * spec bug in 10.1.8: What happens when you delete 
 	 * one of the numbered arguments properties, and then 
 	 * put it back? The spec isn't clear on this.
-	 * This implementation restores its magic linkage to the
-	 * activation object and the formal parameter name.
+	 *
+	 * This implementation follows the implication that
+	 * a new property without special linkage can be created by 
+	 * a [[Delete]]+[[Put]] sequence.
 	 */
 
 	return (struct SEE_object *)arguments;
