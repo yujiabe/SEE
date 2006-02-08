@@ -374,7 +374,9 @@ array_construct(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t length;
 	struct SEE_string *s = NULL;
 
-	if (argc == 1 && SEE_VALUE_GET_TYPE(argv[0]) == SEE_NUMBER) {
+	if (argc == 1 && SEE_VALUE_GET_TYPE(argv[0]) == SEE_NUMBER &&
+		!SEE_COMPAT_JS(interp, ==, JS12))
+	{
 	    length = SEE_ToUint32(interp, argv[0]);
 	    if (argv[0]->u.number != length)
 		SEE_error_throw_string(interp, interp->RangeError, 
@@ -518,9 +520,11 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
 
+/* XXX fixme
 	if (interp->compatibility & SEE_COMPAT_ARRAYJOIN1) 
 		use_comma = (argc == 0);
 	else 
+*/
 		/* strict E262-3 behaviour: */
 		use_comma = (argc == 0 || 
 			     SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED);
