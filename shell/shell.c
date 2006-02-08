@@ -6,7 +6,8 @@
  *  print	- a function object which takes one
  *		  string argument and prints it, followed
  *		  by a newline.
- *  version	- an undefined value, used to satisfy some tests.
+ *  version	- a function that changes compatibility flags
+ *		  based on an integer argument
  *  compat      - changes the compat flags. Returns old compat flags
  *
  * In HTML mode the following objects are provided:
@@ -43,6 +44,8 @@ static void print_fn(struct SEE_interpreter *, struct SEE_object *,
 static void document_write_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void compat_fn(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void version_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #if HAVE_GC_DUMP
 static void gc_dump_fn(struct SEE_interpreter *, struct SEE_object *,
@@ -132,6 +135,54 @@ compat_fn(interp, self, thisobj, argc, argv, res)
         SEE_SET_STRING(res, old);
 }
 
+/*
+ * Query/change the Netscape JavaScript version compatibility value.
+ *
+ * If no argument is supplied, returns the current version number.
+ * If a number is supplied, it is expected to be one of
+ *	120, 130, 140, 150 indicating
+ * Netscape JavaScript 1.0, 1.1, 1.2 etc.
+ *
+ * http://www.mozilla.org/rhino/overview.html#versions
+ */
+static void
+version_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+	SEE_number_t ver;
+	struct SEE_value v;
+
+	if (argc == 0) {
+	    switch (SEE_GET_JS_COMPAT(interp)) {
+	    case SEE_COMPAT_JS12: ver = 120; break;
+	    case SEE_COMPAT_JS13: ver = 130; break;
+	    case SEE_COMPAT_JS14: ver = 140; break;
+	    default:
+	    case SEE_COMPAT_JS15: ver = 150; break;
+	    }
+	    SEE_SET_NUMBER(res, ver);
+	    return;
+	}
+
+	SEE_ToNumber(interp, argv[0], &v);
+	ver = v.u.number;
+	if (ver >= 150)
+		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS15);
+	else if (ver >= 140)
+		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS14);
+	else if (ver >= 130)
+		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS13);
+	else if (ver >= 120)
+		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS12);
+	else 
+		SEE_error_throw(interp, interp->RangeError, 
+		   "cannot set version lower than JS1.2");
+	SEE_SET_UNDEFINED(res);
+}
+
 #if HAVE_GC_DUMP
 void GC_dump(void);
 /*
@@ -195,8 +246,8 @@ shell_add_globals(interp)
 		"gc_collect", gc_gcollect_fn, 0, 0);
 #endif
 
-	SEE_SET_UNDEFINED(&v);
-	SEE_OBJECT_PUTA(interp, interp->Global, "version", &v, 0);
+	SEE_CFUNCTION_PUTA(interp, interp->Global, 
+		"version", version_fn, 1, 0);
 }
 
 /*

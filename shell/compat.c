@@ -13,13 +13,15 @@
 
 #include "compat.h"
 
-static struct { const char *name; int flag; } names[] = {
-	{ "262_3b",	SEE_COMPAT_262_3B },
-	{ "arrayjoin1",	SEE_COMPAT_ARRAYJOIN1 },
-	{ "ext1",	SEE_COMPAT_EXT1 },
-	{ "sgmlcom",	SEE_COMPAT_SGMLCOM },
-	{ "undefdef",	SEE_COMPAT_UNDEFDEF },
-	{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE },
+static struct { const char *name; int mask, flag; } names[] = {
+	{ "262_3b",	SEE_COMPAT_262_3B,	SEE_COMPAT_262_3B },
+	{ "ext1",	SEE_COMPAT_EXT1,	SEE_COMPAT_EXT1 },
+	{ "sgmlcom",	SEE_COMPAT_SGMLCOM,	SEE_COMPAT_SGMLCOM },
+	{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE,	SEE_COMPAT_UTF_UNSAFE },
+	{ "js12",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS12 },
+	{ "js13",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS13 },
+	{ "js14",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS14 },
+	{ "js15",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS15 },
 };
 
 /*
@@ -43,6 +45,7 @@ compat_tovalue(name, compatibility)
 	int i;
 	int no = 0;
 	int bit = 0;
+	int mask = 0;
 
 	if (name[0] == 'n' && name[1] == 'o' && name[2] == '_') {
 		name += 3;
@@ -51,19 +54,17 @@ compat_tovalue(name, compatibility)
 	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
 		if (strcmp(name, names[i].name) == 0) {
 			bit = names[i].flag;
+			mask = names[i].mask;
 			break;
 		}
-	if (name[0] >= '0' && name[0] <= '9')
-		bit = atoi(name);
-	else if (bit == 0) {
+	if (mask == 0) {
 		fprintf(stderr, "WARNING: unknown compatability flag '%s'\n",
 		    name);
 		return -1;
 	}
 
-	if (no)
-		*compatibility &= ~bit;
-	else
+	*compatibility &= ~mask;
+	if (!no)
 		*compatibility |= bit;
 	return 0;
 }
@@ -87,7 +88,7 @@ compat_fromstring(name, compatibility)
 
 	compat = 0;
 	s = name;
-	if (*s == '+') {
+	if (*s == '=') {
 		compat = *compatibility;
 		s++;
 	}
@@ -116,15 +117,12 @@ compat_tostring(interp, compatibility)
 	struct SEE_string *s = SEE_string_new(interp, 0);
 	int i;
 
+        SEE_string_addch(s, '=');
 	for (i = 0; i < sizeof names / sizeof names[0]; i++)  {
-	    if (i)
+	    if ((compatibility & names[i].mask) == names[i].flag) {
 		    SEE_string_addch(s, ' ');
-	    if (!(compatibility & names[i].flag)) {
-		    SEE_string_addch(s, 'n');
-		    SEE_string_addch(s, 'o');
-		    SEE_string_addch(s, '_');
+		    SEE_string_append_ascii(s, names[i].name);
 	    }
-	    SEE_string_append_ascii(s, names[i].name);
 	}
 	return s;
 }

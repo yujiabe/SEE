@@ -81,13 +81,25 @@ struct SEE_interpreter {
 };
 
 /* Compatibility flags */
-#define SEE_COMPAT_STRICT	0x0000	/* ECMA-262 3rd ed. */
-#define SEE_COMPAT_262_3B	0x0001	/* ECMA-262 3rd ed. Annex B */
-#define SEE_COMPAT_EXT1		0x0002	/* see1.0 (non-ecma) extensions */
-#define SEE_COMPAT_UNDEFDEF	0x0004	/* No ReferenceError on undef var */
-#define SEE_COMPAT_UTF_UNSAFE	0x0008	/* accept 'valid but insecure' UTF */
-#define SEE_COMPAT_SGMLCOM	0x0010	/* treat '<!--' as a '//' comment */
-#define SEE_COMPAT_ARRAYJOIN1	0x0020	/* Bug-compat with array join */
+#define SEE_COMPAT_STRICT	0x0000	/* Strict ECMA-262 3rd ed. */
+#define SEE_COMPAT_262_3B	(1<< 1)	/* ECMA-262 3rd ed. Annex B */
+#define SEE_COMPAT_UTF_UNSAFE	(1<< 2)	/* accept 'valid but insecure' UTF */
+#define SEE_COMPAT_SGMLCOM	(1<< 3) /* treat '<!--' as a '//' comment */
+#define SEE_COMPAT_EXT1		(1<< 4) /* SEE (non-ECMA) extensions */
+#define SEE_COMPAT_JS_MASK	(7<< 5) /* mask for JS compat values  */
+#define SEE_COMPAT_JS_NONE	  (0<< 5) /* JavaScript1.2 */
+#define SEE_COMPAT_JS12		  (2<< 5) /* JavaScript1.2 */
+#define SEE_COMPAT_JS13    	  (3<< 5) /* JavaScript1.3 */
+#define SEE_COMPAT_JS14    	  (4<< 5) /* JavaScript1.4 */
+#define SEE_COMPAT_JS15    	  (5<< 5) /* JavaScript1.5 */
+
+/* This macro is used to see if an ECMA deviation is required */
+#define SEE_COMPAT_JS(i,cmp,jsnn) \
+	((SEE_GET_JS_COMPAT(i) != SEE_COMPAT_JS_NONE) && \
+	 (SEE_GET_JS_COMPAT(i) cmp SEE_COMPAT_##jsnn))
+#define SEE_GET_JS_COMPAT(i) ((i)->compatibility & SEE_COMPAT_JS_MASK)
+#define SEE_SET_JS_COMPAT(i,c) \
+	(i)->compatibility = ((i)->compatibility & ~SEE_COMPAT_JS_MASK)|(c)
 
 /* traceback call_type */
 #define SEE_CALLTYPE_CALL	1
