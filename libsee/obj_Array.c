@@ -67,6 +67,8 @@ static struct SEE_string *intstr(struct SEE_interpreter *,
 	struct SEE_string **, SEE_uint32_t);
 static struct array_object *toarray(struct SEE_interpreter *,
 	struct SEE_object *);
+static void check_too_long(struct SEE_interpreter *, SEE_uint32_t,
+	SEE_uint32_t);
 
 static void array_init(struct array_object *, struct SEE_interpreter *, 
 	unsigned int);
@@ -303,6 +305,17 @@ toarray(interp, o)
 	return (struct array_object *)o;
 }
 
+/* Throws a RangeError if a + b would exceed the maximum array length */
+static void
+check_too_long(interp, a, b)
+	struct SEE_interpreter *interp;
+	SEE_uint32_t a, b;
+{
+	if (a + b < a || a + b < b)
+	    SEE_error_throw(interp, interp->RangeError,
+	    	"array too long");
+}
+
 int
 SEE_is_Array(o)
 	struct SEE_object *o;
@@ -321,6 +334,7 @@ SEE_Array_push(interp, o, v)
 	struct SEE_string *s = NULL;
 
 	a = toarray(interp, o);
+	check_too_long(interp, a->length, 1);
 	SEE_native_put(interp, o, intstr(interp, &s, a->length), v, 0);
 	a->length++;
 }
@@ -467,6 +481,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	    {
 		struct array_object *Ea = (struct array_object *)E->u.object;
 		for (k = 0; k < Ea->length; k++) {
+		    check_too_long(interp, n, 1);
 		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, 
 			    intstr(interp, &ns, k))) {
 			SEE_OBJECT_GET(interp, E->u.object, ns, &v);
@@ -476,6 +491,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 		    n++;
 		}
 	    } else {
+	        check_too_long(interp, n, 1);
 		SEE_OBJECT_PUT(interp, A, intstr(interp, &ns, n), E, 0);
 		n++;
 	    }
@@ -576,6 +592,7 @@ array_proto_push(interp, self, thisobj, argc, argv, res)
         SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
         n = SEE_ToUint32(interp, &v);
 	for (i = 0; i < argc; i++) {
+	    check_too_long(interp, n, 1);
 	    SEE_OBJECT_PUT(interp, thisobj, intstr(interp, &np, n), 
 	        argv[i], 0);
 	    n++;
@@ -962,6 +979,7 @@ array_proto_unshift(interp, self, thisobj, argc, argv, res)
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	r2 = SEE_ToUint32(interp, &v);
 	r3 = argc;
+	check_too_long(interp, r2, r3);
 	for (k = r2; k > 0; k--) {
 	    p = intstr(interp, &s, k - 1);
 	    if (SEE_OBJECT_HASPROPERTY(interp, thisobj, p)) {
