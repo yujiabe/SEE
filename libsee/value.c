@@ -118,6 +118,23 @@ SEE_ToBoolean(interp, val, res)
 			SEE_SET_BOOLEAN(res, 1);
 		break;
 	case SEE_OBJECT:
+		if (SEE_COMPAT_JS(interp, <=, JS12)) {
+		    /* In JS <= 1.2, Boolean instances convert to bool */
+		    extern struct SEE_objectclass _SEE_boolean_inst_class;
+		    struct SEE_object *bo = val->u.object;
+		    if (bo->objectclass == &_SEE_boolean_inst_class) {
+		        struct SEE_value vo;
+			SEE_OBJECT_GET(interp, bo, STR(valueOf), &vo);
+			if (SEE_VALUE_GET_TYPE(&vo) == SEE_OBJECT &&
+			    SEE_OBJECT_HAS_CALL(vo.u.object)) 
+			{
+			    SEE_OBJECT_CALL(interp, vo.u.object, bo,
+			    	0, NULL, res);
+			    if (SEE_VALUE_GET_TYPE(res) == SEE_BOOLEAN)
+			        break;
+			}
+		    }
+		}
 		SEE_SET_BOOLEAN(res, 1);
 		break;
 	default:

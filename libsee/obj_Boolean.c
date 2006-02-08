@@ -86,7 +86,7 @@ static struct SEE_objectclass boolean_const_class = {
 };
 
 /* object class for Boolean.prototype and number instances */
-static struct SEE_objectclass boolean_inst_class = {
+struct SEE_objectclass _SEE_boolean_inst_class = {
 	"Boolean",			/* Class */
 	SEE_native_get,			/* Get */
 	SEE_native_put,			/* Put */
@@ -131,7 +131,7 @@ SEE_Boolean_init(interp)
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY);
 
 	SEE_native_init((struct SEE_native *)Boolean_prototype, interp,
-		&boolean_inst_class, interp->Object_prototype); /* 15.6.4 */
+		&_SEE_boolean_inst_class, interp->Object_prototype); /* 15.6.4 */
 	((struct boolean_object *)Boolean_prototype)->boolean = 0; /* 15.6.4 */
 
 	/* 15.6.4.1 Boolean.prototype.constructor */
@@ -154,7 +154,7 @@ toboolean(interp, o)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
 {
-	if (o->objectclass != &boolean_inst_class)
+	if (o->objectclass != &_SEE_boolean_inst_class)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(not_boolean));
 	return (struct boolean_object *)o;
@@ -178,7 +178,7 @@ boolean_construct(interp, self, thisobj, argc, argv, res)
 		SEE_ToBoolean(interp, argv[0], &v);
 
 	bo = SEE_NEW(interp, struct boolean_object);
-	SEE_native_init(&bo->native, interp, &boolean_inst_class,
+	SEE_native_init(&bo->native, interp, &_SEE_boolean_inst_class,
 		interp->Boolean_prototype);
 	bo->boolean = v.u.boolean;
 
