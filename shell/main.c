@@ -42,7 +42,7 @@ static void trace(struct SEE_interpreter *, struct SEE_throw_location *,
         struct SEE_context *, enum SEE_trace_event);
 static int run_input(struct SEE_interpreter *, struct SEE_input *, 
         struct SEE_value *);
-static int run_file(struct SEE_interpreter *, char *);
+static void run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
 static void run_html(struct SEE_interpreter *, char *);
 
@@ -119,6 +119,8 @@ trace(interp, loc, context, event)
  * text in the ECMAScript global context. This function also examines
  * the result of the evaluation, being careful to print out exceptions
  * correctly.
+ * Returns 0 if an exception was uncaught, or 1 if the script ran to
+ * completion.
  */
 static int
 run_input(interp, inp, res)
@@ -151,11 +153,12 @@ run_input(interp, inp, res)
 		SEE_PrintTraceback(interp, stderr);
             }
             if (SEE_CAUGHT(ctxt2)) {
-                fprintf(stderr, "exception thrown while printing exception");
+		/* Exception while printing exception! */
+                fprintf(stderr, "[exception thrown while printing exception");
 		if (ctxt2.throw_file)
 		    fprintf(stderr, " at %s:%d",
 		        ctxt2.throw_file, ctxt2.throw_line);
-                fprintf(stderr, "\n");
+                fprintf(stderr, "]\n");
 	    }
 	    return 0;
         }
@@ -167,7 +170,7 @@ run_input(interp, inp, res)
  * This function converts a local file into a unicode input stream,
  * and then calls run_input() above.
  */
-static int
+static void
 run_file(interp, filename)
 	struct SEE_interpreter *interp;
 	char *filename;
@@ -179,18 +182,19 @@ run_file(interp, filename)
 
 	if (strcmp(filename, "-") == 0) {
 		run_interactive(interp);
-		return 1;
+		return;
 	}
 
 	f = fopen(filename, "r");
 	if (!f) {
 		perror(filename);
-		return 0;
+		exit(4);	/* File argument not found */
 	}
 	inp = SEE_input_file(interp, f, filename, NULL);
 	ok = run_input(interp, inp, &res);
 	SEE_INPUT_CLOSE(inp);
-	return ok;
+	if (!ok)
+		exit(3);	/* Runtime error (uncaught exception) */
 }
 
 /*
@@ -367,8 +371,7 @@ main(argc, argv)
 		    globals_added = 1;
 		}
 		do_interactive = 0;
-		if (!run_file(&interp, optarg))
-			exit(1);
+		run_file(&interp, optarg);
 		break;
 	    case 'g':
 	    	if (!debugger)
@@ -411,7 +414,7 @@ main(argc, argv)
 		""
 #endif
 	    );
-	    exit(1);
+	    exit(2); /* Invalid argument on command line */
 	}
 
 	if (do_interactive) {
@@ -420,5 +423,5 @@ main(argc, argv)
 	    run_interactive(&interp);
 	}
 
-	exit(0);
+	exit(0);	/* Success */
 }
