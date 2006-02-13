@@ -6,10 +6,10 @@
         body     { background: white; color: black; }
         h1,h2,h3,h4 { font-family: sans-serif; }
         h2,h3,h4   { background: #f0f0f0; }
-        table    { display: block; 
-                   float: none;
-                   position: relative; 
-                   margin-left: 10%;
+        table    { /*display: block;  */
+                   /*float: none;*/
+                   /*position: relative; */
+                   /* margin-left: 10%; */
 		   }
         table    { border-collapse: collapse; 
 		   border: none /* thin solid black */; }
@@ -2000,35 +2000,75 @@ The following compatibility flag names may change in the future.
 
 <tr><td><code>SEE_COMPAT_STRICT</code>
 <td>This is not really a flag. It is defined as zero, and can be used
-when no compatibility flags are wanted.
+when no compatibility flags are wanted. SEE will operate in its default
+ECMA compliance mode.
 
 <tr><td><code>SEE_COMPAT_UTF_UNSAFE</code>
-<td>Treat 'overlong' UTF-8 encodings as valid unicode characters.
-
-<tr><td><code>SEE_COMPAT_UNDEFDEF</code>
-<td>Don't throw a <code class="js">ReferenceError</code>
- when an undefined global property is used. 
- Instead, return the <code class="js">undefined</code> value.
- This violates step 3 of s8.7.1 of ECMA-262, but it seems
- that so many interpreters are flexible on this point.
- It was originally a JavaScript 1.5 thing I believe.
+<td>Treats overlong UTF-8 encodings as valid unicode characters.
+You should never need this.
 
 <tr><td><code>SEE_COMPAT_262_3B</code>
 <td>
-Enable optional features in ECMA-262 ed3 Appendix B:
+Enables optional features from Appendix B of ECMA-262 ed3, namely:
 <ul>
-<li><code class="js">Date.toGMTString()</code> is defined, and made equivalent to <code class="js">toUTCString()</code>
-<li><code class="js">Date.getYear()</code> and <code class="js">Date.setYear()</code> are defined.
-<li>Global object has <code class="js">escape()</code> and <code class="js">unescape()</code> functions defined.
-<li><code class="js">String.substr()</code> is defined
+<li>defines <code class="js">Date.prototype.toGMTString()</code>, equivalent to <code class="js">toUTCString()</code>
+<li>defines <code class="js">Date.prototype.getYear()</code> and <code class="js">Date.setYear()</code>
+<li>defines <code class="js">escape()</code> and <code class="js">unescape()</code> in the global object
+<li>defines <code class="js">String.prototype.substr()</code>
 </ul>
 
 <tr><td><code>SEE_COMPAT_SGMLCOM</code>
 <td>
-	The lexical analyser will treat the 4-character sequence
-	'<code class="js">&lt;!--</code>' much like the
+	This flag makes the lexical analyser stage 
+	treat the 4-character sequence
+	'<code class="js">&lt;!--</code>' as if it were the
 	'<code class="js">//</code>' comment introducer. 
-	This is useful in HTML SCRIPT elements.
+	This is useful when parsing HTML SCRIPT elements.
+
+<tr><td><code>SEE_COMPAT_JS12</code>
+<td>
+	Enables JavaScript 1.2 compatibility:
+<ul>
+<li>	the string representation of a bad date 
+	(e.g. <code class="js">String(new Date(NaN))</code>) 
+	will return the string
+	<code class="js">"Invalid Date"</code>,
+	instead of <code class="js">"NaN"</code>.
+
+<li>	Calling <code class="js">Date</code> as a constructor or function
+	will recognise Netscape-style date strings of the 
+	form '<code class="js">1/1/1999 12:30 AM</code>'.
+<li>
+	Conversions from a date to a string will include the timezone.
+<li>
+	The constructor <code class="js">new Array()</code> when given
+	a single numeric argument will return an array consisting of
+	just that argument. e.g. <code class="js">new Array(3)</code>
+	is the same as <code class="js">[3]</code>. 
+	This differs from the ECMA standard where an array of length 3
+	would be created, viz
+	<code class="js">[undefined,undefined,undefined]</code>.
+	(JavaScript 1.2 <strong>only</strong>).
+<li>
+	<code class="js">Boolean</code> instance objects are converted
+	to their logical value in expressions that are converted to boolean.
+	This differs from the ECMA standard where all object instances
+	are to be converted to <code class="js">true</code>.
+	For example, the condition in the statement 
+	<code class="js">if (new Boolean(false))<code> statement, will
+	be evaluated as <code class="js">true</code> in ECMA, and 
+	<code class="js">false</code> by JavaScript 1.2.
+	(JavaScript 1.2 <strong>only</strong>).
+
+<li>	Native objects synthesize a property called
+	<code class="js">__proto__</code> with the same
+	value as the internal [[Prototype]] property 
+	(or <code class="js">null</code>). Assignments
+	to <code class="js">__proto__</code> are accepted if 
+	they don't cause a cycle.
+
+</ul>
+
 
 <tr><td><code>SEE_COMPAT_EXT1</code>
 <td>
@@ -2055,14 +2095,6 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	property will return an object-unique string, instead of throwing
 	a <code class="js">TypeError</code>.
 
-<li>	the string representation of a bad date 
-	(i.e. '<code class="js">new Date(NaN)</code>') will return the string
-	'<code class="js">Invalid Date</code>',
-	instead of '<code class="js">NaN</code>'.
-
-<li>	Calling <code class="js">Date</code> as a constructor 
-	will recognise Netscape-style date strings of the 
-	form '<code class="js">1/1/1999 12:30 AM</code>'.
 
 <li>	<code class="js">Function.prototype</code> will not have a
 	<code class="js">prototype</code> property of its own.
@@ -2086,12 +2118,6 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	<code class="js">this</code>
 	(instead of inheriting the caller's context as per
 	s10.2.2 of the standard).
-
-<li>	Native objects synthesize a property called
-	<code class="js">__proto__</code> with the same
-	value as the internal [[Prototype]] property (or null). Assignments
-	to <code class="js">__proto__</code> are accepted if 
-	they don't cause a cycle.
 
 <li>	Native functions assign themselves an
 	<code class="js">arguments</code>
