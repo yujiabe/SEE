@@ -11,7 +11,7 @@ an interactive (prompted) mode.
 Usage
 -----
 	shell [-g] [-v] [-r <num>] [-d<debugflags>] [-c value] 
-	      [-f file] [-h htmlfile] 
+	      [-f file] [-h htmlfile] [-l library]
 
 The '-g' option drops into the interactive debugger - see below for details.
 
@@ -21,6 +21,9 @@ The '-r' option sets the function recursion limit. Default is -1 (indefinite).
 
 The '-f file' and '-h htmlfile' options can be specified multiple times.
 Each time they are specified, the given files are loaded and run.
+
+The '-l library' flags must be specified before any -h or -f flags,
+and load a library module. See below.
 
 Files specified with -f are loaded and run as pure ECMAScript. The
 entire file is parsed as a 'Program' (see the language grammar), and the
@@ -72,10 +75,15 @@ Shell-provided objects and functions
 Besides the standard environment required by ECMA-262,
 the shell provides a couple of objects useful for testing.
 
- print       - a function object which takes one
-               string argument and prints it, followed
+ print       - a function which prints its argument string followed
                by a newline.
- version     - an undefined value, used to satisfy some tests.
+ version     - a Netscape-compatible compatibility setter/getter
+
+XXX- tbd
+ SEE.print   - same as print() above
+ SEE.version - same as version() above
+ SEE.compat  - changes/reports SEE compatibility flags
+ SEE.load    - loads and runs another script file (see -f flag)
 
 In HTML mode the following objects are provided:
 
@@ -105,6 +113,27 @@ user. Command available at the prompt include:
 	eval <expr>			- evaluate expression in context
 	throw <expr>			- throw an exception value
 
+Dynamically loaded modules
+--------------------------
+
+The -l option which should be used before any -f or -h options dlopens a 
+file and looks for an exported structure called 'module'. The structure 
+should be of the form:
+
+	struct SEE_module {
+		SEE_uint32_t	magic;	/* SEE_IMPORT_MAGIC */
+		const char *name;	/* name of module */
+		const char *version;	/* module version */
+		int (*modinit)(void);	/* called once on first load */
+		void (*alloc)(struct SEE_interpreter *interp);
+		void (*init)(struct SEE_interpreter *interp);
+	};
+
+The modinit() function should obtain global strings using SEE_intern() or
+SEE_intern_ascii().  The init() function should insert module functions and
+values into the interpreter->Global object. Usually, you will want to create
+a toplevel 'container' object to hold your functions and constructors
+(see, for example ECMAScript's Math object).
 
 David Leonard
 

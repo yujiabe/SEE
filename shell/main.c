@@ -35,6 +35,7 @@ extern int optind;
 #include "shell.h"
 #include "compat.h"
 #include "debug.h"
+#include "module.h"
 
 /* Prototypes */
 static void debug(struct SEE_interpreter *, int);
@@ -340,6 +341,7 @@ main(argc, argv)
 	char *argv[];
 {
 	struct SEE_interpreter interp;
+	int interp_initialised = 0;
 	int ch, error = 0;
 	int do_interactive = 1;
 	int globals_added = 0;
@@ -349,23 +351,28 @@ main(argc, argv)
 	/* Initialise the shell's global strings */
 	shell_strings();
 
-	/* Initialise our interpreter */
-	SEE_interpreter_init(&interp);
-	interp.compatibility = SEE_COMPAT_STRICT;
+#define INIT_INTERP()	if (!interp_initialised) {	\
+	SEE_interpreter_init(&interp);			\
+	interp.compatibility = SEE_COMPAT_STRICT;	\
+	interp_initialised = 1;				\
+    }
 
-	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:r:V")) != -1)
+	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:l:r:V")) != -1)
 	    switch (ch) {
 	    case 'c':
+		INIT_INTERP();
 		if (compat_tovalue(optarg, &interp.compatibility) == -1)
 		    error = 1;
 		break;
 	    case 'd':
+		INIT_INTERP();
 		if (*optarg == '*')
 		    optarg = "nElpvecr";
 		for (s = optarg; *s; s++)
 		    debug(&interp, *s);
 		break;
 	    case 'f':
+		INIT_INTERP();
 		if (!globals_added) {
 		    shell_add_globals(&interp);
 		    globals_added = 1;
@@ -374,10 +381,12 @@ main(argc, argv)
 		run_file(&interp, optarg);
 		break;
 	    case 'g':
+		INIT_INTERP();
 	    	if (!debugger)
 			debugger = debug_new(&interp);
 		break;
 	    case 'h':
+		INIT_INTERP();
 		interp.compatibility |= SEE_COMPAT_SGMLCOM;
 		if (!document_added) {
 		    shell_add_document(&interp);
@@ -386,7 +395,17 @@ main(argc, argv)
 		do_interactive = 0;
 		run_html(&interp, optarg);
 		break;
+	    case 'l':
+		if (interp_initialised) {
+			fprintf(stderr, "-l options must come first\n");
+			error = 1;
+			break;
+		}
+	    	if (!load_module(optarg))
+			exit(1);
+		break;
 	    case 'r':
+		INIT_INTERP();
 		interp.recursion_limit = atoi(optarg);
 		printf("(Set recursion limit to %d)\n", 
 			interp.recursion_limit);
@@ -406,7 +425,7 @@ main(argc, argv)
 
 	if (error) {
 	    fprintf(stderr, 
-	        "usage: %s [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
+	        "usage: %s [-l library] [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
 		argv[0],
 #ifndef NDEBUG
 	        "[-d[ETelmnprsv]] "
@@ -418,6 +437,7 @@ main(argc, argv)
 	}
 
 	if (do_interactive) {
+	    INIT_INTERP();
 	    if (!globals_added)
 		shell_add_globals(&interp);
 	    run_interactive(&interp);

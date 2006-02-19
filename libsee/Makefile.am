@@ -15,7 +15,7 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c dprint.c enumerate.c \
                    obj_String.c object.c parse.c printf.c regex.c 	\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
-		   platform_posix.c
+		   module.c platform_posix.c
 
 noinst_HEADERS=    array.h cfunction_private.h dprint.h dtoa.h 		\
 		   dtoa_config.h dprint.h enumerate.h function.h init.h \
