@@ -96,12 +96,13 @@ for SEE version 2.0
  <li><a href="#function">6.6 User function objects</a>
  <li><a href="#error">6.7 Errors and Error objects</a>
  </ul>
- <li><a href="#compat">7 Compatibility features</a>
+ <li><a href="#modules">7 Modules</a>
+ <li><a href="#compat">8 Compatibility features</a>
  <ul>
- <li><a href="#compatjs">7.1 Compatibility with other JavaScript implementations</a>
- <li><a href="#compatsee">7.2 Compatibility with previous versions of SEE</a>
+ <li><a href="#compatjs">8.1 Compatibility with other JavaScript implementations</a>
+ <li><a href="#compatsee">8.2 Compatibility with previous versions of SEE</a>
  </ul>
- <li><a href="#debug">8 Debugging facilities</a>
+ <li><a href="#debug">7 Debugging facilities</a>
  <li><a href="#ref">References</a>
  <li><a href="#idx">Name index</a>
 </ul>
@@ -406,6 +407,8 @@ returning a pointer of given type
 - allocate storage for an array of elements of the given type
 <li><code>SEE_NEW_STRING_ARRAY()</code>
 - a gc-efficient form of <code>SEE_NEW_ARRAY()</code>, where you guarantee that the elements will not contain pointers
+<li><code>SEE_NEW_FINALIZE()</code>
+- same as <code>SEE_NEW()</code>, but associates a finalizer function
 <li><code>SEE_ALLOCA()</code>
 - allocate storage for an array on the stack (see <code>alloca()</code>)
 <li><code>SEE_STRING_ALLOCA()</code>
@@ -416,6 +419,7 @@ elements will not contain pointers
 <pre>T * <dfn id="SEE_NEW">SEE_NEW</dfn>(struct SEE_interpreter *interp, type T);
 T * <dfn id="SEE_NEW_ARRAY">SEE_NEW_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</dfn>(struct SEE_interpreter *interp, type T, int length);
+T * <dfn id="SEE_NEW_FINALIZE">SEE_NEW_FINALIZE</dfn>(struct SEE_interpreter *interp, type T, void (*finalizefn)(struct SEE_interpreter *, void *, void *), void *closure);
 T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);</pre>
 
@@ -1256,6 +1260,9 @@ Other string functions provided are:
  <li><code>SEE_string_fputs()</code>    
         - output the string to the stdio file using UTF-8 encoding,
 	  returns <code>EOF</code> on error
+ <li><code>SEE_string_toutf8()</code>    
+        - output the string into a C string buffer, using UTF-8 encoding,
+	  throwing an error if the buffer is too small
  <li><code>SEE_string_cmp()</code>      
         - compares two strings, like <code>strcmp()</code>
 </ul>
@@ -1265,6 +1272,9 @@ Other string functions provided are:
 struct SEE_string *<dfn id="SEE_string_literal">SEE_string_literal</dfn>(struct SEE_interpreter *interp,
                 const struct SEE_string *s);
 int <dfn id="SEE_string_fputs">SEE_string_fputs</dfn>(const struct SEE_string *s, FILE *file);
+void <dfn id="SEE_string_toutf8">SEE_string_toutf8</dfn>(struct SEE_interpreter *interp, 
+		char *buffer, SEE_size_t buffer_size,
+		const struct SEE_string *s);
 int <dfn id="SEE_string_cmp">SEE_string_cmp</dfn>(const struct SEE_string *s1,
                 const struct SEE_string *s2);</pre>
 
@@ -1961,8 +1971,20 @@ of the same name should be created per interpreter.
 <pre>struct SEE_object *<dfn id="SEE_Error_make">SEE_Error_make</dfn>(struct SEE_interpreter *interp,
                 struct SEE_string *name);</pre>
 
-<h2 id="compat">7 Compatibility features</h2>
-<h3 id="compatjs">7.1 Compatibility with other JavaScript implementations</h3>
+<h2 id="modules">7 Modules</h2>
+
+<p>
+SEE provides a module abstraction for host implementations that want
+a structured approach to extending SEE.
+Modules consist of functions that are automatically called by SEE at
+various stages of intepreter initialisation so that the module may
+insert its own objects into the state initially seen by user scripts.
+</p>
+
+
+
+<h2 id="compat">8 Compatibility features</h2>
+<h3 id="compatjs">8.1 Compatibility with other JavaScript implementations</h3>
 
 <p>
 SEE provides backward-compatibility with earlier versions of JavaScript
@@ -2194,7 +2216,7 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 
 </table>
 
-<h3 id="compatsee">7.2 Compatibility with previous versions of SEE</h3>
+<h3 id="compatsee">8.2 Compatibility with previous versions of SEE</h3>
 
 <p>
 As distributed, SEE has two different version numbers:
@@ -2256,7 +2278,7 @@ defaulting to 1.0.
 const int <dfn id="SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</dfn>;</pre>
 
 
-<h2 id="debug">8 Debugging facilities</h2>
+<h2 id="debug">9 Debugging facilities</h2>
 
 <p>
 The SEE library contains various debugging facilities, that are
@@ -2366,12 +2388,13 @@ will occur.
 <a href="#SEE_native_init">SEE_native_init</a><br>
 <a href="#SEE_NEW">SEE_NEW</a><br>
 <a href="#SEE_NEW_ARRAY">SEE_NEW_ARRAY</a><br>
+<a href="#SEE_NEW_FINALIZE">SEE_NEW_FINALIZE</a><br>
 <a href="#SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</a><br>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
-<a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <td>
+<a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
@@ -2391,8 +2414,8 @@ will occur.
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
-<a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <td>
+<a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
@@ -2412,9 +2435,10 @@ will occur.
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
-<a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <td>
+<a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
+<a href="#SEE_string_toutf8">SEE_string_toutf8</a><br>
 <a href="#SEE_string_vsprintf">SEE_string_vsprintf</a><br>
 <a href="#SEE_THROW">SEE_THROW</a><br>
 <a href="#SEE_ToBoolean">SEE_ToBoolean</a><br>
