@@ -43,6 +43,8 @@ void 	_SEE_free_debug(struct SEE_interpreter *i, void **memp,
 
 /* Convenience macros */
 #define SEE_NEW(i, t)		(t *)SEE_malloc(i, sizeof (t))
+#define SEE_NEW_FINALIZE(i, t, f, c) \
+				(t *)SEE_malloc_finalize(i, sizeof (t), f, c)
 #define SEE_NEW_ARRAY(i, t, n)	(t *)SEE_malloc(i, (n) * sizeof (t))
 #define SEE_NEW_STRING_ARRAY(i, t, n) \
 				(t *)SEE_malloc_string(i, (n) * sizeof (t))
