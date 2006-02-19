@@ -542,7 +542,7 @@ regexp_set_static(interp, S, regex, captures, source)
 	struct SEE_string *lastParen;
 
 	/* Only do all this for EXT1 */
-	if (interp->compatibility & SEE_COMPAT_EXT1 == 0)
+	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0)
 		return;
 
 	RegExp = interp->RegExp;
