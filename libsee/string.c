@@ -49,6 +49,7 @@
 #include <see/string.h>
 #include <see/object.h>
 #include <see/error.h>
+#include <see/try.h>
 #include <see/interpreter.h>
 #include <see/value.h>
 
@@ -304,6 +305,7 @@ SEE_string_fputs(s, f)
 	return 0;
     error:
 	return EOF;
+#undef OUTPUT
 }
 
 /*------------------------------------------------------------
@@ -512,4 +514,62 @@ SEE_string_free(interp, sp)
 		SEE_free(interp, (void **)&(*sp)->data);
 		SEE_free(interp, (void **)sp);
 	}
+}
+
+/*
+ * Converts a SEE string into a UTF8 buffer.
+ * Throws a RangeError if the decoded string, including terminating nul, 
+ * would exceed the size of the given buffer.
+ * If the string itself is illegally formed, an Error is thrown.
+ */
+void
+SEE_string_toutf8(interp, buf, buflen, s)
+	struct SEE_interpreter *interp;
+	char *buf;
+	SEE_size_t buflen;
+	const struct SEE_string *s;
+{
+	unsigned int i;
+	SEE_char_t ch, ch2;
+
+#define OUTPUT(c) do { 				\
+	if (buflen <= 1) goto toolong; 		\
+	*buf++=(c); 				\
+	buflen--; 				\
+    } while (0)
+
+	for (i = 0; i < s->length; i++) {
+		ch = s->data[i];
+		if ((ch & 0xff80) == 0) 
+		    OUTPUT(ch & 0x7f);
+		else if ((ch & 0xf800) == 0) {
+		    OUTPUT(0xc0 | ((ch >> 6) & 0x1f));
+		    OUTPUT(0x80 | (ch & 0x3f));
+		} else if ((ch & 0xfc00) != 0xd800) {
+		    OUTPUT(0xe0 | ((ch >> 12) & 0x0f));
+		    OUTPUT(0x80 | ((ch >> 6) & 0x3f));
+		    OUTPUT(0x80 | (ch & 0x3f));
+		} else {
+		    if (i == s->length - 1)
+			SEE_error_throw_string(interp, interp->Error, 
+				STR(bad_utf16_string));
+		    ch2 = s->data[++i];
+		    if ((ch2 & 0xfc00) != 0xdc00)
+			SEE_error_throw_string(interp, interp->Error, 
+				STR(bad_utf16_string));
+		    ch = (ch & 0x03ff) + 0x0040;
+		    OUTPUT(0xf0 | ((ch >> 8) & 0x07));
+		    OUTPUT(0x80 | ((ch >> 2) & 0x3f));
+		    OUTPUT(0x80 | ((ch & 0x3) << 4) |
+				 ((ch2 & 0x03c0) >> 6));
+		    OUTPUT(0x80 | (ch2 & 0x3f));
+		}
+	}
+	if (buflen < 1) goto toolong;
+	*buf = '\0';
+	return;
+    toolong:
+	SEE_error_throw_string(interp, interp->RangeError, 
+		STR(string_limit_reached));
+#undef OUTPUT
 }

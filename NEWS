@@ -1,6 +1,9 @@
 $Id$
 
 2.0 [unreleased]
+  API change: added SEE_string_toutf8
+  added netscape-compatible version() function to the shell
+  API change: SEE_COMPAT_ flags cleaned up; specific JS version compat
   bug 36: function arguments object now accesses args by index 
   Compat: octal escapes in regular expressions for EXT1
   API change: only [[Put]], [[Get]], [[Delete]] are allowed uninterned props
@@ -11,7 +14,7 @@ $Id$
   Compat: Allow /[/]/ to be parsed as a regex literal in EXT1.
   Error.prototype and NativeError.prototype attributes now match standard
   bug 35: labelled blocks could not be targets of break
-  Compat: Allow [[HasInstance]] for RegExp, i.e. /x*/ instanceof RegExp
+  Compat: Allow [[HasInstance]] for RegExp, e.g. /x*/ instanceof RegExp
   bug 34: some boolean true values (eg from Regexp) do not compare equal
   bug 33: indexOf() corrected when substring is longer than string
   bug 32: thisobj not set for called functions
