@@ -24,8 +24,12 @@ load_module(name)
 	char symname[1024];
 
 	handle = dlopen(name, DL_LAZY);
+	if (!handle && !strchr(name, '/')) {
+	    char path[1024];
+	    snprintf(path, sizeof path, "%s/lib%s.so", PATH_PKGLIB, name);
+	    handle = dlopen(path, DL_LAZY);
+	}
 	if (!handle) {
-	    /* XXX should look in $(pkglib) for lib<name>.so */
 	    fprintf(stderr, "%s\n", dlerror());
 	    return 0;
 	}
@@ -42,7 +46,7 @@ load_module(name)
 	    while (p != name && p[-1] != '/') p--;
 	    q = symname;
 	    *q++ = '_';
-	    for (p; *p && *p != '.'; p++)
+	    for (; *p && *p != '.'; p++)
 		*q++ = *p;
 	    for (p = "_module"; *p; p++)
 	    	*q++ = *p;

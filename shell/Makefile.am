@@ -7,12 +7,14 @@ see_shell_SOURCES=		main.c shell.c getopt.c readline.c 	\
 				shell.h debug.h compat.h module.h
 see_shell_LDADD=		$(top_builddir)/libsee/libsee.la
 see_shell_DEPENDENCIES=		$(top_builddir)/libsee/libsee.la
+see_shell_CPPFLAGS=		-DPATH_PKGLIB='"$(pkglib)"'
 
 ## A statically linked version for running 'make check'
 noinst_PROGRAMS=		see-shell.static
 see_shell_static_SOURCES=	$(see_shell_SOURCES)
 see_shell_static_LDADD=		$(see_shell_LDADD)
 see_shell_static_DEPENDENCIES=	$(see_shell_DEPENDENCIES)
+see_shell_static_CPPFLAGS=	$(see_shell_CPPFLAGS)
 see_shell_static_LDFLAGS=	 -static
 
 pkglib_LTLIBRARIES=		libFile.la
