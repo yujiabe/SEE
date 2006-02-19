@@ -53,4 +53,9 @@ void SEE_RegExp_init(struct SEE_interpreter *);
 void SEE_String_alloc(struct SEE_interpreter *);
 void SEE_String_init(struct SEE_interpreter *);
 
+/* module.c */
+void _SEE_module_alloc(struct SEE_interpreter *);
+void _SEE_module_init(struct SEE_interpreter *);
+void _SEE_module_fini(struct SEE_interpreter *);
+
 #endif /* _SEE_h_init */

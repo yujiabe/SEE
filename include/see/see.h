@@ -23,6 +23,7 @@ extern "C" {
 #include <see/interpreter.h>
 #include <see/context.h>
 #include <see/mem.h>
+#include <see/module.h>
 #include <see/no.h>
 #include <see/string.h>
 #include <see/system.h>

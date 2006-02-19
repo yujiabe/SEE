@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Added module abstraction
   API change: added SEE_string_toutf8
   added netscape-compatible version() function to the shell
   API change: SEE_COMPAT_ flags cleaned up; specific JS version compat

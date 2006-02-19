@@ -94,6 +94,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_Object_alloc(interp);
 	SEE_RegExp_alloc(interp);
 	SEE_String_alloc(interp);
+	_SEE_module_alloc(interp);
 
 	/* Initialise the per-interpreter intern table now */
 	_SEE_intern_init(interp);
@@ -109,7 +110,6 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_Object_init(interp);
 	SEE_RegExp_init(interp);
 	SEE_String_init(interp);
-
-	/* Function init needs to be called last since it uses the parser */
-	SEE_Function_init(interp);
+	SEE_Function_init(interp);	/* Call late because of parser use */
+	_SEE_module_init(interp);
 }

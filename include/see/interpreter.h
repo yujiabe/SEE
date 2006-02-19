@@ -70,6 +70,7 @@ struct SEE_interpreter {
 		struct SEE_traceback *prev;
 	} *traceback;
 
+	void **module_private;		/* private pointers for each module */
 	void *intern_tab;		/* interned string table */
 	unsigned int random_seed;	/* used by Math.random() */
 	const char *locale;		/* current locale (may be NULL) */
