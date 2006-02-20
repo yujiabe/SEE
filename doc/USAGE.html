@@ -2089,6 +2089,12 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 	to <code class="js">__proto__</code> are accepted if 
 	they don't cause a cycle.
 
+<li>	Invalid <code class="js">\u</code> or <code class="js">\x</code>
+	escapes will treat the leading
+	<code class="js">\u</code> or <code class="js">\x</code> as
+	a single-letter escape.
+	Strictly, this is a lexical analyser error.
+
 </ul>
 
 
@@ -2101,11 +2107,6 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	During sort, property names are ordered arithmetically if they
 	are suitable as array indicies, otherwise they are ordered
 	lexicographically.
-
-<li>	Invalid <code class="js">\u</code> or <code class="js">\x</code>
-	escapes will treat the leading
-	<code class="js">\u</code> or <code class="js">\x</code> as
-	a single-letter escape.
 
 <li>	SEE's lexical analyser will recognise octal integers (i.e.
 	integers starting with '0') and will fall back to decimal if

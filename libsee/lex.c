@@ -387,8 +387,9 @@ StringLiteral(lex)
 	SEE_unicode_t quote;
 	SEE_unicode_t c = 0;
 	struct SEE_string *s;
+	struct SEE_interpreter *interp = lex->input->interpreter;
 
-	s = SEE_string_new(lex->input->interpreter, 0);
+	s = SEE_string_new(interp, 0);
 	quote = NEXT;
 	SKIP;
 	while (!ATEOF && NEXT != quote) {
@@ -423,15 +424,16 @@ StringLiteral(lex)
 				break;
 			case 'x':
 			case 'u':
-				if ((lex->input->interpreter->compatibility 
-				    & SEE_COMPAT_EXT1) == 0)
-				{ if (NEXT == 'x')
+				if (SEE_COMPAT_JS(interp, >=, JS12))
+				    goto literal;
+				/* Strict ECMA: */
+				if (NEXT == 'x')
 				     SYNTAX_ERROR(STR(invalid_esc_x));
-				  else
+				else
 				     SYNTAX_ERROR(STR(invalid_esc_u));
-				}
-				/* FALLTHROUGH */
+				/* NOTREACHED */
 			default:
+	literal:
 				c = NEXT; SKIP; break;
 			}
 		} else {
