@@ -179,11 +179,15 @@ cannot normally typecheck your use of those macros.
 
 <p>Where literal C code is used, it is typeset in a monospace font, 
 like this:</p>
-<pre>if (failed) { abort(); }</pre>
+<pre>if (failed) { abort(); } <i>/* comment */</i></pre>
 <p>Similarly, ECMAScript code is typeset in a sans serif font, like this:</p>
 <pre class="js">window.location = "about:blank";</pre>
 
 <p>Elided code is indicated with an elipsis: <code><i>...</i></code></p>
+
+<p>Function definitions listed in the <a href="#idx">name index</a>
+appear in green, like this: <code><dfn>SEE_example()</dfn></code>
+	
 
 <h2 id="req">1 Requirements</h2>
 
@@ -2066,6 +2070,11 @@ successfully. It returns <code>-1</code> if an internal error occurred.
 Otherwise it returns the same non-zero value that the module's 
 <code>mod_init</code> function hook returned.
 Once added, a module cannot be removed.
+</p>
+
+<p>
+The interested reader is referred to the <i>mod_File.c</i> module example
+under the <i>shell</i> directory of the SEE source code.
 </p>
 
 <h2 id="compat">8 Compatibility features</h2>
