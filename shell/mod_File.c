@@ -54,8 +54,7 @@ static void file_finalize(struct SEE_interpreter *, void *, void *);
  * This is the only symbol exported by this module. 
  * It contains some information for debugging and 
  * pointers to the major initialisation functions.
- * This structure can be found dynamically by the shell and 
- * passed to SEE_module_add().
+ * This structure is passed to SEE_module_add() once and early.
  */
 struct SEE_module File_module = {
 	SEE_MODULE_MAGIC,		/* magic */
@@ -74,7 +73,7 @@ struct SEE_module File_module = {
  * The private data we hold is simply original pointers to the objects
  * that we make during alloc/init. This is because (a) a script is able to
  * change the objects locations at runtime, and (b) this is slightly more
- * efficient than performing a runtime lookup.
+ * efficient than performing a runtime lookup with SEE_OBJECT_GET.
  */
 struct module_private {
 	struct SEE_object *File;		/* The File object */
@@ -92,7 +91,7 @@ struct module_private {
  * during mod_init.
  * Internalised strings are guaranteed to have unique pointers,
  * which means you can use '==' instead of 'strcmp()' to compare names.
- * The pointers must all be initialised during mod_init().
+ * The pointers must all be obtained by mod_init().
  */
 #define STR(name) s_##name
 static struct SEE_string 
@@ -109,11 +108,11 @@ static struct SEE_string
 	*STR(write);
 
 /*
- * Module initialisation.
+ * The module initialisation function (mod_init).
  * This function is called exactly once, before any interpreters have
  * been created.
- * You can use this to set up global intern strings (like I've done below),
- * or to initialise data independent of any interpreter context.
+ * You can use this to set up global intern strings (like I've done),
+ * and/or to initialise global data independent of any single interpreter.
  */
 static int
 File_mod_init()
@@ -129,7 +128,6 @@ File_mod_init()
 	STR(prototype) = SEE_intern_global("prototype");
 	STR(read)      = SEE_intern_global("read");
 	STR(write)     = SEE_intern_global("write");
-
 	return 0;
 }
 
@@ -200,10 +198,13 @@ static struct SEE_objectclass file_constructor_class = {
 };
 
 /*
+ * Module per-interpreter allocation (alloc)
  * This function is called during interpreter initialisation;
  * The interpreter is not ready for use; only some storage has been
- * allocated. This is useful only if you have dependent modules that
- * during init() need to lookup pointers in other modules.
+ * allocated. This is useful if you have dependent modules that
+ * during init() need to lookup pointers in other modules. Here
+ * we use the time to allocate the per-interpreter private 
+ * module structure storage.
  */
 static void
 File_alloc(interp)
@@ -213,6 +214,12 @@ File_alloc(interp)
 		SEE_NEW(interp, struct module_private);
 }
 
+/*
+ * Module per-interpreter initialisation (init)
+ * This is the workhorse of the module. Its job is to build up
+ * a fresh collection of host objects and install them into the new 
+ * interpreter instance.
+ */
 static void
 File_init(interp)
 	struct SEE_interpreter *interp;
@@ -229,6 +236,7 @@ File_init(interp)
 	((struct file_object *)File_prototype)->file = NULL;
 	PRIVATE(interp)->File_prototype = File_prototype;
 
+	/* Convenience macro for adding functions to File.prototype */
 #define PUTFUNC(obj, name, len) 					\
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, file_proto_##name,\
 		STR(name), len));					\
@@ -246,6 +254,7 @@ File_init(interp)
 		&file_constructor_class, interp->Object_prototype);
 	PRIVATE(interp)->File = File;
 
+	/* Convenience macro for adding properties to File */
 #define PUTOBJ(parent, name, obj) 					\
 	SEE_SET_OBJECT(&v, obj);					\
 	SEE_OBJECT_PUT(interp, parent, STR(name), &v, SEE_ATTR_DEFAULT);
@@ -255,22 +264,23 @@ File_init(interp)
 	PUTOBJ(File, Out, newfile(interp, stdout))
 	PUTOBJ(File, Err, newfile(interp, stderr))
 
-	/* Create the FileError object for I/O exceptions */
+	/* Create an FileError error object for I/O exceptions */
 	PRIVATE(interp)->FileError = SEE_Error_make(interp, 
 		STR(FileError));
 	PUTOBJ(File, FileError, PRIVATE(interp)->FileError);
 
-	/* Insert File into the Global object */
+	/* Finally, insert File into the Global object */
 	PUTOBJ(interp->Global, File, File);
 }
 
 /*
  * Converts an object into file_object, or throws a TypeError.
  *
- * This is needed by the member functions of a File instance,
- * because a script may assign the member functions to a different
- * (non-file) object and invoke them. Then, thisobj would not be
- * a file instance.
+ * This helper functon is called by the member functions of File
+ * instances, mainly to check that it is being called correctly.
+ * Because a script may assign the member functions to a different
+ * (non-file) object and invoke them, thisobj cannot always be 
+ * assumed to be a file instance.
  */
 static struct file_object *
 tofile(interp, o)
@@ -283,8 +293,8 @@ tofile(interp, o)
 }
 
 /*
- * Constructs and returns a new instance of a file_object initialised
- * to the given file pointer.
+ * This helper function constructs and returns a new instance of a 
+ * file_object initialised to the given file pointer.
  */
 static struct SEE_object *
 newfile(interp, file)
@@ -302,7 +312,8 @@ newfile(interp, file)
 
 /*
  * A finalizer function that is /eventually/ called on file objects,
- * unless a system crash or exit occurs.
+ * unless a system crash or exit occurs. SEE doesn't guarantee that
+ * this is ever called; however the GC implementation may.
  */
 static void
 file_finalize(interp, obj, closure)
@@ -482,4 +493,3 @@ file_proto_close(interp, self, thisobj, argc, argv, res)
 	}
 	SEE_SET_UNDEFINED(res);
 }
-
