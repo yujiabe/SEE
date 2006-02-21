@@ -255,7 +255,7 @@ example()
 {
     struct SEE_interpreter interp_storage;
 
-    SEE_interpreter_init(&interp_storage);
+    SEE_interpreter_init(&amp;interp_storage);
     <i>/* now the interpreter is ready */</i>
 }</pre>
 
@@ -553,8 +553,8 @@ main()
         char *program_text = "<code class="js">Math.sqrt(3 + 4 * 7) + 9</code>";
 
         <i>/* Initialise an interpreter */</i>
-        SEE_interpreter_init(&interp_storage);
-        interp = &interp_storage;
+        SEE_interpreter_init(&amp;interp_storage);
+        interp = &amp;interp_storage;
 
         <i>/* Create an input stream that provides program text */</i>
         input = SEE_input_utf8(interp, program_text);
@@ -562,10 +562,10 @@ main()
         <i>/* Establish an exception context */</i>
         SEE_TRY(interp, try_ctxt) {
                 <i>/* Call the program evaluator */</i>
-                SEE_Global_eval(interp, input, &result);
+                SEE_Global_eval(interp, input, &amp;result);
 
                 <i>/* Print the result */</i>
-                if (SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER)
+                if (SEE_VALUE_GET_TYPE(&amp;result) == SEE_NUMBER)
                         printf("The answer is %f\n", result.u.number);
                 else
                         printf("Unexpected answer\n");
@@ -1975,13 +1975,98 @@ of the same name should be created per interpreter.
 
 <p>
 SEE provides a module abstraction for host implementations that want
-a structured approach to extending SEE.
-Modules consist of functions that are automatically called by SEE at
-various stages of intepreter initialisation so that the module may
-insert its own objects into the state initially seen by user scripts.
+a structured approach to adding their objects into a SEE interpreter.
 </p>
 
+<p>
+A <code>struct SEE_module</code> is a collection of functions
+that are automatically called by SEE at various stages of each intepreter 
+initialisation. The module may initialise and insert its own objects into 
+each interpreter before user scripts can be run.
+</p>
 
+<pre><dfn id="struct_SEE_module">struct SEE_module</dfn> {
+        SEE_uint32_t      magic;
+        const char       *name;
+        const char       *version;
+        unsigned int      index;        <i>/* Set by SEE_module_add() */</i>
+        int             (*mod_init)(void);
+        void            (*alloc)(struct SEE_interpreter *);
+        void            (*init)(struct SEE_interpreter *);
+};</pre>
+
+<p>
+The <code>magic</code> field must be initialised to the constant value
+<code>SEE_MODULE_MAGIC</code>.
+The <code>name</code> field is currently unused, but should consist
+of a short, unique identifier corresponding to the name of the module.
+The <code>version</code> field is similarly optional, but should contain
+at least a version number besides other descriptively identifying text.
+The <code>index</code> field is set by the <code>SEE_module_add()</code>
+function as the module is added to SEE. 
+Each added module is given a unique index. Do not change the index.
+</p>
+
+<p>
+The <code>mod_init</code> function pointer is called immediately the module
+is loaded (by <code>SEE_module_add()</code>). 
+This is an opportunity for
+a module to obtain pointers to globally interned strings.
+(See <code>SEE_intern_global()</code> in <a href="#staticstr">&sect;5.3.2</a>.)
+The <code>mod_init</code> function is expected to return zero to indicate
+a successful initialisation.
+This pointer may be set to <code>NULL</code> if unneeded.
+</p>
+
+<p>
+The <code>alloc</code> function is called after built-in objects have
+been allocated but before any other modules or built-in objects have been
+initialised. It is dangerous to make use of the interpreter at this stage.
+The main use of the <code>alloc</code> function pointer is to allow 
+circular dependencies between modules. 
+For most modules, the <code>alloc</code> pointer can be left as 
+<code>NULL</code>.
+</p>
+
+<p>
+The <code>init</code> function is called after all built-in objects and
+modules have been allocated, and after all built-in objects have been
+initialised.
+It is safe to make use of the interpreter built-ins at this stage, but
+not to make use of other modules.
+For most modules, the <code>init</code> function is the place to
+insert newly-created host objects into a pristine 
+<code>interp-&gt;Global</code>.
+</p>
+
+<p>
+A pointer to your module structure must be passed to 
+<code>SEE_module_add()</code> before any interpreters are created.
+It is not possible to dynamically add modules once interpreters have
+been created because of the way the global intern table is managed.
+(If your module does not modify the global intern table, and your system
+is single-threaded, then you may be able to add the module dynamically.)
+</p>
+
+<p>Finally, per-interpreter private storage for each module is 
+provided through the <code>SEE_MODULE_PRIVATE()</code> macro.
+This macro evaluates to a <code>void *</code> lvalue that may be 
+assigned dynamic storage during <code>alloc</code>.
+</p>
+
+<pre>const SEE_uint32_t <dfn id="SEE_MODULE_MAGIC">SEE_MODULE_MAGIC</dfn>;
+int <dfn id="SEE_module_add">SEE_module_add</dfn>(struct SEE_module *module);
+void *<dfn id="SEE_MODULE_PRIVATE">SEE_MODULE_PRIVATE</dfn>(struct SEE_interpreter *, struct SEE_module *);</pre>
+
+<p>
+The <code>SEE_module_add()</code> function adds a module to the
+global list of modules initialised whenever a new interpreter
+is constructed. This function returns zero if the module was added
+successfully. It returns <code>-1</code> if an internal error occurred.
+Otherwise it returns the same non-zero value that the module's 
+<code>mod_init</code> function hook returned.
+Once added, a module cannot be removed.
+</p>
 
 <h2 id="compat">8 Compatibility features</h2>
 <h3 id="compatjs">8.1 Compatibility with other JavaScript implementations</h3>
@@ -2373,17 +2458,21 @@ will occur.
 <a href="#SEE_input_file">SEE_input_file</a><br>
 <a href="#SEE_INPUT_NEXT">SEE_INPUT_NEXT</a><br>
 <a href="#SEE_input_string">SEE_input_string</a><br>
-<td>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
 <a href="#SEE_intern_ascii">SEE_intern_ascii</a><br>
 <a href="#SEE_intern_global">SEE_intern_global</a><br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
+<td>
 <a href="#SEE_interpreter_init_compat">SEE_interpreter_init_compat</a><br>
 <a href="#SEE_mem_exhausted_hook">SEE_mem_exhausted_hook</a><br>
 <a href="#SEE_mem_free_hook">SEE_mem_free_hook</a><br>
 <a href="#SEE_mem_malloc_hook">SEE_mem_malloc_hook</a><br>
 <a href="#SEE_mem_malloc_string_hook">SEE_mem_malloc_string_hook</a><br>
+<a href="#struct_SEE_module">SEE_module</a> struct<br>
+<a href="#SEE_module_add">SEE_module_add</a><br>
+<a href="#SEE_MODULE_MAGIC">SEE_MODULE_MAGIC</a><br>
+<a href="#SEE_MODULE_PRIVATE">SEE_MODULE_PRIVATE</a><br>
 <a href="#SEE_NaN">SEE_NaN</a><br>
 <a href="#struct_SEE_native">SEE_native</a> struct<br>
 <a href="#SEE_native_init">SEE_native_init</a><br>
@@ -2394,13 +2483,13 @@ will occur.
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
-<td>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
 <a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
+<td>
 <a href="#SEE_OBJECT_CONSTRUCT">SEE_OBJECT_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_DEFAULTVALUE">SEE_OBJECT_DEFAULTVALUE</a><br>
 <a href="#SEE_OBJECT_DELETE">SEE_OBJECT_DELETE</a><br>
@@ -2415,7 +2504,6 @@ will occur.
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
-<td>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
@@ -2427,6 +2515,7 @@ will occur.
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
 <a href="#SEE_string_addch">SEE_string_addch</a><br>
 <a href="#SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</a><br>
+<td>
 <a href="#SEE_string_append">SEE_string_append</a><br>
 <a href="#SEE_string_append_ascii">SEE_string_append_ascii</a><br>
 <a href="#SEE_string_append_int">SEE_string_append_int</a><br>
@@ -2436,7 +2525,6 @@ will occur.
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
-<td>
 <a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_toutf8">SEE_string_toutf8</a><br>
@@ -2453,6 +2541,7 @@ will occur.
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
 <a href="#SEE_TRY">SEE_TRY</a><br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
+<td>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
 <a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>
 <a href="#SEE_version">SEE_version</a><br>
