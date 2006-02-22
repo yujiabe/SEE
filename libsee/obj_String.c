@@ -956,10 +956,12 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 		0, NULL, res);
 	A = res->u.object;
 /*3*/	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
-		lim = 0xffffffff;
+	    lim = 0xffffffff;
 	else
-		lim = SEE_ToUint32(interp, argv[1]);
+	    lim = SEE_ToUint32(interp, argv[1]);
 /*4*/	s = S->length;
+	if (s == 0 && SEE_COMPAT_JS(interp, == ,JS12))
+	    return;
 /*5*/	p = 0;
 /*6*/	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED) {
 	    SEE_SET_STRING(&separatorv, STR(undefined));
@@ -971,6 +973,23 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	    ncap = SEE_RegExp_count_captures(interp, R->u.object);
 	} else {
 	    SEE_ToString(interp, argv[0], &separatorv);
+	    if (SEE_COMPAT_JS(interp, == ,JS12) &&
+	        separatorv.u.string->length == 1 &&
+	        separatorv.u.string->data[0] == ' ')
+	    {
+	    	struct SEE_value a, *av[1];
+		struct SEE_string *wss = SEE_string_new(interp, 3);
+
+		SEE_string_addch(wss, '\\');
+		SEE_string_addch(wss, 's');
+		SEE_string_addch(wss, '+');
+		SEE_SET_STRING(&a, wss);
+		av[0] = &a;
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, 
+			interp->Global, 1, av, &separatorv);
+		while (p < s && UNICODE_IS_Zs(S->data[p]))
+		    p++;
+	    }
 	    R = &separatorv;
 	    ncap = 1;
 	}
@@ -978,7 +997,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 		captures = SEE_STRING_ALLOCA(interp, struct capture, ncap);
 /*7*/	if (lim == 0) return;
 /*8*/	if (argc < 1 || (SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED &&
-		!(interp->compatibility & SEE_COMPAT_EXT1)))
+		!SEE_GET_JS_COMPAT(interp)))
 	    goto step33;
 /*9*/	if (s == 0) goto step31;
 step10:	q = p;
