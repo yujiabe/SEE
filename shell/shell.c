@@ -157,6 +157,7 @@ version_fn(interp, self, thisobj, argc, argv, res)
 
 	if (argc == 0) {
 	    switch (SEE_GET_JS_COMPAT(interp)) {
+	    case SEE_COMPAT_JS11: ver = 110; break;
 	    case SEE_COMPAT_JS12: ver = 120; break;
 	    case SEE_COMPAT_JS13: ver = 130; break;
 	    case SEE_COMPAT_JS14: ver = 140; break;
@@ -177,9 +178,11 @@ version_fn(interp, self, thisobj, argc, argv, res)
 		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS13);
 	else if (ver >= 120)
 		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS12);
+	else if (ver >= 110)
+		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS11);
 	else 
 		SEE_error_throw(interp, interp->RangeError, 
-		   "cannot set version lower than JS1.2");
+		   "cannot set version lower than JS1.1");
 	SEE_SET_UNDEFINED(res);
 }
 
