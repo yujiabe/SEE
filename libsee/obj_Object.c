@@ -224,11 +224,58 @@ object_proto_toString(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_string *s;
 
-	s = SEE_string_sprintf(interp, "[object %s]",
-		thisobj && thisobj->objectclass && thisobj->objectclass->Class
-		? thisobj->objectclass->Class 
-		: "(null)");
-	SEE_SET_STRING(res, s);
+        if (SEE_COMPAT_JS(interp, ==, JS12)) {
+                struct SEE_string *s = SEE_string_new(interp, 0);
+                struct SEE_string *prop;
+                struct SEE_value v, vs;
+                unsigned int j;
+		int flag;
+		int first = 1;
+		struct SEE_enum *e = NULL;
+
+                SEE_string_addch(s, '{');
+		if (SEE_OBJECT_HAS_ENUMERATOR(thisobj)) {
+		    e = SEE_OBJECT_ENUMERATOR(interp, thisobj);
+		    while ((prop = SEE_ENUM_NEXT(interp, e, &flag)) != NULL) {
+			SEE_OBJECT_GET(interp, thisobj, prop, &v);
+			if (SEE_VALUE_GET_TYPE(&v) == SEE_UNDEFINED)
+			    continue;
+			if (!first) {
+			    SEE_string_addch(s, ',');
+			    SEE_string_addch(s, ' ');
+			} else
+			    first = 0;
+			SEE_string_append(s, prop);
+			SEE_string_addch(s, ':');
+			SEE_string_addch(s, ' ');
+			switch (SEE_VALUE_GET_TYPE(&v)) {
+			case SEE_STRING:
+			    SEE_string_addch(s, '"');
+			    for (j = 0; j < v.u.string->length; j++) {
+				if (v.u.string->data[j] == '\"' ||
+				    v.u.string->data[j] == '\\')
+					SEE_string_addch(s, '\\');
+				SEE_string_addch(s, v.u.string->data[j]);
+			    }
+			    SEE_string_addch(s, '"');
+			    break;
+			default:
+			    SEE_ToString(interp, &v, &vs);
+			    SEE_string_append(s, vs.u.string);
+			    break;
+			}
+		    }
+		}
+                SEE_string_addch(s, '}');
+                SEE_SET_STRING(res, s);
+        } else {
+		s = SEE_string_sprintf(interp, "[object %s]",
+			(thisobj && thisobj->objectclass && 
+			 thisobj->objectclass->Class)
+			? thisobj->objectclass->Class 
+			: "(null)");
+		SEE_SET_STRING(res, s);
+	}
 }
 
 /* Object.prototype.toLocaleString (15.2.4.3) */

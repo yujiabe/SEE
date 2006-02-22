@@ -403,7 +403,52 @@ array_proto_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	(void)toarray(interp, thisobj);
-	array_proto_join(interp, self, thisobj, 0, NULL, res);
+	if (SEE_COMPAT_JS(interp, ==, JS12)) {
+		struct SEE_string *s = SEE_string_new(interp, 0);
+		struct SEE_string *n = NULL;
+		int lastundef = 0;
+		SEE_uint32_t length, i;
+		struct SEE_value v, vs;
+		unsigned int j;
+
+		SEE_string_addch(s, '[');
+		SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
+		length = SEE_ToUint32(interp, &v);
+		for (i = 0; i < length; i++) {
+		    if (i) {
+		        SEE_string_addch(s, ',');
+		        SEE_string_addch(s, ' ');
+		    }
+		    SEE_OBJECT_GET(interp, thisobj, intstr(interp, &n, i), &v);
+		    lastundef = 0;
+		    switch (SEE_VALUE_GET_TYPE(&v)) {
+		    case SEE_UNDEFINED: 
+		    	lastundef = 1;
+			break;
+		    case SEE_STRING:
+			SEE_string_addch(s, '"');
+			for (j = 0; j < v.u.string->length; j++) {
+			    if (v.u.string->data[j] == '\"' ||
+				v.u.string->data[j] == '\\')
+				    SEE_string_addch(s, '\\');
+			    SEE_string_addch(s, v.u.string->data[j]);
+			}
+			SEE_string_addch(s, '"');
+			break;
+		    default:
+			SEE_ToString(interp, &v, &vs);
+			SEE_string_append(s, vs.u.string);
+			break;
+		    }
+		}
+	        if (lastundef) {
+		    SEE_string_addch(s, ',');
+		    SEE_string_addch(s, ' ');
+	        }
+		SEE_string_addch(s, ']');
+		SEE_SET_STRING(res, s);
+	} else
+		array_proto_join(interp, self, thisobj, 0, NULL, res);
 }
 
 /* 15.4.4.3 */
@@ -468,7 +513,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	struct SEE_object *A;
 	SEE_uint32_t n, k;
 	int i;
-	struct SEE_string *ns = NULL;
+	struct SEE_string *nsbuf = NULL, *ns;
 
 	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, 
 		NULL, &v);
@@ -484,17 +529,17 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 		struct array_object *Ea = (struct array_object *)E->u.object;
 		for (k = 0; k < Ea->length; k++) {
 		    check_too_long(interp, n, 1);
-		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, 
-			    intstr(interp, &ns, k))) {
+		    ns = intstr(interp, &nsbuf, k);
+		    if (SEE_OBJECT_HASPROPERTY(interp, E->u.object, ns)) {
 			SEE_OBJECT_GET(interp, E->u.object, ns, &v);
-			SEE_OBJECT_PUT(interp, A, intstr(interp, &ns, n),
+			SEE_OBJECT_PUT(interp, A, intstr(interp, &nsbuf, n),
 			    &v, 0);
 		    }
 		    n++;
 		}
 	    } else {
 	        check_too_long(interp, n, 1);
-		SEE_OBJECT_PUT(interp, A, intstr(interp, &ns, n), E, 0);
+		SEE_OBJECT_PUT(interp, A, intstr(interp, &nsbuf, n), E, 0);
 		n++;
 	    }
 	    if (i >= argc) break;
