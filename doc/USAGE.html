@@ -2141,40 +2141,21 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 	'<code class="js">//</code>' comment introducer. 
 	This is useful when parsing HTML SCRIPT elements.
 
-<tr><td><code>SEE_COMPAT_JS12</code>
+<tr><td><code>SEE_COMPAT_JS11</code>
 <td>
-	Enables JavaScript 1.2 compatibility:
+	Enables JavaScript 1.1 compatibility:
 <ul>
-<li>	the string representation of a bad date 
+<li>	The string representation of a bad date 
 	(e.g. <code class="js">String(new Date(NaN))</code>) 
-	will return the string
+	is returned as the string
 	<code class="js">"Invalid Date"</code>,
 	instead of <code class="js">"NaN"</code>.
 
 <li>	Calling <code class="js">Date</code> as a constructor or function
-	will recognise Netscape-style date strings of the 
-	form '<code class="js">1/1/1999 12:30 AM</code>'.
+	will recognise Netscape-style date strings of which one
+	form is '<code class="js">1/1/1999 12:30 AM</code>'.
 <li>
 	Conversions from a date to a string will include the timezone.
-<li>
-	The constructor <code class="js">new Array()</code> when given
-	a single numeric argument will return an array consisting of
-	just that argument. e.g. <code class="js">new Array(3)</code>
-	is the same as <code class="js">[3]</code>. 
-	This differs from the ECMA standard where an array of length 3
-	would be created, viz
-	<code class="js">[undefined,undefined,undefined]</code>.
-	(JavaScript 1.2 <strong>only</strong>).
-<li>
-	<code class="js">Boolean</code> instance objects are converted
-	to their logical value in expressions that are converted to boolean.
-	This differs from the ECMA standard where all object instances
-	are to be converted to <code class="js">true</code>.
-	For example, the condition in the statement 
-	<code class="js">if (new Boolean(false))<code> statement, will
-	be evaluated as <code class="js">true</code> in ECMA, and 
-	<code class="js">false</code> by JavaScript 1.2.
-	(JavaScript 1.2 <strong>only</strong>).
 
 <li>	Native objects synthesize a property called
 	<code class="js">__proto__</code> with the same
@@ -2187,10 +2168,85 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 	escapes will treat the leading
 	<code class="js">\u</code> or <code class="js">\x</code> as
 	a single-letter escape.
-	Strictly, this is a lexical analyser error.
+	This would be a lexical analyser error under ECMA.
+
+<li>	Regular expression instances have a [[Call]] property, which
+	is essentially equivalent to <code class="js">RegExp.prototype.exec()</code>.
+	This has the side-effect of changing what the <code class="js">typeof</code>
+	operator returns when applied to regular expression instances.
+
+<li>	The <code class="js">String.prototype</code> object 
+	is given the following methods that simply return the string, and
+	ignore their arguments:
+	<code class="js">anchor</code>,
+	<code class="js">big</code>,
+	<code class="js">blink</code>,
+	<code class="js">bold</code>,
+	<code class="js">fixed</code>,
+	<code class="js">fontcolor</code>,
+	<code class="js">fontsize</code>,
+	<code class="js">italics</code>,
+	<code class="js">link</code>,
+	<code class="js">small</code>,
+	<code class="js">strike</code>,
+	<code class="js">sub</code> and
+	<code class="js">sup</code>.
+	The <code class="js">substr</code> method is also added.
 
 </ul>
 
+
+<tr><td><code>SEE_COMPAT_JS12</code>
+<td>
+	Enables JavaScript 1.2 compatibility:
+<ul>
+<li>	Includes all JavaScript 1.1 compatibility behaviour.
+<li>
+	The constructor <code class="js">new Array()</code> when given
+	a single numeric argument will return an array consisting of
+	just that argument. e.g. <code class="js">new Array(3)</code>
+	is the same as <code class="js">[3]</code>. 
+	This differs from the ECMA standard where an array of length 3
+	would be created, viz
+	<code class="js">[undefined,undefined,undefined]</code>.
+	(JavaScript 1.2 <strong>only</strong>.)
+
+<li>
+	<code class="js">Boolean</code> instance objects are converted
+	to their logical value in expressions that are converted to boolean.
+	This differs from the ECMA standard where all object instances
+	are to be converted to <code class="js">true</code>.
+	For example, the condition in the statement 
+	<code class="js">if (new Boolean(false))<code> statement, will
+	be evaluated as <code class="js">true</code> in ECMA, and 
+	<code class="js">false</code> by JavaScript 1.2.
+	(JavaScript 1.2 <strong>only</strong>.)
+
+<li>
+	<code class="js">Array.prototype.toString()</code> and 
+	<code class="js">Object.prototype.toString()</code> return
+    	string forms in literal notation, 
+	e.g. <code class="js">"[1,2,3]"</code>, and
+	<code class="js">"{a:1, b:2}"</code>.
+	(JavaScript 1.2 <strong>only</strong>.)
+
+<li>	<code class="js">String.prototype.split()</code> when
+	operating on the empty string <code class="js">""</code>
+	will return 
+	an empty array <code class="js">[]</code>
+	instead of
+	an array consisting of the empty string, <code class="js">[""]</code>.
+	(JavaScript 1.2 <strong>only</strong>.)
+
+<li>	<code class="js">String.prototype.split()</code>, when
+	given a delimiter of exactly one space character
+	(<code class="js">" "</code>), will
+	strip the leading whitespace from the string, and then split on
+	<code class="js">/\s+/</code>.
+	(JavaScript 1.2 <strong>only</strong>.)
+
+
+</ul>
 
 <tr><td><code>SEE_COMPAT_EXT1</code>
 <td>
