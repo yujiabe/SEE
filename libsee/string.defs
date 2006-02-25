@@ -419,3 +419,21 @@ lastMatch
 lastParen
 leftContext
 rightContext
+
+#
+# String methods for Netscape compat
+#
+_ns_nop
+anchor
+big
+blink
+bold
+fixed
+fontcolor
+fontsize
+italics
+link
+small
+strike
+sub
+sup
