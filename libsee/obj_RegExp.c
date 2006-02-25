@@ -71,6 +71,8 @@ static void regexp_construct(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void regexp_call(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void regexp_JS_inst_call(struct SEE_interpreter *, struct SEE_object *, 
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static int regexp_hasinstance(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_value *);
 
@@ -122,7 +124,25 @@ static struct SEE_objectclass regexp_inst_class = {
 	SEE_native_hasproperty,		/* HasProperty */
 	SEE_native_delete,		/* Delete */
 	SEE_native_defaultvalue,	/* DefaultValue */
-	SEE_native_enumerator		/* enumerator */
+	SEE_native_enumerator,		/* enumerator */
+	NULL,				/* Construct */
+	NULL,				/* Call */
+	NULL				/* HasInstance */
+};
+
+/* object class for regexp instances */
+static struct SEE_objectclass regexp_JS_inst_class = {
+	"RegExp",			/* Class */
+	SEE_native_get,			/* Get */
+	SEE_native_put,			/* Put */
+	SEE_native_canput,		/* CanPut */
+	SEE_native_hasproperty,		/* HasProperty */
+	SEE_native_delete,		/* Delete */
+	SEE_native_defaultvalue,	/* DefaultValue */
+	SEE_native_enumerator,		/* enumerator */
+	NULL,				/* Construct */
+	regexp_JS_inst_call,		/* Call */
+	NULL				/* HasInstance */
 };
 
 void
@@ -156,6 +176,7 @@ SEE_RegExp_init(interp)
 	/* 15.10.6 RegExp.prototype */
 	SEE_native_init((struct SEE_native *)RegExp_prototype, interp,
 		&regexp_proto_class, interp->Object_prototype); 
+	/* XXX Netscape: RegExp.prototype is the regexp instance /(?:)/ */
 
 	SEE_SET_OBJECT(&v, RegExp_prototype);			/* 15.10.5.1 */
 	SEE_OBJECT_PUT(interp, RegExp, STR(prototype), &v,
@@ -182,7 +203,7 @@ toregexp(interp, o)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
 {
-	if (o->objectclass != &regexp_inst_class)
+	if (!SEE_is_RegExp(o))
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(not_regexp));
 	return (struct regexp_object *)o;
@@ -202,12 +223,16 @@ regexp_construct(interp, self, thisobj, argc, argv, res)
 	int i;
 
 	ro = SEE_NEW(interp, struct regexp_object);
-	SEE_native_init(&ro->native, interp, &regexp_inst_class,
-		interp->RegExp_prototype);
+	if (SEE_COMPAT_JS(interp, >=, JS11))
+		SEE_native_init(&ro->native, interp, &regexp_JS_inst_class,
+			interp->RegExp_prototype);
+	else /* ECMA: */
+		SEE_native_init(&ro->native, interp, &regexp_inst_class,
+			interp->RegExp_prototype);
 
 	if (argc > 0 && 
 	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
-	    argv[0]->u.object->objectclass == &regexp_inst_class)
+	    SEE_is_RegExp(argv[0]->u.object))
 	{
 	    struct regexp_object *rs = 
 	        (struct regexp_object *)argv[0]->u.object;
@@ -289,11 +314,23 @@ regexp_call(interp, self, thisobj, argc, argv, res)
 {
 	if (argc > 0 && 
 	    SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
-	    argv[0]->u.object->objectclass == &regexp_inst_class &&
+	    SEE_is_RegExp(argv[0]->u.object) &&
 	    (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
 	        SEE_VALUE_COPY(res, argv[0]);
 	else
 		SEE_OBJECT_CONSTRUCT(interp, self, thisobj, argc, argv, res);
+}
+
+/* JavaScript compatibility: calling a regexp as a function */
+static void
+regexp_JS_inst_call(interp, self, thisobj, argc, argv, res)
+	struct SEE_interpreter *interp;
+	struct SEE_object *self, *thisobj;
+	int argc;
+	struct SEE_value **argv;
+	struct SEE_value *res;
+{
+	regexp_proto_exec(interp, NULL, self, argc, argv, res);
 }
 
 static int 
@@ -304,7 +341,7 @@ regexp_hasinstance(interp, self, value)
 {
 	if (interp->compatibility & SEE_COMPAT_EXT1)
 		return SEE_VALUE_GET_TYPE(value) == SEE_OBJECT &&
-		       value->u.object->objectclass == &regexp_inst_class;
+		       SEE_is_RegExp(value->u.object);
 	 else
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(no_hasinstance));
@@ -398,7 +435,8 @@ int
 SEE_is_RegExp(o)
 	struct SEE_object *o;
 {
-	return o->objectclass == &regexp_inst_class;
+	return o->objectclass == &regexp_inst_class ||
+	       o->objectclass == &regexp_JS_inst_class;
 }
 
 int
@@ -474,14 +512,15 @@ regexp_proto_toString(interp, self, thisobj, argc, argv, res)
 
 	/*
 	 * XXX (spec bug?) 15.10.6 says RegExp.prototype's [[Class]] is 
-	 * Object, and that methods where thisobj's [[Class]] is not RegExp,
+	 * "Object", and that methods where thisobj's [[Class]] is not "RegExp",
 	 * it has to throw a TypeError.
-	 *
-	 * Sadly, mozilla's test cases often want to print the 
-	 * RegExp.prototype. This special case is handled here. (Technically,
-	 * this is a spec violation!)
 	 */
-	if (thisobj == interp->RegExp_prototype) {
+	if (SEE_GET_JS_COMPAT(interp) && (thisobj == interp->RegExp_prototype)) {
+		/*
+		 * Sadly, mozilla's test cases often want to print the 
+		 * RegExp.prototype. This special case is handled here. 
+		 * FIXME - make RegExp.prototype a regexp_inst when compat JS1.1
+		 */
 		s = SEE_string_new(interp, 0);
 		SEE_string_append(s, STR(RegExp));
 		SEE_string_addch(s, '.');
