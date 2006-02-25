@@ -123,6 +123,10 @@ static void string_proto_toLocaleUpperCase(struct SEE_interpreter *,
 	struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
+static void string_proto__ns_nop(struct SEE_interpreter *,
+	struct SEE_object *, struct SEE_object *,
+	int, struct SEE_value **, struct SEE_value *);
+
 static struct SEE_string *object_to_string(struct SEE_interpreter *,
 	struct SEE_object *);
 
@@ -239,8 +243,31 @@ SEE_String_init(interp)
 	PUTFUNC(toUpperCase, 0)
 	PUTFUNC(toLocaleUpperCase, 0)
 
-	if (interp->compatibility & SEE_COMPAT_262_3B) {
+
+	if (interp->compatibility & SEE_COMPAT_262_3B ||
+	    SEE_COMPAT_JS(interp, >= ,JS11)) {
 	    PUTFUNC(substr, 2)
+	} 
+
+	if (SEE_COMPAT_JS(interp, >= ,JS11)) {
+#define PUTNOPFUNC(name, len_IGNORED) \
+	SEE_OBJECT_PUT(interp, String_prototype, STR(name), &v,	\
+		SEE_ATTR_DEFAULT);
+	    SEE_SET_OBJECT(&v, SEE_cfunction_make(interp,
+		string_proto__ns_nop, STR(_ns_nop), 0));
+	    PUTNOPFUNC(anchor, 1)
+	    PUTNOPFUNC(big, 0)
+	    PUTNOPFUNC(blink, 0)
+	    PUTNOPFUNC(bold, 0)
+	    PUTNOPFUNC(fixed, 0)
+	    PUTNOPFUNC(fontcolor, 1)
+	    PUTNOPFUNC(fontsize, 1)
+	    PUTNOPFUNC(italics, 0)
+	    PUTNOPFUNC(link, 1)
+	    PUTNOPFUNC(small, 0)
+	    PUTNOPFUNC(strike, 0)
+	    PUTNOPFUNC(sub, 0)
+	    PUTNOPFUNC(sup, 0)
 	}
 }
 
@@ -1184,4 +1211,14 @@ string_proto_toLocaleUpperCase(interp, self, thisobj, argc, argv, res)
 {
 	/* XXX TODO properly */
 	string_proto_toUpperCase(interp, self, thisobj, argc, argv, res);
+}
+
+static void
+string_proto__ns_nop(interp, self, thisobj, argc, argv, res)
+	struct SEE_interpreter *interp;
+	struct SEE_object *self, *thisobj;
+	int argc;
+	struct SEE_value **argv, *res;
+{
+	string_proto_toString(interp, NULL, thisobj, 0, NULL, res);
 }
