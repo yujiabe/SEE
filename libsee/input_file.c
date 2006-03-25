@@ -94,6 +94,7 @@ static struct bomtab {
 	{ 3,	{ 0xef, 0xbb, 0xbf },		&utf8_class,    "UTF-8"    },
 	{ 2,	{ 0xfe, 0xff },			&utf16be_class, "UTF-16BE" },
 	{ 2,	{ 0xff, 0xfe },			&utf16le_class, "UTF-16LE" },
+	{ 0,    { 0 },				&ascii_class,   "ASCII"    },
 	{ 0,    { 0 },				&ascii_class,   NULL }
 };
 
@@ -334,8 +335,9 @@ input_file_close(inp)
 /*
  * Construct an input filter for the alread-opened file 'file',
  * with ASCII-encoded filename *filename. If label is non-null,
- * it is used to determine the file's content - otherwise 7-bit
- * ascii is assumed.
+ * it is used to determine the file's content. Otherwise, a byte-order
+ * mark is sought and if one isn't found, falls back to assume
+ * 7bit ascii.
  */
 struct SEE_input *
 SEE_input_file(interp, file, filename, label)
@@ -362,18 +364,16 @@ SEE_input_file(interp, file, filename, label)
 	inpf->lookahead_pos = &inpf->lookahead_buf[0];
 	inpf->inp.inputclass = &ascii_class;
 
-	if (label) {
+	if (label && *label) {
 	    for (bt = bomtab; bt->label; bt++) 
 		if (strcmp(bt->label, label) == 0) {
 		    inpf->inp.inputclass = bt->inputclass;
 		    break;
 		}
-	    /* XXX If the label was unrecognised, we go with 7-bit ASCII! */
-	} 
-
-	if (!label) {
+	    if (!bt->label) { /* XXX throw error: unknown encoding */ }
+	} else
 	    /*
-	     * Searh for and match any initial byte order mark.
+	     * Search for and match any initial byte order mark.
 	     * This is where our lookahead buffer comes in handy.
 	     */
 	    for (bt = bomtab; ; bt++) {
@@ -395,7 +395,6 @@ SEE_input_file(interp, file, filename, label)
 		    break;
 		}
 	    }
-	}
 
 	SEE_INPUT_NEXT((struct SEE_input *)inpf);	/* prime the buffer */
 	return (struct SEE_input *)inpf;
