@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Shell ignores first line of '-f' files if they start with "#!".
   Compat: regular expression instances are callable in JS1.1+
   Added module abstraction
   API change: added SEE_string_toutf8
