@@ -191,7 +191,29 @@ run_file(interp, filename)
 		perror(filename);
 		exit(4);	/* File argument not found */
 	}
+
+	/*
+	 * We check to see if the file starts with ""#!". If it does
+	 * then it's likely a unix script and we consume to the first 
+	 * newline. We have to do this before any byte order mark checks.
+	 */
+	if (fseek(f, 0, SEEK_SET) != -1) {
+		long offset = 0;
+		int ch;
+
+		if (fgetc(f) == '#' && fgetc(f) == '!') {
+		    offset = 2;
+		    while ((ch = fgetc(f)) != EOF) 
+		        if (ch == '\n')
+			    break;
+		        else
+			    offset++;
+	        }
+	        fseek(f, offset, SEEK_SET);
+        }
+
 	inp = SEE_input_file(interp, f, filename, NULL);
+
 	ok = run_input(interp, inp, &res);
 	SEE_INPUT_CLOSE(inp);
 	if (!ok)
