@@ -53,7 +53,7 @@ SEE_module_add(module)
 {
 	struct SEE_module *m;
 	int ret;
-	unsigned int i;
+	unsigned int i, index;
 
 	for (i = 0; i < _SEE_nmodules; i++)
 		if (_SEE_modules[i] == module)
@@ -62,12 +62,12 @@ SEE_module_add(module)
 	if (_SEE_nmodules >= MAXMODULES)
 		return -1;
 	
-	_SEE_modules[_SEE_nmodules] = module;
-	module->index = _SEE_nmodules;
-	_SEE_nmodules++;
+	index = _SEE_nmodules++;
+	_SEE_modules[index] = module;
+	module->index = index;
 	ret = (*module->mod_init)();
 	if (ret != 0)
-		_SEE_nmodules--;
+		_SEE_nmodules = index;
 	return ret;
 }
 
