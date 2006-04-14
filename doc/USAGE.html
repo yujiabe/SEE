@@ -597,6 +597,10 @@ as using ECMAScript's built-in <code class="js">eval()</code>
 function.
 </p>
 
+<p>If you are interested in developing a provider module for SEE,
+then you should look at the example module file <i>shell/mod_File.c</i>.
+</p>
+
 <h3 id="input">4.2 Inputs</h3>
 
 <p>
@@ -1300,7 +1304,7 @@ the standard library are.)
 The function <code>SEE_intern_ascii()</code> is a convenience function
 that first converts the C string into a <code>SEE_string</code> before
 intern'ing. The C string must be an ASCII string terminated by a null
-character. ASCII characters occupy the range 1 through 127 inclusive.
+character. ASCII character values occupy the range 1 through 127, inclusive.
 </p>
 
 <pre>struct SEE_string *<dfn id="SEE_intern">SEE_intern</dfn>(struct SEE_interpreter *interp,
@@ -1336,8 +1340,9 @@ The main problem with static strings is finding an elegant way
 to initialise the strings' content. 
 There is no simple way in ANSI C to have the compiler convert 
 common ASCII strings into UTF-16 arrays.
-The approach taken by SEE in supporting all the standard ECMAScript objects
-and methods, is to generate C program text from a file of
+The internal approach taken by SEE in supporting
+all the standard ECMAScript object property names,
+is to generate C program text from a file of
 ASCII strings during the build process.
 </p>
 
