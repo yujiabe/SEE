@@ -1383,6 +1383,15 @@ Object references are held inside values with a type field
 of <code>SEE_OBJECT</code> (see <a href="#value">&sect;5</a>).
 </p>
 
+<p>
+If you want to create a plain object quickly from C, 
+the convenience function
+<code>SEE_Object_new()</code>
+is the same as evaluating
+<code class="js">new Object()</code>.
+
+<pre>struct SEE_object *<dfn id="SEE_Object_new">SEE_Object_new</dfn>(struct SEE_interpreter *interp);</pre>
+
 <h3 id="objclient">6.1 Object values, and the object client interface</h3>
 
 <p>
@@ -2566,6 +2575,7 @@ will occur.
 <a href="#SEE_OBJECT_HAS_CONSTRUCT">SEE_OBJECT_HAS_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</a><br>
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
+<a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
