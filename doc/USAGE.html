@@ -375,8 +375,8 @@ void <dfn id="SEE_free">SEE_free</dfn>(struct SEE_interpreter *interp, void **da
 <p>
 Notice that <code>SEE_free()</code> takes a pointer-to-a-pointer, unlike
 its counterpart in the <code>SEE_system</code> structure.
-The pointer will be set to NULL after freeing.
-Freeing a NULL pointer with <code>SEE_free()</code> has no effect.
+The pointer will be set to <code>NULL</code> after freeing.
+Freeing a <code>NULL</code> pointer with <code>SEE_free()</code> has no effect.
 </p>
 
 <p>
@@ -432,7 +432,7 @@ T * <dfn id="SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</dfn>(struct SEE_interpreter *
 
 <p>
 These macros check for a memory allocation failure indicated by the
-system allocator returning NULL.
+system allocator returning <code>NULL</code>.
 In this event they will 
 assume an out-of-memory condition and call
 the <code>SEE_system.mem_exhausted()</code>.
@@ -523,7 +523,7 @@ In a non-interactive environment, this last statement's value is
 usually meaningless, and the
 value result return pointer ('<code>res</code>') given to 
 <code>SEE_Global_eval()</code> may be 
-safely given as NULL.
+safely given as <code>NULL</code>.
 </p>
 
 <pre>void <dfn id="SEE_Global_eval">SEE_Global_eval</dfn>(struct SEE_interpreter *interp, 
@@ -1472,13 +1472,14 @@ struct SEE_enum *<dfn id="SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</dfn>(str
 The last four macros (<code>SEE_OBJECT_CONSTRUCT()</code>, 
 <code>SEE_OBJECT_CALL()</code>, <code>SEE_OBJECT_HASINSTANCE()</code>, 
 <code>SEE_OBJECT_ENUMERATOR()</code>) 
-<strong>will not check</strong> if the object 
-has a <code>NULL</code> pointer for the corresponding object method.
+<strong>do not check</strong> if the object 
+has a <code>NULL</code> function pointer for the corresponding object method.
 Calling them on an
-unchecked object will probably result in a memory access violation
+unchecked object will likely result in a memory access violation
 (e.g. segmentation fault).
-The following macros return true if the object safely provides 
-those methods:
+The following macros let you check if the object provides 
+those methods, by returning true if the function pointer is 
+non-<code>NULL</code>:
 </p>
 
 <ul>
@@ -1543,7 +1544,7 @@ Once obtained, the following macros can be used to access the enumerator:
 
 <ul>
  <li><code>SEE_ENUM_NEXT()</code>
-        - return a pointer to a property name string, or NULL 
+        - return a pointer to a property name string, or <code>NULL</code>
           when the properties have been exhausted.
 </ul>
 
@@ -1891,8 +1892,8 @@ an input stream, is to use the <code>SEE_Function_new()</code> function:
 
 <p>
 where any of the the <code>name</code>, <code>param_input</code> and
-<code>body_input</code> parameters may be NULL (indicating to use the 
-empty string).
+<code>body_input</code> parameters may be <code>NULL</code>
+(indicating to use the empty string).
 </p>
 
 <p>
