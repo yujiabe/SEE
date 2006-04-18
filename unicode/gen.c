@@ -62,7 +62,12 @@ main(argc, argv)
 	bitcount = 0;
 	memset(bit, 0, _UNICODE_MAX >> 3);
 
-	while ((start = fgetln(f, &len))) {
+	for (;;) {
+		char linebuf[4096];
+		start = fgets(linebuf, sizeof linebuf, f);
+		if (!start) break;
+		len = strlen(start);
+
 		s = start;
 		if (len > 0 && s[len-1] == '\n')
 			len--;
