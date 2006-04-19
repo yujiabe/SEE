@@ -36,6 +36,8 @@
 #include <see/module.h>
 #include <see/mem.h>
 
+#include "init.h"
+
 #ifndef MAXMODULES
 # define MAXMODULES 256
 #endif
@@ -51,13 +53,12 @@ int
 SEE_module_add(module)
 	struct SEE_module *module;
 {
-	struct SEE_module *m;
 	int ret;
 	unsigned int i, index;
 
 	for (i = 0; i < _SEE_nmodules; i++)
 		if (_SEE_modules[i] == module)
-			return;
+			return i;
 
 	if (_SEE_nmodules >= MAXMODULES)
 		return -1;
