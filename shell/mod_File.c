@@ -406,6 +406,11 @@ file_construct(interp, self, thisobj, argc, argv, res)
         }
 
         file = fopen(path, mode);
+	if (!file) {
+		/* May have too many files open; collect and try again */
+		SEE_gcollect(interp);
+		file = fopen(path, mode);
+	}
         if (!file)
                 SEE_error_throw(interp, PRIVATE(interp)->FileError,
                         "%s", strerror(errno));
