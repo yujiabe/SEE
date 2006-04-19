@@ -126,6 +126,17 @@ SEE_free(interp, memp)
 }
 
 /*
+ * Forces a garbage collection, or does nothing if unsupported.
+ */
+void
+SEE_gcollect(interp)
+	struct SEE_interpreter *interp;
+{
+	if (SEE_system.gcollect)
+		(*SEE_system.gcollect)(interp);
+}
+
+/*
  * The debug variants must not be protected by NDEBUG.
  * This is for the case when the library is compiled with NDEBUG,
  * but the library-user application is not.

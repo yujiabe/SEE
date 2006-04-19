@@ -79,6 +79,7 @@ static void *simple_gc_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
         void (*)(struct SEE_interpreter *, void *, void *), void *);
 static void simple_gc_free(struct SEE_interpreter *, void *);
 static void simple_finalizer(GC_PTR, GC_PTR);
+static void simple_gc_gcollect(struct SEE_interpreter *);
 #else
 static void *simple_malloc(struct SEE_interpreter *, SEE_size_t);
 static void *unimplemented_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
@@ -109,13 +110,16 @@ struct SEE_system SEE_system = {
 	simple_gc_malloc_finalize,	/* malloc_finalize */
 	simple_gc_malloc_string,	/* malloc_string */
 	simple_gc_free,			/* free */
+	simple_mem_exhausted,		/* mem_exhausted */
+	simple_gc_gcollect		/* gcollect */
 #else
 	simple_malloc,			/* malloc */
 	unimplemented_malloc_finalize,	/* malloc_finalize */
 	simple_malloc,			/* malloc_string */
 	simple_free,			/* free */
+	simple_mem_exhausted,		/* mem_exhausted */
+	NULL				/* gcollect */
 #endif
-	simple_mem_exhausted		/* mem_exhausted */
 };
 
 /*
@@ -235,6 +239,15 @@ simple_gc_free(interp, ptr)
 # endif
 }
 
+static void
+simple_gc_gcollect(interp)
+	struct SEE_interpreter *interp;
+{
+# if HAVE_GC_GCOLLECT
+	GC_gcollect();
+# endif
+}
+
 #else /* !HAVE_GC_MALLOC */
 
 
@@ -261,7 +274,7 @@ simple_malloc(interp, size)
 	return malloc(size);
 }
 
-void *
+static void *
 unimplemented_malloc_finalize(interp, size, finalizefn, closure)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;

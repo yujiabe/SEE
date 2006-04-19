@@ -1,36 +1,37 @@
 $Id$
 
 2.0 [unreleased]
-  Shell ignores first line of '-f' files if they start with "#!".
-  Compat: regular expression instances are callable in JS1.1+
-  Added module abstraction
-  API change: added SEE_string_toutf8
-  added netscape-compatible version() function to the shell
-  API change: SEE_COMPAT_ flags cleaned up; specific JS version compat
-  bug 36: function arguments object now accesses args by index 
-  Compat: octal escapes in regular expressions for EXT1
-  API change: only [[Put]], [[Get]], [[Delete]] are allowed uninterned props
-  Added Regex.$1 etc, from JS1.2
-  Added conditional functions from JS1.5
-  Added compat() function to the shell which changes compatibility flags.
-  Added many ASCII string functions to the API for convenience
-  Compat: Allow /[/]/ to be parsed as a regex literal in EXT1.
-  Error.prototype and NativeError.prototype attributes now match standard
-  bug 35: labelled blocks could not be targets of break
+  Feature: SEE_gcollect() method that tries a garbage collection
+  gen.c no longer uses the non-portable fgetln()
+  Feature: Shell ignores first line of '-f' files if they start with "#!".
+  Compat: regular expression instances are callable as in JS1.1+
+  Feature: Module support - see File module example
+  API change: added SEE_string_toutf8() which is pretty handy
+  Compat: Added Netscape-compatible version() function to the shell
+  API change: SEE_COMPAT_ flags cleaned up; specific Netscape version compat
+  Bug 36: function arguments object now accesses args by index 
+  Compat: octal escapes in regular expressions for JS1.1+ compat
+  API change: only [[Put]], [[Get]], [[Delete]] can use uninterned props
+  Compat: Added Regex.$1 et al. support, for JS1.2 compat
+  Compat: Added conditional function support, for JS1.5 compat
+  Compat: Added compat() function to the shell which changes compatibility flags.
+  API change: Added many ASCII string functions to the API for convenience
+  Compat: Allow /[/]/ to be parsed as a regex literal in JS1.2
+  Fix: Error.prototype and NativeError.prototype attributes now match standard
+  Bug 35: labelled blocks could not be targets of break
   Compat: Allow [[HasInstance]] for RegExp, e.g. /x*/ instanceof RegExp
-  bug 34: some boolean true values (eg from Regexp) do not compare equal
-  bug 33: indexOf() corrected when substring is longer than string
-  bug 32: thisobj not set for called functions
-  Corrected some Unicode case translations
-  Improved debugger for the shell
-  Platform isolation of time functions, and abort
-  Correction in daylight savings estimation code
-  Internal vsnprintf implementation with extra formats
-  Internal garbage collector implementation (backup only)
-  GC finalization support (not used by SEE classes, but supported by API)
-  API changes:
-     SEE_interpreter.trace() function takes new event type argument
-     SEE_objectclass.Class is now const char * (was struct SEE_string *)
+  Bug 34: some boolean true values (eg from Regexp) do not compare equal
+  Bug 33: indexOf() corrected when substring is longer than string
+  Bug 32: thisobj not set for called functions
+  Fix: Corrected some Unicode case translations
+  Improved: more sophisticated debugger for the shell
+  Improved: Platform isolation of time and abort functions
+  Fix: Correction in daylight savings estimation code
+  Portability: Internal vsnprintf implementation with extra formats
+  Experimental: Internal garbage collector implementation (backup only)
+  Improved: GC finalization support (not used by SEE classes, but supported by API)
+  API change: SEE_interpreter.trace() function takes new event type argument
+  API change: SEE_objectclass.Class is now const char * (was struct SEE_string *)
 
 1.3.1 [2005-01-18]
   bug 31: Fix header include installation

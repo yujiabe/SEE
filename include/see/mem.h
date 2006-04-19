@@ -17,6 +17,7 @@ void *	SEE_malloc_finalize(struct SEE_interpreter *i, SEE_size_t sz,
 			void *closure), void *closure) 
 		_SEE_malloc;
 void  	SEE_free(struct SEE_interpreter *i, void **memp);
+void  	SEE_gcollect(struct SEE_interpreter *i);
 
 #ifndef NDEBUG
 /* Debugging variants */

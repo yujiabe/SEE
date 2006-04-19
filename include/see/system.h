@@ -39,6 +39,7 @@ struct SEE_system {
 
 	void (*free)(struct SEE_interpreter *, void *);
 	void (*mem_exhausted)(struct SEE_interpreter *) SEE_dead;
+	void (*gcollect)(struct SEE_interpreter *);
 
 };
 

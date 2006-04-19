@@ -9,6 +9,7 @@
  *  version	- a function that changes compatibility flags
  *		  based on an integer argument
  *  compat      - changes the compat flags. Returns old compat flags
+ *  gc          - may force a garbage collection
  *
  * In HTML mode the following objects are provided:
  *
@@ -18,11 +19,10 @@
  *  document.userAgent 	- "SEE-shell"
  *  document.window	- a reference to the Global object
  *
- * If the functions GC_dump and GC_gcollect are found during configure,
- * then the shell adds them as GC_dump and GC_gcollect.
+ * If the function GC_dump is found during configure,
+ * then the shell adds it as GC_dump.
  *
  *  gc_dump
- *  gc_gcollect
  *
  */
 
@@ -51,10 +51,8 @@ static void version_fn(struct SEE_interpreter *, struct SEE_object *,
 static void gc_dump_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #endif
-#if HAVE_GC_GCOLLECT
-static void gc_gcollect_fn(struct SEE_interpreter *, struct SEE_object *,
+static void gc_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-#endif
 
 /*
  * Adds useful symbols into the interpreter's internal symbol table. 
@@ -73,7 +71,7 @@ shell_strings()
 	SEE_intern_global("userAgent");
 	SEE_intern_global("window");
 	SEE_intern_global("gc_dump");
-	SEE_intern_global("gc_gcollect");
+	SEE_intern_global("gc");
 }
 
 /*
@@ -203,22 +201,19 @@ gc_dump_fn(interp, self, thisobj, argc, argv, res)
 }
 #endif
 
-#if HAVE_GC_GCOLLECT
-void GC_gcollect(void);
 /*
  * Force a complete garbage collection
  */
 static void
-gc_gcollect_fn(interp, self, thisobj, argc, argv, res)
+gc_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
         struct SEE_object *self, *thisobj;
         int argc;
         struct SEE_value **argv, *res;
 {
-	GC_gcollect();
+	SEE_gcollect(interp);
         SEE_SET_UNDEFINED(res);
 }
-#endif
 
 /*
  * Adds global symbols 'print' and 'version' to the interpreter.
@@ -243,11 +238,9 @@ shell_add_globals(interp)
 		"gc_dump", gc_dump_fn, 0, 0);
 #endif
 
-#if HAVE_GC_GCOLLECT
-	/* Create the gc_gcollect function, and attach to the Globals. */
+	/* Create the gc function, and attach to the Globals. */
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"gc_collect", gc_gcollect_fn, 0, 0);
-#endif
+		"gc", gc_fn, 0, 0);
 
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
 		"version", version_fn, 1, 0);
