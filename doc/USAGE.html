@@ -2,6 +2,7 @@
 
 <head>
 <title>Using the Simple ECMAScript Engine</title>
+
 <style type="text/css"><!--
         body     { background: white; color: black; }
         h1,h2,h3,h4 { font-family: sans-serif; }
@@ -26,7 +27,11 @@
         dl       { margin-left: 4ex; }
         pre      { margin-left: 8ex; }
         code i, pre i    { color: blue; }
-        code b, pre b    { color: red; }
+        code b, pre b    { 
+		   background: #ffffd0;   
+		   color: #202020; 
+		   font-weight: normal;
+		 }
         ul.toc   { font-size: smaller; }
         code     { white-space: nowrap; }
         /* code,pre { background: #ffe0e0; } */
@@ -42,6 +47,9 @@
 	table.index { border: none }
 	table.index td { font: x-small monospace; }
 	cite     { font-style: italic; }
+	.footnote { vertical-align: super;
+		    font-size: smaller;
+		    color: #008; }
 // -->
 </style>
 
@@ -73,6 +81,7 @@ for SEE version 2.0
 <li><a href="#mem">3 Memory management</a>
  <ul>
  <li><a href="#mem2">3.1 On memory allocators</a>
+ <li><a href="#memfinal">3.2 Finalization</a>
  </ul>
 <li><a href="#eval">4 Running programs</a>
  <ul>
@@ -183,7 +192,8 @@ like this:</p>
 <p>Similarly, ECMAScript code is typeset in a sans serif font, like this:</p>
 <pre class="js">window.location = "about:blank";</pre>
 
-<p>Elided code is indicated with an elipsis: <code><i>...</i></code></p>
+<p>Important parts of exammple code are <code><b>highlighted</b></code>, and
+elided code is indicated with an elipsis, like this: <code><i>...</i></code></p>
 
 <p>Function definitions listed in the <a href="#idx">name index</a>
 appear in green, like this: <code><dfn>SEE_example()</dfn></code>
@@ -487,6 +497,62 @@ They do nothing to impede development.
 They can often be tuned to meet your 
 application's usage patterns.
 </ul>
+
+<h3 id="memfinal">3.2 Finalization</h3>
+
+<p>
+Host objects that acquire operating system resources
+can release those resources when their finalizer is called by the
+garbage collector.
+However, a major criticism of garbage collectors is that finalizers
+are not invoked early or often enough.
+What this means is that it is highly desirable to release system resources 
+at the earliest time possible (i.e. immediately the referring object becomes
+unreachable), but garbage collectors deliberately don't do this
+because performing the reachability analysis on objects is expensive
+and often left only to when memory is low.
+</p>
+
+<p>To address this problem,
+I recommend developers follow these guidelines when designing 
+their host object finalizers:</p>
+
+<ol>
+<li>
+Provide a host object method 
+(conventionally called <code class="js">dispose()</code>)
+that immediately releases all resources acquired by the object. 
+The dispose method should cope with being called multiple times without error.
+The object will need to maintain state indicating whether it is valid or
+disposed, and its methods should check this state and generally throw
+an exception if it is invalid.
+You may also wish to provide the user with an accessor for this state,
+e.g. <code class="js">isValid()</code>.
+The state can usually be combined with other normally occurring error 
+states of the object.
+</li>
+<li>
+Arrange to have the finalizer simply invoke the dispose method.
+You may even choose to allow users to <q>hook</q> the dispose method
+by having the finalizer call the method
+indirectly with <code>SEE_OBJECT_CALL</code>, and then
+once again, directly, in case the user's hook failed.
+</li>
+<li>
+Detect/predict resource exhaustion at the point when host objects 
+acquire new resources. In this case, force an immediate garbage collection
+by calling <code>SEE_gcollect()</code>, and then
+try just once more to acquire the resource before failing.
+</li>
+</ol>
+
+<p>
+The principal effects of these guidelines are to 
+first shift the burden of optional, optimal reachability analysis
+onto the user, and secondly to couple memory exhaustion with resource
+exhaustion to exploit the benefits of late reachability analysis and
+avoid false resource loss when memory is plentiful.
+</p>
 
 <h2 id="eval">4 Running programs</h2>
 
@@ -849,12 +915,12 @@ The ECMAScript language has exactly six types of value. They are:
 
 <ul>
 <li><em>undefined type</em>
-- with exactly one value: <code class=js>undefined</code>
+- with exactly one value: <code class="js">undefined</code>
 <li><em>null type</em>
-- with exactly one value: <code class=js>null</code>
+- with exactly one value: <code class="js">null</code>
 <li><em>boolean type</em>
-- with exactly two values: <code class=js>true</code>
-and <code class=js>false</code>
+- with exactly two values: <code class="js">true</code>
+and <code class="js">false</code>
 <li><em>number type</em>
 - IEEE 754 64-bit floating point numbers
 <li><em>string type</em>
@@ -1013,9 +1079,9 @@ values into values of a known type:
     - Returns a value of type <code>SEE_STRING</code>
 <li><code>SEE_ToObject()</code>
     - Returns a value of type <code>SEE_OBJECT</code>
-        using the <code class=js>String</code>, 
-        <code class=js>Number</code> and
-        <code class=js>Boolean</code>
+        using the <code class="js">String</code>, 
+        <code class="js">Number</code> and
+        <code class="js">Boolean</code>
         constructors
 </ul>
 
@@ -1037,12 +1103,12 @@ void <dfn id="SEE_ToObject">SEE_ToObject</dfn>(struct SEE_interpreter *interp,
 
 <p>
 The undefined and null types have exactly one implied value each, namely
-<code class=js>undefined</code> and <code class=js>null</code>. 
+<code class="js">undefined</code> and <code class="js">null</code>. 
 </p>
 
 <p class="note">
 &#9888; Note:
-<code class=js>null</code> is <em>not</em> an object type, and is
+<code class="js">null</code> is <em>not</em> an object type, and is
 not related to C's <code>NULL</code> constant.
 </p>
 
@@ -1410,38 +1476,57 @@ convenient, when I know that I am dealing with objects.
 </p>
 
 <p>
-To use an existing object instance, you should interact with it using only the
-following macros:
+To use an existing object instance, you should interact with it using 
+its <q>internal methods</q>. 
+These should be invoked by using the following macros:
 </p>
 
 <ul>
 <li><code>SEE_OBJECT_GET()</code>
-        - retrieve a named property or return <code class=js>undefined</code>
-          ('<code class=js>o.prop</code>')
+	- retrieve a named property or return <code class="js">undefined</code>
+          ('<code class="js">o.prop</code>');
+          also known as the <code class="js">[[Get]]</code> internal method
 <li><code>SEE_OBJECT_PUT()</code>
         - create/update a named property
-          ('<code class=js>o.prop = val</code>')
+          ('<code class="js">o.prop = val</code>');
+          also known as the <code class="js">[[Put]]</code> internal method
 <li><code>SEE_OBJECT_CANPUT()</code>
-        - returns true if the property can be changed
+        - returns true if the property can be changed;
+          also known as the <code class="js">[[CanPut]]</code> internal method
 <li><code>SEE_OBJECT_HASPROPERTY()</code>
         - tests for existence of a property
-	  ('<code class=js>"prop" in o</code>')
+	  ('<code class="js">"prop" in o</code>');
+          also known as the <code class="js">[[HasProperty]]</code> 
+	  internal method
 <li><code>SEE_OBJECT_DELETE()</code>
         - delete a property; returns true on success 
-          ('<code class=js>delete o.prop</code>')
+          ('<code class="js">delete o.prop</code>');
+          also known as the <code class="js">[[Delete]]</code> internal method
 <li><code>SEE_OBJECT_DEFAULTVALUE()</code>
-        - returns the string or number value associated with the object
+        - returns the string or number value associated with the object;
+          also known as the <code class="js">[[DefaultValue]]</code> 
+	  internal method
 <li><code>SEE_OBJECT_CONSTRUCT()</code>
+	  <a href="#objcheck" class="footnote">&dagger;</a>
         - call object as a constructor
-	  ('<code class=js>new o(<i>...</i>)</code>')
+	  ('<code class="js">new o(<i>...</i>)</code>');
+          also known as the <code class="js">[[Construct]]</code> 
+	  internal method
 <li><code>SEE_OBJECT_CALL()</code>
-        - call object as a function ('<code class=js>o(<i>...</i>)</code>')
+	  <a href="#objcheck" class="footnote">&dagger;</a>
+        - call object as a function ('<code class="js">o(<i>...</i>)</code>');
+          also known as the <code class="js">[[Call]]</code> 
+	  internal method
 <li><code>SEE_OBJECT_HASINSTANCE()</code>
+	  <a href="#objcheck" class="footnote">&dagger;</a>
         - return true if the objects are related
-          ('<code class=js>x instanceof o</code>')
+          ('<code class="js">x instanceof o</code>');
+          also known as the <code class="js">[[HasInstance]]</code> 
+	  internal method
 <li><code>SEE_OBJECT_ENUMERATOR()</code>
+	  <a href="#objcheck" class="footnote">&dagger;</a>
         - create a property enumerator
-	  ('<code class=js>for (i in o) <i>...</i></code>')
+	  ('<code class="js">for (i in o) <i>...</i></code>')
 </ul>
 
 <pre>void <dfn id="SEE_OBJECT_GET">SEE_OBJECT_GET</dfn>(struct SEE_interpreter *interp,
@@ -1472,19 +1557,19 @@ int <dfn id="SEE_OBJECT_HASINSTANCE">SEE_OBJECT_HASINSTANCE</dfn>(struct SEE_int
 struct SEE_enum *<dfn id="SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *obj);</pre>
 
-<p class="note">
-&#9888; Note:
-The last four macros (<code>SEE_OBJECT_CONSTRUCT()</code>, 
-<code>SEE_OBJECT_CALL()</code>, <code>SEE_OBJECT_HASINSTANCE()</code>, 
-<code>SEE_OBJECT_ENUMERATOR()</code>) 
-<strong>do not check</strong> if the object 
-has a <code>NULL</code> function pointer for the corresponding object method.
-Calling them on an
-unchecked object will likely result in a memory access violation
-(e.g. segmentation fault).
-The following macros let you check if the object provides 
-those methods, by returning true if the function pointer is 
-non-<code>NULL</code>:
+<p id="objcheck">
+<span class="footnote">&dagger;</span>
+Four of the macros above (<code>CONSTRUCT</code>, 
+<code>CALL</code>, <code>HASINSTANCE</code>, and
+<code>ENUMERATOR</code>) 
+refer to optional internal methods, and
+<strong>do not check</strong> if the object does not provide them.
+The macros will try to call through a <code>NULL</code> function pointer in
+this case, which will cause an error.
+You can determine if the object provides 
+the optional methods with the following macros.
+The macro returns true if the function pointer they check is valid
+(non-<code>NULL</code>):
 </p>
 
 <ul>
@@ -1522,10 +1607,10 @@ flags can be used:
 <tr><td><code>SEE_ATTR_DONTENUM</code></td>
     <td>Enumerators will not list this property
         and will hide inherited prototype properties of
-        the same name until this property is <code class=js>delete</code>d.
+        the same name until this property is <code class="js">delete</code>d.
 	(see <a href="#enum">&sect;6.2</a>)</td></tr>
 <tr><td><code>SEE_ATTR_DONTDELETE</code></td>
-    <td>Future <code class=js>delete</code>s on this property will 
+    <td>Future <code class="js">delete</code>s on this property will 
         fail</td></tr>
 </tbody>
 </table>
@@ -1535,7 +1620,7 @@ flags can be used:
 <p>
 A property enumerator is a mechanism for discovering the properties that
 an object contains. The language exercises this with its
-<code class=js>for (var v in <i>...</i>)</code> construct.
+<code class="js">for (var v in <i>...</i>)</code> construct.
 The results of the enumeration need not be sorted, nor even
 to be the same order each time. 
 </p>
@@ -1565,6 +1650,24 @@ is to first create a private list of its property names, ensuring that it
 has exhausted the enumerator before attempting to modify the object.
 </p>
 
+<pre><i>/* An example of enumerating properties on an object from C */</i>
+void
+print_properties(struct SEE_interpreter *interp, struct SEE_object *obj)
+{
+        struct SEE_enum *enumerator;
+        struct SEE_string *prop;
+
+        <i>/* Ignore objects that don't provide an enumerator */</i>
+        if (!<b>SEE_OBJECT_HAS_ENUMERATOR</b>(obj))
+                return;
+
+        enumerator = <b>SEE_OBJECT_ENUMERATOR</b>(interp, obj);
+        while ((prop = <b>SEE_ENUM_NEXT</b>(interp, enumerator, NULL)) != NULL) {
+                SEE_PrintString(interp, prop, stdout);
+                printf("\n");
+        }
+}</pre>
+
 
 <h3 id="objimpl">6.3 The object implementation interface</h3>
 
@@ -1586,7 +1689,7 @@ All SEE objects are in-memory structures starting with a
 
 <p>
 Normally, this structure is part of a larger structure that maintains the
-object's private state. For example, native <code class=js>Number</code>
+object's private state. For example, native <code class="js">Number</code>
 objects could be implemented with the following:
 </p>
 
@@ -1650,7 +1753,7 @@ ECMA-262 standard, and are summarised in the following table:
 </thead>
 <tbody>
 <tr><td><code>Get</code></td>
-    <td>retrieve a named property (or return <code class=js>undefined</code>)</td></tr>
+    <td>retrieve a named property (or return <code class="js">undefined</code>)</td></tr>
 <tr><td><code>Put</code></td>
     <td>create/update a named property</td></tr>
 <tr><td><code>Delete</code></td>
@@ -1663,7 +1766,7 @@ ECMA-262 standard, and are summarised in the following table:
     <td>turns the object into a string or number value</td></tr>
 <tr><td><code>Construct</code></td>
     <td>constructs a new object; as per the
-        <code class=js>new</code> keyword</td></tr>
+        <code class="js">new</code> keyword</td></tr>
 <tr><td><code>Call</code></td>
     <td>the object has been called as a function</td></tr>
 <tr><td><code>HasInstance</code></td>
@@ -1701,7 +1804,7 @@ can either be set to:
 <li>to <code>NULL</code> (meaning no prototype), or 
 <li>to some other object. (Be careful to avoid a prototype cycle!)</ul>
 If you choose to use <code>NULL</code>, it is recommended you provide a 
-<code class=js>toString()</code> method (to help with debugging).
+<code class="js">toString()</code> method (to help with debugging).
 
 <p>
 Once the host application has constructed its own objects that
@@ -1711,8 +1814,8 @@ as object-valued properties.
 
 <p>
 The 'Global object' is an unnamed, top-level object whose sole purpose
-is to 'hold' all the built-in objects, such as <code class=js>Object</code>,
-<code class=js>Function</code>, <code class=js>Math</code>,
+is to 'hold' all the built-in objects, such as <code class="js">Object</code>,
+<code class="js">Function</code>, <code class="js">Math</code>,
 etc., as well as all user-declared global variables. The host
 application can access it through the <code>Global</code> member of the
 <code>SEE_interpreter</code> structure.
@@ -1777,7 +1880,7 @@ The host application will likely want a particular bit of C code to be able
 to be called from the runtime environment.
 To do this simply requires construction of an object whose 
 <code>Prototype</code> field points to
-<code class=js>Function.prototype</code>,
+<code class="js">Function.prototype</code>,
 and whose <code>objectclass</code>'s <code>Call</code> method points to a 
 C function that contains the desired code.
 </p>
@@ -1788,7 +1891,7 @@ construction.
 It takes a pointer to the C 
 function, and an integer indicating the expected number of arguments. 
 (The integer becomes the function object's
-<code class=js>length</code> property, which is advisory only.)
+<code class="js">length</code> property, which is advisory only.)
 </p>
 
 <pre>struct SEE_object *<dfn id="SEE_cfunction_make">SEE_cfunction_make</dfn>(struct SEE_interpreter *interp,
@@ -1808,7 +1911,7 @@ portability.)
 <p>
 The C function must conform to the <code>SEE_call_fn_t</code> signature.
 This is demonstrated below, with <code>math_sqrt()</code>, which is
-the actual code behind the <code class=js>Math.sqrt</code> object:
+the actual code behind the <code class="js">Math.sqrt</code> object:
 </p>
 
 <pre><i>/* Implementation of Math.sqrt() method */</i>
@@ -1845,10 +1948,10 @@ are described in the following table:
     <td>the current interpreter context</td></tr>
 <tr><td><code>self</code></td>
     <td>a pointer to the object called 
-        (<code class=js>Math.sqrt</code> here)</td></tr>
+        (<code class="js">Math.sqrt</code> here)</td></tr>
 <tr><td><code>thisobj</code></td>
-    <td>the <code class=js>this</code> object 
-        (the <code class=js>Math</code> object in this 
+    <td>the <code class="js">this</code> object 
+        (the <code class="js">Math</code> object in this 
         case)</td></tr>
 <tr><td><code>argc</code></td>
     <td>number of arguments</td></tr>
@@ -1861,7 +1964,7 @@ are described in the following table:
 
 <p>
 A common convention in all ECMAScript functions is that unspecified
-arguments should be treated as <code class=js>undefined</code>, and
+arguments should be treated as <code class="js">undefined</code>, and
 extraneous arguments should just be ignored.
 If the function uses <code>thisobj</code>, 
 it should check any assumptions made about it, especially if it is expected
@@ -1878,12 +1981,12 @@ Occasionally, a host application will wish to take some user text and
 create a callable function object from it. An example of this problem is 
 in attaching the JavaScript code from HTML attributes onto form 
 elements of a web page.
-One way to achieve this is to invoke the <code class=js>Function</code> 
+One way to achieve this is to invoke the <code class="js">Function</code> 
 constructor object with the
 <code>SEE_OBJECT_CONSTRUCT()</code> macro, passing it the formal arguments
 text and body text as arguments.
 (See <a href="#ref-ecma">the ECMAScript standard</a> for details on the
-<code class=js>Function</code> constructor.)
+<code class="js">Function</code> constructor.)
 </p>
 
 <p>
@@ -1913,9 +2016,9 @@ The returned function object may be called with the
 Host applications sometimes need to convey errors to ECMAScript programs.
 Errors in ECMAScript are typically indicated by throwing an exception
 with an object value.  The thrown objects conventionally have 
-<code class=js>Error.prototype</code> somewhere in their prototype chain, 
-and provide a <code class=js>message</code> and <code class=js>name</code> 
-property which the <code class=js>Error.prototype</code> reads to generate
+<code class="js">Error.prototype</code> somewhere in their prototype chain, 
+and provide a <code class="js">message</code> and <code class="js">name</code> 
+property which the <code class="js">Error.prototype</code> reads to generate
 a human-readable error message.
 </p>
 
@@ -1937,7 +2040,7 @@ void <dfn id="SEE_error_throw_sys">SEE_error_throw_sys</dfn>(struct SEE_interpre
 <p>
 These convenience macros construct a new error object, and throw it as an 
 exception using <code>SEE_THROW()</code>.
-The object thrown is given a <code class=js>message</code>
+The object thrown is given a <code class="js">message</code>
 string property that reflects the rest of the arguments provided 
 to the called macro.
 The <code>SEE_error_throw_sys()</code> macro works like
@@ -1959,7 +2062,7 @@ constructor objects found in the <code>SEE_interpreter</code> structure:
 <tr><td><code>Error</code></td>
     <td>runtime error</td></tr>
 <tr><td><code>EvalError</code></td>
-    <td>error in <code class=js>eval()</code></td></tr>
+    <td>error in <code class="js">eval()</code></td></tr>
 <tr><td><code>RangeError</code></td>
     <td>numeric argument has exceeded allowable range</td></tr>
 <tr><td><code>ReferenceError</code></td>
