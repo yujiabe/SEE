@@ -28,6 +28,19 @@ function literal(v) {
 	}
 }
 
+function pass(msg) {
+	print(msg + " - [32mPASS[m");
+	total++;
+}
+
+function fail(msg, extra) {
+	var s = msg + " - [31;7mFAIL[m";
+	if (extra) s += "\n\t\t(" + extra + ")";
+	print(s);
+	failures++;
+	total++;
+}
+
 /* Run a test, and check that the result is that expected */
 function test(expr, expected) {
 
@@ -35,7 +48,7 @@ function test(expr, expected) {
 
 	try {
 		result = eval(expr);
-		ok = (result === expected);
+		ok = (result === expected || expected == "no exception");
 	} catch (e) {
 		ok = (expected == "exception");
 		result = e.name;
@@ -46,17 +59,14 @@ function test(expr, expected) {
 	catch (e) { result_str = "<cannot represent as string>"; }
 
 
-	msg = expr + ' = ' + result_str + " - ";
+	msg = expr + ' = ' + result_str;
 	if (ok) {
-		msg += "[32mPASS[m";	/* "ESC [ 32 m" == ANSI green */
+		pass(msg);
 	} else {
 		try { expected_str = literal(expected); }
 		catch (e) { expected_str = "<cannot represent as string>"; }
-		msg += "[31;7mFAIL[m\n\t\t(expected " + expected_str + ")";
-		failures++;
+		fail(msg, "expected " + expected_str);
 	}
-	print(msg);
-	total++;
 }
 
 function finish() {
