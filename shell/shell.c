@@ -11,6 +11,10 @@
  *  compat      - changes the compat flags. Returns old compat flags
  *  gc          - may force a garbage collection
  *
+ *  Shell.args  - command line arguments [TODO]
+ *  Shell.exit  - function to force immediate exit
+ *  Shell.gcdump - calls GC_dump(), if it was detected
+ *
  * In HTML mode the following objects are provided:
  *
  *  document		- a simple Object with some properties:
@@ -18,11 +22,6 @@
  *  document.navigator	- a simple Object used as a placeholder
  *  document.userAgent 	- "SEE-shell"
  *  document.window	- a reference to the Global object
- *
- * If the function GC_dump is found during configure,
- * then the shell adds it as GC_dump.
- *
- *  gc_dump
  *
  */
 
@@ -47,11 +46,11 @@ static void compat_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void version_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-#if HAVE_GC_DUMP
-static void gc_dump_fn(struct SEE_interpreter *, struct SEE_object *,
-        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-#endif
 static void gc_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void shell_gcdump_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void shell_exit_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
 /*
@@ -70,8 +69,11 @@ shell_strings()
 	SEE_intern_global("navigator");
 	SEE_intern_global("userAgent");
 	SEE_intern_global("window");
-	SEE_intern_global("gc_dump");
+	SEE_intern_global("gcdump");
 	SEE_intern_global("gc");
+	SEE_intern_global("exit");
+	SEE_intern_global("args");
+	SEE_intern_global("Shell");
 }
 
 /*
@@ -184,22 +186,42 @@ version_fn(interp, self, thisobj, argc, argv, res)
 	SEE_SET_UNDEFINED(res);
 }
 
-#if HAVE_GC_DUMP
-void GC_dump(void);
 /*
  * Dump the garbage collector.
  */
 static void
-gc_dump_fn(interp, self, thisobj, argc, argv, res)
+shell_gcdump_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
         struct SEE_object *self, *thisobj;
         int argc;
         struct SEE_value **argv, *res;
 {
+#if HAVE_GC_DUMP
+	void GC_dump(void);
+
 	GC_dump();
+#endif
         SEE_SET_UNDEFINED(res);
 }
-#endif
+
+/*
+ * Exit the shell process
+ */
+static void
+shell_exit_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+	SEE_uint16_t exitcode = 0;
+	struct SEE_value v;
+
+	if (argc > 0)
+		exitcode = SEE_ToUint16(interp, argv[0]);
+	exit(exitcode);
+	/* NOTREACHED */
+}
 
 /*
  * Force a complete garbage collection
@@ -224,6 +246,7 @@ shell_add_globals(interp)
 	struct SEE_interpreter *interp;
 {
 	struct SEE_value v;
+	struct SEE_object *Shell;
 
 	/* Create the print function, and attch to the Globals */
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
@@ -232,18 +255,25 @@ shell_add_globals(interp)
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
 		"compat", compat_fn, 1, 0);
 
-#if HAVE_GC_DUMP
-	/* Create the gc_dump function, and attach to the Globals. */
-	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"gc_dump", gc_dump_fn, 0, 0);
-#endif
-
-	/* Create the gc function, and attach to the Globals. */
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
 		"gc", gc_fn, 0, 0);
 
 	SEE_CFUNCTION_PUTA(interp, interp->Global, 
 		"version", version_fn, 1, 0);
+
+	/* Create the Shell object */
+	Shell = SEE_Object_new(interp);
+	SEE_SET_OBJECT(&v, Shell);
+	SEE_OBJECT_PUTA(interp, interp->Global, 
+		"Shell", Shell, SEE_ATTR_DEFAULT);
+
+	SEE_CFUNCTION_PUTA(interp, Shell,
+		"gcdump", shell_gcdump_fn, 0, 0);
+
+	SEE_CFUNCTION_PUTA(interp, Shell,
+		"exit", shell_exit_fn, 0, 0);
+
+	/* TODO: args */
 }
 
 /*
