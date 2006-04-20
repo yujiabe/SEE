@@ -1496,12 +1496,14 @@ These should be invoked by using the following macros:
           also known as the <code class="js">[[Put]]</code> internal method
 <li><code>SEE_OBJECT_CANPUT()</code>
         - returns true if the property can be changed;
-          also known as the <code class="js">[[CanPut]]</code> internal method
+          also known as the <code class="js">[[CanPut]]</code> internal method;
+	  assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_HASPROPERTY()</code>
         - tests for existence of a property
 	  ('<code class="js">"prop" in o</code>');
           also known as the <code class="js">[[HasProperty]]</code> 
-	  internal method
+	  internal method;
+	  assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_DELETE()</code>
         - delete a property; returns true on success 
           ('<code class="js">delete o.prop</code>');
@@ -1566,14 +1568,16 @@ struct SEE_enum *<dfn id="SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</dfn>(str
 Four of the macros above (<code>CONSTRUCT</code>, 
 <code>CALL</code>, <code>HASINSTANCE</code>, and
 <code>ENUMERATOR</code>) 
-refer to optional internal methods, and
-<strong>do not check</strong> if the object does not provide them.
-The macros will try to call through a <code>NULL</code> function pointer in
-this case, which will cause an error.
-You can determine if the object provides 
-the optional methods with the following macros.
-The macro returns true if the function pointer they check is valid
-(non-<code>NULL</code>):
+call optional internal methods, and
+<strong>do not check</strong> if the object class has not provided them.
+This means the macros may try to call through a <code>NULL</code> function 
+pointer, which will cause an error.
+You can determine if the object's class provides 
+the optional methods by using the following macros before you use one of the
+four marked above.
+These check macros returns true if the method they check for is valid
+(i.e. they check the function pointer in the object class is
+non-<code>NULL</code>):
 </p>
 
 <ul>
