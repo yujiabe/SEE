@@ -267,7 +267,7 @@ simple_malloc(interp, size)
 
 	if (!warning_printed) {
 		warning_printed++;
-		dprintf("WARNING: SEE is using non-release malloc\n(A garbage collector library is highly recommended.)");
+		dprintf("WARNING: SEE is using non-release malloc\n");
 	}
 
 #endif
