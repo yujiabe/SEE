@@ -287,11 +287,7 @@ File_init(interp)
         SEE_native_init((struct SEE_native *)File, interp,
                 &file_constructor_class, interp->Object_prototype);
         PUTOBJ(interp->Global, STR(File), File);
-
         PUTOBJ(File, STR(prototype), File_prototype)
-        PUTOBJ(File, STR(In), newfile(interp, stdin))
-        PUTOBJ(File, STR(Out), newfile(interp, stdout))
-        PUTOBJ(File, STR(Err), newfile(interp, stderr))
 
         /* Create the File.FileError error object for I/O exceptions */
         FileError = SEE_Error_make(interp, STR(FileError));
@@ -301,6 +297,11 @@ File_init(interp)
         PRIVATE(interp)->File_prototype = File_prototype;
         PRIVATE(interp)->FileError = FileError;
         PRIVATE(interp)->File = File;
+
+	/* Now we can build our well-known files */
+        PUTOBJ(File, STR(In), newfile(interp, stdin))
+        PUTOBJ(File, STR(Out), newfile(interp, stdout))
+        PUTOBJ(File, STR(Err), newfile(interp, stderr))
 }
 #undef PUTFUNC
 #undef PUTOBJ
