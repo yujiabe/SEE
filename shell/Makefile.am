@@ -9,6 +9,9 @@ see_shell_LDADD=		$(top_builddir)/libsee/libsee.la
 see_shell_DEPENDENCIES=		$(top_builddir)/libsee/libsee.la
 see_shell_CPPFLAGS=		-DPATH_PKGLIB='"$(pkglib)"'
 
+see_shell_LDADD+=		$(LIBLTDL)
+see_shell_CPPFLAGS+=		$(LTDLINCL)
+
 ## A statically linked version for running 'make check'
 noinst_PROGRAMS=		see-shell.static
 see_shell_static_SOURCES=	$(see_shell_SOURCES)
@@ -29,3 +32,7 @@ INCLUDES=			-I$(top_builddir)/include \
 EXTRA_DIST=			README
 
 SUBDIRS=			test
+
+TESTS_ENVIRONMENT=		SHELLARGS="-f $(srcdir)/test/common.js" $(SHELL)
+TESTS=				t-File
+

@@ -3,7 +3,7 @@
 
 AUTOMAKE_OPTIONS= foreign
 
-SUBDIRS = include libsee shell doc
+SUBDIRS = include libsee libltdl shell doc
 
 EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
 

@@ -6,7 +6,7 @@
 #-- delete any previous cache
 rm -rf autom4te.cache
 
-#-- select the right autoconf tools 
+#-- select the right autoconf tools for OpenBSD
 if test x"$AUTOCONF_VERSION" = x""; then
 	AUTOCONF_VERSION=2.59; export AUTOCONF_VERSION
 	echo "export AUTOCONF_VERSION=$AUTOCONF_VERSION" >&2
@@ -16,8 +16,15 @@ if test x"$AUTOMAKE_VERSION" = x""; then
 	echo "export AUTOMAKE_VERSION=$AUTOMAKE_VERSION" >&2
 fi
 
+#-- delete any previous libltdl created by libtoolize
+rm -rf libltdl
+LIBTOOLIZE="libtoolize --ltdl"; export LIBTOOLIZE
+
+#-- use GNU's m4
 #M4=/usr/local/bin/gm4; export M4
+
 set -ex
+
 autoreconf --install --force
 
 (cd unicode && make)

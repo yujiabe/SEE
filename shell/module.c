@@ -1,4 +1,10 @@
+/* Copyright (c) 2006, David Leonard. All rights reserved. */
+
 /*
+ * Dynamic module loading. 
+ * This code does the hard work to find, open the file and find its
+ * exported struct SEE_module. Once the module is loaded, it can't 
+ * be un/reloaded.
  */
 
 #if HAVE_CONFIG_H
@@ -10,74 +16,93 @@
 # include <string.h>
 #endif
 
-#include <dlfcn.h>
+#include <ltdl.h>
 
 #include <see/see.h>
 #include "module.h"
 
+/* Loads a dynamic SEE module. Returns true on success. */
 int
 load_module(name)
 	const char *name;
 {
-	void *handle;
+	lt_dlhandle handle = NULL;
 	struct SEE_module *module;
-	char symname[1024];
+	char symname[256];
 
-	handle = dlopen(name, DL_LAZY);
-	if (!handle && !strchr(name, '/')) {
-	    char path[1024];
-	    snprintf(path, sizeof path, "%s/lib%s.so", PATH_PKGLIB, name);
-	    handle = dlopen(path, DL_LAZY);
-	}
-	if (!handle) {
-	    fprintf(stderr, "%s\n", dlerror());
+	if (lt_dlinit()) {
+	    fprintf(stderr, "Cannot load modules: %s\n", lt_dlerror());
 	    return 0;
 	}
 
-	module = dlsym(handle, "_module");
-	if (!module)
-		module = dlsym(handle, "module");
+	handle = lt_dlopenext(name);
+
+	/* If the filename is "foo", try "libfoo" */
+	if (!handle && strchr(name, '/') == 0) {
+	    char libname[1024];
+	    snprintf(libname, sizeof libname, "lib%s", name);
+	    handle = lt_dlopenext(libname);
+	}
+
+	if (!handle) {
+	    fprintf(stderr, "Cannot load module '%s': %s\n", 
+	    	name, lt_dlerror());
+	    goto fail;
+	}
+
+	/* Look for a simple exported "module" symbol first */
+	module = (struct SEE_module *)lt_dlsym(handle, "module");
+
 	if (!module) {
 	    const char *p;
 	    char *q;
 
-	    /* Turn names of the form "/path/foo.ext" into "foo_module" */
+	    /* If the file is "[/path/]foo.ext" try "foo_module" */
 	    for (p = name; *p; p++) {}
 	    while (p != name && p[-1] != '/') p--;
 	    q = symname;
-	    *q++ = '_';
-	    for (; *p && *p != '.'; p++)
+	    for (; *p && *p != '.'; p++) {
 		*q++ = *p;
-	    for (p = "_module"; *p; p++)
+		if (q >= symname + sizeof symname)
+		    goto fail;
+	    }
+	    for (p = "_module"; *p; p++) {
 	    	*q++ = *p;
+		if (q >= symname + sizeof symname)
+		    goto fail;
+	    }
 	    *q = '\0';
-	    module = dlsym(handle, symname);
-	    if (!module)
-		module = dlsym(handle, symname + 1);
-	    if (!module && memcmp(symname + 1, "lib", 3) == 0) {
-	    	symname[3] = '_';
-	        module = dlsym(handle, symname + 3);
-		if (!module)
-		    module = dlsym(handle, symname + 4);
+	    module = (struct SEE_module *)lt_dlsym(handle, symname);
+
+	    /* If the file name is "libfoo.ext", remove the "lib" and
+	     * try "foo_module" */
+	    if (!module && memcmp(symname, "lib", 3) == 0) {
+	        module = (struct SEE_module *)lt_dlsym(handle, symname + 3);
 	    }
 	    	    
 	}
+
 	if (!module) {
-		fprintf(stderr, "%s\n", dlerror());
-		dlclose(handle);
-		return 0;
+		fprintf(stderr, "Cannot load module '%s': %s\n", 
+			name, lt_dlerror());
+	        goto fail;
 	}
+
 	if (module->magic != SEE_MODULE_MAGIC) {
-		fprintf(stderr, "%s: bad module magic number %x != %x\n", 
+		fprintf(stderr, "Cannot load module '%s': bad magic %x!=%x\n", 
 			name, module->magic, SEE_MODULE_MAGIC);
-		dlclose(handle);
-		return 0;
+	        goto fail;
 	}
 
 	if (SEE_module_add(module) != 0) {
-		fprintf(stderr, "error while loading module %s\n", name);
-		dlclose(handle);
-		return 0;
+		fprintf(stderr, "Error while loading module '%s'\n", name);
+		goto fail;
 	}
+
 	return 1;
+
+  fail:
+	if (handle) lt_dlclose(handle);
+  	lt_dlexit();
+	return 0;
 }

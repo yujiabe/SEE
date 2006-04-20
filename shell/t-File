@@ -1,0 +1,4 @@
+#! /bin/sh
+
+exec ./see-shell -lFile $SHELLARGS -f $0.js
+

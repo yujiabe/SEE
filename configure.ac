@@ -26,7 +26,13 @@ dnl
 
 AC_PROG_CC
 
+AC_LIBLTDL_CONVENIENCE([libltdl])
+AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
+dnl AC_LIB_LTDL
+AC_CONFIG_SUBDIRS([libltdl])
+AC_SUBST([LIBLTDL])
+AC_SUBST([LTDLINCL])
 
 AC_ARG_VAR(PERL, [Practical Extraction and Report Language interpreter])
 AC_PATH_PROG(PERL, perl)
