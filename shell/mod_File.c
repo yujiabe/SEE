@@ -439,7 +439,7 @@ file_proto_read(interp, self, thisobj, argc, argv, res)
         struct SEE_string *buf;
         int unbound;
 
-        if (argc == 0 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED) {
+        if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED) {
                 unbound = 1;
                 len = 1024;
         } else {
