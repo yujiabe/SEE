@@ -1,4 +1,4 @@
 #! /bin/sh
 
-exec ./see-shell -lFile $SHELLARGS -f $0.js
+exec ./see-shell -l./libFile.la $SHELLARGS -f $0.js
 
