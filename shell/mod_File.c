@@ -159,7 +159,8 @@ static struct SEE_objectclass file_inst_class = {
         SEE_native_defaultvalue,        /* DefaultValue */
         SEE_native_enumerator,          /* DefaultValue */
         NULL,                           /* Construct */
-        NULL                            /* Call */
+        NULL,                           /* Call */
+        NULL                            /* HasInstance */
 };
 
 /*
