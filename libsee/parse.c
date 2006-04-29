@@ -49,21 +49,23 @@
  * Names of structures and functions have been chosen to correspond 
  * with the production names from the standard's grammar.
  *
- * The semantic functions for each node class are used for the following:
+ * The semantic functions in each node class are the following:
  *
  *  - PROD_eval() functions are called at runtime to implement
  *    the behaviour of the program. They "evaluate" the program.
  *
  *  - PROD_fproc() functions are called at execution time to generate
  *    the name/value bindings between container objects and included
- *    function objects. They provide a parallel recusive semantic operation
- *    described in the standard as being "processed for function 
+ *    function objects. (It finds functions and assigns them to properties.)
+ *    They provide a parallel, but independent, recusive semantic operation
+ *    described in the standard as "process[ing] for function 
  *    declarations".
  *
  *  - PROD_print() functions are used to print the abstract syntax tree 
  *    to stdout during debugging.
  *
- * XXX This file is far too big; need to split it up.
+ * TODO This file is far too big; need to split it up.
+ * TODO Compact/bytecode intermediate form
  *
  */
 
@@ -207,12 +209,16 @@ struct printer {
 };
 #endif
 
-struct Arguments_node;
+struct Targetable_node {
+	struct node node;
+	void *target;
+};
 
 /*------------------------------------------------------------
  * function prototypes
  */
 
+struct Arguments_node;
 struct ArrayLiteral_node;
 struct AssignmentExpression_node;
 struct Binary_node;
@@ -865,6 +871,10 @@ static void Function_visit(struct node *na, visitor_fn_t v, void *va);
 static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 #endif
 
+#define CONTINUABLE 1
+static int target_matches(struct Targetable_node *, void *);
+static void target_init(struct Targetable_node *, struct parser *, int);
+
 /*------------------------------------------------------------
  * macros
  */
@@ -959,7 +969,7 @@ static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 		EXPECTX(';', "';', '}' or newline");	\
     } while (0)
 
-/* Trace a statement-level event, or an eval() */
+/* Traces a statement-level event, or an eval() */
 #define TRACE(node, ctxt, event)				\
     do {						\
 	if (ctxt) {					\
@@ -1057,9 +1067,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
         prod##_parse(parser)
 #endif
 
-/*
- * Generate a generic parse error
- */
+/* Generates a generic parse error */
 #define ERROR						\
 	SEE_error_throw_string(				\
 	    parser->interpreter,			\
@@ -1067,6 +1075,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 	    error_at(parser, "parse error before %s",	\
 	    SEE_tokenname(NEXT)))
 
+/* Generates a specific parse error */
 #define ERRORm(m)					\
 	SEE_error_throw_string(				\
 	    parser->interpreter,			\
@@ -1076,7 +1085,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 
 #if WITH_PARSER_PRINT
 /*
- * Printer
+ * Printer macros
  */
 # define PRINT(n)	 (*printer->printerclass->print_node)(printer, n)
 # define PRINT_STRING(s) (*printer->printerclass->print_string)(printer, s)
@@ -1092,7 +1101,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 
 #if WITH_PARSER_VISIT
 /*
- * Visitor
+ * Visitor macro
  */
 # define VISIT(n, v, va)	do {			\
 	if ((n)->nodeclass->visit)			\
@@ -1101,7 +1110,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
     } while (0)
 #endif
 
-/* Evaluate and cache constant nature of a node */
+/* Returns true if the node returns a constant expression */
 #define ISCONST(n, interp) 				\
 	((n)->isconst_valid ? (n)->isconst :		\
 	  ((n)->isconst_valid = 1,			\
@@ -1111,13 +1120,13 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 		: 0)))
 
 /*------------------------------------------------------------
- * allocators and initialisers
+ * Allocators and initialisers
  */
 
 /*
- * Create a new AST node, initialising to the 
- * given node class, and recording the current
- * line number
+ * Creates a new AST node, initialising it with the 
+ * given node class nc, and recording the current
+ * line number as reported by the parser.
  */
 static struct node *
 new_node(parser, sz, nc, dbg_nc)
@@ -1144,8 +1153,8 @@ new_node(parser, sz, nc, dbg_nc)
 
 #ifndef NDEBUG
 /*
- * Cast a node pointer to a particular node class.
- * Searches the superclass chain of na to see if it matches nc.
+ * Checks that the node pointer na has node class nc in its class chain.
+ * Used by the CAST_NODE() macro to runtime check casts.
  */
 static struct node *
 cast_node(na, nc, cname, file, line)
@@ -1171,7 +1180,7 @@ cast_node(na, nc, cname, file, line)
 #endif
 
 /*
- * initialise a parser state.
+ * Initialises a parser state.
  */
 static void
 parser_init(parser, interp, lex)
@@ -1194,8 +1203,8 @@ parser_init(parser, interp, lex)
  * Labels
  *
  * LabelledStatements that appear consecutively are converted
- * into a 'label set' named by the first label. Essentially,
- * each successive labels becomes an alias for the first.
+ * into a 'label set' named by the first label. Each successive 
+ * label becomes an alias for the first.
  *
  * Only Iteration/SwitchStatements that are immediately parented by 
  * a LabelledStatement are passed a 'current label set' consisting of 
@@ -1211,7 +1220,7 @@ parser_init(parser, interp, lex)
  */
 
 /*
- * Push a label onto the current label stack.
+ * Pushes a label onto the current label stack.
  * Checks for duplicate labels already in the current label
  * stack.
  */
@@ -1258,7 +1267,7 @@ label_push(parser, name, labelset, continuable)
 }
 
 /*
- * Pop the last pushed label from the current label stack.
+ * Pops the last pushed label from the current label stack.
  */
 static void
 label_pop(parser)
@@ -1277,7 +1286,7 @@ label_pop(parser)
 }
 
 /*
- * Marks a label as being a valid target for continue
+ * Marks a label as being a valid target for the continue statement.
  */
 static void
 label_set_continuable(parser, labelset)
@@ -1294,9 +1303,9 @@ label_set_continuable(parser, labelset)
 }
 
 /*
- * Look for the given label name (or implied name), raising a
- * syntax error if it isn't found. kind indicates the kind of
- * statement using the label.
+ * Looks for the given label name (or implied name), raising a
+ * SyntaxError if it isn't found. Kind is a token indicates the kind of
+ * statement using the label (tBREAK or tCONTINUE).
  */
 static struct label *
 label_lookup(parser, name, kind)
@@ -1353,6 +1362,10 @@ label_lookup(parser, name, kind)
 	/* NOTREACHED */
 }
 
+/*
+ * Returns the labelset associated with a label.
+ * The label argument may be NULL, in which case NULL is returned.
+ */
 static void *
 label_get_target(label)
 	struct label *label;
@@ -1360,12 +1373,38 @@ label_get_target(label)
 	return label ? label->labelset : NULL;
 }
 
+/*
+ * Returns true if the node is a valid target of the labelset target.
+ */
+static int
+target_matches(itn, ls_target)
+	struct Targetable_node *itn;
+	void *ls_target;
+{
+	return ls_target == NULL || ls_target == itn->target;
+}
+
+/*
+ * Initialises a targetable node with the current label set,
+ * and optionally modifies the labelset to be continuable.
+ */
+static void
+target_init(itn, parser, continuable)
+	struct Targetable_node *itn;
+	struct parser *parser;
+	int continuable;
+{
+	itn->target = (void *)parser->current_labelset;
+	if (continuable && parser->current_labelset)
+	    label_set_continuable(parser, parser->current_labelset);
+}
+
 /*------------------------------------------------------------
  * LL(2) lookahead implementation
  */
 
 /*
- * return the token that is n tokens ahead. (0 is the next token)
+ * Returns the token that is n tokens ahead. (0 is the next token.)
  */
 static int
 lookahead(parser, n)
@@ -1402,9 +1441,8 @@ lookahead(parser, n)
 }
 
 /*
- * Generate a trace event, giving the host application an opportunity to
+ * Generates a trace event, giving the host application an opportunity to
  * step or trace execution.
- * This need only be called when try_location changes.
  */
 static void
 trace_event(ctxt, event)
@@ -1417,7 +1455,8 @@ trace_event(ctxt, event)
 }
 
 /*
- * Insert a new entry into the traceback list
+ * Pushes a new call context entry onto the traceback stack.
+ * Returns the old traceback stack.
  */
 static struct SEE_traceback *
 traceback_enter(interp, callee, loc, call_type)
@@ -1441,7 +1480,7 @@ traceback_enter(interp, callee, loc, call_type)
 }
 
 /*
- * Remove an entry from the traceback list.
+ * Restores the traceback list before a call context was entered.
  */
 static void
 traceback_leave(interp, old_tb)
@@ -1501,8 +1540,9 @@ PutValue(context, v, w)
  */
 
 /*
- * Generate an error string prefixed with the filename and 
- * line number of the next token. e.g. "foo.js:23: blah blah"
+ * Generates an error string prefixed with the filename and 
+ * line number of the next token. e.g. "foo.js:23: blah blah".
+ * This is useful for error messages.
  */
 static struct SEE_string *
 error_at(struct parser *parser, const char *fmt, ...)
@@ -1534,6 +1574,7 @@ error_at(struct parser *parser, const char *fmt, ...)
  *  subtree with a node that generates that expression statically.
  */
 
+/* Always returns true to indicate this class of node is always constant. */
 static int
 Always_isconst(na, interp)
 	struct node *na;
@@ -1545,7 +1586,7 @@ Always_isconst(na, interp)
 /*------------------------------------------------------------
  * Parser
  *
- * each group of grammar productions is ordered:
+ * Each group of grammar productions is ordered:
  *   - production summary as a comment
  *   - node structure
  *   - evaluator function
@@ -1974,9 +2015,9 @@ PrimaryExpression_parse(parser)
  *	|	Elision ','
  *	;
  *
- * NB: I ignore the above elision bullshit and just build a list of
- * (index,expr) nodes with an overall length. It has
- * equivalent semantics to that in the standard.
+ * NB: I ignore the above elision nonsense and just build a list of
+ * (index,expr) nodes with an overall length. It is equivalent 
+ * to that in the standard.
  */
 
 struct ArrayLiteral_node {
@@ -4066,8 +4107,8 @@ ShiftExpression_parse(parser)
  *	|	RelationalExpressionNoIn tINSTANCEOF ShiftExpression -- 11.8.6
  *	;
  *
- * The *NoIn productions are implemented below by the introduction of
- * the 'noin' field of the parser state parameter.
+ * The *NoIn productions are implemented by the 'noin' boolean field
+ * in the parser state.
  */
 
 /* 
@@ -6340,7 +6381,7 @@ VariableDeclaration_eval(na, context, res)
 }
 
 /*
- * NB: all declared vars end up attached to a function body's vars
+ * Note: All declared vars end up attached to a function body's vars
  * list, and are set to undefined upon entry to that function.
  * See also:
  *	SEE_function_put_args()		- put args
@@ -6673,37 +6714,6 @@ IfStatement_parse(parser)
  *	;
  */
 
-struct Targetable_node {
-	struct node node;
-	void *target;
-};
-
-static int target_in_labelset(struct Targetable_node *, void *);
-
-static int
-target_in_labelset(itn, target)
-	struct Targetable_node *itn;
-	void *target;
-{
-	return target == NULL || target == itn->target;
-}
-
-/*
- * Initialises a targetable node with the current label set,
- * and optionally modifies the labelset to be continuable.
- */
-#define CONTINUABLE 1
-static void
-target_init(itn, parser, continuable)
-	struct Targetable_node *itn;
-	struct parser *parser;
-	int continuable;
-{
-	itn->target = (void *)parser->current_labelset;
-	if (continuable && parser->current_labelset)
-	    label_set_continuable(parser, parser->current_labelset);
-}
-
 struct IterationStatement_while_node {
 	struct Targetable_node targetable;
 	struct node *cond, *body;
@@ -6724,10 +6734,10 @@ step2:	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 	    goto step7;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 	{
 	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
@@ -6832,10 +6842,10 @@ IterationStatement_while_eval(na, context, res)
 	if (res->u.completion.value)
 		v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 		goto step2;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 	{
 	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
@@ -6926,10 +6936,10 @@ IterationStatement_for_eval(na, context, res)
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 		goto step19;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 		goto step15;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
@@ -7046,10 +7056,10 @@ IterationStatement_forvar_eval(na, context, res)
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 		goto step17;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 		goto step13;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
@@ -7138,10 +7148,10 @@ IterationStatement_forin_eval(na, context, res)
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
 	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-		target_in_labelset(&n->targetable, res->u.completion.target))
+		target_matches(&n->targetable, res->u.completion.target))
 		    break;
 	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-		target_in_labelset(&n->targetable, res->u.completion.target))
+		target_matches(&n->targetable, res->u.completion.target))
 		    continue;
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
@@ -7232,10 +7242,10 @@ IterationStatement_forvarin_eval(na, context, res)
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
 	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-		target_in_labelset(&n->targetable, res->u.completion.target))
+		target_matches(&n->targetable, res->u.completion.target))
 		    break;
 	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-		target_in_labelset(&n->targetable, res->u.completion.target))
+		target_matches(&n->targetable, res->u.completion.target))
 		    continue;
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
@@ -7847,7 +7857,7 @@ SwitchStatement_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	SwitchStatement_caseblock(n, context, &r2, res);
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_in_labelset(&n->targetable, res->u.completion.target))
+	    target_matches(&n->targetable, res->u.completion.target))
 	{
 		v = res->u.completion.value;
 		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
@@ -8502,7 +8512,7 @@ struct Function_node {
 };
 
 #if 0
-/* This is never called. Spec bug? */
+/* This is never called, but defined in the spec. (Spec bug?) */
 static void
 FunctionDeclaration_eval(na, context, res)
 	struct node *na; /* (struct Function_node) */
@@ -8782,8 +8792,9 @@ FunctionBody_parse(parser)
 }
 
 /*
- * JavaScript 1.5 function statements. (Not part of ECMA-262)
- * The statement 'function foo (args) { body };' becomes syntactically
+ * JavaScript 1.5 function statements. (Not part of ECMA-262, which
+ * treats functions as declarations.) The statement 
+ * 'function foo (args) { body };' is treated syntactically
  * equivalent to 'foo = function foo (args) { body };' The Netscape
  * documentation calls these 'conditional functions', as their intent
  * is to be used like this:
@@ -8846,7 +8857,8 @@ Program_parse(parser)
 	 * NB: The semantics of Program are indistinguishable from that of
 	 * a FunctionBody. Syntactically, the only difference is that
 	 * Program must be followed by the tEND (end-of-input) token.
-	 * Practically, a program does not have parameters nor a name.
+	 * Practically, a program does not have parameters nor a name,
+	 * and its 'this' is always set to the Global object.
 	 */
 	body = PARSE(FunctionBody);
 	if (NEXT == '}')
@@ -8856,7 +8868,7 @@ Program_parse(parser)
 	if (NEXT == ']')
 		ERRORm("unmatched ']'");
 	if (NEXT != tEND)
-		ERRORm("unexpected token");	/* (typically '}') */
+		ERRORm("unexpected token");
 	return SEE_function_make(parser->interpreter,
 		NULL, NULL, body);
 }
@@ -8881,10 +8893,10 @@ SourceElements_eval(na, context, res)
 	struct SourceElement *e;
 
 	/*
-	 * NB: strictly speaking, we should 'evaluate' the
+	 * NB: strictly, this should 'evaluate' the
 	 * FunctionDeclarations, but they only yield <NORMAL, NULL, NULL>
-	 * so, why bother. We just run the non-functiondecl statements
-	 * instead. It's equivalent.
+	 * so, we don't. We just run the non-functiondecl statements
+	 * instead. It has the same result.
 	 */
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
 	for (e = n->statements; e; e = e->next) {
@@ -9055,9 +9067,9 @@ SourceElements_parse(parser)
  */
 
 /*
- * Parse a function declaration in two parts and
- * return a function structure, in a similar way as if
- * FunctionDeclaration_parse() had been called with the
+ * Parses a function declaration in two parts and
+ * return a function structure, in a similar way to
+ * FunctionDeclaration_parse() when called with the
  * right input.
  */
 struct function *
@@ -9082,7 +9094,7 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 	if (bodyinp) 
 		SEE_lex_init(&lex, SEE_input_lookahead(bodyinp, 6));
 	else {
-		/* This is a nasty hack to fake a quick EOF */
+		/* Set the lexer to EOF quickly */
 		lex.input = NULL;
 		lex.next = tEND;
 	}
@@ -9096,9 +9108,10 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 }
 
 /*
- * parse a Program, but do not close the input.
- * (The input will be wrapped in a 6-char lookahead filter
- * by this function)
+ * Parses a Program. 
+ * Does not close the input, but may consume up to 6 characters.
+ * lookahead. This is not usually a problem, because the input is
+ * always read to EOF on normal completion.
  */
 struct function *
 SEE_parse_program(interp, inp)
@@ -9124,9 +9137,7 @@ SEE_parse_program(interp, inp)
 	return f;
 }
 
-/*
- * Evaluate the function body in the given context.
- */
+/* Evaluates the function body with the given execution context. */
 void
 SEE_eval_functionbody(f, context, res)
 	struct function *f;
@@ -9144,7 +9155,7 @@ SEE_functionbody_isempty(interp, f)
 	return FunctionBody_isempty(interp, (struct node *)f->body);
 }
 
-/* Returns true if the FunctionBody is empty */
+/* Returns true if the FunctionBody is empty. */
 static int
 FunctionBody_isempty(interp, body)
 	struct SEE_interpreter *interp;
@@ -9160,7 +9171,7 @@ FunctionBody_isempty(interp, body)
 
 #if WITH_PARSER_PRINT
 /*------------------------------------------------------------
- * printer common code
+ * Printer common code
  */
 
 static void
@@ -9175,7 +9186,7 @@ printer_init(printer, interp, printerclass)
 	printer->bol = 0;
 }
 
-/* called when the printer is at the beginning of a line */
+/* Called when the printer is at the beginning of a line. */
 static void
 printer_atbol(printer)
 	struct printer *printer;
@@ -9217,7 +9228,7 @@ print_hex(printer, i)
 }
 
 /*------------------------------------------------------------
- * stdio printer - prints each node in an AST to a stdio file.
+ * Stdio printer - Prints each node in an AST to a stdio file.
  * So we can reconstruct parsed programs and print them to the screen.
  */
 
@@ -9282,8 +9293,8 @@ stdio_printer_new(interp, output)
 }
 
 /*------------------------------------------------------------
- * string printer
- * So we can reconstruct parsed programs and save them in a string.
+ * String printer
+ * Used to reconstruct parsed programs and save them in a string.
  */
 
 struct string_printer {
@@ -9335,7 +9346,7 @@ string_printer_new(interp, string)
 
 
 /*
- * Print a function body on the standard error
+ * Prints a function body to standard error.
  */
 static void
 print_functionbody(interp, f, fp)
@@ -9350,9 +9361,7 @@ print_functionbody(interp, f, fp)
 }
 #endif /* WITH_PARSER_PRINT */
 
-/*
- * Return the function body as a string
- */
+/* Returns the function body as a string */
 struct SEE_string *
 SEE_functionbody_string(interp, f)
 	struct SEE_interpreter *interp;
@@ -9380,13 +9389,12 @@ SEE_functionbody_string(interp, f)
 
 /*
  * Global.eval()
- * This is a special function (not a cfunction), because it accesses 
+ * 'Eval' is a special function (not a cfunction), because it accesses 
  * the execution context of the caller (which is not available to 
  * functions and methods invoked via SEE_OBJECT_CALL()).
  *
  * This normally only ever get called from CallExpression_eval().
- * A stub cfunction exists for Global.eval, but it should be bypassed
- * in every case.
+ * A stub cfunction exists for Global.eval, but it is bypassed.
  */
 static void
 eval(context, thisobj, argc, argv, res)
@@ -9446,13 +9454,11 @@ eval(context, thisobj, argc, argv, res)
 	if (SEE_VALUE_GET_TYPE(&v) != SEE_COMPLETION || 
 	    v.u.completion.type != SEE_COMPLETION_NORMAL) 
 	{
-	    /* XXX spec bug: what if the eval did a 'return'? */
 #ifndef NDEBUG
 	    dprintf("eval'd string returned ");
 	    dprintv(interp, &v);
 	    dprintf("\n");
 #endif
-
 	    SEE_error_throw_string(
 		interp,
 		interp->EvalError,
@@ -9464,7 +9470,11 @@ eval(context, thisobj, argc, argv, res)
 	    SEE_VALUE_COPY(res, v.u.completion.value);
 }
 
-/* Helper function for external debuggers wanting to use a context */
+/* 
+ * Evaluates an expression in the given context.
+ * This is a helper function intended for external debuggers wanting 
+ * to evaluate user expressions in a given context.
+ */
 void
 SEE_context_eval(context, expr, res)
 	struct SEE_context *context;
@@ -9479,9 +9489,12 @@ SEE_context_eval(context, expr, res)
 }
 
 /*
- * A comparison function using the built-in operators for < and == 
- * Could be used as a better comparsion function for Array.sort().
- * Currently used by RegExp.prototype.test()
+ * Compares two value using ECMAScript == and > operator semantics.
+ * Returns  0 if x == y,
+ *          1 if x > y or indeterminate,
+ *         -1 otherwise.
+ * This could be used as a better comparsion function for Array.sort().
+ * Currently only used by RegExp.prototype.test()
  */
 int
 SEE_compare(interp, x, y)
@@ -9489,6 +9502,7 @@ SEE_compare(interp, x, y)
 	struct SEE_value *x, *y;
 {
 	struct SEE_value v;
+
 	EqualityExpression_eq(interp, x, y, &v);
 	if (v.u.boolean)
 		return 0;
