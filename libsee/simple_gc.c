@@ -53,11 +53,22 @@
 
 #if STDC_INCLUDES
 # include <stdlib.h>
+# include <string.h>
 #endif
 
 #include <see/try.h>
 
 #include "simple_gc.h"
+
+#if TEST
+# define IS_ROOT	,1
+# define IS_NOT_ROOT	,0
+# define TPRINTF(fmt, args...)	fprintf(stderr, fmt , ## args)
+#else
+# define IS_ROOT		/* nothing */
+# define IS_NOT_ROOT		/* nothing */
+# define TPRINTF(fmt, args...)	/* nothing */
+#endif
 
 /* Linked list of roots. A root is a memory segment that is always reachable */
 struct root {
@@ -101,19 +112,25 @@ static void sweep(void);
 static void sweep_sub(struct allocation *);
 static void run_finalizers(void);
 static void machdep_scan(void);
+#if TEST
+static void scan(char *base, unsigned int len, unsigned int isroot);
+#else
 static void scan(char *base, unsigned int len);
+#endif
 static void allocation_insert(struct allocation *);
 static void allocation_free(struct allocation *);
 static void *allocate(unsigned int sz, int state, void (*finalizer)(void *));
 
-static struct allocation *allocation_root;	/* allocated objects */
-static struct allocation *allocation_finalizing; /* objects pending finalizer */
-static char *allocation_min;
-static char *allocation_max;
-static unsigned int allocation_total_size;
-static unsigned int allocation_total_count;
-static unsigned int collect_at = 1024;		/* collect at this size */
-static struct root *user_roots;
+static struct {
+	struct allocation *allocation_root;	/* allocated objects */
+	struct allocation *allocation_finalizing; /* objects pending finalizer */
+	char *allocation_min;
+	char *allocation_max;
+	unsigned int allocation_total_size;
+	unsigned int allocation_total_count;
+	unsigned int collect_at;		/* collect at this size */
+	struct root *user_roots;
+} gc;
 
 /*
  * Inserts a new allocation into the AVL binary tree. Takes O(log(n))
@@ -123,7 +140,7 @@ static void
 allocation_insert(new_node)
 	struct allocation *new_node;
 {
-	struct allocation **root = &allocation_root;
+	struct allocation **root = &gc.allocation_root;
 	struct allocation **last_imbalance = NULL;
 	struct allocation **n;
 
@@ -226,11 +243,15 @@ machdep_scan()
 			sp = *(char **)sp;
 		top = sp;
 	}
-	scan(bottom, top - bottom);
+	TPRINTF("{stack}");
+	scan(bottom, top - bottom  IS_ROOT);
 #else
   /* TODO - stack finders for other architectures */
  # warning "Unable to add stack to root set on this architecture"
 #endif
+
+#if 0 /* Turned off because malloc's own pointers are found */
+      /* Better to have the application add static roots */
 
 	/* 2. Static variables */
 #if __unix__ || unix
@@ -247,12 +268,15 @@ machdep_scan()
 # define bss_end	_end
 	{
 	    extern char data_start[], data_end[], bss_start[], bss_end[];
-	    scan(data_start, data_end - data_start);
-	    scan(bss_start, bss_end - bss_start);
+	    TPRINTF("{data}");
+	    scan(data_start, data_end - data_start  IS_ROOT);
+	    TPRINTF("{bss}");
+	    scan(bss_start, bss_end - bss_start  IS_ROOT);
 	}
 #else /* not unix */
  # warning "Unable to add static storage to root set on this system"
 #endif 
+#endif
 
     /* Dynamically loaded libraries */
     /* TODO - detected shared libraries? */
@@ -266,41 +290,45 @@ sgc_collect()
 	struct root *root;
 	_SEE_JMPBUF jmpbuf;
 #if TEST
-	unsigned int osize = allocation_total_size;
-	unsigned int ocount = allocation_total_count;
-fprintf(stderr, "[collecting...");
+	unsigned int osize = gc.allocation_total_size;
+	unsigned int ocount = gc.allocation_total_count;
 #endif
+
+	TPRINTF("[collecting...");
 
 	/*
 	 * Phase 1: Scan and mark
 	 */
 
 	/* Scan the unspilt registers */
+	memset(&jmpbuf, 0, sizeof jmpbuf);
 	_SEE_SETJMP(jmpbuf);
-        scan((char *)&jmpbuf, sizeof jmpbuf);
+        TPRINTF("{registers}");
+        scan((char *)&jmpbuf, sizeof jmpbuf  IS_ROOT);
 
 	/* Scan the stack, data and BSS */
 	machdep_scan();
 
 	/* Scan the user-supplied roots */
-	for (root = user_roots; root; root = root->next)
-		scan(root->base, root->extent);
+        TPRINTF("{users}");
+	for (root = gc.user_roots; root; root = root->next)
+		scan(root->base, root->extent  IS_ROOT);
 
 	/*
 	 * Phase 2: Sweep and release
 	 */
 
 	/* Rebuild the allocation tree with marked nodes only */
+        TPRINTF("{sweep}");
 	sweep();
 
 	/* Deal with objects left on the finalizing list */
+        TPRINTF("{final}");
 	run_finalizers();
 
-#if TEST
-fprintf(stderr, "freed %d objects %d bytes]\n", 
-	ocount - allocation_total_count,
-	osize - allocation_total_size);
-#endif
+	TPRINTF(" freed %d objects %d bytes]\n", 
+		ocount - gc.allocation_total_count,
+		osize - gc.allocation_total_size);
 }
 
 /*
@@ -311,9 +339,9 @@ fprintf(stderr, "freed %d objects %d bytes]\n",
 static void
 sweep()
 {
-	struct allocation *old_root = allocation_root;
+	struct allocation *old_root = gc.allocation_root;
 	
-	allocation_root = NULL;
+	gc.allocation_root = NULL;
 	if (old_root)
 	    sweep_sub(old_root);
 }
@@ -329,12 +357,12 @@ sweep_sub(a)
 	side[1] = a->side[1];
 
 	if (!IS_MARKED(a)) {
-	    allocation_total_size -= ALLOCATION_LENGTH(a);
-	    allocation_total_count--;
+	    gc.allocation_total_size -= ALLOCATION_LENGTH(a);
+	    gc.allocation_total_count--;
 	    if (a->finalizer) {
 	    	/* Add to the list of finalizers to run later */
-	        a->side[0] = allocation_finalizing;
-	        allocation_finalizing = a;
+	        a->side[0] = gc.allocation_finalizing;
+	        gc.allocation_finalizing = a;
 	    } else
 	        allocation_free(a);
 	} else {
@@ -347,14 +375,14 @@ sweep_sub(a)
 	    sweep_sub(side[1]);
 }
 
-/* Finalize the allocations on the allocation_finalizing list then free them */
+/* Finalize the allocations on the gc.allocation_finalizing list then free them */
 static void
 run_finalizers()
 {
 	struct allocation *a, *anext;
 
-	a = allocation_finalizing;
-	allocation_finalizing = NULL;
+	a = gc.allocation_finalizing;
+	gc.allocation_finalizing = NULL;
 
 	while (a) {
 	    anext = a->side[0];
@@ -366,9 +394,15 @@ run_finalizers()
 
 /* Scans a segment of memory and recursively marks/scans reached allocations */
 static void
+#if TEST
+scan(base, len, isroot)
+	char *base;
+	unsigned int len, isroot;
+#else
 scan(base, len)
 	char *base;
 	unsigned int len;
+#endif
 {
 	char **p;
 
@@ -376,10 +410,13 @@ scan(base, len)
 	     (char *)p + sizeof *p < base + len; 
 	     p++)
 	{
-	    if (*p >= allocation_min && *p < allocation_max)
+	    /* Don't scan GC-private storage */
+	    if (p >= (char **)&gc && p < (char **)(&gc + 1))
+	    	continue;
+	    if (*p >= gc.allocation_min && *p < gc.allocation_max)
 	    {
 	    	/* Looks like a pointer into an allocation; search O(log(n)) */
-	    	struct allocation *a = allocation_root;
+	    	struct allocation *a = gc.allocation_root;
 	        while (a) 
 			if (*p < (char *)a)
 				a = a->side[RIGHT];
@@ -388,10 +425,15 @@ scan(base, len)
 			else {
 			    /* Found the allocation pointed to */
 			    if (!IS_MARKED(a) && *p >= ALLOCATION_BASE(a)) {
+#if TEST
+				if (isroot) 
+				    TPRINTF("%p reached by %p in [%p/%u]\n", 
+				        ALLOCATION_BASE(a), p, base, len);
+#endif
 				SET_MARK(a);
 				if (!IS_ATOMIC(a))
 				    scan(ALLOCATION_BASE(a), 
-				         ALLOCATION_LENGTH(a));
+				         ALLOCATION_LENGTH(a) IS_NOT_ROOT);
 			    }
 			    break;
 			}
@@ -415,10 +457,10 @@ allocate(len, init_state, finalizer)
 	}
 
 	/* Collect when we have allocated twice as much as last time */
-	if (allocation_total_size >= collect_at) {
+	if (gc.allocation_total_size >= gc.collect_at) {
 	    sgc_collect();
-	    collect_at = collect_at * 3 / 2;
-	    /* if (collect_at < 1024) collect_at = 1024; */
+	    gc.collect_at = gc.collect_at * 3 / 2;
+	    if (gc.collect_at == 0) gc.collect_at = 1024;
 	}
 
 	/* Call system malloc; if exhausted, collect and retry */
@@ -437,12 +479,12 @@ allocate(len, init_state, finalizer)
 	allocation_insert(newa); /* O(log(n)) */
 
 	/* Accounting */
-	allocation_total_size += ALLOCATION_LENGTH(newa);
-	allocation_total_count++;
-	if (!allocation_min || ALLOCATION_BASE(newa) < allocation_min)
-		allocation_min = ALLOCATION_BASE(newa);
-	if (ALLOCATION_END(newa) >= allocation_max)
-		allocation_max = ALLOCATION_END(newa);
+	gc.allocation_total_size += ALLOCATION_LENGTH(newa);
+	gc.allocation_total_count++;
+	if (!gc.allocation_min || ALLOCATION_BASE(newa) < gc.allocation_min)
+		gc.allocation_min = ALLOCATION_BASE(newa);
+	if (ALLOCATION_END(newa) >= gc.allocation_max)
+		gc.allocation_max = ALLOCATION_END(newa);
 
 	return ALLOCATION_BASE(newa);
 }
@@ -469,8 +511,8 @@ sgc_add_root(base, extent)
 	if (root) {
 	    root->base = (char *)base;
 	    root->extent = extent;
-	    root->next = user_roots;
-	    user_roots = root;
+	    root->next = gc.user_roots;
+	    gc.user_roots = root;
 	}
 }
 
@@ -481,7 +523,7 @@ sgc_remove_root(base)
 {
 	struct root **r;
 
-	for (r = &user_roots; *r; r = &(*r)->next)
+	for (r = &gc.user_roots; *r; r = &(*r)->next)
 	    if ((*r)->base == (char *)base) {
 	    	struct root *root = *r;
 		*r = root->next;
@@ -537,7 +579,7 @@ static void
 info()
 {
 	printf("[in use: %u bytes in %u objects]\n\n",
-		allocation_total_size, allocation_total_count);
+		gc.allocation_total_size, gc.allocation_total_count);
 }
 
 static void 
@@ -561,7 +603,7 @@ main()
 {
 	void *p, *p2;
 	unsigned long i;
-	double start, t;
+	double start;
 
 	setbuf(stdout, NULL);
 	atexit(info);
@@ -584,9 +626,18 @@ main()
 #define COUNT 1024*256
 #define SIZE  1024*2
 	printf("allocating %u objects of size %u:\n", COUNT, SIZE);
+	p2 = NULL;
 	for (i = 0; i < COUNT; i++) {
 /*	    printf("\r\t%7u", i); */
-	    sgc_malloc(SIZE);
+	    p = sgc_malloc(SIZE);
+	    if (!p) {
+	    	printf("Out of memory at count=%lu\n", i);
+		break;
+	    } else {
+	    	memset(p, 0, SIZE);
+		*(void **)p = p2;
+		p2 = p;
+	    }
 	}
 /*	printf(" done\n"); */
 	info();
@@ -597,9 +648,19 @@ main()
 	printf(" collect took %f seconds\n", now() - start);
 	info();
 
+	p = p2 = NULL;
+
+	printf("calling collect\n");
+	start = now();
+	sgc_collect();
+	printf(" collect took %f seconds\n", now() - start);
+	info();
+
 	printf("calling malloc_finalizer(300, myfinalizer)\n");
 	p2 = sgc_malloc_finalizer(300, myfinalizer);
 	info();
+
+	printf("p=%p p2=%p\n", p, p2);
 
 	exit(0);
 }
