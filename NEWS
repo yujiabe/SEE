@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Bug 42: String.concat() behaves correctly
   Use libltdl for the shell's dynamic loading of modules
   Feature: SEE_gcollect() method that tries a garbage collection
   gen.c no longer uses the non-portable fgetln()
