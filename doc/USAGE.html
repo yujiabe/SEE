@@ -11,9 +11,9 @@
                    /*float: none;*/
                    /*position: relative; */
                    /* margin-left: 10%; */
-		   }
+                   }
         table    { border-collapse: collapse; 
-		   border: none /* thin solid black */; }
+                   border: none /* thin solid black */; }
         table tr { border: thin solid black; }
         table th { background: #f0f0f0;
                    border-bottom: thin solid black; }
@@ -22,21 +22,22 @@
                    vertical-align: top;
                  }
         td       { padding-left: 1ex; padding-right: 1ex;
-		   padding-top: 0.3ex; padding-bottom: 0.3ex;
-		   }
+                   padding-top: 0.3ex; padding-bottom: 0.3ex;
+                   }
         dl       { margin-left: 4ex; }
         pre      { margin-left: 8ex; }
         code i, pre i    { color: blue; }
         code b, pre b    { 
-		   background: #ffffd0;   
-		   color: #202020; 
-		   font-weight: normal;
-		 }
+                   background: #ffffd0;   
+                   color: #202020; 
+                   font-weight: normal;
+                 }
         ul.toc   { font-size: smaller; }
         code     { white-space: nowrap; }
         /* code,pre { background: #ffe0e0; } */
         /* code.js,pre.js { background: #e0ffe0; } */
         code.js  { font-family: sans-serif; }
+        code.meta i { font-family: serif; color: gray; }
         code dfn,pre dfn { font: bold; color: green; }
         pre.js   { font-family: sans-serif; }
         p.misc   { font-size: smaller; color: gray; }
@@ -44,12 +45,12 @@
         blockquote { font-size: smaller; }
         p.note   { margin-left: 2ex; font-size: smaller; }
         dt       { font: bold; }
-	table.index { border: none }
-	table.index td { font: x-small monospace; }
-	cite     { font-style: italic; }
-	.footnote { vertical-align: super;
-		    font-size: smaller;
-		    color: #008; }
+        table.index { border: none }
+        table.index td { font: x-small monospace; }
+        cite     { font-style: italic; }
+        .footnote { vertical-align: super;
+                    font-size: smaller;
+                    color: #008; }
 // -->
 </style>
 
@@ -81,7 +82,8 @@ for SEE version 2.0
 <li><a href="#mem">3 Memory management</a>
  <ul>
  <li><a href="#mem2">3.1 On memory allocators</a>
- <li><a href="#memfinal">3.2 Finalization</a>
+ <li><a href="#memother">3.2 Interacting with an external allocator</a>
+ <li><a href="#memfinal">3.3 Finalization</a>
  </ul>
 <li><a href="#eval">4 Running programs</a>
  <ul>
@@ -192,12 +194,15 @@ like this:</p>
 <p>Similarly, ECMAScript code is typeset in a sans serif font, like this:</p>
 <pre class="js">window.location = "about:blank";</pre>
 
-<p>Important parts of exammple code are <code><b>highlighted</b></code>, and
-elided code is indicated with an elipsis, like this: <code><i>...</i></code></p>
+<p>
+Important parts of exammple code are <code><b>highlighted</b></code>, and
+elided code is indicated with an elipsis, like this: <code><i>...</i></code>
+</p>
 
-<p>Function definitions listed in the <a href="#idx">name index</a>
+<p>
+Function definitions listed in the <a href="#idx">name index</a>
 appear in green, like this: <code><dfn>SEE_example()</dfn></code>
-	
+</p>
 
 <h2 id="req">1 Requirements</h2>
 
@@ -502,7 +507,63 @@ They can often be tuned to meet your
 application's usage patterns.
 </ul>
 
-<h3 id="memfinal">3.2 Finalization</h3>
+<h3 id="memother">3.2 Interacting with an external allocator</h3>
+
+<p>
+If you are embedding SEE in a host application that uses
+<code>malloc()</code>,
+any <code>struct SEE_...</code> pointers that
+you keep inside storage obtained by <code>malloc()</code> 
+are likely to be unreliable.
+This is because garbage collectors do not normally look
+inside <code>malloc</code>ed memory.
+</p>
+
+<p>
+To make the GC aware of your reference to the SEE object,
+you will either need to arrange for the GC to
+scan your malloc'd memory (e.g. by adding it to its <q>root set</q>) or 
+by using a level of pointer indirection through <q>uncollectable</q> GC
+memory. 
+</p>
+
+<p>
+For example, you might create an indirect reference by allocating storage
+with Boehm's <code>GC_MALLOC_UNCOLLECTABLE()</code> function for
+a structure like this:
+</p>
+
+<pre>struct myobjref {   <i>/* Always allocate this as GC uncollectable */</i>
+    struct SEE_interpreter *interp;
+    struct SEE_object *object;
+}</pre>
+
+<p>
+Then, you can safely keep a pointer to the <code>myobjref</code>
+in storage allocated by <code>malloc()</code>.
+It would still be your problem to eventually release 
+the <code>myobjref</code> with a call to <code>GC_FREE()</code>.
+</p>
+
+<p>
+You may also find it convenient for SEE to manage the lifetime of your
+<code>malloc</code>ed host data. 
+This normally happens when you create wrapped SEE objects
+(see <a href="#objimpl">&sect;6.3</a>)
+and include pointers into storage allocated with
+with <code>malloc()</code>.
+To achieve this, use <code>SEE_NEW_FINALIZE()</code> to allocate
+the wrapped object structure, and a finalizer function that calls
+<code>free()</code> on the right members.
+</p>
+
+<p>
+Similar approaches can be used for external allocators that use
+reference counting.
+</p>
+
+
+<h3 id="memfinal">3.3 Finalization</h3>
 
 <p>
 Host objects that acquire operating system resources
@@ -571,7 +632,7 @@ strategy:
         (<a href="#interp">&sect;2</a>);
  <li> construct a <code>SEE_input</code> unicode stream reader 
         (<a href="#input">&sect;4.2</a>)
-	to transport the 
+        to transport the 
       ECMAScript program text to SEE's parser;
  <li> establish a try-catch context
         (<a href="#try">&sect;4.3</a>);
@@ -984,10 +1045,10 @@ The following table shows when the union fields of <code>v.u</code> are valid:
 <tbody>
 <tr>    <td><code>SEE_UNDEFINED</code></td>
         <td><i>n/a</i></td>
-	<td><i>n/a</i></td>					</tr>
+        <td><i>n/a</i></td>                                     </tr>
 <tr>    <td><code>SEE_NULL</code></td>
         <td><i>n/a</i></td>
-	<td><i>n/a</i></td>					</tr>
+        <td><i>n/a</i></td>                                     </tr>
 <tr>    <td><code>SEE_BOOLEAN</code></td>
         <td><code>v.u.boolean</code></td>
         <td><code>SEE_boolean_t</code></td>             </tr>
@@ -1220,8 +1281,6 @@ To manipulate a string, first create a new string using one of the following:
 <ul>    
   <li><code>SEE_string_new()</code> - create a new, empty string
   <li><code>SEE_string_dup()</code> - create a new string with duplicate content
-  <li><code>SEE_string_concat()</code> - create a new string by duplicating 
-        two other strings
   <li><code>SEE_string_sprintf()</code> - create a new string using 
         <code>printf</code>-like arguments (forced to 7-bit ASCII)
   <li><code>SEE_string_vsprintf()</code> - create a new string using
@@ -1245,8 +1304,8 @@ characters to it using the following:
 Once a new string has been passed to any other SEE function, it should not
 have its contents modified in any way.
 Strings should not be shared
-between different interpreters, unless created with 
-<code>SEE_intern_global()</code> (<a href="#staticstr">&sect;5.3.1</a>).
+between different interpreters, unless internalised with 
+<code>SEE_intern_global()</code> (see <a href="#staticstr">&sect;5.3.1</a>).
 </p>
 
 <p>
@@ -1274,47 +1333,46 @@ Follows is a table of understood formats:
     <th>Comment</th></tr>
 </thead>
 <tbody>
-<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>d</code></td>
+<tr><td><code class="meta">%<i>[</i>+<i>][</i>-<i>][</i>0<i>][#]</i>d</code></td>
     <td><code>signed int</td>
     <td>decimal</td></tr>
-<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>u</code></td>
+<tr><td><code class="meta">%<i>[</i>+<i>][</i>-<i>][</i>0<i>][#]</i>u</code></td>
     <td><code>unsigned int<code></td>
     <td>decimal</td></tr>
-<tr><td><code>%<i>[</i>+<i>][</i>-<i>|</i>0<i>][#]</i>x</code></td>
+<tr><td><code class="meta">%<i>[</i>+<i>][</i>-<i>][</i>0<i>][#]</i>x</code></td>
     <td><code>unsigned int</code></td>
     <td>hexadecimal (base 16)</td></tr>
-<tr><td><code>%c</code></td>
+<tr><td><code class="meta">%c</code></td>
     <td><code>char</code></td>
     <td>0x00..0x7f only</td></tr>
-<tr><td><code>%C</code></td>
+<tr><td><code class="meta">%C</code></td>
     <td><code>SEE_char_t</code></td></tr>
-<tr><td><code>%<i>[</i>-<i>][#][</i>.<i>#]</i>s</code></td>
+<tr><td><code class="meta">%<i>[</i>-<i>][#][</i>.<i>#]</i>s</code></td>
     <td><code>const char *</code></td>
     <td>each 0x00..0x7f only</td></tr>
-<tr><td><code>%<i>[</i>-<i>][#][</i>.<i>#]</i>S</code></td>
+<tr><td><code class="meta">%<i>[</i>-<i>][#][</i>.<i>#]</i>S</code></td>
     <td><code>struct SEE_string *</code></td></tr>
-<tr><td><code>%<i>[</i>-<i>][#]</i>p</code></td>
+<tr><td><code class="meta">%<i>[</i>-<i>][#]</i>p</code></td>
     <td><code>void *</code></td></tr>
-<tr><td><code>%%</code></td>
+<tr><td><code class="meta">%%</code></td>
     <td></td>
     <td>single <code>%</code></td></tr>
 </tbody>
 </table>
 
 <p>
-Where a <code><i>#</i></code> appears in the format, either a positive
+Where a hash (<code class="meta"><i>#</i></code>) appears in the format column above, it means that either a positive
 integer in base 10 may be supplied to indicate padding or precision, 
-or the special character <q><code>*</code></q> can be used instead
-to indicate that the next <code>int</code> argument provides the value. 
-Please see your system's documentation on <code>printf()</code>.
+(eg <code>%4d</code>)
+or an asterisk (<code>*</code>) can be used instead
+to indicate that the next <code>int</code> argument provides the padding or precision value. 
+This follows the behaviour of <code>printf()</code>.
 </p>
 
 <pre>struct SEE_string *<dfn id="SEE_string_new">SEE_string_new</dfn>(struct SEE_interpreter *interp,
                 unsigned int space);
 struct SEE_string *<dfn id="SEE_string_dup">SEE_string_dup</dfn>(struct SEE_interpreter *interp,
                 struct SEE_string *s);
-struct SEE_string *<dfn id="SEE_string_concat">SEE_string_concat</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s1, struct SEE_string *s2);
 struct SEE_string *<dfn id="SEE_string_sprintf">SEE_string_sprintf</dfn>(struct SEE_interpreter *interp,
                 const char *fmt, ...);
 struct SEE_string *<dfn id="SEE_string_vsprintf">SEE_string_vsprintf</dfn>(struct SEE_interpreter *interp,
@@ -1336,11 +1394,13 @@ Other string functions provided are:
         - create a copy of the string, escaping chars and
           enclosing it in double quotes (<code>"</code>)
  <li><code>SEE_string_fputs()</code>    
-        - output the string to the stdio file using UTF-8 encoding,
-	  returns <code>EOF</code> on error
+        - write the string to the stdio file using UTF-8 encoding,
+          returns <code>EOF</code> on error
  <li><code>SEE_string_toutf8()</code>    
-        - output the string into a C string buffer, using UTF-8 encoding,
-	  throwing an error if the buffer is too small
+        - copy the string into a C string buffer, using UTF-8 encoding,
+          throwing an error if the buffer is too small
+ <li><code>SEE_string_concat()</code>    
+        - efficiently concatenate two strings, creating a new string
  <li><code>SEE_string_cmp()</code>      
         - compares two strings, like <code>strcmp()</code>
 </ul>
@@ -1351,8 +1411,10 @@ struct SEE_string *<dfn id="SEE_string_literal">SEE_string_literal</dfn>(struct 
                 const struct SEE_string *s);
 int <dfn id="SEE_string_fputs">SEE_string_fputs</dfn>(const struct SEE_string *s, FILE *file);
 void <dfn id="SEE_string_toutf8">SEE_string_toutf8</dfn>(struct SEE_interpreter *interp, 
-		char *buffer, SEE_size_t buffer_size,
-		const struct SEE_string *s);
+                char *buffer, SEE_size_t buffer_size,
+                const struct SEE_string *s);
+struct SEE_string *<dfn id="SEE_string_concat">SEE_string_concat</dfn>(struct SEE_interpreter *interp,
+                struct SEE_string *s1, struct SEE_string *s2);
 int <dfn id="SEE_string_cmp">SEE_string_cmp</dfn>(const struct SEE_string *s1,
                 const struct SEE_string *s2);</pre>
 
@@ -1487,7 +1549,7 @@ These should be invoked by using the following macros:
 
 <ul>
 <li><code>SEE_OBJECT_GET()</code>
-	- retrieve a named property or return <code class="js">undefined</code>
+        - retrieve a named property or return <code class="js">undefined</code>
           ('<code class="js">o.prop</code>');
           also known as the <code class="js">[[Get]]</code> internal method
 <li><code>SEE_OBJECT_PUT()</code>
@@ -1497,13 +1559,13 @@ These should be invoked by using the following macros:
 <li><code>SEE_OBJECT_CANPUT()</code>
         - returns true if the property can be changed;
           also known as the <code class="js">[[CanPut]]</code> internal method;
-	  assumes <code>prop</code> is an internalised string
+          assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_HASPROPERTY()</code>
         - tests for existence of a property
-	  ('<code class="js">"prop" in o</code>');
+          ('<code class="js">"prop" in o</code>');
           also known as the <code class="js">[[HasProperty]]</code> 
-	  internal method;
-	  assumes <code>prop</code> is an internalised string
+          internal method;
+          assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_DELETE()</code>
         - delete a property; returns true on success 
           ('<code class="js">delete o.prop</code>');
@@ -1511,28 +1573,28 @@ These should be invoked by using the following macros:
 <li><code>SEE_OBJECT_DEFAULTVALUE()</code>
         - returns the string or number value associated with the object;
           also known as the <code class="js">[[DefaultValue]]</code> 
-	  internal method
+          internal method
 <li><code>SEE_OBJECT_CONSTRUCT()</code>
-	  <a href="#objcheck" class="footnote">&dagger;</a>
+          <a href="#objcheck" class="footnote">&dagger;</a>
         - call object as a constructor
-	  ('<code class="js">new o(<i>...</i>)</code>');
+          ('<code class="js">new o(<i>...</i>)</code>');
           also known as the <code class="js">[[Construct]]</code> 
-	  internal method
+          internal method
 <li><code>SEE_OBJECT_CALL()</code>
-	  <a href="#objcheck" class="footnote">&dagger;</a>
+          <a href="#objcheck" class="footnote">&dagger;</a>
         - call object as a function ('<code class="js">o(<i>...</i>)</code>');
           also known as the <code class="js">[[Call]]</code> 
-	  internal method
+          internal method
 <li><code>SEE_OBJECT_HASINSTANCE()</code>
-	  <a href="#objcheck" class="footnote">&dagger;</a>
+          <a href="#objcheck" class="footnote">&dagger;</a>
         - return true if the objects are related
           ('<code class="js">x instanceof o</code>');
           also known as the <code class="js">[[HasInstance]]</code> 
-	  internal method
+          internal method
 <li><code>SEE_OBJECT_ENUMERATOR()</code>
-	  <a href="#objcheck" class="footnote">&dagger;</a>
+          <a href="#objcheck" class="footnote">&dagger;</a>
         - create a property enumerator
-	  ('<code class="js">for (i in o) <i>...</i></code>')
+          ('<code class="js">for (i in o) <i>...</i></code>')
 </ul>
 
 <pre>void <dfn id="SEE_OBJECT_GET">SEE_OBJECT_GET</dfn>(struct SEE_interpreter *interp,
@@ -1616,7 +1678,7 @@ flags can be used:
     <td>Enumerators will not list this property
         and will hide inherited prototype properties of
         the same name until this property is <code class="js">delete</code>d.
-	(see <a href="#enum">&sect;6.2</a>)</td></tr>
+        (see <a href="#enum">&sect;6.2</a>)</td></tr>
 <tr><td><code>SEE_ATTR_DONTDELETE</code></td>
     <td>Future <code class="js">delete</code>s on this property will 
         fail</td></tr>
@@ -1879,7 +1941,7 @@ Do this using the <code>SEE_native_init()</code> function.
 
 <pre>void <dfn id="SEE_native_init">SEE_native_init</dfn>(struct SEE_native *obj, struct SEE_interpreter *i,
                 const struct SEE_objectclass *obj_class, 
-		struct SEE_object *prototype);</pre>
+                struct SEE_object *prototype);</pre>
 
 <h3 id="cfunction">6.5 C function objects</h3>
 
@@ -2223,7 +2285,7 @@ behaves just like <code>SEE_interpreter_init()</code>
 </p>
 
 <pre>void <dfn id="SEE_interpreter_init_compat">SEE_interpreter_init_compat</dfn>(struct SEE_interpreter *interp,
-		int flags);</pre>
+                int flags);</pre>
 
 <p>The <code>flags</code> parameter is a bitwise OR of the constants
 described in the following table.
@@ -2261,115 +2323,115 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 
 <tr><td><code>SEE_COMPAT_SGMLCOM</code>
 <td>
-	This flag makes the lexical analyser stage 
-	treat the 4-character sequence
-	'<code class="js">&lt;!--</code>' as if it were the
-	'<code class="js">//</code>' comment introducer. 
-	This is useful when parsing HTML SCRIPT elements.
+        This flag makes the lexical analyser stage 
+        treat the 4-character sequence
+        '<code class="js">&lt;!--</code>' as if it were the
+        '<code class="js">//</code>' comment introducer. 
+        This is useful when parsing HTML SCRIPT elements.
 
 <tr><td><code>SEE_COMPAT_JS11</code>
 <td>
-	Enables JavaScript 1.1 compatibility:
+        Enables JavaScript 1.1 compatibility:
 <ul>
-<li>	The string representation of a bad date 
-	(e.g. <code class="js">String(new Date(NaN))</code>) 
-	is returned as the string
-	<code class="js">"Invalid Date"</code>,
-	instead of <code class="js">"NaN"</code>.
+<li>    The string representation of a bad date 
+        (e.g. <code class="js">String(new Date(NaN))</code>) 
+        is returned as the string
+        <code class="js">"Invalid Date"</code>,
+        instead of <code class="js">"NaN"</code>.
 
-<li>	Calling <code class="js">Date</code> as a constructor or function
-	will recognise Netscape-style date strings of which one
-	form is '<code class="js">1/1/1999 12:30 AM</code>'.
+<li>    Calling <code class="js">Date</code> as a constructor or function
+        will recognise Netscape-style date strings of which one
+        form is '<code class="js">1/1/1999 12:30 AM</code>'.
 <li>
-	Conversions from a date to a string will include the timezone.
+        Conversions from a date to a string will include the timezone.
 
-<li>	Native objects synthesize a property called
-	<code class="js">__proto__</code> with the same
-	value as the internal [[Prototype]] property 
-	(or <code class="js">null</code>). Assignments
-	to <code class="js">__proto__</code> are accepted if 
-	they don't cause a cycle.
+<li>    Native objects synthesize a property called
+        <code class="js">__proto__</code> with the same
+        value as the internal [[Prototype]] property 
+        (or <code class="js">null</code>). Assignments
+        to <code class="js">__proto__</code> are accepted if 
+        they don't cause a cycle.
 
-<li>	Invalid <code class="js">\u</code> or <code class="js">\x</code>
-	escapes will treat the leading
-	<code class="js">\u</code> or <code class="js">\x</code> as
-	a single-letter escape.
-	This would be a lexical analyser error under ECMA.
+<li>    Invalid <code class="js">\u</code> or <code class="js">\x</code>
+        escapes will treat the leading
+        <code class="js">\u</code> or <code class="js">\x</code> as
+        a single-letter escape.
+        This would be a lexical analyser error under ECMA.
 
-<li>	Regular expression instances have a [[Call]] property, which
-	is essentially equivalent to <code class="js">RegExp.prototype.exec()</code>.
-	This has the side-effect of changing what the <code class="js">typeof</code>
-	operator returns when applied to regular expression instances.
+<li>    Regular expression instances have a [[Call]] property, which
+        is essentially equivalent to <code class="js">RegExp.prototype.exec()</code>.
+        This has the side-effect of changing what the <code class="js">typeof</code>
+        operator returns when applied to regular expression instances.
 
-<li>	The <code class="js">String.prototype</code> object 
-	is given the following methods that simply return the string, and
-	ignore their arguments:
-	<code class="js">anchor</code>,
-	<code class="js">big</code>,
-	<code class="js">blink</code>,
-	<code class="js">bold</code>,
-	<code class="js">fixed</code>,
-	<code class="js">fontcolor</code>,
-	<code class="js">fontsize</code>,
-	<code class="js">italics</code>,
-	<code class="js">link</code>,
-	<code class="js">small</code>,
-	<code class="js">strike</code>,
-	<code class="js">sub</code> and
-	<code class="js">sup</code>.
-	The <code class="js">substr</code> method is also added.
+<li>    The <code class="js">String.prototype</code> object 
+        is given the following methods that simply return the string, and
+        ignore their arguments:
+        <code class="js">anchor</code>,
+        <code class="js">big</code>,
+        <code class="js">blink</code>,
+        <code class="js">bold</code>,
+        <code class="js">fixed</code>,
+        <code class="js">fontcolor</code>,
+        <code class="js">fontsize</code>,
+        <code class="js">italics</code>,
+        <code class="js">link</code>,
+        <code class="js">small</code>,
+        <code class="js">strike</code>,
+        <code class="js">sub</code> and
+        <code class="js">sup</code>.
+        The <code class="js">substr</code> method is also added.
 
 </ul>
 
 
 <tr><td><code>SEE_COMPAT_JS12</code>
 <td>
-	Enables JavaScript 1.2 compatibility:
+        Enables JavaScript 1.2 compatibility:
 <ul>
-<li>	Includes all JavaScript 1.1 compatibility behaviour.
+<li>    Includes all JavaScript 1.1 compatibility behaviour.
 <li>
-	The constructor <code class="js">new Array()</code> when given
-	a single numeric argument will return an array consisting of
-	just that argument. e.g. <code class="js">new Array(3)</code>
-	is the same as <code class="js">[3]</code>. 
-	This differs from the ECMA standard where an array of length 3
-	would be created, viz
-	<code class="js">[undefined,undefined,undefined]</code>.
-	(JavaScript 1.2 <strong>only</strong>.)
-
-<li>
-	<code class="js">Boolean</code> instance objects are converted
-	to their logical value in expressions that are converted to boolean.
-	This differs from the ECMA standard where all object instances
-	are to be converted to <code class="js">true</code>.
-	For example, the condition in the statement 
-	<code class="js">if (new Boolean(false))<code> statement, will
-	be evaluated as <code class="js">true</code> in ECMA, and 
-	<code class="js">false</code> by JavaScript 1.2.
-	(JavaScript 1.2 <strong>only</strong>.)
+        The constructor <code class="js">new Array()</code> when given
+        a single numeric argument will return an array consisting of
+        just that argument. e.g. <code class="js">new Array(3)</code>
+        is the same as <code class="js">[3]</code>. 
+        This differs from the ECMA standard where an array of length 3
+        would be created, viz
+        <code class="js">[undefined,undefined,undefined]</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
 
 <li>
-	<code class="js">Array.prototype.toString()</code> and 
-	<code class="js">Object.prototype.toString()</code> return
-    	string forms in literal notation, 
-	e.g. <code class="js">"[1,2,3]"</code>, and
-	<code class="js">"{a:1, b:2}"</code>.
-	(JavaScript 1.2 <strong>only</strong>.)
+        <code class="js">Boolean</code> instance objects are converted
+        to their logical value in expressions that are converted to boolean.
+        This differs from the ECMA standard where all object instances
+        are to be converted to <code class="js">true</code>.
+        For example, the condition in the statement 
+        <code class="js">if (new Boolean(false))<code> statement, will
+        be evaluated as <code class="js">true</code> in ECMA, and 
+        <code class="js">false</code> by JavaScript 1.2.
+        (JavaScript 1.2 <strong>only</strong>.)
 
-<li>	<code class="js">String.prototype.split()</code> when
-	operating on the empty string <code class="js">""</code>
-	will return 
-	an empty array <code class="js">[]</code>
-	instead of
-	an array consisting of the empty string, <code class="js">[""]</code>.
-	(JavaScript 1.2 <strong>only</strong>.)
+<li>
+        <code class="js">Array.prototype.toString()</code> and 
+        <code class="js">Object.prototype.toString()</code> return
+        string forms in literal notation, 
+        e.g. <code class="js">"[1,2,3]"</code>, and
+        <code class="js">"{a:1, b:2}"</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
 
-<li>	<code class="js">String.prototype.split()</code>, when
-	given a delimiter of exactly one space character
-	(<code class="js">" "</code>), will
-	strip the leading whitespace from the string, and then split on
-	<code class="js">/\s+/</code>.
-	(JavaScript 1.2 <strong>only</strong>.)
+<li>    <code class="js">String.prototype.split()</code> when
+        operating on the empty string <code class="js">""</code>
+        will return 
+        an empty array <code class="js">[]</code>
+        instead of
+        an array consisting of the empty string, <code class="js">[""]</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>    <code class="js">String.prototype.split()</code>, when
+        given a delimiter of exactly one space character
+        (<code class="js">" "</code>), will
+        strip the leading whitespace from the string, and then split on
+        <code class="js">/\s+/</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
 
 
 </ul>
@@ -2379,117 +2441,117 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 <ul>
 
-<li>	Enumerating over properties is done in a sorted fashion. 
-	During sort, property names are ordered arithmetically if they
-	are suitable as array indicies, otherwise they are ordered
-	lexicographically.
+<li>    Enumerating over properties is done in a sorted fashion. 
+        During sort, property names are ordered arithmetically if they
+        are suitable as array indicies, otherwise they are ordered
+        lexicographically.
 
-<li>	SEE's lexical analyser will recognise octal integers (i.e.
-	integers starting with '0') and will fall back to decimal if
-	the token contains
-	a non-octal digit.
+<li>    SEE's lexical analyser will recognise octal integers (i.e.
+        integers starting with '0') and will fall back to decimal if
+        the token contains
+        a non-octal digit.
 
-<li>	Coercing native values that do not have a 
-	[[DefaultValue]] internal
-	property will return an object-unique string, instead of throwing
-	a <code class="js">TypeError</code>.
+<li>    Coercing native values that do not have a 
+        [[DefaultValue]] internal
+        property will return an object-unique string, instead of throwing
+        a <code class="js">TypeError</code>.
 
 
-<li>	<code class="js">Function.prototype</code> will not have a
-	<code class="js">prototype</code> property of its own.
+<li>    <code class="js">Function.prototype</code> will not have a
+        <code class="js">prototype</code> property of its own.
 
-<li>	<code class="js">Function.prototype.toString()</code>
-	applied to built-in functions and
-	constructors (which are not function instances) will return a bogus
-	do-nothing FunctionDeclaration instead of throwing a
-	<code class="js">TypeError</code>.
+<li>    <code class="js">Function.prototype.toString()</code>
+        applied to built-in functions and
+        constructors (which are not function instances) will return a bogus
+        do-nothing FunctionDeclaration instead of throwing a
+        <code class="js">TypeError</code>.
 
-<li>	The global object has its property [[Prototype]] property set to
-	<code class="js">Object.prototype</code>,
-	effectively making all its properties available to the global scope,
-	but having the good side effect of allowing 
-	<code class="js">toString()</code> to
-	work anywhere.
+<li>    The global object has its property [[Prototype]] property set to
+        <code class="js">Object.prototype</code>,
+        effectively making all its properties available to the global scope,
+        but having the good side effect of allowing 
+        <code class="js">toString()</code> to
+        work anywhere.
 
-<li>	Calling <code class="js">eval()</code> with a 
-	<code class="js">this</code> different to the global object executes
-	its contents with the scope and variable object always set to
-	<code class="js">this</code>
-	(instead of inheriting the caller's context as per
-	s10.2.2 of the standard).
+<li>    Calling <code class="js">eval()</code> with a 
+        <code class="js">this</code> different to the global object executes
+        its contents with the scope and variable object always set to
+        <code class="js">this</code>
+        (instead of inheriting the caller's context as per
+        s10.2.2 of the standard).
 
-<li>	Native functions assign themselves an
-	<code class="js">arguments</code>
-	property when called, so that the old idiom of using
-	<code class="js">f.arguments</code> inside the function 
-	<code class="js">f</code> will work.
+<li>    Native functions assign themselves an
+        <code class="js">arguments</code>
+        property when called, so that the old idiom of using
+        <code class="js">f.arguments</code> inside the function 
+        <code class="js">f</code> will work.
 
-<li>	The system-generated <code class="js">arguments</code> object
-	created inside a function has a default-value (a comma-separated
-	string representing the arguments), instead of raising a
-	<code class="js">TypeError</code>. The upshot of this is that
-	<code class="js">arguments</code> can be coerced into a string.
-
-<li>
-	Calling an empty function will involve the expensive 
-	process of extending the scope chain, creating an
-	<code class="js">arguments</code> property, etc.
-	In other words, an simple optimisation is disabled.
+<li>    The system-generated <code class="js">arguments</code> object
+        created inside a function has a default-value (a comma-separated
+        string representing the arguments), instead of raising a
+        <code class="js">TypeError</code>. The upshot of this is that
+        <code class="js">arguments</code> can be coerced into a string.
 
 <li>
-	Reserved words can be used as identifiers (with a warning message)
+        Calling an empty function will involve the expensive 
+        process of extending the scope chain, creating an
+        <code class="js">arguments</code> property, etc.
+        In other words, an simple optimisation is disabled.
+
 <li>
-	Invalid quantifiers in regular expressions
-	(e.g. <code>/a{12x}/</code>) are treated as literals instead
-	of raising a SyntaxError.
+        Reserved words can be used as identifiers (with a warning message)
 <li>
-	<code class="js">RegExp</code> supports the [[HasInstance]] operator,
-	meaning that <code class="js">/x*/ instanceof RegExp</code>
-	will work.
+        Invalid quantifiers in regular expressions
+        (e.g. <code>/a{12x}/</code>) are treated as literals instead
+        of raising a SyntaxError.
 <li>
-	Change the token grammar to recognise simple character classes 
-	in literal regular expressions.
-	This means the expression <code class="js">/[/]/</code> will
-	be parsed as if it were <code class="js">/[\/]/</code>.
-	Also, three digit octal escape sequences beginning with 
-	<code class="js">\0</code> are understood.
+        <code class="js">RegExp</code> supports the [[HasInstance]] operator,
+        meaning that <code class="js">/x*/ instanceof RegExp</code>
+        will work.
 <li>
-	Permit conditional function declarations (JavaScript 1.5) of the form
-	<code class="js">if (1) function foo (args) { body; }</code>.
-	The statement is considered by SEE to be syntactically identical to
-	<code class="js">if (1) foo = function foo (args) { body; }</code>.
+        Change the token grammar to recognise simple character classes 
+        in literal regular expressions.
+        This means the expression <code class="js">/[/]/</code> will
+        be parsed as if it were <code class="js">/[\/]/</code>.
+        Also, three digit octal escape sequences beginning with 
+        <code class="js">\0</code> are understood.
 <li>
-	Regex execution leaves results in the 
-	<code class="js">RegExp</code> object, in the properteis
-	<code class="js">$1</code> ...
-	<code class="js">$9</code>,
-	<code class="js">$_</code>,
-	<code class="js">$*</code>,
-	<code class="js">$+</code>,
-	<code class="js">$`</code>,
-	<code class="js">$'</code>,
-	<code class="js">global</code>,
-	<code class="js">ignoreCase</code>,
-	<code class="js">input</code>,
-	<code class="js">lastIndex</code>,
-	<code class="js">lastMatch</code>,
-	<code class="js">lastParen</code>,
-	<code class="js">leftContext</code>,
-	<code class="js">multiline</code>,
-	<code class="js">rightContext</code>, and
-	<code class="js">source</code>.
+        Permit conditional function declarations (JavaScript 1.5) of the form
+        <code class="js">if (1) function foo (args) { body; }</code>.
+        The statement is considered by SEE to be syntactically identical to
+        <code class="js">if (1) foo = function foo (args) { body; }</code>.
+<li>
+        Regex execution leaves results in the 
+        <code class="js">RegExp</code> object, in the properteis
+        <code class="js">$1</code> ...
+        <code class="js">$9</code>,
+        <code class="js">$_</code>,
+        <code class="js">$*</code>,
+        <code class="js">$+</code>,
+        <code class="js">$`</code>,
+        <code class="js">$'</code>,
+        <code class="js">global</code>,
+        <code class="js">ignoreCase</code>,
+        <code class="js">input</code>,
+        <code class="js">lastIndex</code>,
+        <code class="js">lastMatch</code>,
+        <code class="js">lastParen</code>,
+        <code class="js">leftContext</code>,
+        <code class="js">multiline</code>,
+        <code class="js">rightContext</code>, and
+        <code class="js">source</code>.
 
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>
 <td>
-	<code class="js">Array.join(undefined)</code> uses
-	the string '<code class="js">undefined</code>'
-	as the join string instead of '<code class="js">,</code>'.
-	However when called without arguments will still use
-	'<code class="js">,</code>'.
-	Also, <code class="js">String.split(undefined)</code> will
-	work in a corresponding reverse way.
+        <code class="js">Array.join(undefined)</code> uses
+        the string '<code class="js">undefined</code>'
+        as the join string instead of '<code class="js">,</code>'.
+        However when called without arguments will still use
+        '<code class="js">,</code>'.
+        Also, <code class="js">String.split(undefined)</code> will
+        work in a corresponding reverse way.
 
 </table>
 
