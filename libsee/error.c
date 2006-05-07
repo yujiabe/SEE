@@ -75,7 +75,7 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 	struct SEE_string *s;
 {
 	volatile struct SEE_try_context *ctxt_save;
-	struct SEE_value v, *argv[1], res;
+	struct SEE_value res;
 
 	/* If no try-catch context exists, we should abort immediately */
 	if (!interp->try_context) {
@@ -89,34 +89,33 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 #endif
 		SEE_SET_OBJECT(&v, obj);
 		SEE_throw_abort(interp, &v, filename, lineno);
+		/* NOTREACHED */
 	}
 
 	/* 
 	 * Temporarily remove the current try-catch context
-	 * so that any exceptions thrown during the construction
-	 * of the error cause an interpreter abort. 
+	 * so that any exceptions thrown recusively during the construction
+	 * of the error cause an interpreter abort in the block above. 
 	 */
 	ctxt_save = interp->try_context;
 	interp->try_context = NULL;
+	{
+		struct SEE_string *msg;
+		struct SEE_value v, *argv[1];
 
-	if (!s)
-		s = STR(error);
-
-	s = SEE_string_concat(interp, 
-	    SEE_location_string(interp, interp->try_location), s);
-	SEE_SET_STRING(&v, s);
-	argv[0] = &v;
-
-	SEE_OBJECT_CONSTRUCT(interp, obj, obj, 1, argv, &res);
-
-	interp->try_context = ctxt_save;
-
+		msg = SEE_string_concat(interp, 
+		    SEE_location_string(interp, interp->try_location), 
+		    	s ? s : STR(error));
+		SEE_SET_STRING(&v, msg);
+		argv[0] = &v;
+		SEE_OBJECT_CONSTRUCT(interp, obj, obj, 1, argv, &res);
 #ifndef NDEBUG
-	if (SEE_error_debug) {
-	    dprintf("throwing object %p from %s:%d\n",
-	    res.u.object, filename ? filename : "unknown", lineno);
-	}
+		if (SEE_error_debug)
+		    dprintf("throwing object %p from %s:%d\n",
+			res.u.object, filename ? filename : "unknown", lineno);
 #endif
+	}
+	interp->try_context = ctxt_save;
 
 	SEE__THROW(interp, &res, filename, lineno);
 }
