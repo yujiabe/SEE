@@ -58,10 +58,15 @@
 
 static void growby(struct SEE_string *s, unsigned int extra);
 static void simple_growby(struct SEE_string *s, unsigned int extra);
+static void string_append_int(struct SEE_string *s, unsigned int i);
 
 static struct SEE_stringclass fixed_stringclass = {
 	0						/* growby */
 };
+
+#define IS_GROWABLE(s)	((s)->stringclass && (s)->stringclass->growby)
+#define MAKE_UNGROWABLE(s) (s)->stringclass = 0
+#define ASSERT_GROWABLE(s) SEE_ASSERT(s->interpreter, IS_GROWABLE(s))
 
 /*
  * Strings.
@@ -74,26 +79,26 @@ static struct SEE_stringclass fixed_stringclass = {
  */
 
 /*
- * Grow a string's data[] array by the given length increment
+ * Grows a string's data[] array by the given length increment
  */
 static void
 growby(s, extra)
 	struct SEE_string *s;
 	unsigned int extra;
 {
-	if (!s->stringclass || !s->stringclass->growby)
+	if (!IS_GROWABLE(s))
 		SEE_error_throw_string(s->interpreter, s->interpreter->Error, 
 			STR(no_string_space));
 	(*s->stringclass->growby)(s, extra);
 }
 
 /*
- * Copy a string
+ * Creates a new, growable string containing a copy of an existing one.
  */
 struct SEE_string *
 SEE_string_dup(interp, s)
 	struct SEE_interpreter *interp;
-	struct SEE_string *s;
+	const struct SEE_string *s;
 {
 	struct SEE_string *cp;
 
@@ -103,8 +108,10 @@ SEE_string_dup(interp, s)
 }
 
 /*
- * Copy and return a substring.
- * Raises an error if the substring is out of bounds.
+ * Creates a new (ungrowable) string that is a substring of another.
+ * Raises an error if the substring indixies are out of bounds.
+ * The source string (s) may continue to be grown, but should not
+ * be changed.
  */
 struct SEE_string *
 SEE_string_substr(interp, s, start, len)
@@ -129,7 +136,7 @@ SEE_string_substr(interp, s, start, len)
 }
 
 /*
- * Compare two strings. Returns
+ * Compares two strings, a and b, lexicographically by UTF-16. Returns
  *	-1 if a < b
  *	 0 if a = b
  *	+1 if a > b
@@ -164,27 +171,27 @@ SEE_string_cmp(a, b)
 }
 
 /*
- * Append character c to the end of string s.
- * MODIFIES 's'!
+ * Appends character c to the end of string s.
  */
 void
 SEE_string_addch(s, c)
 	struct SEE_string *s;
 	int c;				/* promoted SEE_char_t */
 {
+	ASSERT_GROWABLE(s);
 	growby(s, 1);
 	s->data[s->length++] = c;
 }
 
 /*
- * Append string t to the end of string s.
- * MODIFIES 's'!
+ * Appends string t to the end of string s.
  */
 void
 SEE_string_append(s, t)
 	struct SEE_string *s;
 	const struct SEE_string *t;
 {
+	ASSERT_GROWABLE(s);
 	if (t->length) {
 	    growby(s, t->length);
 	    memcpy(s->data + s->length, t->data, 
@@ -194,8 +201,7 @@ SEE_string_append(s, t)
 }
 
 /*
- * Append 7-bit ascii string to the end of string s.
- * MODIFIES 's'!
+ * Appends 7-bit ascii string to the end of string s.
  */
 void
 SEE_string_append_ascii(s, ascii)
@@ -204,6 +210,7 @@ SEE_string_append_ascii(s, ascii)
 {
 	const char *p;
 
+	ASSERT_GROWABLE(s);
 	for (p = ascii; *p; p++)
 		SEE_ASSERT(s->interpreter, !(*p & 0x80));
 	if (p - ascii) {
@@ -214,51 +221,34 @@ SEE_string_append_ascii(s, ascii)
 }
 
 /*
- * Append an integer onto the end of string s
- * MODIFIES 's'!
+ * Appends a signed integer onto the end of string s
  */
 void
 SEE_string_append_int(s, i)
 	struct SEE_string *s;
 	int i;
 {
+	ASSERT_GROWABLE(s);
 	if (i < 0) {
 		i = -i;
 		SEE_string_addch(s, '-');
 	}
-	if (i >= 10)
-		SEE_string_append_int(s, i / 10);
-	SEE_string_addch(s, (i % 10) + '0');
+	string_append_int(s, i);
 }
 
-/*
- * Concatenate two strings together and return the resulting string.
- * May return one of the original strings or a new string.
- */
-struct SEE_string *
-SEE_string_concat(interp, a, b)
-	struct SEE_interpreter *interp;
-	struct SEE_string *a, *b;
-{
+static void
+string_append_int(s, i)
 	struct SEE_string *s;
-
-	if (a->length == 0)
-		return b;
-	if (b->length == 0)
-		return a;
-
-	s = SEE_string_new(interp, a->length + b->length);
-	if (a->length)
-		memcpy(s->data, a->data, a->length * sizeof (SEE_char_t));
-	if (b->length)
-		memcpy(s->data + a->length, b->data, 
-		    b->length * sizeof (SEE_char_t));
-	s->length = a->length + b->length;
-	return s;
+	unsigned int i;
+{
+	if (i >= 10)
+		string_append_int(s, i / 10);
+	growby(s, 1);
+	s->data[s->length++] = (i % 10) + '0';
 }
 
 /* 
- * Convert a UTF-16 string to UTF-8 and write to a stdio file.
+ * Converts a UTF-16 string to UTF-8 and write to a stdio file.
  * Returns 0 on success, like fputs().
  * Returns EOF on write error, like fputs().
  * Throws exception on conversion error, unlike fputs().
@@ -316,7 +306,11 @@ struct simple_string {
 	unsigned int space;
 };
 
-/* Tunable parameters at build */
+/*
+ * Tunable parameters, specified in bytes.
+ * These can be varied at build time to suit a particular platform.
+ * TODO: provide support for segmented strings?
+ */
 #ifndef STRING_INITIAL_SIZE
 # define STRING_INITIAL_SIZE	512
 #endif
@@ -328,9 +322,10 @@ struct simple_string {
 #endif
 
 /*
- * INITSPACE: initial length of a string
- * MAXSPACE:  biggest string length possible with length type
- * BIGSPACE:  largest string length allocation likely to succeed
+ * Derived variables, in 'SEE_char_t's:
+ *   INITSPACE: initial length of a string
+ *   MAXSPACE:  biggest string length possible with length type
+ *   BIGSPACE:  largest string length allocation likely to succeed
  */
 #define INITSPACE	(STRING_INITIAL_SIZE / sizeof (SEE_char_t))
 #define MAXSPACE	(STRING_MAXIMUM_SIZE / sizeof (SEE_char_t))
@@ -338,8 +333,8 @@ struct simple_string {
 			 sizeof (SEE_char_t))
 
 /* 
- * grows the string storage to have at least current+extra elements of storage.
- * Simple strings never shrink. Grows in powers of two, starting at 256.
+ * Grows the string storage to have at least current+extra elements of storage.
+ * Simple strings never shrink. Growth is in powers of two from INITSPACE.
  */
 static void
 simple_growby(s, extra)
@@ -387,6 +382,11 @@ static struct SEE_stringclass simple_stringclass = {
 	simple_growby					/* growby */
 };
 
+/*
+ * Constrycts a new, empty string. 
+ * Storage is pre-allocated for the number of UTF-16 characters indicated
+ * by the 'space' argument.
+ */
 struct SEE_string *
 SEE_string_new(interp, space)
 	struct SEE_interpreter *interp;
@@ -406,10 +406,7 @@ SEE_string_new(interp, space)
 }
 
 /*
- * sprintf-like interface to new strings.
- * Assumes the format yields 7-bit ASCII (and not UTF-8!).
- * (Also assumes a va_list can be passed multiple times to vsnprintf!)
- * Returns a simple string that can be grown.
+ * Creates a string using vsprintf-like arguments.
  */
 struct SEE_string *
 SEE_string_vsprintf(interp, fmt, ap)
@@ -425,6 +422,9 @@ SEE_string_vsprintf(interp, fmt, ap)
 	return (struct SEE_string *)ss;
 }
 
+/*
+ * Creates a string using sprintf-like arguments.
+ */
 struct SEE_string *
 SEE_string_sprintf(struct SEE_interpreter *interp, const char *fmt, ...)
 {
@@ -438,7 +438,7 @@ SEE_string_sprintf(struct SEE_interpreter *interp, const char *fmt, ...)
 }
 
 /**
- * Fully escapes a string literal, suitable for lexical analysis
+ * Returns a quoted, escaped string, suitable for lexical analysis.
  */
 struct SEE_string *
 SEE_string_literal(interp, s)
@@ -502,8 +502,9 @@ SEE_string_literal(interp, s)
 }
 
 /*
- * Frees a string. The caller must know that the string is not in 
- * use in any other place. That includes substring references.
+ * Frees a string. The caller must know that the string data is not in 
+ * use in any other place. That includes by substring references, and
+ * the piggybacking side effects of SEE_string_concat.
  */
 void
 SEE_string_free(interp, sp)
@@ -520,7 +521,7 @@ SEE_string_free(interp, sp)
  * Converts a SEE string into a UTF8 buffer.
  * Throws a RangeError if the decoded string, including terminating nul, 
  * would exceed the size of the given buffer.
- * If the string itself is illegally formed, an Error is thrown.
+ * If the string itself is illegally formed, a generic Error is thrown.
  */
 void
 SEE_string_toutf8(interp, buf, buflen, s)
@@ -534,7 +535,7 @@ SEE_string_toutf8(interp, buf, buflen, s)
 
 #define OUTPUT(c) do { 				\
 	if (buflen <= 1) goto toolong; 		\
-	*buf++=(c); 				\
+	*buf++ = (c); 				\
 	buflen--; 				\
     } while (0)
 
@@ -572,4 +573,52 @@ SEE_string_toutf8(interp, buf, buflen, s)
 	SEE_error_throw_string(interp, interp->RangeError, 
 		STR(string_limit_reached));
 #undef OUTPUT
+}
+
+/*
+ * Extends a string, marking the original string as ungrowable.
+ */
+static struct SEE_string *
+simple_concat(interp, a, b)
+	struct SEE_interpreter *interp;
+	struct simple_string *a;
+	const struct SEE_string *b;
+{
+	struct simple_string *cp;
+
+	cp = SEE_NEW(interp, struct simple_string);
+	memcpy(cp, a, sizeof (struct simple_string));
+	MAKE_UNGROWABLE(&a->string);
+	SEE_string_append(&cp->string, b);
+	return (struct SEE_string *)cp;
+}
+
+/*
+ * Concatenates two strings together and return the resulting string.
+ * May return one of the original strings, or a new string altogether.
+ * May modify a. String b will not be modified, but it may be returned.
+ */
+struct SEE_string *
+SEE_string_concat(interp, a, b)
+	struct SEE_interpreter *interp;
+	struct SEE_string *a, *b;
+{
+	struct SEE_string *s;
+
+	if (a->length == 0)
+		return b;
+	if (b->length == 0)
+		return a;
+
+	if (a->stringclass == &simple_stringclass) 
+		return simple_concat(interp, (struct simple_string *)a, b);
+
+	s = SEE_string_new(interp, a->length + b->length);
+	if (a->length)
+		memcpy(s->data, a->data, a->length * sizeof (SEE_char_t));
+	if (b->length)
+		memcpy(s->data + a->length, b->data, 
+		    b->length * sizeof (SEE_char_t));
+	s->length = a->length + b->length;
+	return s;
 }

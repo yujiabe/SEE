@@ -59,7 +59,7 @@ int	SEE_string_cmp(const struct SEE_string *s1,
 struct SEE_string *SEE_string_new(struct SEE_interpreter *i,
 				unsigned int space);
 struct SEE_string *SEE_string_dup(struct SEE_interpreter *i,
-				struct SEE_string *s);
+				const struct SEE_string *s);
 struct SEE_string *SEE_string_substr(struct SEE_interpreter *i,
 				struct SEE_string *s, int index, int length);
 struct SEE_string *SEE_string_concat(struct SEE_interpreter *i,

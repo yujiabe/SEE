@@ -3751,10 +3751,8 @@ AdditiveExpression_add_common(r2, bn, context, res)
 	} else {
 		SEE_ToString(context->interpreter, &r5, &r12);
 		SEE_ToString(context->interpreter, &r6, &r13);
-		s = SEE_string_new(context->interpreter,
-			r12.u.string->length + r13.u.string->length);
-		SEE_string_append(s, r12.u.string);
-		SEE_string_append(s, r13.u.string);
+		s = SEE_string_concat(context->interpreter, 
+			r12.u.string, r13.u.string);
 		SEE_SET_STRING(res, s);
 	}
 }
