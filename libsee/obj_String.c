@@ -421,10 +421,11 @@ string_proto_concat(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	struct SEE_string *s = SEE_string_new(interp, 0);
+	struct SEE_string *s;
 	int i;
 	struct SEE_value v;
 
+	s = SEE_string_dup(interp, object_to_string(interp, thisobj));
 	for (i = 0; i < argc; i++) {
 		SEE_ToString(interp, argv[i], &v);
 		SEE_string_append(s, v.u.string);
