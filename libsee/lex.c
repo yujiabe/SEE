@@ -424,7 +424,7 @@ StringLiteral(lex)
 				break;
 			case 'x':
 			case 'u':
-				if (SEE_COMPAT_JS(interp, >=, JS12))
+				if (SEE_GET_JS_COMPAT(interp))
 				    goto literal;
 				/* Strict ECMA: */
 				if (NEXT == 'x')
@@ -468,14 +468,14 @@ RegularExpressionLiteral(lex, prev)
 		SEE_string_addch(s, '=');
 	while (!ATEOF) {
 		if (NEXT == '/' && 
-		    (!incc || !(interp->compatibility & SEE_COMPAT_EXT1)))
+		    (!incc || !(SEE_GET_JS_COMPAT(interp))))
 			break;
 		if (NEXT == '\\') {
 			SEE_string_addch(s, '\\');
 			SKIP;
 			if (ATEOF) break;
 		} else {
-			/* Track charclasses for EXT1 compat */
+			/* Track charclasses for JS_COMPAT */
 			if (NEXT == '[') incc = 1;
 			if (NEXT == ']') incc = 0;
 		}
@@ -543,7 +543,8 @@ NumericLiteral(lex)
 	    SKIP;
 	}
 
-	if ((interp->compatibility & SEE_COMPAT_EXT1) 
+	/* Octal integers */
+	if (SEE_GET_JS_COMPAT(interp)
 	    && seendigit 
 	    && (ATEOF || (NEXT != '.' && NEXT != 'e' && NEXT != 'E'))
 	    && s->length > 1
@@ -924,8 +925,8 @@ SEE_lex_number(interp, s, res)
 		SKIP;
 	}
 
-	/* Strict ECMA262-3 hex strings require no sign. EXT1 relaxes this. */
-	hexok = !sign || (interp->compatibility & SEE_COMPAT_EXT1);
+	/* Strict ECMA262-3 hex strings require no sign. Netscape relaxes this. */
+	hexok = !sign || SEE_GET_JS_COMPAT(interp);
 
 	if (ATEOF) goto fail;
 	if (NEXT == 'I') {

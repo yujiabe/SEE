@@ -138,7 +138,7 @@ SEE_native_get(interp, o, p, res)
 
 	if (*x)
 	    SEE_VALUE_COPY(res, &(*x)->value);
-	else if (SEE_COMPAT_JS(interp, >=, JS12) &&
+	else if (SEE_GET_JS_COMPAT(interp) &&
 		 ip == STR(__proto__)) {
 	    if (o->Prototype)
 		SEE_SET_OBJECT(res, o->Prototype);
@@ -181,8 +181,7 @@ SEE_native_put(interp, o, p, val, attr)
 	 * we can ignore any restrictions on extant
 	 * properties!
 	 */
-	if (SEE_COMPAT_JS(interp, >=, JS12) &&
-	    ip == STR(__proto__)) 
+	if (SEE_GET_JS_COMPAT(interp) && ip == STR(__proto__)) 
 	{
 		struct SEE_object *po;
 		if (SEE_VALUE_GET_TYPE(val) == SEE_NULL) {

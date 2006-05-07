@@ -941,7 +941,7 @@ static struct SEE_string *
 repr_baddate(interp)
 	struct SEE_interpreter *interp;
 {
-	if (SEE_COMPAT_JS(interp, >=, JS12))
+	if (SEE_GET_JS_COMPAT(interp))
 		return SEE_string_sprintf(interp, "Invalid Date");
 	else
 		return STR(NaN);
@@ -974,7 +974,7 @@ reprdatetime(interp, t, utc)
 	sec = SecFromTime(t);
 
 
-	if (SEE_COMPAT_JS(interp, >=, JS12)) {
+	if (SEE_GET_JS_COMPAT(interp)) {
 	    if (utc)
 		return SEE_string_sprintf(interp,
 			"%.3s, %02d %.3s %04d %02d:%02d:%02d GMT",
@@ -1083,7 +1083,7 @@ date_construct(interp, self, thisobj, argc, argv, res)
 		    t = TimeClip(w.u.number);
 		} else  {
 		    t = parsetime(interp, v.u.string);
-		    if (SEE_COMPAT_JS(interp, >=, JS12) && SEE_ISNAN(t))
+		    if (SEE_GET_JS_COMPAT(interp) && SEE_ISNAN(t))
 		        t = parse_netscape_time(interp, v.u.string);
 		}
 	} else {
