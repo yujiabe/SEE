@@ -1,6 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([see],[2.0],[leonard@users.sourceforge.net])
+AC_INIT([see],
+        [2.0.]esyscmd((svnversion -n . /trunk || echo 0) | tr : _)[_snapshot],
+	[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
 AM_INIT_AUTOMAKE
