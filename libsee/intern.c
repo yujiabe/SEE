@@ -80,7 +80,7 @@ typedef struct intern *(intern_tab_t[HASHTABSZ]);
 
 /* Prototypes */
 static struct intern *  make(struct SEE_interpreter *, struct SEE_string *);
-static unsigned int     hash(struct SEE_string *);
+static unsigned int     hash(const struct SEE_string *);
 static struct intern ** find(intern_tab_t *, struct SEE_string *,
 			     unsigned int);
 static void global_init(void);
@@ -115,7 +115,7 @@ make(interp, s)
 /** Compute the hash value of a string */
 static unsigned int
 hash(s)
-	struct SEE_string *s;
+	const struct SEE_string *s;
 {
 	unsigned int j, h = 0;
 	for (j = 0; j < HASHLENMAX && j < s->length; j++)
