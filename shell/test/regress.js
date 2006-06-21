@@ -25,6 +25,7 @@ test("/m/i.ignoreCase == true", true)			/* bug 34 */
 test("a: { do { break a } while (true) }",  void 0);	/* bug 35 */
 test("/foo/.test('foo')", true);			/* bug 40 */
 test("/foo/.test('bar')", false);			/* bug 40 */
+test("'foo'.concat('bar')", "foobar");			/* bug 42 */
 
 function h(x,x) { return arguments[0]+","+arguments[1]; }
 test("h(1,2)", "1,2")					/* bug 36 */
