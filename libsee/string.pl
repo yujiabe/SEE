@@ -102,7 +102,7 @@ sub h_mode {
 
 struct SEE_string;
 extern struct SEE_string SEE_stringtab[];
-extern unsigned int SEE_nstringtab;
+extern const unsigned int SEE_nstringtab;
 
 #define STR(x) (&SEE_stringtab[SEE_STR_##x])
 ";
@@ -119,9 +119,9 @@ sub c_mode {
 #include <see/string.h>
 
 #define STR_SEGMENT(offset,length) \\
-    { length, stringtext+offset, 0, 0, SEE_STRING_FLAG_STATIC }
+    { length, (SEE_char_t *)stringtext + offset, 0, 0, SEE_STRING_FLAG_STATIC }
 
-static SEE_char_t stringtext[] = {\n";
+static const SEE_char_t stringtext[] = {\n";
 	my @segment = ();
 	my @length = ();
 	my @codepoints = ();
@@ -144,7 +144,7 @@ struct SEE_string SEE_stringtab[] = {
 	    print "\tSTR_SEGMENT($offset, $length)";
 	}
 	print "};
-unsigned int SEE_nstringtab = ".($#strings + 1).";
+const unsigned int SEE_nstringtab = ".($#strings + 1).";
 ";
 }
 
