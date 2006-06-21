@@ -247,7 +247,6 @@ object_proto_toString(interp, self, thisobj, argc, argv, res)
 			    first = 0;
 			SEE_string_append(s, prop);
 			SEE_string_addch(s, ':');
-			SEE_string_addch(s, ' ');
 			switch (SEE_VALUE_GET_TYPE(&v)) {
 			case SEE_STRING:
 			    SEE_string_addch(s, '"');
