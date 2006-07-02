@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Bug 45: improved compilation portability
   Bug 12: efficient string concatenation
   Bug 42: String.concat() behaves correctly
   Use libltdl for the shell's dynamic loading of modules
