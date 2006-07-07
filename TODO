@@ -1,18 +1,20 @@
-$Id$
 
 Things to do
 
-* add a visitor pattern to the AST
-* do a proper Canonicalize - use ICU?
-* do a proper upper/lower conversion for unicode
-* write a HOWTO to show common reqts like adding to Global or getting a var
 * split parse.c up into the three parts of the grammar
-* start work on JIT
-* write a cfunction builder, eg:
-	SEE_attach_method(interp, obj, "name", "tsi", func); 
-	where the format string (t=this, i=int, s=string, b=bool, etc) shows
-	how to arrange the (int) arguments to func(...).
-* implement all compatibility stuff
+* switch from executable AST to compact bytecode
+* bytecode JIT compiler
+* add an argument converter, eg
+	SEE_argconv(interp, argc, argv, "ofi|sa*b",
+	   &obj, &floatv, &intv, &stringv, 
+	   &asciibuf, sizeof asciibuf, &boolchar);
+  and maybe a corresponding call:
+	SEE_callv(interp, callableobj, "ofisab-",
+	    obj, float, int, see_string, asciiptr, boolchar);
+
+
+* Get rid of EXT1 and replace with real JavaScript version compat
+
     some resources at: http://www.swtech.com/script/javascript/diff/
     http://members.ozemail.com.au/~enigman/javascript/js_faq.html
     http://web.archive.org/web/20011014100919/http://www.webcoder.com/reference/2/
