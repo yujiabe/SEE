@@ -499,7 +499,8 @@ become memory leaks or introduce too much fragile 'finally' code.
 <li> The object-prototype model of ECMAScript results in plenty of
 circular references between constructor functions and instances,
 and with recursive function scope chains.
-A reference counting scheme would leak these.
+A reference counting scheme would 
+<a href="http://jibbering.com/faq/faq_notes/closures.html#clMem">leak these</a>.
 <li> A decent garbage collector for C is freely available (and some
 good commercial ones exist, too).
 They do nothing to impede development.
