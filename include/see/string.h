@@ -75,5 +75,7 @@ void	SEE_string_free(struct SEE_interpreter *i, struct SEE_string **sp);
 
 void	SEE_string_toutf8(struct SEE_interpreter *i, char *buf, 
 			SEE_size_t buflen, const struct SEE_string *s);
+SEE_size_t SEE_string_utf8_size(struct SEE_interpreter *interp,
+			const struct SEE_string *s);
 
 #endif /* _SEE_h_string_ */

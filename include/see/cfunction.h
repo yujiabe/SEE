@@ -26,4 +26,7 @@ struct SEE_object *SEE_cfunction_make(struct SEE_interpreter *i,
 			attr);					\
 	} while (0)
 
+void SEE_parse_args(struct SEE_interpreter *i, int argc, 
+	struct SEE_value **argv, const char *fmt, ...);
+
 #endif /* _SEE_h_cfunction_ */

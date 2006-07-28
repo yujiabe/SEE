@@ -80,6 +80,8 @@ array_sort_error =	"Sort comparison function did not return a number"
 toLocaleString_notfunc   = "'toLocaleString' property is not a function"
 toLocaleString_notstring = "toLocaleString() property did not return a string"
 
+too_many_args =		"Too many arguments"
+string_not_ascii =	"String contains non-ASCII characters"
 
 # Function body strings
 implementation_dependent = "ECMA-262 'implementation dependent' result"

@@ -385,27 +385,13 @@ file_construct(interp, self, thisobj, argc, argv, res)
         int argc;
         struct SEE_value **argv, *res;
 {
-        char *mode;
-        char modebuf[10];
-        char path[1024];
-        struct SEE_value v;
+        char *path, *mode = (char *)"r";
         FILE *file;
 	struct SEE_object *newobj;
 
-        if (argc < 1)
+	SEE_parse_args(interp, argc, argv, "Z|Z", &path, &mode);
+	if (!path)
                 SEE_error_throw(interp, interp->RangeError, "missing argument");
-
-	/* Convert a UTF-16 string into a nul-terminated C string */
-        SEE_ToString(interp, argv[0], &v);
-        SEE_string_toutf8(interp, path, sizeof path, v.u.string);
-
-        if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
-                mode = "r";
-        else {
-                SEE_ToString(interp, argv[1], &v);
-                SEE_string_toutf8(interp, modebuf, sizeof modebuf, v.u.string);
-                mode = modebuf;
-        }
 
         file = fopen(path, mode);
 	if (!file) {

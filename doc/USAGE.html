@@ -2044,6 +2044,130 @@ This is because method functions can easily be attached to
 other objects by user code.
 </p>
 
+<p>
+When writing cfunctions, you can use the <code>SEE_parse_args()</code>
+convenience function to make argument processing easier.
+This function takes a format string and converts arguments according to
+the table below.
+It can throw a <code class="js">TypeError</code> exception if a
+conversion error occurs.
+
+<pre>void <dfn id="SEE_parse_args">SEE_parse_args</dfn>(struct SEE_interpreter *interp,
+        int argc, struct SEE_value **argv, const char *fmt, ...);</pre>
+
+<table>
+<thead>
+<tr><th>Format</th>
+    <th>Parameter type</th>
+    <th>Conversion applied</th>
+    <th>Result when <code class="js">undefined</code></th></tr>
+</thead>
+<tbody>
+<tr><td><code>a</code></td>
+    <td><code>char **</code>
+    <td><code><a href="#SEE_ToString">SEE_ToString</a>()</code>,
+        then into an ASCII C string</td>
+    <td><code>"undefined"</code></td>
+<tr><td><code>A</code></td>
+    <td><code>char **</code>
+    <td><code>NULL</code> if <code class="js">undefined</code>,
+        otherwise the same as format '<code>a</code>'</td>
+    <td><code>NULL</code></td>
+<tr><td><code>b</code></td>
+    <td><code>int *</code>
+    <td><code><a href="#SEE_ToBoolean">SEE_ToBoolean</a>()</code></td>
+    <td><code>0</code></td>
+<tr><td><code>h</code></td>
+    <td><code>SEE_uint16_t *</code>
+    <td><code><a href="#SEE_ToUint16">SEE_ToUint16</a>()</code></td>
+    <td><code>0</code></td>
+<tr><td><code>i</code></td>
+    <td><code>SEE_int32_t *</code>
+    <td><code><a href="#SEE_ToInt32">SEE_ToInt32</a>()</code></td>
+    <td><code>0</code></td>
+<tr><td><code>n</code></td>
+    <td><code>SEE_number_t *</code>
+    <td><code><a href="#SEE_ToNumber">SEE_ToNumber</a>()</code></td>
+    <td><code>SEE_NaN</code></td>
+<tr><td><code>o</code></td>
+    <td><code>struct SEE_object **</code>
+    <td><code><a href="#SEE_ToObject">SEE_ToObject</a>()</code></td>
+    <td><code class="js">TypeError</code></td>
+<tr><td><code>O</code></td>
+    <td><code>struct SEE_object **</code>
+    <td><code>NULL</code> if <code class="js">undefined</code>
+    	or <code class="js">null</code>,
+        otherwise the same as format '<code>o</code>'</td>
+    <td><code>NULL</code></td>
+<tr><td><code>p</code></td>
+    <td><code>struct SEE_value *</code>
+    <td><code><a href="#SEE_ToPrimitive">SEE_ToPrimitive</a>()</code></td>
+    <td><code class="js">undefined</code></td>
+<tr><td><code>s</code></td>
+    <td><code>struct SEE_string **</code>
+    <td><code><a href="#SEE_ToString">SEE_ToString</a>()</code></td>
+    <td><code class="js">"undefined"</code></td>
+<tr><td><code>u</code></td>
+    <td><code>SEE_uint32_t *</code>
+    <td><code><a href="#SEE_ToUint32">SEE_ToUint32</a>()</code></td>
+    <td><code>0</code></td>
+<tr><td><code>v</code></td>
+    <td><code>struct SEE_value *</code>
+    <td>the argument is copied without conversion</td>
+    <td><code class="js">undefined</code></td>
+<tr><td><code>x</code></td>
+    <td></td>
+    <td>the argument is ignored</td>
+    <td></td>
+<tr><td><code>z</code></td>
+    <td><code>char **</code>
+    <td><code><a href="#SEE_ToString">SEE_ToString</a>()</code>,
+        then into a UTF8 C string</td>
+    <td><code>"undefined"</code></td>
+<tr><td><code>Z</code></td>
+    <td><code>char **</code>
+    <td><code>NULL</code> if <code class="js">undefined</code>,
+        otherwise the same as format '<code>z</code>'</td>
+    <td><code>NULL</code></td>
+<tr><td><code>|</code></td>
+    <td></td>
+    <td>optional argument marker
+<tr><td><code>.</code></td>
+    <td></td>
+    <td>throws a <code class="js">TypeError</code> on further
+        arguments</td>
+<tr><td>space</td>
+    <td></td>
+    <td>space character is ignored</td>
+</tbody>
+</table>
+
+<p>The optional argument marker ('<code>|</code>') disables
+storing a result when the argument is 
+<code class="js">undefined</code> or not provided by the caller.
+This allows storage to be initialised to default values.
+
+<p>The '<code>a</code>' and '<code>A</code>' formats will
+throw a <code class="js">TypeError</code> if the string contains
+non-ASCII characters. ASCII is defined to be characters in value range
+0 through 127, inclusive.
+
+<p>An example of using <code>SEE_parse_args()</code>:
+
+<pre><i>/* Possible implementation of Math.sqrt() method */</i>
+static void
+math_sqrt_possible(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+        SEE_number_t n;
+
+	SEE_parse_args(interp, argc, argv, "n", &amp;n);
+	SEE_SET_NUMBER(res, sqrt(n));
+}</pre>
+
 
 <h3 id="function">6.6 User function objects</h3>
 
@@ -2758,6 +2882,7 @@ will occur.
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
+<a href="#SEE_parse_args">SEE_parse_args</a><br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
@@ -2769,8 +2894,8 @@ will occur.
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
 <a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
-<a href="#SEE_string_addch">SEE_string_addch</a><br>
 <td>
+<a href="#SEE_string_addch">SEE_string_addch</a><br>
 <a href="#SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</a><br>
 <a href="#SEE_string_append">SEE_string_append</a><br>
 <a href="#SEE_string_append_ascii">SEE_string_append_ascii</a><br>
@@ -2795,8 +2920,8 @@ will occur.
 <a href="#SEE_ToString">SEE_ToString</a><br>
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
-<a href="#SEE_TRY">SEE_TRY</a><br>
 <td>
+<a href="#SEE_TRY">SEE_TRY</a><br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
 <a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>

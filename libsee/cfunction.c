@@ -45,6 +45,7 @@
 #include <see/no.h>
 #include <see/cfunction.h>
 #include <see/interpreter.h>
+#include <see/error.h>
 
 #include "stringdefs.h"
 #include "cfunction_private.h"
@@ -133,7 +134,7 @@ cfunction_get(interp, o, p, res)
 {
 	struct cfunction *f = (struct cfunction *)o;
 
-	if ((interp->compatibility & SEE_COMPAT_EXT1) &&
+	if ((SEE_COMPAT_JS(interp, >=, JS11)) &&
 		SEE_string_cmp(p, STR(__proto__)) == 0)
 	{
 		SEE_SET_OBJECT(res, o->Prototype);
@@ -195,3 +196,199 @@ SEE_cfunction_getname(interp, o)
 
 	return f->name;
 }
+
+/* Converts a SEE_string of ASCII chars into a C string */
+static char *
+to_ascii_string(interp, s)
+	struct SEE_interpreter *interp;
+	struct SEE_string *s;
+{
+	int i;
+	char *zs;
+
+	zs = SEE_NEW_STRING_ARRAY(interp, char, s->length + 1);
+	for (i = 0; i < s->length; i++)
+	    if (s->data[i] < 0x80)
+	    	zs[i] = s->data[i] & 0x7f;
+	    else
+		SEE_error_throw_string(interp, interp->TypeError,
+			STR(string_not_ascii));
+	zs[s->length] = 0;
+	return zs;
+}
+
+/* Converts a SEE_string of chars into a UTF-8 string */
+static char *
+to_utf8_string(interp, s)
+	struct SEE_interpreter *interp;
+	struct SEE_string *s;
+{
+	char *zs;
+	int zslen;
+
+	zslen = SEE_string_utf8_size(interp, s) + 1;
+	zs = SEE_NEW_STRING_ARRAY(interp, char, zslen);
+	SEE_string_toutf8(interp, zs, zslen, s);
+	return zs;
+}
+
+void
+SEE_parse_args(interp, argc, argv, fmt)
+	struct SEE_interpreter *interp;
+	int argc;
+	struct SEE_value **argv;
+	const char *fmt;
+{
+	va_list ap;
+	int i, init = 1, isundef;
+	const char *f;
+	struct SEE_value val, undef, *arg;
+	struct SEE_string **stringp;
+	int *intp;
+	SEE_int32_t *int32p;
+	SEE_uint32_t *uint32p;
+	SEE_uint16_t *uint16p;
+	SEE_number_t *numberp;
+	struct SEE_object **objectpp;
+	struct SEE_value *valuep;
+	char **charpp;
+
+	SEE_SET_UNDEFINED(&undef);
+
+	va_start(ap, fmt);
+	for (i = 0, f = fmt; *f; f++) {
+	    if (!init && i >= argc)
+	    	break;
+	    arg = i < argc ? argv[i] : &undef;
+	    isundef = SEE_VALUE_GET_TYPE(arg) == SEE_UNDEFINED;
+	    switch (*f) {
+	    case ' ':
+		break;
+	    case 's':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToString(interp, arg, &val);
+		stringp = va_arg(ap, struct SEE_string **);
+		*stringp = val.u.string;
+		break;
+	    case 'A':
+	    	if (isundef) {
+		    i++;
+		    if (!init) continue;
+		    charpp = va_arg(ap, char **);
+		    *charpp = NULL;
+		    break;
+		}
+		/* else fallthrough */
+	    case 'a':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToString(interp, arg, &val); 
+		charpp = va_arg(ap, char **);
+		*charpp = to_ascii_string(interp, val.u.string);
+		break;
+	    case 'Z':
+	    	if (isundef) {
+		    i++;
+		    if (!init) continue;
+		    charpp = va_arg(ap, char **);
+		    *charpp = NULL;
+		    break;
+		}
+		/* else fallthrough */
+	    case 'z':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToString(interp, arg, &val);
+		charpp = va_arg(ap, char **);
+		*charpp = to_utf8_string(interp, val.u.string);
+		break;
+	    case 'b':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToBoolean(interp, arg, &val);
+		intp = va_arg(ap, int *);
+		*intp = val.u.boolean;
+		break;
+	    case 'i':
+		i++;
+	        if (isundef && !init)
+		    break;
+		int32p = va_arg(ap, SEE_int32_t *);
+	    	*int32p = SEE_ToInt32(interp, arg);
+		break;
+	    case 'u':
+		i++;
+	        if (isundef && !init)
+		    break;
+		uint32p = va_arg(ap, SEE_uint32_t *);
+	    	*uint32p = SEE_ToUint32(interp, arg);
+		break;
+	    case 'h':
+		i++;
+	        if (isundef && !init)
+		    break;
+		uint16p = va_arg(ap, SEE_uint16_t *);
+	    	*uint16p = SEE_ToUint16(interp, arg);
+		break;
+	    case 'n':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToNumber(interp, arg, &val);
+		numberp = va_arg(ap, SEE_number_t *);
+		*numberp = val.u.number;
+		break;
+	    case 'O':
+	    	if (isundef || SEE_VALUE_GET_TYPE(arg) == SEE_NULL) {
+		    i++;
+		    if (!init && isundef) continue;
+		    objectpp = va_arg(ap, struct SEE_object **);
+		    *objectpp = NULL;
+		    break;
+		}
+		/* else fallthrough */ 
+	    case 'o':
+		i++;
+	        if (isundef && !init)
+		    break;
+	    	SEE_ToObject(interp, arg, &val); i++;
+		objectpp = va_arg(ap, struct SEE_object **);
+		*objectpp = val.u.object;
+		break;
+	    case 'p':
+		i++;
+	        if (isundef && !init)
+		    break;
+		valuep = va_arg(ap, struct SEE_value *);
+	    	SEE_ToPrimitive(interp, arg, NULL, valuep);
+		break;
+	    case 'v':
+		i++;
+	        if (isundef && !init)
+		    break;
+		valuep = va_arg(ap, struct SEE_value *);
+		SEE_VALUE_COPY(valuep, arg);
+		break;
+	    case '|':
+	    	init = 0;
+		break;
+	    case 'x':
+	    	i++;
+		break;
+	    case '.':
+	    	if (i < argc)
+			SEE_error_throw_string(interp, interp->TypeError,
+				STR(too_many_args));
+		break;
+	    }
+	}
+
+
+	va_end(ap);
+}
+
