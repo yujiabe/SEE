@@ -207,6 +207,11 @@ Function definitions listed in the <a href="#idx">name index</a>
 appear in green, like this: <code><dfn>SEE_example()</dfn></code>
 </p>
 
+<p>
+The term ASCII refers to character codes in the decimal range 0 through 127,
+inclusive.
+</p>
+
 <h2 id="req">1 Requirements</h2>
 
 <p>
@@ -1044,7 +1049,7 @@ The following table shows when the union fields of <code>v.u</code> are valid:
 
 <table>
 <thead>
-<tr>    <th><code>SEE_VALUE_GET_TYPE(&v)</code></th>
+<tr>    <th><code>SEE_VALUE_GET_TYPE(&amp;v)</code></th>
         <th>Valid member</th>
         <th>Member's type</th>  </tr>
 </thead>
@@ -1350,12 +1355,12 @@ Follows is a table of understood formats:
     <td>hexadecimal (base 16)</td></tr>
 <tr><td><code class="meta">%c</code></td>
     <td><code>char</code></td>
-    <td>0x00..0x7f only</td></tr>
+    <td>ASCII only</td></tr>
 <tr><td><code class="meta">%C</code></td>
     <td><code>SEE_char_t</code></td></tr>
 <tr><td><code class="meta">%<i>[</i>-<i>][#][</i>.<i>#]</i>s</code></td>
     <td><code>const char *</code></td>
-    <td>each 0x00..0x7f only</td></tr>
+    <td>ASCII only</td></tr>
 <tr><td><code class="meta">%<i>[</i>-<i>][#][</i>.<i>#]</i>S</code></td>
     <td><code>struct SEE_string *</code></td></tr>
 <tr><td><code class="meta">%<i>[</i>-<i>][#]</i>p</code></td>
@@ -1442,7 +1447,7 @@ the standard library are.)
 The function <code>SEE_intern_ascii()</code> is a convenience function
 that first converts the C string into a <code>SEE_string</code> before
 intern'ing. The C string must be an ASCII string terminated by a null
-character. ASCII character values occupy the range 1 through 127, inclusive.
+character.
 </p>
 
 <pre>struct SEE_string *<dfn id="SEE_intern">SEE_intern</dfn>(struct SEE_interpreter *interp,
@@ -2153,8 +2158,7 @@ This allows storage to be initialised to default values.
 
 <p>The '<code>a</code>' and '<code>A</code>' formats will
 throw a <code class="js">TypeError</code> if the string contains
-non-ASCII characters. ASCII is defined to be characters in value range
-0 through 127, inclusive.
+non-ASCII characters. 
 
 <p>An example of using <code>SEE_parse_args()</code>:
 
@@ -2168,7 +2172,7 @@ math_sqrt_possible(interp, self, thisobj, argc, argv, res)
 {
         SEE_number_t n;
 
-	SEE_parse_args(interp, argc, argv, "n", &amp;n);
+	<b>SEE_parse_args</b>(interp, argc, argv, "n", &amp;n);
 	SEE_SET_NUMBER(res, sqrt(n));
 }</pre>
 
