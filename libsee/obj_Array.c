@@ -566,7 +566,7 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 	length = SEE_ToUint32(interp, &v);
 
 /* XXX fixme
-	if (interp->compatibility & SEE_COMPAT_ARRAYJOIN1) 
+	if (interp->compatibility & SEE_COMPAT_ARRAYJOIN1)  EXT:16
 		use_comma = (argc == 0);
 	else 
 */

@@ -468,7 +468,7 @@ RegularExpressionLiteral(lex, prev)
 		SEE_string_addch(s, '=');
 	while (!ATEOF) {
 		if (NEXT == '/' && 
-		    (!incc || !(SEE_GET_JS_COMPAT(interp))))
+		    (!incc || !(SEE_GET_JS_COMPAT(interp))))	/* EXT:15 */
 			break;
 		if (NEXT == '\\') {
 			SEE_string_addch(s, '\\');
@@ -698,7 +698,7 @@ Token(lex)
 			 {
 			    int token = SEE_tok_keywords[i].token;
 			    if (token == tRESERVED &&
-			        (interp->compatibility & SEE_COMPAT_EXT1))
+/* EXT:3 */			(interp->compatibility & SEE_COMPAT_EXT1))
 			    {
 #ifndef NDEBUG
 				dprintf("Warning: line %d: reserved token '",
@@ -960,7 +960,7 @@ SEE_lex_number(interp, s, res)
 
 #if 0
 		/* Octal */
-		if ((interp->compatibility & SEE_COMPAT_EXT1) &&
+		if ((interp->compatibility & SEE_COMPAT_EXT1) && /* EXT:4 */
 		    !ATEOF && NEXT == '0' &&
 		    !(pos + 1 < len && (s->data[pos+1] == '.' ||
 		      s->data[pos+1] == 'e' || s->data[pos+1] == 'E')))

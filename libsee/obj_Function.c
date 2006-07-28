@@ -252,7 +252,7 @@ SEE_Function_init(interp)
 	Function_prototype->Prototype = interp->Object_prototype; /* 15.3.4 */
 	f->common->Prototype = interp->Object_prototype;	  /* 15.3.4 */
 
-	if (interp->compatibility & SEE_COMPAT_EXT1) {
+	if (interp->compatibility & SEE_COMPAT_EXT1) {	/* EXT:9 */
 		/*
 		 * Delete the "prototype" property of Function.prototype.
 		 */
@@ -490,7 +490,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	fi = tofunction(interp, self);
 
 	/* Bypass empty functions */
-	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0 &&
+	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0 &&	/* EXT:10 */
 	    fi->function->is_empty)
 	{
 		SEE_SET_UNDEFINED(res);
@@ -517,7 +517,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	 * Compatibility: set f.arguments to the arguments object too,
 	 * saving the old value (It gets restored later)
 	 */
-	if (interp->compatibility & SEE_COMPAT_EXT1) {
+	if (interp->compatibility & SEE_COMPAT_EXT1) { /* EXT:11 */
 	    struct SEE_object *common = 
 	    	(struct SEE_object *)fi->function->common;
 	    if (SEE_OBJECT_HASPROPERTY(interp, common, STR(arguments))) {
@@ -537,7 +537,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	}
 
 	/* Restore f.arguments */
-	if (interp->compatibility & SEE_COMPAT_EXT1) {
+	if (interp->compatibility & SEE_COMPAT_EXT1) { /* EXT:12 */
 	    struct SEE_object *common = 
 	    	(struct SEE_object *)fi->function->common;
 	    if (old_arguments_saved)
@@ -600,7 +600,7 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s;
 	int i;
 
-	if (interp->compatibility & SEE_COMPAT_EXT1) {
+	if (interp->compatibility & SEE_COMPAT_EXT1) { /* EXT:13 */
 	    /*
 	     * spec bug: built-in-functions really should supply their own 
 	     * toString() method for representation,  but the standard 
@@ -943,7 +943,7 @@ arguments_defaultvalue(interp, o, hint, res)
 	int i;
 
 
-	if (interp->compatibility & SEE_COMPAT_EXT1) {
+	if (interp->compatibility & SEE_COMPAT_EXT1) { /* EXT:14 */
 	    SEE_string_addch(s, '[');
 	    for (i = 0; i < a->activation->argc; i++) {
 		if (i) {

@@ -170,7 +170,7 @@ SEE_enumerate(interp, o)
 	for (sp = slist; head; head = head->next)
 		*sp++ = head;
 	qsort(slist, count, sizeof slist[0], 
-	    interp->compatibility & SEE_COMPAT_EXT1
+	    interp->compatibility & SEE_COMPAT_EXT1	/* EXT:1 */
 		? slist_cmp_nice
 		: slist_cmp_fast);
 

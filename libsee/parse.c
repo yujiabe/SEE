@@ -6092,7 +6092,7 @@ Statement_parse(parser)
 	case tTRY:
 		return PARSE(TryStatement);
 	case tFUNCTION:
-		if ((parser->interpreter->compatibility & SEE_COMPAT_EXT1))
+/* EXT:22 */	if ((parser->interpreter->compatibility & SEE_COMPAT_EXT1))
 		    if (lookahead(parser, 1) != '(')
 			return PARSE(FunctionStatement);
 		ERRORm("function keyword not allowed here");
@@ -9428,7 +9428,7 @@ eval(context, thisobj, argc, argv, res)
 	evalcontext.thisobj = context->thisobj;
 	evalcontext.scope = context->scope;
 
-	if ((interp->compatibility & SEE_COMPAT_EXT1)
+	if ((interp->compatibility & SEE_COMPAT_EXT1)	/* EXT:23 */
 	    && thisobj && thisobj != interp->Global) 
 	{
 		/*

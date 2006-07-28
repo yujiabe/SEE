@@ -339,7 +339,7 @@ regexp_hasinstance(interp, self, value)
 	struct SEE_object *self;
 	struct SEE_value *value;
 {
-	if (interp->compatibility & SEE_COMPAT_EXT1)
+	if (interp->compatibility & SEE_COMPAT_EXT1)	/* EXT:20 */
 		return SEE_VALUE_GET_TYPE(value) == SEE_OBJECT &&
 		       SEE_is_RegExp(value->u.object);
 	 else
@@ -581,7 +581,7 @@ regexp_set_static(interp, S, regex, captures, source)
 	struct SEE_string *lastParen;
 
 	/* Only do all this for EXT1 */
-	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0)
+	if ((interp->compatibility & SEE_COMPAT_EXT1) == 0)	/* EXT:21 */
 		return;
 
 	RegExp = interp->RegExp;

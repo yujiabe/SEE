@@ -152,7 +152,7 @@ SEE_Global_init(interp)
 	interp->Global_scope->obj = Global;
 
 	SEE_native_init((struct SEE_native *)Global, interp, &global_class, 
-	    (interp->compatibility & SEE_COMPAT_EXT1)  
+	    (interp->compatibility & SEE_COMPAT_EXT1)  	/* EXT:17 */
 		? interp->Object_prototype 
 		: NULL);
 
@@ -313,7 +313,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 		i += 2;
 		R = 16;
 	}
-	else if ((interp->compatibility & SEE_COMPAT_EXT1) && 
+	else if ((interp->compatibility & SEE_COMPAT_EXT1) && 	/* EXT:18 */
 	    R == 0 && i < s->length &&
 	    s->data[i] == '0')
 	{
@@ -789,7 +789,7 @@ global_escape(interp, self, thisobj, argc, argv, res)
 	static unsigned char ok[] =
 	{ 0x00,0x00,0x00,0x00,0x00,0xec,0xff,0x03,    /* [A-Za-z0-9@*_+\-./] */
 	  0xff,0xff,0xff,0x87,0xfe,0xff,0xff,0x07, };
-	char *hexstr = (interp->compatibility & SEE_COMPAT_EXT1) 
+	char *hexstr = (interp->compatibility & SEE_COMPAT_EXT1)  /* EXT:19 */
 		? SEE_hexstr_uppercase : SEE_hexstr_lowercase;
 
 	if (argc < 1) {

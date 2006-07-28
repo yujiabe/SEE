@@ -13,7 +13,10 @@
                    /* margin-left: 10%; */
                    }
         table    { border-collapse: collapse; 
-                   border: none /* thin solid black */; }
+                   border: none /* thin solid black */;
+		   margin-left: auto;
+		   margin-right: auto;
+		   }
         table tr { border: thin solid black; }
         table th { background: #f0f0f0;
                    border-bottom: thin solid black; }
@@ -500,7 +503,9 @@ become memory leaks or introduce too much fragile 'finally' code.
 circular references between constructor functions and instances,
 and with recursive function scope chains.
 A reference counting scheme would 
-<a href="http://jibbering.com/faq/faq_notes/closures.html#clMem">leak these</a>.
+leak these
+[<a href="http://www.codeproject.com/jscript/LeakPatterns.asp">1</a>]
+[<a href="http://jibbering.com/faq/faq_notes/closures.html#clMem">2</a>].
 <li> A decent garbage collector for C is freely available (and some
 good commercial ones exist, too).
 They do nothing to impede development.
@@ -1998,7 +2003,7 @@ math_sqrt(interp, self, thisobj, argc, argv, res)
         if (argc == 0)
                 SEE_SET_UNDEFINED(res);
         else {
-                SEE_ToNumber(interp, argv[0], &v);
+                SEE_ToNumber(interp, argv[0], &amp;v);
                 SEE_SET_NUMBER(res, sqrt(v.u.number));
         }
 }</pre>
@@ -2022,8 +2027,7 @@ are described in the following table:
         (<code class="js">Math.sqrt</code> here)</td></tr>
 <tr><td><code>thisobj</code></td>
     <td>the <code class="js">this</code> object 
-        (the <code class="js">Math</code> object in this 
-        case)</td></tr>
+        (the <code class="js">Math</code> object here)</td></tr>
 <tr><td><code>argc</code></td>
     <td>number of arguments</td></tr>
 <tr><td><code>argv</code></td>
@@ -2475,7 +2479,8 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
         value as the internal [[Prototype]] property 
         (or <code class="js">null</code>). Assignments
         to <code class="js">__proto__</code> are accepted if 
-        they don't cause a cycle.
+        they don't cause a cycle. 
+	[EXT:7 + EXT:8]
 
 <li>    Invalid <code class="js">\u</code> or <code class="js">\x</code>
         escapes will treat the leading
@@ -2569,27 +2574,33 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 <li>    Enumerating over properties is done in a sorted fashion. 
         During sort, property names are ordered arithmetically if they
         are suitable as array indicies, otherwise they are ordered
-        lexicographically.
+        lexicographically. 
+	[EXT:1]
 
 <li>    SEE's lexical analyser will recognise octal integers (i.e.
         integers starting with '0') and will fall back to decimal if
         the token contains
         a non-octal digit.
+	Same with parseInt().
+	[EXT:4 + EXT:18]
 
 <li>    Coercing native values that do not have a 
         [[DefaultValue]] internal
         property will return an object-unique string, instead of throwing
         a <code class="js">TypeError</code>.
+	[EXT:5 + EXT:6]
 
 
 <li>    <code class="js">Function.prototype</code> will not have a
         <code class="js">prototype</code> property of its own.
+	[EXT:9]
 
 <li>    <code class="js">Function.prototype.toString()</code>
         applied to built-in functions and
         constructors (which are not function instances) will return a bogus
         do-nothing FunctionDeclaration instead of throwing a
         <code class="js">TypeError</code>.
+	[EXT:13]
 
 <li>    The global object has its property [[Prototype]] property set to
         <code class="js">Object.prototype</code>,
@@ -2597,6 +2608,7 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
         but having the good side effect of allowing 
         <code class="js">toString()</code> to
         work anywhere.
+	[EXT:17]
 
 <li>    Calling <code class="js">eval()</code> with a 
         <code class="js">this</code> different to the global object executes
@@ -2604,47 +2616,60 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
         <code class="js">this</code>
         (instead of inheriting the caller's context as per
         s10.2.2 of the standard).
+	[EXT:23]
 
 <li>    Native functions assign themselves an
         <code class="js">arguments</code>
         property when called, so that the old idiom of using
         <code class="js">f.arguments</code> inside the function 
         <code class="js">f</code> will work.
+	[EXT:2 + EXT:11 + EXT:12]
 
 <li>    The system-generated <code class="js">arguments</code> object
         created inside a function has a default-value (a comma-separated
         string representing the arguments), instead of raising a
         <code class="js">TypeError</code>. The upshot of this is that
         <code class="js">arguments</code> can be coerced into a string.
+	[EXT:14]
 
 <li>
         Calling an empty function will involve the expensive 
         process of extending the scope chain, creating an
         <code class="js">arguments</code> property, etc.
         In other words, an simple optimisation is disabled.
+	[EXT:10]
 
 <li>
         Reserved words can be used as identifiers (with a warning message)
+	[EXT:3]
 <li>
         Invalid quantifiers in regular expressions
         (e.g. <code>/a{12x}/</code>) are treated as literals instead
         of raising a SyntaxError.
+	[EXT:24]
 <li>
         <code class="js">RegExp</code> supports the [[HasInstance]] operator,
         meaning that <code class="js">/x*/ instanceof RegExp</code>
         will work.
+	[EXT:20]
 <li>
         Change the token grammar to recognise simple character classes 
         in literal regular expressions.
         This means the expression <code class="js">/[/]/</code> will
         be parsed as if it were <code class="js">/[\/]/</code>.
-        Also, three digit octal escape sequences beginning with 
+	[EXT:15]
+
+<li>	In regex character classes,
+	three digit octal escape sequences beginning with 
         <code class="js">\0</code> are understood.
+	[EXT:25]
 <li>
         Permit conditional function declarations (JavaScript 1.5) of the form
         <code class="js">if (1) function foo (args) { body; }</code>.
         The statement is considered by SEE to be syntactically identical to
         <code class="js">if (1) foo = function foo (args) { body; }</code>.
+	[EXT:22]
+	
 <li>
         Regex execution leaves results in the 
         <code class="js">RegExp</code> object, in the properteis
@@ -2665,7 +2690,12 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
         <code class="js">multiline</code>,
         <code class="js">rightContext</code>, and
         <code class="js">source</code>.
+	[EXT:21]
 
+<li>
+	The global function escape() returns uppercase hex digits,
+	instead of lowercase. 
+	[EXT:19]
 </ul>
 
 <tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>
@@ -2677,6 +2707,7 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
         '<code class="js">,</code>'.
         Also, <code class="js">String.split(undefined)</code> will
         work in a corresponding reverse way.
+	[EXT:16]
 
 </table>
 

@@ -98,7 +98,7 @@ struct SEE_system SEE_system = {
 	NULL,				/* default_trace */
 
 	SEE_COMPAT_262_3B  		/* default_compat_flags */
-	|SEE_COMPAT_EXT1,
+	|SEE_COMPAT_EXT1,		/* EXT:26 */
 
 	simple_random_seed,		/* random_seed */
 
