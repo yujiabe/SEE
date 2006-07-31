@@ -7,6 +7,7 @@ SUBDIRS = include libsee libltdl shell doc
 
 EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
 
+DISTCLEANFILES= ChangeLog
 ChangeLog:
 	svn2cl --strip-prefix=see/trunk \
 	    --include-rev --stdout $(srcdir) --revision=796:HEAD > $@ || \
@@ -22,3 +23,4 @@ installcheck:
 	  `$(DESTDIR)$(bindir)/libsee-config --libs` \
 	  test1.o -o test1
 	$(LIBTOOL) --mode=execute ./test1
+	-rm -f test1.o test1

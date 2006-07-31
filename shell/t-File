@@ -1,4 +1,5 @@
 #! /bin/sh
-
-exec ./see-shell -l./libFile.la $SHELLARGS -f $0.js
+set -ex
+./see-shell -l./libFile.la $SHELLARGS -f $0.js
+rm -f t-File.out
 
