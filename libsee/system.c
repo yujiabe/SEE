@@ -82,7 +82,7 @@ static void simple_finalizer(GC_PTR, GC_PTR);
 static void simple_gc_gcollect(struct SEE_interpreter *);
 #else
 static void *simple_malloc(struct SEE_interpreter *, SEE_size_t);
-static void *unimplemented_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
+static void *simple_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
         void (*)(struct SEE_interpreter *, void *, void *), void *);
 static void simple_free(struct SEE_interpreter *, void *);
 #endif
@@ -114,7 +114,7 @@ struct SEE_system SEE_system = {
 	simple_gc_gcollect		/* gcollect */
 #else
 	simple_malloc,			/* malloc */
-	unimplemented_malloc_finalize,	/* malloc_finalize */
+	simple_malloc_finalize,		/* malloc_finalize */
 	simple_malloc,			/* malloc_string */
 	simple_free,			/* free */
 	simple_mem_exhausted,		/* mem_exhausted */
@@ -275,13 +275,22 @@ simple_malloc(interp, size)
 }
 
 static void *
-unimplemented_malloc_finalize(interp, size, finalizefn, closure)
+simple_malloc_finalize(interp, size, finalizefn, closure)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
         void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
 {
-	SEE_ABORT(interp, "malloc_finalize not implemented in SEE_system");
+#ifndef NDEBUG
+	static int warning_printed = 0;
+
+	if (!warning_printed) {
+		warning_printed++;
+		dprintf("WARNING: SEE is using non-finalize malloc\n");
+	}
+
+#endif
+	return malloc(size);
 }
 
 /*
