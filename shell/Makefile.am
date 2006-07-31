@@ -29,10 +29,10 @@ DEFS = @DEFS@ -I. -I$(srcdir)
 INCLUDES=			-I$(top_builddir)/include \
 				-I$(top_srcdir)/include
 
-EXTRA_DIST=			README
-
 SUBDIRS=			test
 
 TESTS_ENVIRONMENT=		SHELLARGS="-f $(srcdir)/test/common.js" $(SHELL)
 TESTS=				t-File
+
+EXTRA_DIST=			README t-File t-File.js
 
