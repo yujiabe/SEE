@@ -117,6 +117,9 @@ for SEE version 2.0
  <li><a href="#compatsee">8.2 Compatibility with previous versions of SEE</a>
  </ul>
  <li><a href="#security">9 Security</a>
+ <ul>
+ <li><a href="#secguide">9.1 Guidelines for using the security framework</a>
+ </ul>
  <li><a href="#debug">10 Debugging facilities</a>
  <li><a href="#ref">References</a>
  <li><a href="#idx">Name index</a>
@@ -1607,6 +1610,10 @@ These should be invoked by using the following macros:
           <a href="#objcheck" class="footnote">&dagger;</a>
         - create a property enumerator
           ('<code class="js">for (i in o) <i>...</i></code>')
+<li><code>SEE_OBJECT_GET_SEC_DOMAIN()</code>
+          <a href="#objcheck" class="footnote">&dagger;</a>
+        - returns the security domain associated with callable objects
+          (see <a href="#security">&sect;9</a>)
 </ul>
 
 <pre>void <dfn id="SEE_OBJECT_GET">SEE_OBJECT_GET</dfn>(struct SEE_interpreter *interp,
@@ -1635,13 +1642,15 @@ void <dfn id="SEE_OBJECT_CALL">SEE_OBJECT_CALL</dfn>(struct SEE_interpreter *int
 int <dfn id="SEE_OBJECT_HASINSTANCE">SEE_OBJECT_HASINSTANCE</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *obj, struct SEE_value *instance);
 struct SEE_enum *<dfn id="SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</dfn>(struct SEE_interpreter *interp,
+                struct SEE_object *obj);
+void *<dfn id="SEE_OBJECT_GET_SEC_DOMAIN">SEE_OBJECT_GET_SEC_DOMAIN</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *obj);</pre>
 
 <p id="objcheck">
 <span class="footnote">&dagger;</span>
-Four of the macros above (<code>CONSTRUCT</code>, 
-<code>CALL</code>, <code>HASINSTANCE</code>, and
-<code>ENUMERATOR</code>) 
+Five of the macros above (<code>CONSTRUCT</code>, 
+<code>CALL</code>, <code>HASINSTANCE</code>,
+<code>ENUMERATOR</code> and <code>GET_SEC_DOMAIN</code>) 
 call optional internal methods, and
 <strong>do not check</strong> if the object class has not provided them.
 This means the macros may try to call through a <code>NULL</code> function 
@@ -1663,12 +1672,15 @@ non-<code>NULL</code>):
          - object can be called with <code>SEE_OBJECT_HASINSTANCE()</code>
 <li><code>SEE_OBJECT_HAS_ENUMERATOR()</code>
          - object can be called with <code>SEE_OBJECT_ENUMERATOR()</code>
+<li><code>SEE_OBJECT_HAS_GET_SEC_DOMAIN()</code>
+         - object can be called with <code>SEE_OBJECT_GET_SEC_DOMAIN()</code>
 </ul>
 
 <pre>int <dfn id="SEE_OBJECT_HAS_CALL">SEE_OBJECT_HAS_CALL</dfn>(struct SEE_object *obj);
 int <dfn id="SEE_OBJECT_HAS_CONSTRUCT">SEE_OBJECT_HAS_CONSTRUCT</dfn>(struct SEE_object *obj);
 int <dfn id="SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</dfn>(struct SEE_object *obj);
-int <dfn id="SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</dfn>(struct SEE_object *obj);</pre>
+int <dfn id="SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</dfn>(struct SEE_object *obj);
+int <dfn id="SEE_OBJECT_HAS_GET_SEC_DOMAIN">SEE_OBJECT_HAS_GET_SEC_DOMAIN</dfn>(struct SEE_object *obj);</pre>
 
 <p>
 When storing properties in an object with <code>SEE_OBJECT_PUT()</code>, 
@@ -1810,6 +1822,7 @@ provides the object's behaviour. The class structure looks like this:
         SEE_call_fn_t           Construct;      <i>/* optional */</i>
         SEE_call_fn_t           Call;           <i>/* optional */</i>
         SEE_hasinstance_fn_t    HasInstance;    <i>/* optional */</i>
+        SEE_get_sec_domain_fn_t get_sec_domain; <i>/* optional */</i>
 };</pre>
 
 <p>
@@ -1846,6 +1859,8 @@ ECMA-262 standard, and are summarised in the following table:
     <td>returns 0 if the property cannot be changed</td></tr>
 <tr><td><code>DefaultValue</code></td>
     <td>turns the object into a string or number value</td></tr>
+<tr><td><code>enumerator</code></td>
+    <td>allow enumeration of the properties (see above)</td></tr>
 <tr><td><code>Construct</code></td>
     <td>constructs a new object; as per the
         <code class="js">new</code> keyword</td></tr>
@@ -1853,8 +1868,8 @@ ECMA-262 standard, and are summarised in the following table:
     <td>the object has been called as a function</td></tr>
 <tr><td><code>HasInstance</code></td>
     <td>returns 0 if the objects are unrelated</td></tr>
-<tr><td><code>enumerator</code></td>
-    <td>allow enumeration of the properties (see above)</td></tr>
+<tr><td><code>get_sec_domain</code></td>
+    <td>returns the security domain associated with functions</td></tr>
 </tbody>
 </table>
 
@@ -2836,8 +2851,60 @@ successfully, the interpreter's security domain is restored to its
 value before the call.
 
 <p>
-All SEE-defined functions have a security domain of <code>NULL</code>.
+The initial value of the interpreter's <code>sec_domain</code>
+field is NULL. 
+Consequently, all built-in SEE function objects will have a security 
+domain of <code>NULL</code>.
+The following functions (amongst others) are sensitive to the interpreter's
+<code>sec_domain</code> field and will record it in any callable objects 
+they produce:
+<ul>
+<li><code>SEE_Global_eval()</code>,
+<li><code>SEE_Function_new()</code>,
+<li><code>SEE_cfunction_make()</code>,
+</ul>
 
+<p>
+Apart from the
+<code>SEE_OBJECT_CALL()</code> and
+<code>SEE_OBJECT_CONSTRUCT()</code> macros,
+which only save and restore the <code>sec_domain</code>,
+no other function in the SEE library will changes the 
+interpreter's <code>sec_domain</code> value.
+
+<h3 id="secguide">9.1 Guidelines for using the security framework</h3>
+<p>
+If you plan to make use of SEE's security framework, here are some guidelines:
+<ol>
+<li>
+Design a domain structure that represents a subset of entities to which 
+you will grant or deny access. These entities are called <i>principals</i>.
+The domain structure then represents the intersection of the rights of
+multiple principals. 
+<li>
+Design an authorization model for your code based on <i>resources</i>
+and <i>operations</i>. 
+Implement an assertion-like function that 
+throws an exception unless
+the current domain is allowed to perform the given operation on
+the given resource. 
+This function should be called by your sensitive functions.
+<li>Design a domain transition function for SEE that, given two security
+domains (the caller and the callee), chooses one or generates a new 
+representative domain, and assigns it into the interpreter.
+Set this function as
+the <code>SEE_system.transit_sec_domain()</code> function.
+Note that SEE's built-in functions will have a <code>NULL</code> domain.
+<li>When you get source text from a trusted or untrusted source, 
+then before calling 
+<code>SEE_Global_eval()</code>,
+<code>SEE_Function_new()</code>, or even
+<code>SEE_cfunction_make()</code>,
+first set the interpreter's <code>sec_domain</code> field
+to reflect the principal that controls the source.
+Be mindful to restore the security domain when you have finished,
+especially during exceptions.
+</ol>
 
 <h2 id="debug">10 Debugging facilities</h2>
 
@@ -2971,11 +3038,13 @@ will occur.
 <a href="#SEE_OBJECT_DELETE">SEE_OBJECT_DELETE</a><br>
 <a href="#SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</a><br>
 <a href="#SEE_OBJECT_GET">SEE_OBJECT_GET</a><br>
+<a href="#SEE_OBJECT_GET_SEC_DOMAIN">SEE_OBJECT_GET_SEC_DOMAIN</a><br>
 <a href="#SEE_OBJECT_HASINSTANCE">SEE_OBJECT_HASINSTANCE</a><br>
 <a href="#SEE_OBJECT_HASPROPERTY">SEE_OBJECT_HASPROPERTY</a><br>
 <a href="#SEE_OBJECT_HAS_CALL">SEE_OBJECT_HAS_CALL</a><br>
 <a href="#SEE_OBJECT_HAS_CONSTRUCT">SEE_OBJECT_HAS_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</a><br>
+<a href="#SEE_OBJECT_HAS_GET_SEC_DOMAIN">SEE_OBJECT_HAS_GET_SEC_DOMAIN</a><br>
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
@@ -2989,9 +3058,9 @@ will occur.
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
 <a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
+<td>
 <a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
-<td>
 <a href="#SEE_string_addch">SEE_string_addch</a><br>
 <a href="#SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</a><br>
 <a href="#SEE_string_append">SEE_string_append</a><br>
@@ -3015,9 +3084,9 @@ will occur.
 <a href="#SEE_ToObject">SEE_ToObject</a><br>
 <a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <a href="#SEE_ToString">SEE_ToString</a><br>
+<td>
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
-<td>
 <a href="#SEE_TRY">SEE_TRY</a><br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
