@@ -6092,8 +6092,9 @@ Statement_parse(parser)
 	case tTRY:
 		return PARSE(TryStatement);
 	case tFUNCTION:
-/* EXT:22 */	if ((parser->interpreter->compatibility & SEE_COMPAT_EXT1))
-		    if (lookahead(parser, 1) != '(')
+		/* Conditional functions for JS1.5 compatibility */
+		if (SEE_COMPAT_JS(parser->interpreter, >= ,JS15) &&
+		    lookahead(parser, 1) != '(')
 			return PARSE(FunctionStatement);
 		ERRORm("function keyword not allowed here");
 	case tIDENT:
