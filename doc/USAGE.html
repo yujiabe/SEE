@@ -2817,44 +2817,49 @@ const int <dfn id="SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</dfn>;</pre>
 
 <h2 id="security">9 Security</h2>
 <p>
-The SEE library provides a simple interface for the host application 
+The SEE library provides a simple framework for the host application 
 to manage security contexts for scripts and host functions.
 
 <p>
-The host application should manage the 'current' security domain
+The host application manages the 'current' security domain
 by setting the interpreter's <code>sec_domain</code> field.
-
-<p>
 During execution, when callable objects are created, they inherit the 
 value of the interpreter's <code>sec_domain</code> field.
+When an object is called, the host application is given the opportunity
+of changing the current security domain.
+
+<p>
 Just before an object is called (either through the
 <code>SEE_OBJECT_CALL()</code> or
 <code>SEE_OBJECT_CONSTRUCT()</code> macro),
-the interpreter's <code>sec_domain</code> field is temporarily modified
-by SEE in the following steps:
+SEE takes the following steps:
 <ol>
 <li>If <code>SEE_system.transit_sec_domain</code> is <code>NULL</code>,
-	then no modification occurs, and execution continues; otherwise
+	then no security domain modification occurs, 
+	and execution continues; otherwise
 <li>If the object's class does not provide a <code>get_sec_domain()</code>
 	method, then no modification occurs, and execution continues; otherwise
-<li>The object's <code>get_sec_domain()</code> method is called to
-	obtain its security domain. If its security domain is pointer
-	identical to the current security domain, then no modification occurs,
+<li>The <code>SEE_OBJECT_GET_SEC_DOMAIN()</code> macro is called to
+	obtain the function's security domain. 
+<li>If the function's security domain is identical to the current 
+	security domain (pointer comparison), then no modification occurs,
 	and execution continues; otherwise
-<li>The <code>SEE_system.transit_sec_domain()</code> function is called to
-	change the security domain of the interpreter, and execution continues.
+<li>SEE calls the <code>SEE_system.transit_sec_domain()</code> function,
+	which is expected to change the <code>sec_domain</code> field
+	of the interpreter if needed.
+<li>Execution continues, but if an exception occurs during the call, 
+	or the object's call completes successfully, then the 
+	old value of <code>sec_domain</code> is restored to the
+	interpreter before the return value or exeception is propagated.
 </ol>
 
-<p>	
-When an exception occurs during the call, or the object's call completes
-successfully, the interpreter's security domain is restored to its 
-value before the call.
+<p>
+The interpreter's <code>sec_domain</code>
+field is initially set to NULL by <code>SEE_interpreter_init()</code>.  
+Consequently, all built-in SEE function objects constructed during
+initialisation will have a security domain of <code>NULL</code>.
 
 <p>
-The initial value of the interpreter's <code>sec_domain</code>
-field is NULL. 
-Consequently, all built-in SEE function objects will have a security 
-domain of <code>NULL</code>.
 The following functions (amongst others) are sensitive to the interpreter's
 <code>sec_domain</code> field and will record it in any callable objects 
 they produce:
@@ -2868,9 +2873,19 @@ they produce:
 Apart from the
 <code>SEE_OBJECT_CALL()</code> and
 <code>SEE_OBJECT_CONSTRUCT()</code> macros,
-which only save and restore the <code>sec_domain</code>,
+which only restore the <code>sec_domain</code>,
 no other function in the SEE library will changes the 
 interpreter's <code>sec_domain</code> value.
+
+<p class="note">
+&#9888; Note:
+If the interpreter's <code>sec_domain</code> field is somehow changed without
+restoration during an inner function, it will eventually be restored to 
+its original value as the function returns.
+This is simply a consequence of a caller invoking 
+<code>SEE_OBJECT_CALL()</code> or <code>SEE_OBJECT_CONSTRUCT()</code>.
+You should not rely on this side-effect.
+
 
 <h3 id="secguide">9.1 Guidelines for using the security framework</h3>
 <p>
