@@ -152,7 +152,7 @@ test("x=y=0;try{" +
      " try { throw {a:1} } finally {x=2}; " +
      "} catch(e) {y=e.a}; x+y", 3);
 test("x=y=0; try{throw {a:2};y=1;} catch(e){x=e.a;y=-7;} finally{y=3}; x+y", 5);
-compat("ext1");
+compat("js15");
 test("var x='pass';a:{b:break a;x='fail';};x", 'pass');
 test("if (0) function foo(){}", undefined);
 
