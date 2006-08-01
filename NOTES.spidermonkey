@@ -114,8 +114,8 @@ Exceptions
 					
 Security
 
-   n/a					JS_CompileScriptForPrincipals()
+  SEE_system.transit_sec_domain         JS_CompileScriptForPrincipals()
 					JS_EvaluateScriptForPrincipals()
-					JS_CheckAccess()
+  (host supplied)                       JS_CheckAccess()
 
 
