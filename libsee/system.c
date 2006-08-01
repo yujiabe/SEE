@@ -111,15 +111,16 @@ struct SEE_system SEE_system = {
 	simple_gc_malloc_string,	/* malloc_string */
 	simple_gc_free,			/* free */
 	simple_mem_exhausted,		/* mem_exhausted */
-	simple_gc_gcollect		/* gcollect */
+	simple_gc_gcollect,		/* gcollect */
 #else
 	simple_malloc,			/* malloc */
 	simple_malloc_finalize,		/* malloc_finalize */
 	simple_malloc,			/* malloc_string */
 	simple_free,			/* free */
 	simple_mem_exhausted,		/* mem_exhausted */
-	NULL				/* gcollect */
+	NULL,				/* gcollect */
 #endif
+	NULL				/* transit_sec_domain */
 };
 
 /*
