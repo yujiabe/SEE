@@ -1,10 +1,13 @@
-/* David Leonard, 2006. Released into the public domain. */
+/* David Leonard, 2006. This file released into the public domain. */
 /* $Id$ */
 
 /*
  * This module is intended to provide an example of how to write a module
- * and host objects for SEE. 
- * When loaded, it provides the following objects based on stdio.
+ * and host objects for SEE. Feel free to use it for the basis of
+ * your own works.
+ *
+ * When loaded, this example provides the following objects based on
+ * stdio FILEs:
  *
  *      File                    - constructor/opener object
  *      File.prototype          - container object for common methods
