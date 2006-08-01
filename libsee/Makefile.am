@@ -24,6 +24,7 @@ noinst_HEADERS=    array.h cfunction_private.h dprint.h dtoa.h 		\
 		   stringdefs.h stringdefs.inc
 
 libsee_la_LIBADD=  @LIBOBJS@
+libsee_la_LDFLAGS= -version-info $(libsee_version_info)
 
 EXTRA_DIST=	   string.pl string.defs
 PERL=		   @PERL@
@@ -36,3 +37,28 @@ stringdefs.inc: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl c $(srcdir)/string.defs >$@
 stringdefs.h: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl h $(srcdir)/string.defs >$@
+
+#
+# (From the libtool documentation:)
+#
+# 1. Start with version information of `0:0:0' for each libtool library.
+# 
+# 2. Update the version information only immediately before a public
+#    release of your software.  More frequent updates are unnecessary,
+#    and only guarantee that the current interface number gets larger
+#    faster.
+# 
+# 3. If the library source code has changed at all since the last
+#    update, then increment REVISION (`C:R:A' becomes `C:r+1:A').
+# 
+# 4. If any interfaces have been added, removed, or changed since the
+#    last update, increment CURRENT, and set REVISION to 0.
+# 
+# 5. If any interfaces have been added since the last public release,
+#    then increment AGE.
+# 
+# 6. If any interfaces have been removed since the last public release,
+#    then set AGE to 0.
+#
+
+libsee_version_info=	1:0:0
