@@ -75,6 +75,7 @@ struct SEE_interpreter {
 	unsigned int random_seed;	/* used by Math.random() */
 	const char *locale;		/* current locale (may be NULL) */
 	int recursion_limit;		/* -1 means don't care */
+	void *sec_domain;		/* security domain inherited by new code */
 
 	/* Trace hook, called by interpreter at each step if not NULL */
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,

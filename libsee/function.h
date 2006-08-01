@@ -26,6 +26,7 @@ struct function {
 	struct SEE_object *cache;	/* used by SEE_Function_create() */
 	struct function *next;		/* linked list of functions */
 	int is_empty;			/* true if body is empty */
+	void *sec_domain;		/* security domain active when defined */
 };
 
 struct function *SEE_function_make(struct SEE_interpreter *i,

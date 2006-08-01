@@ -74,6 +74,7 @@ struct cfunction {
 	SEE_call_fn_t func;
 	int length;
 	struct SEE_string *name;
+	void *sec_domain;
 };
 
 static void cfunction_get(struct SEE_interpreter *, struct SEE_object *, 
@@ -82,6 +83,7 @@ static int cfunction_hasproperty(struct SEE_interpreter *,
         struct SEE_object *, struct SEE_string *);
 static void cfunction_call(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void *cfunction_get_sec_domain(struct SEE_interpreter *, struct SEE_object *);
 
 /*
  * CFunction object class
@@ -96,7 +98,9 @@ struct SEE_objectclass SEE_cfunction_class = {
 	SEE_native_defaultvalue,/* DefaultValue */
 	SEE_no_enumerator,	/* enumerator */
 	NULL,			/* Construct (15) */
-	cfunction_call		/* Call */
+	cfunction_call,		/* Call */
+	NULL,			/* HasInstance */
+	cfunction_get_sec_domain/* get_sec_domain */
 };
 
 /*
@@ -117,6 +121,7 @@ SEE_cfunction_make(interp, func, name, length)
 	f->func = func;
 	f->name = name;
 	f->length = length;
+	f->sec_domain = interp->sec_domain;
 
 	return (struct SEE_object *)f;
 }
@@ -392,3 +397,12 @@ SEE_parse_args(interp, argc, argv, fmt)
 	va_end(ap);
 }
 
+static void *
+cfunction_get_sec_domain(interp, o)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+{
+	struct cfunction *f = (struct cfunction *)o;
+
+	return f->sec_domain;
+}

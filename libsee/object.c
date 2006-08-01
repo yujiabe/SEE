@@ -42,8 +42,30 @@
 #include <see/try.h>
 #include <see/error.h>
 #include <see/string.h>
+#include <see/system.h>
 
 #include "stringdefs.h"
+
+static void transit_sec_domain(struct SEE_interpreter *, struct SEE_object *);
+
+/*
+ * Transits a security domain.
+ */
+static void
+transit_sec_domain(interp, obj)
+	struct SEE_interpreter *interp;
+	struct SEE_object *obj;
+{
+	void *sec_domain;
+
+	if (SEE_system.transit_sec_domain &&
+	    SEE_OBJECT_HAS_GET_SEC_DOMAIN(obj))
+	{
+		sec_domain = SEE_OBJECT_GET_SEC_DOMAIN(interp, obj);
+		if (interp->sec_domain != sec_domain)
+			SEE_system.transit_sec_domain(interp, sec_domain);
+	}
+}
 
 /*
  * Calls the object method, after checking that any recursion
@@ -60,15 +82,18 @@ SEE_object_call(interp, obj, thisobj, argc, argv, res)
 {
 	SEE_try_context_t c;
 	int saved_recursion_limit = interp->recursion_limit;
+	void *saved_sec_domain = interp->sec_domain;
 
 	if (interp->recursion_limit == 0)
 	    SEE_error_throw_string(interp, interp->Error,
 		STR(recursion_limit_reached));
 	else if (interp->recursion_limit > 0) 
 	    interp->recursion_limit--;
+	transit_sec_domain(interp, obj);
 	SEE_TRY(interp, c) {
 	    _SEE_OBJECT_CALL(interp, obj, thisobj, argc, argv, res);
 	}
+	interp->sec_domain = saved_sec_domain;
 	interp->recursion_limit = saved_recursion_limit;
 	SEE_DEFAULT_CATCH(interp, c);
 }
@@ -88,6 +113,7 @@ SEE_object_construct(interp, obj, thisobj, argc, argv, res)
 {
 	SEE_try_context_t c;
 	int saved_recursion_limit = interp->recursion_limit;
+	void *saved_sec_domain = interp->sec_domain;
 
 	if (interp->recursion_limit == 1) {
 	    interp->recursion_limit = 0;
@@ -95,9 +121,11 @@ SEE_object_construct(interp, obj, thisobj, argc, argv, res)
 		STR(recursion_limit_reached));
 	} else if (interp->recursion_limit > 0) 
 	    interp->recursion_limit--;
+	transit_sec_domain(interp, obj);
 	SEE_TRY(interp, c) {
 	    _SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res);
 	}
+	interp->sec_domain = saved_sec_domain;
 	interp->recursion_limit = saved_recursion_limit;
 	SEE_DEFAULT_CATCH(interp, c);
 }

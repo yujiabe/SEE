@@ -115,6 +115,8 @@ static void function_inst_call(struct SEE_interpreter *,
 static void function_inst_construct(struct SEE_interpreter *, 
         struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
         struct SEE_value *);
+static void * function_inst_get_sec_domain(struct SEE_interpreter *, 
+        struct SEE_object *);
 static void function_proto_toString(struct SEE_interpreter *, 
         struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
         struct SEE_value *);
@@ -181,10 +183,11 @@ static struct SEE_objectclass function_inst_class = {
 	function_inst_hasproperty,		/* HasProperty */
 	function_inst_delete,			/* Delete */
 	SEE_native_defaultvalue,		/* DefaultValue */
-	function_inst_enumerator,		/* Enumerator */
+	function_inst_enumerator,		/* enumerator */
 	function_inst_construct,		/* Construct */
 	function_inst_call,			/* Call */
-	function_inst_hasinstance		/* HasInstance */
+	function_inst_hasinstance,		/* HasInstance */
+	function_inst_get_sec_domain		/* get_sec_domain */
 };
 
 /* object class for 'arguments' instances */
@@ -196,7 +199,7 @@ static struct SEE_objectclass arguments_class = {
 	SEE_native_hasproperty,			/* HasProperty */
 	arguments_delete,			/* Delete */
 	arguments_defaultvalue,			/* DefaultValue */
-	SEE_native_enumerator			/* Enumerator */
+	SEE_native_enumerator			/* enumerator */
 };
 
 /* object class for objects created by instance constructs (13.2.2) */
@@ -584,6 +587,17 @@ function_inst_construct(interp, self, thisobj, argc, argv, res)
 	SEE_OBJECT_CALL(interp, self, r1, argc, argv, res);
 	if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 		SEE_SET_OBJECT(res, r1);
+}
+
+/* Returns the security domain active when the function was defined */
+static void *
+function_inst_get_sec_domain(interp, o)
+	struct SEE_interpreter *interp;
+        struct SEE_object *o;
+{
+	struct function_inst *fi = (struct function_inst *)o;
+
+	return fi->function->sec_domain;
 }
 
 /* Function.prototype.toString (15.3.4.2) */

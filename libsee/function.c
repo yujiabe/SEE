@@ -81,6 +81,7 @@ SEE_function_make(interp, name, params, body)
 	f = SEE_NEW(interp, struct function);
 
 	f->body = body;
+	f->sec_domain = interp->sec_domain;
 
 	/*
 	 * Convert the linked list of parameter name strings into

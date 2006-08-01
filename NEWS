@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  Feature: security domain framework
   Feature: SEE_parse_args() to help convert arguments to C types
   Bug 45: improved compilation portability
   Bug 12: efficient string concatenation

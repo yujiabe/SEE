@@ -41,6 +41,9 @@ struct SEE_system {
 	void (*mem_exhausted)(struct SEE_interpreter *) SEE_dead;
 	void (*gcollect)(struct SEE_interpreter *);
 
+	/* Security domain tracking */
+	void *(*transit_sec_domain)(struct SEE_interpreter *, void *);
+
 };
 
 extern struct SEE_system SEE_system;

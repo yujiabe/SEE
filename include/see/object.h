@@ -35,6 +35,8 @@ typedef void	(*SEE_call_fn_t)(struct SEE_interpreter *i,
 			struct SEE_value *res);
 typedef struct SEE_enum *(*SEE_enumerator_fn_t)(struct SEE_interpreter *i,
 			struct SEE_object *obj);
+typedef void *	(*SEE_get_sec_domain_fn_t)(struct SEE_interpreter *i,
+			struct SEE_object *obj);
 
 /*
  * Object classes: an object insatnce appears as a container of named
@@ -60,6 +62,7 @@ struct SEE_objectclass {
 	SEE_call_fn_t		Construct;		/* [[Construct]] */
 	SEE_call_fn_t		Call;			/* [[Call]] */
 	SEE_hasinstance_fn_t	HasInstance;		/* [[HasInstance]] */
+	SEE_get_sec_domain_fn_t	get_sec_domain;		/* get_sec_domain */
 };
 
 /*
@@ -95,6 +98,8 @@ struct SEE_object {
 	(*(obj)->objectclass->HasInstance)(interp, obj, instance)
 #define SEE_OBJECT_ENUMERATOR(interp, obj)				\
 	(*(obj)->objectclass->enumerator)(interp, obj)
+#define SEE_OBJECT_GET_SEC_DOMAIN(interp, obj)				\
+	(*(obj)->objectclass->get_sec_domain)(interp, obj)
 
 /* Convenience macros that use ASCII C strings for names */
 struct SEE_string *SEE_intern_ascii(struct SEE_interpreter *, const char *);
@@ -113,6 +118,7 @@ struct SEE_string *SEE_intern_ascii(struct SEE_interpreter *, const char *);
 #define SEE_OBJECT_HAS_CONSTRUCT(obj)	((obj)->objectclass->Construct)
 #define SEE_OBJECT_HAS_HASINSTANCE(obj)	((obj)->objectclass->HasInstance)
 #define SEE_OBJECT_HAS_ENUMERATOR(obj)	((obj)->objectclass->enumerator)
+#define SEE_OBJECT_HAS_GET_SEC_DOMAIN(obj) ((obj)->objectclass->get_sec_domain)
 
 /* [[Put]] attributes */
 #define SEE_ATTR_READONLY   0x01
@@ -153,7 +159,8 @@ struct SEE_object *SEE_Object_new(struct SEE_interpreter *);
 
 /*
  * Wrappers around [[Call]] and [[Construct]] that check for 
- * recursion limits being reached.
+ * recursion limits being reached and to keep track of the security
+ * domains.
  */
 void SEE_object_call(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);

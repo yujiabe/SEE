@@ -116,7 +116,8 @@ for SEE version 2.0
  <li><a href="#compatjs">8.1 Compatibility with other JavaScript implementations</a>
  <li><a href="#compatsee">8.2 Compatibility with previous versions of SEE</a>
  </ul>
- <li><a href="#debug">7 Debugging facilities</a>
+ <li><a href="#security">9 Security</a>
+ <li><a href="#debug">10 Debugging facilities</a>
  <li><a href="#ref">References</a>
  <li><a href="#idx">Name index</a>
 </ul>
@@ -2570,6 +2571,32 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 
 </ul>
 
+<tr><td><code>SEE_COMPAT_JS13</code>
+<td>
+        Enables JavaScript 1.3 compatibility:
+<ul>
+<li>    Includes JavaScript 1.1&emdash;1.2 compatibility behaviour.
+</ul>
+
+<tr><td><code>SEE_COMPAT_JS14</code>
+<td>
+        Enables JavaScript 1.4 compatibility:
+<li>    Includes JavaScript 1.1&emdash;1.3 compatibility behaviour.
+<ul>
+</ul>
+
+<tr><td><code>SEE_COMPAT_JS15</code>
+<td>
+        Enables JavaScript 1.5 compatibility:
+<ul>
+<li>    Includes JavaScript 1.1&emdash;1.4 compatibility behaviour.
+<li>
+        Permit conditional function declarations of the form
+        <code class="js">if (1) function foo (args) { body; }</code>.
+        The statement becomes syntactically identical to
+        <code class="js">if (1) foo = function foo (args) { body; }</code>.
+</ul>
+
 <tr><td><code>SEE_COMPAT_EXT1</code>
 <td>
 Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
@@ -2637,13 +2664,6 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	[EXT:14]
 
 <li>
-        Calling an empty function will involve the expensive 
-        process of extending the scope chain, creating an
-        <code class="js">arguments</code> property, etc.
-        In other words, an simple optimisation is disabled.
-	[EXT:10]
-
-<li>
         Reserved words can be used as identifiers (with a warning message)
 	[EXT:3]
 <li>
@@ -2667,13 +2687,7 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	three digit octal escape sequences beginning with 
         <code class="js">\0</code> are understood.
 	[EXT:25]
-<li>
-        Permit conditional function declarations (JavaScript 1.5) of the form
-        <code class="js">if (1) function foo (args) { body; }</code>.
-        The statement is considered by SEE to be syntactically identical to
-        <code class="js">if (1) foo = function foo (args) { body; }</code>.
-	[EXT:22]
-	
+
 <li>
         Regex execution leaves results in the 
         <code class="js">RegExp</code> object, in the properteis
@@ -2714,6 +2728,15 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	[EXT:16]
 
 </table>
+
+<p>
+SEE now always optimises empty function calls
+by skipping the expensive 
+process of extending the scope chain, creating an
+<code class="js">arguments</code> property, etc. and just
+synthesizing <code class="js">undefined</code> for the call, instead.
+This was an optional optimisation prior to SEE 2.0, but is now always
+in effect.
 
 <h3 id="compatsee">8.2 Compatibility with previous versions of SEE</h3>
 
@@ -2777,7 +2800,44 @@ defaulting to 1.0.
 const int <dfn id="SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</dfn>;</pre>
 
 
-<h2 id="debug">9 Debugging facilities</h2>
+<h2 id="security">9 Security</h2>
+<p>
+The SEE library provides a simple interface for the host application 
+to manage security contexts for scripts and host functions.
+
+<p>
+The host application should manage the 'current' security domain
+by setting the interpreter's <code>sec_domain</code> field.
+
+<p>
+During execution, when callable objects are created, they inherit the 
+value of the interpreter's <code>sec_domain</code> field.
+Just before an object is called (either through the
+<code>SEE_OBJECT_CALL()</code> or
+<code>SEE_OBJECT_CONSTRUCT()</code> macro),
+the interpreter's <code>sec_domain</code> field is temporarily modified
+by SEE in the following steps:
+<ol>
+<li>If <code>SEE_system.transit_sec_domain</code> is <code>NULL</code>,
+	then no modification occurs, and execution continues; otherwise
+<li>If the object's class does not provide a <code>get_sec_domain()</code>
+	method, then no modification occurs, and execution continues; otherwise
+<li>The object's <code>get_sec_domain()</code> method is called to
+	obtain its security domain. If its security domain is pointer
+	identical to the current security domain, then no modification occurs,
+	and execution continues; otherwise
+<li>The <code>SEE_system.transit_sec_domain()</code> function is called to
+	change the security domain of the interpreter, and execution continues.
+<p>	
+When an exception occurs during the call, or the object's call completes
+successfully, the interpreter's security domain is restored to its 
+value before the call.
+
+<p>
+All SEE-defined functions have a security domain of <code>NULL</code>.
+
+
+<h2 id="debug">10 Debugging facilities</h2>
 
 <p>
 The SEE library contains various debugging facilities, that are
