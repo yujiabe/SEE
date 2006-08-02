@@ -51,7 +51,7 @@ function test(expr, expected) {
 		ok = (result === expected || expected == "no exception");
 	} catch (e) {
 		ok = (expected == "exception");
-		result = e.name;
+		result = e.name + ":" + e.message;
 		// result = String(e);
 	}
 
