@@ -100,6 +100,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
     char strch, fmtch;
     SEE_char_t *out, *outbuf = 0, *sstr = 0, sstrch;
     const char *fmtstart = 0;
+    double dbl;
 
 #define OUTPUT(c) do { \
 	if (out) *out++ = (c); else outlen++; \
@@ -340,6 +341,14 @@ _SEE_vsprintf(interp, s, fmt, ap)
 			    *out++ = ' ';
 		}
 		break;
+
+	    /* Floating point formats - not implemented */
+	    case 'e': 
+	    case 'f': 
+	    case 'g':
+		    /* For now, consume the argument and skip */
+		    dbl = va_arg(ap, double);
+		    /* FALLTHROUGH */
 
 	    /* Unknown formats */
 	    default: badform:
