@@ -215,7 +215,6 @@ shell_exit_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_value **argv, *res;
 {
 	SEE_uint16_t exitcode = 0;
-	struct SEE_value v;
 
 	if (argc > 0)
 		exitcode = SEE_ToUint16(interp, argv[0]);
@@ -265,7 +264,7 @@ shell_add_globals(interp)
 	Shell = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, Shell);
 	SEE_OBJECT_PUTA(interp, interp->Global, 
-		"Shell", Shell, SEE_ATTR_DEFAULT);
+		"Shell", &v, SEE_ATTR_DEFAULT);
 
 	SEE_CFUNCTION_PUTA(interp, Shell,
 		"gcdump", shell_gcdump_fn, 0, 0);
