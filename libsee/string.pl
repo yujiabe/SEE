@@ -132,6 +132,7 @@ static const SEE_char_t stringtext[] = {\n";
 	    my @cp = &text_to_unicode($text);
 	    push(@segment, [$#codepoints + 1, $#cp + 1]);
 	    push(@codepoints, @cp);
+	    print "\t /* ".&cp_to_str(@cp)." */\n";
 	    print "\t".join(",", @cp);
 	    $prevlen = $#cp + 1;
 	}
@@ -148,4 +149,17 @@ const unsigned int SEE_nstringtab = ".($#strings + 1).";
 ";
 }
 
-
+sub cp_to_str {
+   my $r = "";
+   for $_(@_) {
+   	if ($_ < 0x20 || $_ > 0x7e) {
+		$r .= "\\x".hex($_);
+	} elsif ($_ == ord("\\") or $_ == ord("\"")) {
+		$r .= "\\".chr($_);
+	} else {
+		$r .= chr($_);
+	}
+   }
+   $r =~ s,\*/,*\\/,g;
+   '"'.$r.'"';
+}
