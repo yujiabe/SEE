@@ -213,11 +213,14 @@ to_ascii_string(interp, s)
 
 	zs = SEE_NEW_STRING_ARRAY(interp, char, s->length + 1);
 	for (i = 0; i < s->length; i++)
-	    if (s->data[i] < 0x80)
-	    	zs[i] = s->data[i] & 0x7f;
-	    else
+	    if (s->data[i] == 0) 
+		SEE_error_throw_string(interp, interp->TypeError,
+			STR(string_contains_null));
+	    else if (s->data[i] >= 0x80)
 		SEE_error_throw_string(interp, interp->TypeError,
 			STR(string_not_ascii));
+	    else
+	    	zs[i] = s->data[i];
 	zs[s->length] = 0;
 	return zs;
 }
@@ -229,11 +232,15 @@ to_utf8_string(interp, s)
 	struct SEE_string *s;
 {
 	char *zs;
-	int zslen;
+	int zslen, i;
 
 	zslen = SEE_string_utf8_size(interp, s) + 1;
 	zs = SEE_NEW_STRING_ARRAY(interp, char, zslen);
 	SEE_string_toutf8(interp, zs, zslen, s);
+	for (i = 0; i < zslen - 1; i++)
+	    if (zs[i] == 0)
+		SEE_error_throw_string(interp, interp->TypeError,
+			STR(string_contains_null));
 	return zs;
 }
 
