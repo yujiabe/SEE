@@ -22,7 +22,7 @@ function describe(desc) {
 function literal(v) {
 	switch (typeof v) {
 	case "string":
-		return '"' + v.replace(/[\\'"]/, "\\$1") + '"';
+		return '"' + v.replace(/[\\'"]/g, "\\$&") + '"';
 	default:
 		return String(v);
 	}
