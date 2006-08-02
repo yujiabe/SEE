@@ -121,6 +121,10 @@ for SEE version 2.0
  <li><a href="#secguide">9.1 Guidelines for using the security framework</a>
  </ul>
  <li><a href="#debug">10 Debugging facilities</a>
+ <ul>
+ <li><a href="#debug-see">10.1 Debugging the SEE library (for developers)</a>
+ <li><a href="#debug-js">10.2 Debugging scripts (for users)</a>
+ </ul>
  <li><a href="#ref">References</a>
  <li><a href="#idx">Name index</a>
 </ul>
@@ -2889,39 +2893,81 @@ You should not rely on this side-effect.
 
 <h3 id="secguide">9.1 Guidelines for using the security framework</h3>
 <p>
-If you plan to make use of SEE's security framework, here are some guidelines:
+If you plan to make use of SEE's security framework for
+foreign code, I recommend you follow the 
+Java principals model
+used both by 
+<a href="http://java.sun.com/j2se/1.5.0/docs/guide/security/spec/security-spec.doc.html">Java</a> and 
+<a href="http://www.mozilla.org/projects/security/components/signed-scripts.html">Mozilla</a> by following these guidelines:
 <ol>
 <li>
-Design a domain structure that represents a subset of entities to which 
-you will grant or deny access. These entities are called <i>principals</i>.
-The domain structure then represents the intersection of the rights of
-multiple principals. 
+Design a domain structure that represents a <i>set of principals</i>.
+A principal is a named entity which the user would recognise; 
+e.g. another user, or a web site.
+You should provide functions for checking if a principal is in a set,
+and also to compute the intersection of two sets.
+You should also provide an 'empty' set constant which is not the
+<code>NULL</code> pointer.
 <li>
-Design an authorization model for your code based on <i>resources</i>
-and <i>operations</i>. 
-Implement an assertion-like function that 
-throws an exception unless
-the current domain is allowed to perform the given operation on
-the given resource. 
-This function should be called by your sensitive functions.
-<li>Design a domain transition function for SEE that, given two security
-domains (the caller and the callee), chooses one or generates a new 
-representative domain, and assigns it into the interpreter.
-Set this function as
-the <code>SEE_system.transit_sec_domain()</code> function.
-Note that SEE's built-in functions will have a <code>NULL</code> domain.
-<li>When you get source text from a trusted or untrusted source, 
+Design a structure to hold 
+<i>authorization statements</i>
+depening on the way your user will expresses  them.
+These statements relate <i>permisions</i> to individual principals.
+These questions could be prompted dynamically, or might be read from an
+authorization file.
+For example, the user may want to express the authorization statement
+<blockquote>all principals matching <i>foo@bar.com</i> are granted
+<i>FileRead</i> permission on resources matching <i>/public/*</i></blockquote>
+<li>
+Write a function 
+<code>checkPermission(interp, permission, resource)</code>
+that searches the authorization statements and
+throws an exception if the current domain (the principal set stored in
+<code>interp-&gt;sec_domain</code>)
+does not have the required permission.
+Ensure this function is called in the sensitive places of your code.
+<li>
+Implement the domain transition function 
+<code>SEE_system.transit_sec_domain()</code>
+so that it efficiently computes the intersection of the current and 
+the callee's 
+security domain and sets it to be the current domain.
+Note that SEE's built-in functions will have a <code>NULL</code> domain
+and can be treated as completed trusted, 
+that is <code>NULL</code> makes no change to the current security domain.
+<li>
+When your application receives source text from a trusted or untrusted source, 
 then before calling 
 <code>SEE_Global_eval()</code>,
 <code>SEE_Function_new()</code>, or even
 <code>SEE_cfunction_make()</code>,
 first set the interpreter's <code>sec_domain</code> field
-to reflect the principal that controls the source.
+to reflect exactly the principal that controls the source.
 Be mindful to restore the security domain when you have finished,
-especially during exceptions.
+especially during exceptions, like so:
+<pre>void
+eval_in_domain(interp, input, <b>input_sec_domain</b>, result)
+	struct SEE_interpreter *interp;
+	struct SEE_input *input;
+	void *input_sec_domain;
+	struct SEE_value *result;
+{
+	SEE_try_context_t c;
+	void *saved_sec_domain;
+
+	<b>saved_sec_domain = interp-&gt;sec_domain;</b>
+	<b>interp-&gt;sec_domain = input_sec_domain;</b>
+	SEE_TRY(interp, c) {
+                SEE_Global_eval(interp, input, result);
+	}
+	<b>interp-&gt;sec_domain = saved_sec_domain;</b>
+	SEE_DEFAULT_CATCH(interp, c);
+}</pre>
 </ol>
 
 <h2 id="debug">10 Debugging facilities</h2>
+
+<h3 id="debug-see">10.1 Debugging the SEE library (for developers)</h3>
 
 <p>
 The SEE library contains various debugging facilities, that are
@@ -2955,26 +3001,65 @@ also disables (slow) internal assertions that would otherwise
 help show up application misuse of the API.
 </p>
 
+<h3 id="debug-js">10.2 Debugging scripts (for users)</h3>
+
 <p>
-The interpreter structure provides a <code>trace</code>
-callback field, which is called on every transition through the executable
-AST. This callback is passed a handle to the current execution context,
+The SEE library does not contain a script debugger, however it
+does provide an interpreter hook for external debuggers and the
+<i>see-shell</i>
+example tool contains an example of using it.
+</p>
+
+<p>
+The interpreter structure provides a <code>trace</code> callback field, 
+which is called on certain events during execution
+(function call, return, throw or statement).
+The callback is also passed a handle to the current execution context,
 (a <code>struct SEE_context *</code>)
-and an external debugger may examine it directly, or with the
+and an external debugger may examine it directly, or indirectly via the
 <code>SEE_context_eval()</code> utility function, which is otherwise 
 functionally identical to <code>SEE_Global_eval()</code>. 
 <code>SEE_context_eval()</code>
 is intended only for use by external debuggers attached to the 
 <code>trace</code> callback.
-The <code>trace</code> callback should be disabled
-(by setting it to <code>NULL</code>)
-when calling <code>SEE_Global_eval()</code>, otherwise re-entrant tracing
-will occur.
+
+<p>
+During a debugger's execution,
+the <code>trace</code> callback should be disabled
+by setting it to <code>NULL</code>,
+otherwise re-entrant tracing can occur.
 </p>
 
 <pre>void <dfn id="SEE_context_eval">SEE_context_eval</dfn>(struct SEE_context *context,
                 struct SEE_string *expr, struct SEE_value *res);</pre>
 
+If <i>see-shell</i> is invoked with the <i>-g</i> option, then
+immediately before it executes the first script, it will prompt
+the user for debugging operations.
+
+<p>
+Commands available at the '<code>%</code>' prompt include:
+
+<dl>
+<dt><code>break</code> <i>[filename</i><code>:</code><i>]lineno</i>
+<dd>add a new breakpoint
+<dt><code>show</code>
+<dd>show current breakpoints
+<dt><code>delete</code> <i>number</i>
+<dd>delete existing breakpoint
+<dt><code>step</code>
+<dd>step to a new line
+<dt><code>cont</code>
+<dd>continue execution
+<dt><code>where</code>
+<dd>print traceback information
+<dt><code>info</code>
+<dd>print context information
+<dt><code>eval</code> <i>expr</i>
+<dd>evaluate and print an expression in the current context
+<dt><code>throw</code> <i>expr</i>
+<dd>throw an exception
+</dl>
 
 <h2 id="ref">References</h2>
 
