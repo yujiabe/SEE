@@ -45,6 +45,7 @@
 #include "dtoa.h"
 #include "init.h"
 #include "nmath.h"
+#include "array.h"
 
 /*
  * 15.7 The Number object.
@@ -240,6 +241,11 @@ number_call(interp, self, thisobj, argc, argv, res)
 {
 	if (argc < 1)
 		SEE_SET_NUMBER(res, 0);
+	else if (SEE_COMPAT_JS(interp, ==, JS12) &&
+			SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT &&
+			SEE_is_Array(argv[0]->u.object))
+		SEE_SET_NUMBER(res, SEE_Array_length(interp,
+			argv[0]->u.object));
 	else 
 		SEE_ToNumber(interp, argv[0], res);
 }
