@@ -129,7 +129,7 @@ SEE_function_make(interp, name, params, body)
 		&r9, SEE_ATTR_DONTDELETE); /* (see 15.3.5.2) */
 
 	/* f.arguments = null */
-	if (interp->compatibility & SEE_COMPAT_EXT1) {	/* EXT:2 */
+	if (SEE_COMPAT_JS(interp, >=, JS11)) {	/* EXT:2 */
 		struct SEE_value v;
 		SEE_SET_NULL(&v);
 		SEE_OBJECT_PUT(interp, F,

@@ -9429,7 +9429,7 @@ eval(context, thisobj, argc, argv, res)
 	evalcontext.thisobj = context->thisobj;
 	evalcontext.scope = context->scope;
 
-	if ((interp->compatibility & SEE_COMPAT_EXT1)	/* EXT:23 */
+	if (SEE_COMPAT_JS(interp, >=, JS11)	/* EXT:23 */
 	    && thisobj && thisobj != interp->Global) 
 	{
 		/*

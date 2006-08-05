@@ -2667,96 +2667,7 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
         <code class="js">sup</code>.
         The <code class="js">substr</code> method is also added.
 
-</ul>
-
-
-<tr><td><code>SEE_COMPAT_JS12</code>
-<td>
-        Enables JavaScript 1.2 compatibility:
-<ul>
-<li>    Includes all JavaScript 1.1 compatibility behaviour.
-<li>
-        The constructor <code class="js">new Array()</code> when given
-        a single numeric argument will return an array consisting of
-        just that argument. e.g. <code class="js">new Array(3)</code>
-        is the same as <code class="js">[3]</code>. 
-        This differs from the ECMA standard where an array of length 3
-        would be created, viz
-        <code class="js">[undefined,undefined,undefined]</code>.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-<li>
-        <code class="js">Boolean</code> instance objects are converted
-        to their logical value in expressions that are converted to boolean.
-        This differs from the ECMA standard where all object instances
-        are to be converted to <code class="js">true</code>.
-        For example, the condition in the statement 
-        <code class="js">if (new Boolean(false))<code> statement, will
-        be evaluated as <code class="js">true</code> in ECMA, and 
-        <code class="js">false</code> by JavaScript 1.2.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-<li>
-        <code class="js">Array.prototype.toString()</code> and 
-        <code class="js">Object.prototype.toString()</code> return
-        string forms in literal notation, 
-        e.g. <code class="js">"[1,2,3]"</code>, and
-        <code class="js">"{a:1, b:2}"</code>.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-<li>    <code class="js">String.prototype.split()</code> when
-        operating on the empty string <code class="js">""</code>
-        will return 
-        an empty array <code class="js">[]</code>
-        instead of
-        an array consisting of the empty string, <code class="js">[""]</code>.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-<li>    <code class="js">String.prototype.split()</code>, when
-        given a delimiter of exactly one space character
-        (<code class="js">" "</code>), will
-        strip the leading whitespace from the string, and then split on
-        <code class="js">/\s+/</code>.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-<li>	The <code class="js">Number()</code> function when applied to
-	an array will return the array length, instead of 
-	<code class="js">NaN</code>.
-        (JavaScript 1.2 <strong>only</strong>.)
-
-</ul>
-
-<tr><td><code>SEE_COMPAT_JS13</code>
-<td>
-        Enables JavaScript 1.3 compatibility:
-<ul>
-<li>    Includes JavaScript 1.1&mdash;1.2 compatibility behaviour.
-</ul>
-
-<tr><td><code>SEE_COMPAT_JS14</code>
-<td>
-        Enables JavaScript 1.4 compatibility:
-<ul>
-<li>    Includes JavaScript 1.1&mdash;1.3 compatibility behaviour.
-<ul>
-</ul>
-
-<tr><td><code>SEE_COMPAT_JS15</code>
-<td>
-        Enables JavaScript 1.5 compatibility:
-<ul>
-<li>    Includes JavaScript 1.1&mdash;1.4 compatibility behaviour.
-<li>
-        Permit conditional function declarations of the form
-        <code class="js">if (1) function foo (args) { body; }</code>.
-        The statement becomes syntactically identical to
-        <code class="js">if (1) foo = function foo (args) { body; }</code>.
-</ul>
-
-<tr><td><code>SEE_COMPAT_EXT1</code>
-<td>
-Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
-<ul>
+<!--- old EXT1 stuff starts here -->
 
 <li>    Enumerating over properties is done in a sorted fashion. 
         During sort, property names are ordered arithmetically if they
@@ -2870,10 +2781,8 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
 	The global function escape() returns uppercase hex digits,
 	instead of lowercase. 
 	[EXT:19]
-</ul>
 
-<tr><td><code>SEE_COMPAT_ARRAYJOIN1</code>
-<td>
+<li>
         <code class="js">Array.join(undefined)</code> uses
         the string '<code class="js">undefined</code>'
         as the join string instead of '<code class="js">,</code>'.
@@ -2882,6 +2791,93 @@ Random, unsorted extensions, mainly relating to behaviour of older JavaScript:
         Also, <code class="js">String.split(undefined)</code> will
         work in a corresponding reverse way.
 	[EXT:16]
+
+
+</ul>
+
+
+<tr><td><code>SEE_COMPAT_JS12</code>
+<td>
+        Enables JavaScript 1.2 compatibility:
+<ul>
+<li>    Includes all JavaScript 1.1 compatibility behaviour.
+<li>
+        The constructor <code class="js">new Array()</code> when given
+        a single numeric argument will return an array consisting of
+        just that argument. e.g. <code class="js">new Array(3)</code>
+        is the same as <code class="js">[3]</code>. 
+        This differs from the ECMA standard where an array of length 3
+        would be created, viz
+        <code class="js">[undefined,undefined,undefined]</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>
+        <code class="js">Boolean</code> instance objects are converted
+        to their logical value in expressions that are converted to boolean.
+        This differs from the ECMA standard where all object instances
+        are to be converted to <code class="js">true</code>.
+        For example, the condition in the statement 
+        <code class="js">if (new Boolean(false))<code> statement, will
+        be evaluated as <code class="js">true</code> in ECMA, and 
+        <code class="js">false</code> by JavaScript 1.2.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>
+        <code class="js">Array.prototype.toString()</code> and 
+        <code class="js">Object.prototype.toString()</code> return
+        string forms in literal notation, 
+        e.g. <code class="js">"[1,2,3]"</code>, and
+        <code class="js">"{a:1, b:2}"</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>    <code class="js">String.prototype.split()</code> when
+        operating on the empty string <code class="js">""</code>
+        will return 
+        an empty array <code class="js">[]</code>
+        instead of
+        an array consisting of the empty string, <code class="js">[""]</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>    <code class="js">String.prototype.split()</code>, when
+        given a delimiter of exactly one space character
+        (<code class="js">" "</code>), will
+        strip the leading whitespace from the string, and then split on
+        <code class="js">/\s+/</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+<li>	The <code class="js">Number()</code> function when applied to
+	an array will return the array length, instead of 
+	<code class="js">NaN</code>.
+        (JavaScript 1.2 <strong>only</strong>.)
+
+</ul>
+
+<tr><td><code>SEE_COMPAT_JS13</code>
+<td>
+        Enables JavaScript 1.3 compatibility:
+<ul>
+<li>    Includes JavaScript 1.1&mdash;1.2 compatibility behaviour.
+</ul>
+
+<tr><td><code>SEE_COMPAT_JS14</code>
+<td>
+        Enables JavaScript 1.4 compatibility:
+<ul>
+<li>    Includes JavaScript 1.1&mdash;1.3 compatibility behaviour.
+<ul>
+</ul>
+
+<tr><td><code>SEE_COMPAT_JS15</code>
+<td>
+        Enables JavaScript 1.5 compatibility:
+<ul>
+<li>    Includes JavaScript 1.1&mdash;1.4 compatibility behaviour.
+<li>
+        Permit conditional function declarations of the form
+        <code class="js">if (1) function foo (args) { body; }</code>.
+        The statement becomes syntactically identical to
+        <code class="js">if (1) foo = function foo (args) { body; }</code>.
+</ul>
 
 </table>
 

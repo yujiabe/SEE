@@ -361,7 +361,7 @@ SEE_native_defaultvalue(interp, o, hint, res)
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
-		if (interp->compatibility & SEE_COMPAT_EXT1) /* EXT:5 */
+		if (SEE_COMPAT_JS(interp, >=, JS11)) /* EXT:5 */
 			SEE_SET_STRING(res, SEE_string_sprintf(interp,
 			    "[object %p]", o));
 		else 
@@ -384,7 +384,7 @@ SEE_native_defaultvalue(interp, o, hint, res)
 			if (SEE_VALUE_GET_TYPE(res) != SEE_OBJECT)
 				return;
 		}
-		if (interp->compatibility & SEE_COMPAT_EXT1) /* EXT:6 */
+		if (SEE_COMPAT_JS(interp, >=, JS11)) /* EXT:6 */
 			SEE_SET_STRING(res, SEE_string_sprintf(interp,
 			    "[object %p]", o));
 		else 

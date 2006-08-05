@@ -688,7 +688,7 @@ Quantifier_is_next(recontext)
 	 * Strict ECMA-262 says that '{' is NOT a Pattern character,
 	 * but Mozilla allows it 
 	 */
-/*EXT:24*/if (!(recontext->interpreter->compatibility & SEE_COMPAT_EXT1))
+/*EXT:24*/if (!SEE_COMPAT_JS(recontext->interpreter, >=, JS11))
 	    return 1;
 
 	len = LOOKAHEAD(lookahead, 24);
@@ -1088,7 +1088,7 @@ ClassEscape_parse(recontext)
 	if (NEXT >= '0' && NEXT <= '9') {
 
 	    /* \0oo - 3 digit octal escapes */
-/*EXT:25*/  if ((recontext->interpreter->compatibility & SEE_COMPAT_EXT1) &&
+/*EXT:25*/  if (SEE_COMPAT_JS(recontext->interpreter, >=, JS11) &&
 	    	NEXT == '0' && LOOKAHEAD(lookahead, 3) >= 2 &&
 		lookahead[1] >= '0' && lookahead[1] < '8' &&
 		lookahead[2] >= '0' && lookahead[2] < '8')

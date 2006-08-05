@@ -154,6 +154,7 @@ version_fn(interp, self, thisobj, argc, argv, res)
 {
 	SEE_number_t ver;
 	struct SEE_value v;
+	int compat;
 
 	if (argc == 0) {
 	    switch (SEE_GET_JS_COMPAT(interp)) {
@@ -171,18 +172,20 @@ version_fn(interp, self, thisobj, argc, argv, res)
 	SEE_ToNumber(interp, argv[0], &v);
 	ver = v.u.number;
 	if (ver >= 150)
-		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS15);
+		compat = SEE_COMPAT_JS15;
 	else if (ver >= 140)
-		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS14);
+		compat = SEE_COMPAT_JS14;
 	else if (ver >= 130)
-		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS13);
+		compat = SEE_COMPAT_JS13;
 	else if (ver >= 120)
-		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS12);
+		compat = SEE_COMPAT_JS12;
 	else if (ver >= 110)
-		SEE_SET_JS_COMPAT(interp, SEE_COMPAT_JS11);
+		compat = SEE_COMPAT_JS11;
 	else 
 		SEE_error_throw(interp, interp->RangeError, 
 		   "cannot set version lower than JS1.1");
+
+	SEE_SET_JS_COMPAT(interp, compat);
 	SEE_SET_UNDEFINED(res);
 }
 

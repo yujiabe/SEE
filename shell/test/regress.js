@@ -17,7 +17,7 @@ compat('')
 
 function f() { return this; } 
 function g() { var h = f; return h(); } 
-test("g().toString()", this.toString())			/* bug 32 */
+test("g()", this)					/* bug 32 */
 
 test("(new String()).indexOf()", -1)			/* bug 33 */
 test("-\"\\u20001234\\u2001\"", -1234)			/* r960 */

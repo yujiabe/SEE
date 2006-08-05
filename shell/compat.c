@@ -15,7 +15,6 @@
 
 static struct { const char *name; int mask, flag; } names[] = {
 	{ "262_3b",	SEE_COMPAT_262_3B,	SEE_COMPAT_262_3B },
-	{ "ext1",	SEE_COMPAT_EXT1,	SEE_COMPAT_EXT1 },
 	{ "sgmlcom",	SEE_COMPAT_SGMLCOM,	SEE_COMPAT_SGMLCOM },
 	{ "utf_unsafe",	SEE_COMPAT_UTF_UNSAFE,	SEE_COMPAT_UTF_UNSAFE },
 	{ "js11",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS11 },

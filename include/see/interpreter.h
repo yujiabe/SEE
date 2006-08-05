@@ -87,7 +87,7 @@ struct SEE_interpreter {
 #define SEE_COMPAT_262_3B       (1<< 1) /* ECMA-262 3rd ed. Annex B */
 #define SEE_COMPAT_UTF_UNSAFE   (1<< 2) /* accept 'valid but insecure' UTF */
 #define SEE_COMPAT_SGMLCOM      (1<< 3) /* treat '<!--' as a '//' comment */
-#define SEE_COMPAT_EXT1         (1<< 4) /* SEE (non-ECMA) extensions */
+/* SEE_COMPAT_EXT1 deprecated; use SEE_COMPAT_JS11 instead */
 #define SEE_COMPAT_JS_MASK      (7<< 5) /* mask for JS compat values  */
 #define SEE_COMPAT_JS_NONE         0      /* no JS compat */
 #define SEE_COMPAT_JS11           (1<< 5) /* JavaScript1.1 */
