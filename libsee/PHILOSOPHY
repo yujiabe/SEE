@@ -1,0 +1,101 @@
+
+This document tries to capture the design and implementation philosophy of 
+SEE. This is not about SEE's design goals (ECMAScript compliance), or of the 
+formatting style. It is about the way that the C language is and isn't used;
+and the way that developers of SEE should think about responsibilities.
+
+David Leonard
+
+Cohesion
+--------
+
+Cohesion means keeping together the alike and separating the unlike.
+Cohesion isolates faults and reduces build dependencies. Build
+dependencies in C come through #include directives. A consequential
+decision of mine is to have small API include files, and eliminate all 
+unnecessary inclusions:
+
+  * DO keep closely-related structure definitions in their own 
+    header file.
+  * DO NOT introduce typedefs for structures; prefer entire
+    spelling of struct or enum and use of * for pointers.
+  * DO prefer using the forward type declaration 'struct foo;' over
+    using '#include <foo.h>' when possible, especially when inside
+    other header files.
+
+An object-oriented approach to data types improves cohesion.  In
+C, the benefits of OO can be obtained by using "poor man's subtyping",
+class pointers and abstraction macros.
+
+Use C instead of C++ because C is empirically more widely available
+than C++, especially on the small systems SEE has been targeted at.
+
+Cohesion is destroyed by leaking implementation properties through
+the API.
+
+   * Do not use const in object APIs; it precludes optimisations like caching
+   * Make static as many functions as as possible
+
+Limited abstraction
+-------------------
+
+The C type checker should be exploited and not avoided with 'void *'.
+The rule of thumb is
+
+   * Any use of 'void *' in a function signature must be accompanied
+      by a 'size_t'
+
+Namespace
+---------
+
+Keep the namespace consumed by the library very small
+
+   * Group all library configuration globals into a single structure
+   * Use the prefix SEE_ or _SEE_ on all public symbols
+
+Scope
+-----
+
+SEE should only try to do one thing, and do it well. It provides
+   - an API for managing distinct ECMA-262 runtime states
+   - an API for interfacing host objects into ECMAScript programs
+
+The caller handles the failure
+------------------------------
+
+The burden of graceful failure lies with the library user, and not
+with us (the SEE implementors). A true failure in SEE is when the
+API is followed and then a catastropic failure occurs. It is a bug.
+A catastrophic failure that occurs when the API is not followed is 
+not SEE's problem. SEE should not fail gracefully when the caller is
+at fault.
+
+  * DO NOT provide error codes for when arguments are invalid
+  * DO NOT trap memory faults like SEGV or unexpected exceptions
+
+This doesn't mean to stop checking for states of NULL or similar.
+However, I prefer to use dereferencing instead of assert(ptr!=NULL))
+as the hardware does the assertion check for you :)
+
+Assertions are a useful debugging technique that forces early failure
+with helpful description. But, assertions are not for use by the
+library user, but exclusively for the library developer. Library
+users will not need library debug information except as provided
+through the library API.
+
+  * DO use liberal checks for preconditions with assert() macros
+  * DO enclose all complex asserts and trace/debug with '#ifndef NDEBUG'.
+  * DO NOT rely on side-effects from assertions (as they may never be called)
+
+
+Frugality and ownership
+-----------------------
+
+An API should expect the caller to provide storage for a result
+whenever possible.  The only functions that return allocated
+memory should be constructors.
+
+Despite a garbage collector, both heap and stack remain expensive.
+[SEE's parser design uses lots of stack and has eschewed stack price for
+correctness. This must change.]
+
