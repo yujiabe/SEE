@@ -1,6 +1,7 @@
 $Id$
 
 2.0 [unreleased]
+  API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)
   Feature: security domain framework
   Feature: SEE_parse_args() to help convert arguments to C types
   Bug 45: improved compilation portability
