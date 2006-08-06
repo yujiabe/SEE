@@ -1,6 +1,6 @@
 $Id$
 
-2.0 [unreleased]
+2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)
   Feature: security domain framework
   Feature: SEE_parse_args() to help convert arguments to C types
@@ -21,7 +21,7 @@ $Id$
   API change: only [[Put]], [[Get]], [[Delete]] can use uninterned props
   Compat: Added Regex.$1 et al. support, for JS1.2 compat
   Compat: Added conditional function support, for JS1.5 compat
-  Compat: Added compat() function to the shell which changes compatibility flags.
+  Compat: Added compat() function to the shell which changes compat flags.
   API change: Added many ASCII string functions to the API for convenience
   Compat: Allow /[/]/ to be parsed as a regex literal in JS1.2
   Fix: Error.prototype and NativeError.prototype attributes now match standard
@@ -36,9 +36,9 @@ $Id$
   Fix: Correction in daylight savings estimation code
   Portability: Internal vsnprintf implementation with extra formats
   Experimental: Internal garbage collector implementation (backup only)
-  Improved: GC finalization support (not used by SEE classes, but supported by API)
+  Improved: GC finalization support (unused by native, but supported by API)
   API change: SEE_interpreter.trace() function takes new event type argument
-  API change: SEE_objectclass.Class is now const char * (was struct SEE_string *)
+  API change: SEE_objectclass.Class is now const char * 
 
 1.3.1 [2005-01-18]
   bug 31: Fix header include installation
