@@ -7,7 +7,7 @@ MOZDIR=	  mozilla.js.tests
 
 SHELLDIR= $(shell cd ../.. && pwd)
 SHELLPROG= $(SHELLDIR)/see-shell.static
-SHELLOPTS= -c ext1
+SHELLOPTS= -f $(srcdir)/setup.js
 
 TESTS=	run-mozilla-tests
 
@@ -20,12 +20,16 @@ $(MOZDIR)/Makefile: $(MOZPASS)
 $(MOZPASS):
 	CVS_PASSFILE=$(MOZPASS) cvs -d $(MOZROOTP) login
 
+SUBST= sed -e 's!@SHELLPROG@!$(SHELLPROG)!g' \
+	   -e 's!@SHELLOPTS@!$(SHELLOPTS)!g' \
+	   -e 's!@MOZDIR@!$(MOZDIR)!g' \
+	   -e 's!@srcdir@!$(srcdir)!g'
+
 run-mozilla-tests: run-mozilla-tests.in
-	sed -e 's!@SHELLPROG@!${SHELLPROG} ${SHELLOPTS}!g' \
-	    -e 's!@MOZDIR@!${MOZDIR}!g' \
-		< $^ > $@
+	$(SUBST) < $^ >$@
 	chmod +x $@
 
-CLEANFILES=	run-mozilla-tests $(MOZPASS) run-mozilla-tests.out
+CLEANFILES=	run-mozilla-tests $(MOZPASS) \
+		run-mozilla-tests.out run-mozilla-tests.log
 extra-clean:
 	rm -rf $(MOZDIR) $(MOZPASS) 

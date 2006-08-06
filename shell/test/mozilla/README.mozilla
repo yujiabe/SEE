@@ -6,20 +6,22 @@ Doing a 'make check' in this directory will check out the current
 Mozilla test suite, configure the run-mozilla-tests script to
 use the see-shell binary, and then run all tests.
 
+You will need a perl module called Getopt::Mixed (can be found at cpan.org)
+
 Why some of the mozilla tests fail
 ----------------------------------
 
 This section contains notes on why some tests failing are acceptable.
 
-  ecma/Date/15.9.5.10-1.js
-  ecma/Date/15.9.5.10-9.js 
-  ecma/Date/15.9.5.12-1.js
-  ecma/Date/...
-  	- SEE doesn't seme to compute daylight savings the same way as
-	  SM. This is permitted because SEE is consistent, and the standard
-	  doesn't say how to compute daylight savings or local timezone.
-	  These errors all seem to have local timezone calculation as the
-	  underlying cause.
+  js1_2/Objects/toString-001.js
+  	- Object.toString() in JS1.2 converted objects to literal displays,
+	  but it is dangerous to do this (recursion), so SEE deliberately
+	  doesn't do this.
+
+  ecma/Date/15.9.5.10-12.js
+  	- The netscape test code appears to have incorrect
+	  PST daylight savings times.
+
 
 Bug numbers
 -----------

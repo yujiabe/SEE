@@ -7,11 +7,40 @@
 #   ** see-shell or see-shell.static
 #   ** 
 SHELLPROG="@SHELLPROG@"
+SHELLOPTS="@SHELLOPTS@"
 MOZDIR="@MOZDIR@"
+SRCDIR="@srcdir@"
 CR="`echo | tr '\012' '\015'`"
+FAILED="[41;37mFAILED![m"
 
-ulimit -c 0
+ulimit -c unlimited
 ulimit -t 600
+
+#-- determine the name of the core file
+echo -n "detecting corefile... " >&2
+T=/tmp/coretest$$
+mkdir $T
+(cd $T;
+ echo 'for(;;){}' > test.js
+ $SHELLPROG -f test.js &
+ PID=$!
+ sleep 1
+ kill -ABRT $PID || exit 1
+ sleep 1
+ rm -f test.js
+)
+
+corefile=
+for f in $T/*; do
+	test -f "$f" && corefile=`basename $f`
+done
+if test -n "$corefile"; then
+	echo "$corefile" >&2
+else
+	echo "not found" >&2
+fi
+rm -rf $T
+
 
 #-- return true if the directory is suitable for tests
 isok () {
@@ -34,17 +63,21 @@ else
 	exit 1
 fi
 
-if ! date | grep -w PST >/dev/null; then
+if ! date | grep -w 'P[SD]T' >/dev/null; then
 	echo "** WARNING: Timezone is not US/Pacific - date tests may fail" >&2
 fi
 
+OUT=/var/tmp/test.out
+
 (
 cd "$MOZDIR"
+: > $OUT
 
 #-- scan for tests
-echo 'scanning tests...' >&2
+echo -n 'scanning tests...' >&2
 count=0
-for d in *; do
+for d in js* ecma*; do
+    test -d "$d" || continue
     isok "$D" || continue
     for e in $d/*; do
 	test -d $e || continue
@@ -53,58 +86,65 @@ for d in *; do
 	    istestok "$i" || continue
 	    count=`expr $count + 1`
 	done
+	echo -n '.' >&2
     done
 done
+echo 'done' >&2
 
 pos=0
 failed=0
-for d in *; do
+for d in js* ecma*; do
+    test -d "$d" || continue
     isok "$d" || continue
     arg="-f $d/shell.js"
     for e in $d/*; do
-	earg="$arg"
+	earg="$SHELLOPTS $arg"
 	test -d $e || continue
-	test -f "$e/shell.js" && earg="$arg -f $e/shell.js"
+	test -f "$e/shell.js" && earg="$earg -f $e/shell.js"
+        test -f $srcdir/tweak.js && earg="$earg -f $srcdir/tweak.js"
         for i in $e/*.js; do
 	    test -f "$i" || continue
 	    istestok "$i" || continue
 	    pos=`expr $pos + 1`
 	    echo -n "$pos of $count: $failed failed${CR}" >&2
-	    echo ""
 	    echo "** $pos $i **"
-	    echo ""
-	    echo ">> $SHELLPROG $earg -f $i"
-	    if $SHELLPROG $earg -f $i 2>&1; then
-	       case "$i" in 
-		  *-n.js) 
-		     echo "$i: FAILED! (should have raised exception)"
-		     failed=`expr $failed + 1`
-		      ;;
-		  *)
-		     ;;
-	       esac
-	    else
-	       case "$i" in 
-		   *-n.js) 
-		     ;;
-		   *) 
-		     echo "$i: FAILED! exit code $?"
-		     failed=`expr $failed + 1`
-		     ;;
-	       esac
-	    fi
+	    (echo; echo "** $pos $i **"; 
+	     echo ">> $SHELLPROG $earg -f $i"; echo) >> $OUT
+	    case "$i" in
+	    	*-n.js)	#-- expect failure
+	            if ($SHELLPROG $earg -f $i || echo "$FAILED exit $?") 2>&1|
+		    	tee -a $OUT | grep 'FAILED!' >/dev/null
+		    then
+		    	: got expected failure, therefore passed
+		    else
+		        echo "$i: $FAILED should have raised an exception"
+		        failed=`expr $failed + 1`
+		    fi;;
+
+		*) #-- expect success
+		    test -n "$corefile" && rm -f "$corefile"
+	            if ($SHELLPROG $earg -f $i || echo "$FAILED exit $?") 2>&1|
+		    	tee -a $OUT | grep 'FAILED!'
+		    then
+		        failed=`expr $failed + 1`
+			if test -n "$corefile" -a -r "$corefile"; then
+			    gdb `echo "$SHELLPROG" | 
+			        awk '{print $1}'` $T/$corefile <<. |tee -a $OUT
+				    where
+.
+			fi
+		    fi;;
+	    esac
 	done 
     done
 done 
 ) | 
-  tee $0.out | 
   awk '/^\*/     { name = $0;				\
   		   printed = 0; }			\
        /FAILED!/ { if (!printed) { 			\
                        printed = 1; 			\
-		       print name; 			\
-		       failed++; } 			\
+		       print name; }			\
                    print; }				\
-       END       { print "\nTests failed:", failed; 		\
-                   exit failed > 0 ? 1 : 0; }		\
-       ' failed=0
+       '
+echo "Full output in $OUT"
+test $failed = 0
