@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([see],
-        [2.0.]esyscmd((svnversion . /trunk||echo 0)|tr : _|tr -d \\012),
+        [2.1.]esyscmd((svnversion . /trunk||echo 0)|tr : _|tr -d \\012)[_snapshot],
 	[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AC_REVISION([$Id$])
@@ -425,6 +425,14 @@ AC_CACHE_CHECK([for 64-bit IEEE754 fp], [ac_cv_cc_ieee754],
 if test x"$ac_cv_cc_ieee754" != x"yes"; then
     AC_MSG_WARN([SEE's ECMAScript compliance depends on native IEEE754 support])
 fi
+
+AC_CACHE_CHECK([platform class], [ac_cv_see_platform], [
+case "$build_os" in
+	cygwin*|mingw*|pw32)	ac_cv_see_platform=win32;;
+	*)			ac_cv_see_platform=posix;;
+esac])
+AM_CONDITIONAL(PLATFORM_POSIX, test x"$ac_cv_see_platform" = x"posix")
+AM_CONDITIONAL(PLATFORM_WIN32, test x"$ac_cv_see_platform" = x"win32")
 
 dnl ------------------------------------------------------------
 dnl templates for autoheader

@@ -45,6 +45,6 @@ const char *SEE_version(void);
  *
  */
 #define SEE_VERSION_API_MAJOR	2
-#define SEE_VERSION_API_MINOR	0
+#define SEE_VERSION_API_MINOR	1
 
 #endif /* _SEE_h_version */
