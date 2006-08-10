@@ -28,5 +28,8 @@ struct SEE_object *SEE_cfunction_make(struct SEE_interpreter *i,
 
 void SEE_parse_args(struct SEE_interpreter *i, int argc, 
 	struct SEE_value **argv, const char *fmt, ...);
+void SEE_call_args(struct SEE_interpreter *i, struct SEE_object *func,
+	struct SEE_object *thisobj, struct SEE_value *ret, 
+	const char *fmt, ...);
 
 #endif /* _SEE_h_cfunction_ */

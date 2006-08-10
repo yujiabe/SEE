@@ -81,10 +81,19 @@ struct cfunction {
 static void cfunction_get(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_string *, struct SEE_value *);
 static int cfunction_hasproperty(struct SEE_interpreter *, 
-        struct SEE_object *, struct SEE_string *);
-static void cfunction_call(struct SEE_interpreter *, struct SEE_object *, 
+	struct SEE_object *, struct SEE_string *);
+static void cfunction_call(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
-static void *cfunction_get_sec_domain(struct SEE_interpreter *, struct SEE_object *);
+static char *to_ascii_string(struct SEE_interpreter *, struct SEE_string *);
+static char *to_utf8_string(struct SEE_interpreter *, struct SEE_string *);
+static struct SEE_string *from_string_buffer(struct SEE_interpreter *,
+	const unsigned char *, size_t);
+static struct SEE_string *from_ascii_string(struct SEE_interpreter *,
+	const char *);
+static struct SEE_string *from_utf8_string(struct SEE_interpreter *,
+	const char *);
+static void *cfunction_get_sec_domain(struct SEE_interpreter *, 
+	struct SEE_object *);
 
 /*
  * CFunction object class
@@ -245,6 +254,57 @@ to_utf8_string(interp, s)
 	return zs;
 }
 
+/* Creates a string from a binary buffer */
+static struct SEE_string *
+from_string_buffer(interp, buf, bufsz)
+	struct SEE_interpreter *interp;
+	const unsigned char *buf;
+	SEE_size_t bufsz;
+{
+	struct SEE_string *s;
+	int i;
+
+	s = SEE_string_new(interp, bufsz);
+	for (i = 0; i < bufsz; i++)
+		s->data[i] = buf[i];
+	s->length = bufsz;
+	return s;
+}
+
+/* Creates a string from an ASCII C string */
+static struct SEE_string *
+from_ascii_string(interp, cp)
+	struct SEE_interpreter *interp;
+	const char *cp;
+{
+	struct SEE_string *s;
+	int i, len;
+
+	len = strlen(cp);
+	s = SEE_string_new(interp, len);
+	for (i = 0; i < len; i++)
+		s->data[i] = cp[i] & 0x7f;
+	s->length = len;
+	return s;
+}
+
+/* Creates a string from a UTF-8 C string */
+static struct SEE_string *
+from_utf8_string(interp, cp)
+	struct SEE_interpreter *interp;
+	const char *cp;
+{
+	struct SEE_string *s;
+	struct SEE_input *input;
+
+	s = SEE_string_new(interp, 0);
+	input = SEE_input_utf8(interp, cp);
+
+	while (!input->eof) 
+		SEE_string_addch(s, SEE_INPUT_NEXT(input));
+	return s;
+}
+
 void
 SEE_parse_args(interp, argc, argv, fmt)
 	struct SEE_interpreter *interp;
@@ -398,11 +458,182 @@ SEE_parse_args(interp, argc, argv, fmt)
 			SEE_error_throw_string(interp, interp->TypeError,
 				STR(too_many_args));
 		break;
+	    default:
+	    	SEE_ABORT(interp, "SEE_parse_args: bad format");
 	    }
 	}
 
 
 	va_end(ap);
+}
+
+void
+SEE_call_args(interp, func, thisobj, ret, fmt)
+	struct SEE_interpreter *interp;
+	struct SEE_object *func, *thisobj;
+        struct SEE_value *ret;
+	const char *fmt;
+{
+	va_list ap;
+	int i, argc;
+	const char *f;
+	struct SEE_value *arg, **argv;
+	struct SEE_string *stringv;
+	int intv;
+	SEE_int32_t int32v;
+	SEE_uint32_t uint32v;
+	SEE_uint16_t uint16v;
+	SEE_number_t numberv;
+	struct SEE_object *objectv;
+	struct SEE_value *valuev;
+	char *charpv;
+	unsigned char *bufp;
+	SEE_size_t bufsz;
+
+	/* Count the arguments to allocate */
+	argc = 0;
+	for (f = fmt; *f; f++) 
+	    switch (*f) {
+	    case ' ':
+	    	break;
+	    case 's':
+	    case 'A':
+	    case 'a':
+	    case 'Z':
+	    case 'z':
+	    case 'b':
+	    case 'i':
+	    case 'u':
+	    case 'h':
+	    case 'n':
+	    case 'O':
+	    case 'o':
+	    case 'p':
+	    case 'v':
+	    case 'x':
+	    case '*':
+	    	argc++;
+	    default:
+	    	SEE_ABORT(interp, "SEE_call_args: bad format");
+	    }
+
+	arg = SEE_ALLOCA(interp, struct SEE_value, argc);
+	argv = SEE_ALLOCA(interp, struct SEE_value *, argc);
+	for (i = 0; i < argc; i++)
+	    argv[i] = &arg[i];
+
+	va_start(ap, fmt);
+	for (i = 0, f = fmt; *f; f++)
+	    switch (*f) {
+	    case ' ':
+		break;
+	    case 's':
+	    	stringv = va_arg(ap, struct SEE_string *);
+		if (stringv)
+			SEE_SET_STRING(argv[i], stringv);
+		else
+			SEE_SET_UNDEFINED(argv[i]);
+		i++;
+		break;
+	    case 'A':
+	    	charpv = va_arg(ap, char *);
+		if (charpv) {
+			stringv = from_ascii_string(interp, charpv);
+			SEE_SET_STRING(argv[i], stringv);
+		} else
+			SEE_SET_UNDEFINED(argv[i]);
+		i++;
+		break;
+	    case 'a':
+	    	charpv = va_arg(ap, char *);
+		SEE_ASSERT(interp, charpv != NULL);
+		stringv = from_ascii_string(interp, charpv);
+		SEE_SET_STRING(argv[i], stringv);
+		i++;
+		break;
+	    case 'Z':
+	    	charpv = va_arg(ap, char *);
+		if (charpv) {
+			stringv = from_utf8_string(interp, charpv);
+			SEE_SET_STRING(argv[i], stringv);
+		} else
+			SEE_SET_UNDEFINED(argv[i]);
+		i++;
+		break;
+	    case 'z':
+	    	charpv = va_arg(ap, char *);
+		stringv = from_utf8_string(interp, charpv);
+		SEE_SET_STRING(argv[i], stringv);
+		i++;
+		break;
+	    case '*':
+	    	bufp = va_arg(ap, unsigned char *);
+		bufsz = va_arg(ap, SEE_size_t);
+		stringv = from_string_buffer(interp, bufp, bufsz);
+		SEE_SET_STRING(argv[i], stringv);
+		i++;
+		break;
+	    case 'b':
+	    	intv = va_arg(ap, int);
+		SEE_SET_BOOLEAN(argv[i], intv);
+		i++;
+		break;
+	    case 'i':
+	    	int32v = va_arg(ap, SEE_int32_t);
+		SEE_SET_NUMBER(argv[i], int32v);
+		i++;
+		break;
+	    case 'u':
+	    	uint32v = va_arg(ap, SEE_uint32_t);
+		SEE_SET_NUMBER(argv[i], uint32v);
+		i++;
+		break;
+	    case 'h':
+	    	uint16v = va_arg(ap, int);
+		SEE_SET_NUMBER(argv[i], uint16v);
+		i++;
+		break;
+	    case 'l':
+		SEE_SET_NULL(argv[i]);
+		i++;
+	    case 'n':
+	    	numberv = va_arg(ap, SEE_number_t);
+		SEE_SET_NUMBER(argv[i], numberv);
+		i++;
+		break;
+	    case 'O':
+	    	objectv = va_arg(ap, struct SEE_object *);
+		if (objectv)
+			SEE_SET_OBJECT(argv[i], objectv);
+		else
+			SEE_SET_UNDEFINED(argv[i]);
+		i++;
+		break;
+	    case 'o':
+	    	objectv = va_arg(ap, struct SEE_object *);
+		SEE_ASSERT(interp, objectv != NULL);
+		SEE_SET_OBJECT(argv[i], objectv);
+		i++;
+		break;
+	    case 'p':
+	    	valuev = va_arg(ap, struct SEE_value *);
+	        SEE_ToObject(interp, valuev, argv[i]);
+		i++;
+		break;
+	    case 'v':
+	    	valuev = va_arg(ap, struct SEE_value *);
+	        argv[i] = valuev;
+		i++;
+		break;
+	    case 'x':
+	        SEE_SET_UNDEFINED(argv[i]);
+		i++;
+		break;
+	    }
+	va_end(ap);
+	SEE_ASSERT(interp, i == argc);
+
+	SEE_OBJECT_CALL(interp, func, thisobj, argc, argv, ret);
 }
 
 static void *

@@ -2275,7 +2275,7 @@ conversion error occurs.
 <tr><td><code>z</code></td>
     <td><code>char **</code>
     <td><code><a href="#SEE_ToString">SEE_ToString</a>()</code>,
-        then into a UTF8 C string</td>
+        then into a UTF-8 C string</td>
     <td><code>"undefined"</code></td>
 <tr><td><code>Z</code></td>
     <td><code>char **</code>
@@ -2323,6 +2323,109 @@ math_sqrt_possible(interp, self, thisobj, argc, argv, res)
 	SEE_SET_NUMBER(res, sqrt(n));
 }</pre>
 
+
+<p>
+A corresponding convenience function is provided for calling
+SEE function objects.
+
+<pre>void <dfn id="SEE_call_args">SEE_call_args</dfn>(struct SEE_interpreter *interp,
+        struct SEE_object *func, struct SEE_object *thisobj, 
+	struct SEE_value *ret, const char *format, ...);</pre>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_call_args()</code> function first appeared in API 2.1.
+
+<p>
+The <code>SEE_call_args()</code> function
+constructs a value argument array and then invokes
+<code>SEE_OBJECT_CALL()</code>.
+The format argument is explained
+in the following table.
+
+<table>
+<thead>
+<tr><th>Format</th>
+    <th>Parameter type</th>
+    <th>Conversion applied</th>
+    <th>Value generated</th>
+</thead>
+<tbody>
+<tr><td><code>a</code></td>
+    <td><code>char *</code>
+    <td>ASCII C string
+    <td>string</td>
+<tr><td><code>A</code></td>
+    <td><code>char *</code>
+    <td>ASCII C string, or NULL
+    <td>string or <code class="js">undefined</code>
+<tr><td><code>b</code></td>
+    <td><code>int</code></td>
+    <td>none</td>
+    <td>boolean</td>
+<tr><td><code>h</code></td>
+    <td><code>SEE_uint16_t</code></td>
+    <td>none</td>
+    <td>number</td>
+<tr><td><code>i</code></td>
+    <td><code>SEE_int32_t</code></td>
+    <td>none</td>
+    <td>number</td>
+<tr><td><code>l</code></td>
+    <td></td>
+    <td>generates a <code class="js">null</code> value</td>
+    <td><code class="js">null</code></td>
+<tr><td><code>n</code></td>
+    <td><code>SEE_number_t</code></td>
+    <td>none</td>
+    <td>number</td>
+<tr><td><code>o</code></td>
+    <td><code>struct SEE_object *</code></td>
+    <td>none</td>
+    <td>object</td>
+<tr><td><code>O</code></td>
+    <td><code>struct SEE_object *</code></td>
+    <td>none, unless <code>NULL</code></td>
+    <td>object or <code class="js">undefined</code></td>
+<tr><td><code>p</code></td>
+    <td><code>struct SEE_value *</code></td>
+    <td><code><a href="#SEE_ToObject">SEE_ToObject</a>()</code></td>
+    <td>object</td>
+<tr><td><code>s</code></td>
+    <td><code>struct SEE_string *</code></td>
+    <td>none, unless <code>NULL</code></td>
+    <td>string or <code class="js">undefined</code></td>
+<tr><td><code>u</code></td>
+    <td><code>SEE_uint32_t</code></td>
+    <td>none</td>
+    <td>number</td>
+<tr><td><code>v</code></td>
+    <td><code>struct SEE_value *</code></td>
+    <td>the argument pointer is copied without conversion</td>
+    <td>same as input parameter type</td>
+<tr><td><code>x</code></td>
+    <td></td>
+    <td>generates an <code class="js">undefined</code> value</td>
+    <td><code class="js">undefined</code></td>
+<tr><td><code>z</code></td>
+    <td><code>char *</code></td>
+    <td>UTF-8 C string</td>
+    <td>string</td>
+<tr><td><code>Z</code></td>
+    <td><code>char *</code></td>
+    <td>UTF-8 C string or <code>NULL</code></td>
+    <td>string or <code class="js">undefined</code></td>
+<tr><td><code>*</code></td>
+    <td><code>unsigned char *, SEE_size_t</td>
+    <td>8-bit binary buffer copied byte-for-byte</td>
+    <td>string</td>
+<tr><td>space</td>
+    <td></td>
+    <td>space character is ignored</td>
+</tbody>
+</table>
+
+
 <h3 id="function">6.6 User function objects</h3>
 
 <p>
@@ -2357,7 +2460,6 @@ where any of the the <code>name</code>, <code>param_input</code> and
 The returned function object may be called with the 
 <code>SEE_OBJECT_CALL()</code> macro.
 </p>
-
 
 <h3 id="error">6.7 Errors and Error objects</h3>
 
@@ -3280,6 +3382,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ALLOCA">SEE_ALLOCA</a><br>
 <a href="#SEE_CFUNCTION_PUTA">SEE_CFUNCTION_PUTA</a> (2.0)<br>
 <a href="#SEE_CAUGHT">SEE_CAUGHT</a><br>
+<a href="#SEE_call_args">SEE_call_args</a> (2.1)<br>
 <a href="#SEE_cfunction_make">SEE_cfunction_make</a><br>
 <a href="#SEE_context_eval">SEE_context_eval</a><br>
 <a href="#SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</a><br>
@@ -3300,8 +3403,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_input_string">SEE_input_string</a><br>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
-<a href="#SEE_intern_ascii">SEE_intern_ascii</a> (2.0)<br>
 <td>
+<a href="#SEE_intern_ascii">SEE_intern_ascii</a> (2.0)<br>
 <a href="#SEE_intern_global">SEE_intern_global</a> (2.0*)<br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
 <a href="#SEE_interpreter_init_compat">SEE_interpreter_init_compat</a><br>
@@ -3326,8 +3429,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
-<a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <td>
+<a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
@@ -3352,8 +3455,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
-<a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
 <td>
+<a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
@@ -3378,8 +3481,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
 <a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
-<a href="#SEE_string_substr">SEE_string_substr</a><br>
 <td>
+<a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_toutf8">SEE_string_toutf8</a> (2.0)<br>
 <a href="#SEE_string_utf8_size">SEE_string_utf8_size</a> (2.0)<br>
 <a href="#SEE_string_vsprintf">SEE_string_vsprintf</a><br>

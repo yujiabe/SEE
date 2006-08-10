@@ -1,5 +1,8 @@
 $Id$
 
+2.1 [unreleased]
+  Feature: SEE_call_args() counterpart to SEE_parse_args()
+
 2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)
   Feature: security domain framework
