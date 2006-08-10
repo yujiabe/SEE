@@ -7,6 +7,8 @@
 #include <stdarg.h>
 #include <see/type.h>
 
+struct SEE_interpreter;
+
 /* Returns the time right now in milliseconds since Jan 1 1970 UTC 0:00 */
 SEE_number_t _SEE_platform_time(struct SEE_interpreter *interp);
 
