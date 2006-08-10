@@ -15,7 +15,14 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dtoa.c dprint.c enumerate.c \
                    obj_String.c object.c parse.c printf.c regex.c 	\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
-		   module.c platform_posix.c
+		   module.c
+		   
+if PLATFORM_WIN32
+libsee_la_SOURCES += platform_win32.c
+endif
+if PLATFORM_POSIX
+libsee_la_SOURCES += platform_posix.c
+endif
 
 noinst_HEADERS=    array.h cfunction_private.h dprint.h dtoa.h 		\
 		   dtoa_config.h dprint.h enumerate.h function.h init.h \
