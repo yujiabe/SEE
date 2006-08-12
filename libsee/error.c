@@ -108,7 +108,7 @@ SEE_error__throw_string(interp, obj, filename, lineno, s)
 		    	s ? s : STR(error));
 		SEE_SET_STRING(&v, msg);
 		argv[0] = &v;
-		SEE_OBJECT_CONSTRUCT(interp, obj, obj, 1, argv, &res);
+		SEE_OBJECT_CONSTRUCT(interp, obj, NULL, 1, argv, &res);
 #ifndef NDEBUG
 		if (SEE_error_debug)
 		    dprintf("throwing object %p from %s:%d\n",

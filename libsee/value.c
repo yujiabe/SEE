@@ -378,5 +378,5 @@ SEE_ToObject(interp, val, res)
 			STR(toobject_bad));
 	}
 	arg[0] = val;
-	SEE_OBJECT_CONSTRUCT(interp, obj, obj, 1, arg, res);
+	SEE_OBJECT_CONSTRUCT(interp, obj, NULL, 1, arg, res);
 }

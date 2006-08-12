@@ -318,7 +318,7 @@ regexp_call(interp, self, thisobj, argc, argv, res)
 	    (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED))
 	        SEE_VALUE_COPY(res, argv[0]);
 	else
-		SEE_OBJECT_CONSTRUCT(interp, self, thisobj, argc, argv, res);
+		SEE_OBJECT_CONSTRUCT(interp, self, NULL, argc, argv, res);
 }
 
 /* JavaScript compatibility: calling a regexp as a function */
@@ -418,8 +418,7 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 	    elv[i] = &el[i];
 	}
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array,
-		ncaptures, elv, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, ncaptures, elv, &v);
 	a = v.u.object;
 
 	SEE_SET_NUMBER(&v, captures[0].start);

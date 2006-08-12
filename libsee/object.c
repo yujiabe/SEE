@@ -123,7 +123,7 @@ SEE_object_construct(interp, obj, thisobj, argc, argv, res)
 	    interp->recursion_limit--;
 	transit_sec_domain(interp, obj);
 	SEE_TRY(interp, c) {
-	    _SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res);
+	    _SEE_OBJECT_CONSTRUCT(interp, obj, NULL, argc, argv, res);
 	}
 	interp->sec_domain = saved_sec_domain;
 	interp->recursion_limit = saved_recursion_limit;

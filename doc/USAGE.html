@@ -1676,6 +1676,8 @@ the following <q>internal method</q> macros:
           ('<code class="js">new o(<i>...</i>)</code>');
           also known as the <code class="js">[[Construct]]</code> 
           internal method
+	  (Note: the <code>thisobj</code> parameter of the construct macro
+	  is not used and should be set to <code>NULL</code>)
 <li><code>SEE_OBJECT_CALL()</code>
           <a href="#objcheck" class="footnote">&dagger;</a>
         - call object as a function ('<code class="js">o(<i>...</i>)</code>');
@@ -1986,6 +1988,11 @@ ECMA-262 standard, and are summarised in the following table:
     <td>returns the security domain associated with functions</td></tr>
 </tbody>
 </table>
+
+<p class="note">
+&#9888; Note:
+The <i>thisobj</i> argument to the <code>Construct</code> 
+method is unused and should be ignored by implementations.
 
 <p>
 It is up to the host application to provide storage for the properties, and

@@ -515,8 +515,7 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	int i;
 	struct SEE_string *nsbuf = NULL, *ns;
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 0, 
-		NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
 	n = 0;
 	SEE_SET_OBJECT(&thisv, thisobj);
@@ -744,8 +743,7 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 		return;
 	}
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
-		0, NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
@@ -950,8 +948,7 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t r3, r5, r6, r17, k;
 	struct SEE_string *s = NULL, *s9, *s11, *s22, *s33, *s39;
 
-/*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
-		0, NULL, &v);
+/*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
 /*2*/	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 /*3*/	r3 = SEE_ToUint32(interp, &v);

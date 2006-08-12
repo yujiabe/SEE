@@ -562,7 +562,7 @@ regexp_arg(interp, vp)
 	struct SEE_value *args[1], v;
 
 	if (vp == NULL) {
-		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp,
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, NULL, 
 			0, NULL, &v);
 		return v.u.object;
 	} else if (SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT &&
@@ -570,7 +570,7 @@ regexp_arg(interp, vp)
 		return vp->u.object;
 	else {
 		args[0] = vp;
-		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp,
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, NULL,
 			1, args, &v);
 		return v.u.object;
 	}
@@ -615,8 +615,8 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 
 		/* a = new Array() */
-		SEE_OBJECT_CONSTRUCT(interp, interp->Array,
-		    interp->Array, 0, NULL, &v);
+		SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL,
+			0, NULL, &v);
 		a = v.u.object;
 		nstr = SEE_string_new(interp, 0);
 
@@ -980,8 +980,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	struct capture *captures = NULL;
 
 /*1*/	S = object_to_string(interp, thisobj);
-/*2*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
-		0, NULL, res);
+/*2*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, res);
 	A = res->u.object;
 /*3*/	if (argc < 2 || SEE_VALUE_GET_TYPE(argv[1]) == SEE_UNDEFINED)
 	    lim = 0xffffffff;
@@ -1013,8 +1012,8 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 		SEE_string_addch(wss, '+');
 		SEE_SET_STRING(&a, wss);
 		av[0] = &a;
-		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, 
-			interp->Global, 1, av, &separatorv);
+		SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, NULL,
+			1, av, &separatorv);
 		while (p < s && UNICODE_IS_Zs(S->data[p]))
 		    p++;
 	    }

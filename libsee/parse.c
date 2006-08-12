@@ -1817,7 +1817,7 @@ RegularExpressionLiteral_eval(na, context, res)
         tb = traceback_enter(interp, interp->RegExp, &n->node.location,
 		SEE_CALLTYPE_CONSTRUCT);
 	TRACE(na, context, SEE_TRACE_CALL);
-	SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, interp->RegExp, 
+	SEE_OBJECT_CONSTRUCT(interp, interp->RegExp, NULL,
 		2, n->argv, res);
 	TRACE(na, context, SEE_TRACE_RETURN);
         traceback_leave(interp, tb);
@@ -2049,7 +2049,7 @@ ArrayLiteral_eval(na, context, res)
         tb = traceback_enter(interp, interp->Array, &n->node.location,
 		SEE_CALLTYPE_CONSTRUCT);
 	TRACE(na, context, SEE_TRACE_CALL);
-	SEE_OBJECT_CONSTRUCT(interp, interp->Array, interp->Array, 
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL,
 		0, NULL, res);
 	TRACE(na, context, SEE_TRACE_RETURN);
         traceback_leave(interp, tb);
@@ -2507,7 +2507,7 @@ MemberExpression_new_eval(na, context, res)
         tb = traceback_enter(interp, r2.u.object, &n->node.location,
 		SEE_CALLTYPE_CONSTRUCT);
 	TRACE(na, context, SEE_TRACE_CALL);
-	SEE_OBJECT_CONSTRUCT(interp, r2.u.object, r2.u.object, 
+	SEE_OBJECT_CONSTRUCT(interp, r2.u.object, NULL,
 		argc, argv, res);
 	TRACE(na, context, SEE_TRACE_RETURN);
 	traceback_leave(interp, tb);
