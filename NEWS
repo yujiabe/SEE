@@ -2,6 +2,8 @@ $Id$
 
 2.1 [unreleased]
   Feature: SEE_call_args() counterpart to SEE_parse_args()
+  Improved: thisobj field of constructors deprecated (it was never used)
+  Experimental: code generator
 
 2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)

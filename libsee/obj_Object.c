@@ -170,8 +170,7 @@ SEE_Object_new(interp)
 {
 	struct SEE_value v;
 
-	SEE_OBJECT_CONSTRUCT(interp, interp->Object, interp->Object, 0, 
-		NULL, &v);
+	SEE_OBJECT_CONSTRUCT(interp, interp->Object, NULL, 0, NULL, &v);
 	return v.u.object;
 }
 
