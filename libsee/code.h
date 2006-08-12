@@ -39,9 +39,22 @@ enum SEE_code_gen_op {
 	SEE_CODE_MUL,			/* num num | num */
 	SEE_CODE_DIV,			/* num num | num */
 	SEE_CODE_MOD,			/* num num | num */
+	SEE_CODE_LSHIFT,		/* num num | num */
+	SEE_CODE_RSHIFT,		/* num num | num */
+	SEE_CODE_URSHIFT,		/* num num | num */
 	SEE_CODE_NEG,			/* num | num */
 	SEE_CODE_INV,			/* val | num */
-	SEE_CODE_NOT,			/* val | bool */
+	SEE_CODE_NOT,			/* bool | bool */
+	SEE_CODE_LT,			/* val val | bool */
+	SEE_CODE_EQ,			/* val val | bool */
+	SEE_CODE_SEQ,			/* val val | bool */
+	SEE_CODE_BAND,			/* val val | bool */
+	SEE_CODE_BXOR,			/* val val | bool */
+	SEE_CODE_BOR,			/* val val | bool */
+	SEE_CODE_LAND,			/* val val | bool */
+	SEE_CODE_LOR,			/* val val | bool */
+	SEE_CODE_INSTANCEOF,		/* val obj | bool */
+	SEE_CODE_HASPROPERTY,		/* str obj | bool */
 
 	SEE_CODE_GETVALUE,		/* ref | val */
 	SEE_CODE_PUTVALUE,		/* ref val | - */

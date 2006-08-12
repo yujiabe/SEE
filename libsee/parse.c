@@ -461,11 +461,13 @@ static void MultiplicativeExpression_mod_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static struct node *MultiplicativeExpression_parse(struct parser *parser);
 static void AdditiveExpression_add_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context,
+	struct SEE_value *res);
 static void AdditiveExpression_add_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void AdditiveExpression_sub_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context,
+	struct SEE_value *res);
 static void AdditiveExpression_sub_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *AdditiveExpression_parse(struct parser *parser);
@@ -474,11 +476,13 @@ static void ShiftExpression_lshift_common(struct SEE_value *r2,
 static void ShiftExpression_lshift_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_rshift_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context, 
+	struct SEE_value *res);
 static void ShiftExpression_rshift_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_urshift_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context,
+	struct SEE_value *res);
 static void ShiftExpression_urshift_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *ShiftExpression_parse(struct parser *parser);
@@ -511,17 +515,20 @@ static void EqualityExpression_sne_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static struct node *EqualityExpression_parse(struct parser *parser);
 static void BitwiseANDExpression_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context, 
+	struct SEE_value *res);
 static void BitwiseANDExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *BitwiseANDExpression_parse(struct parser *parser);
 static void BitwiseXORExpression_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context, 
+	struct SEE_value *res);
 static void BitwiseXORExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *BitwiseXORExpression_parse(struct parser *parser);
 static void BitwiseORExpression_common(struct SEE_value *r2, 
-        struct node *bn, struct SEE_context *context, struct SEE_value *res);
+        struct SEE_value *r4, struct SEE_context *context,
+	struct SEE_value *res);
 static void BitwiseORExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *BitwiseORExpression_parse(struct parser *parser);
@@ -1211,6 +1218,9 @@ static const struct SEE_value cg_undefined = { SEE_UNDEFINED };
 # define CG_MUL()	(*cg->code_class->gen_op)(cg, SEE_CODE_MUL)
 # define CG_DIV()	(*cg->code_class->gen_op)(cg, SEE_CODE_DIV)
 # define CG_MOD()	(*cg->code_class->gen_op)(cg, SEE_CODE_MOD)
+# define CG_LSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_LSHIFT)
+# define CG_RSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_RSHIFT)
+# define CG_URSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_URSHIFT)
 
 /* num | num */
 # define CG_NEG()	(*cg->code_class->gen_op)(cg, SEE_CODE_NEG)
@@ -1218,6 +1228,22 @@ static const struct SEE_value cg_undefined = { SEE_UNDEFINED };
 
 /* bool | bool */
 # define CG_NOT()	(*cg->code_class->gen_op)(cg, SEE_CODE_NOT)
+
+/* val val | bool */
+# define CG_LT()	(*cg->code_class->gen_op)(cg, SEE_CODE_LT)
+# define CG_EQ()	(*cg->code_class->gen_op)(cg, SEE_CODE_EQ)
+# define CG_SEQ()	(*cg->code_class->gen_op)(cg, SEE_CODE_SEQ)
+# define CG_BAND()	(*cg->code_class->gen_op)(cg, SEE_CODE_BAND)
+# define CG_BXOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_BXOR)
+# define CG_BOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_BOR)
+# define CG_LAND()	(*cg->code_class->gen_op)(cg, SEE_CODE_LAND)
+# define CG_LOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_LOR)
+
+/* val obj | bool */
+# define CG_INSTANCEOF() (*cg->code_class->gen_op)(cg, SEE_CODE_INSTANCEOF)
+
+/* str obj | bool */
+# define CG_HASPROPERTY() (*cg->code_class->gen_op)(cg, SEE_CODE_HASPROPERTY)
 
 # define CG_GETVALUE()			/* ref | val */		\
 	(*cg->code_class->gen_op)(cg, SEE_CODE_GETVALUE)
@@ -4395,19 +4421,16 @@ MultiplicativeExpression_parse(parser)
 
 /* 11.6.1 */
 static void
-AdditiveExpression_add_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+AdditiveExpression_add_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4, r5, r6,
+	struct SEE_value r5, r6,
 			 r8, r9, r12, r13;
 	struct SEE_string *s;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	SEE_ToPrimitive(context->interpreter, r2, NULL, &r5);
-	SEE_ToPrimitive(context->interpreter, &r4, NULL, &r6);
+	SEE_ToPrimitive(context->interpreter, r4, NULL, &r6);
 	if (!(SEE_VALUE_GET_TYPE(&r5) == SEE_STRING || 
 	      SEE_VALUE_GET_TYPE(&r6) == SEE_STRING)) 
 	{
@@ -4430,11 +4453,13 @@ AdditiveExpression_add_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	AdditiveExpression_add_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	AdditiveExpression_add_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -4444,7 +4469,10 @@ AdditiveExpression_add_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CODEGEN(n->b);
+	CG_ADD();
 }
 #endif
 
@@ -4474,17 +4502,14 @@ static struct nodeclass AdditiveExpression_add_nodeclass
 
 /* 11.6.2 */
 static void
-AdditiveExpression_sub_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+AdditiveExpression_sub_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4, r5, r6;
+	struct SEE_value r5, r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	SEE_ToNumber(context->interpreter, r2, &r5);
-	SEE_ToNumber(context->interpreter, &r4, &r6);
+	SEE_ToNumber(context->interpreter, r4, &r6);
 	SEE_SET_NUMBER(res, r5.u.number - r6.u.number);
 }
 
@@ -4495,11 +4520,13 @@ AdditiveExpression_sub_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	AdditiveExpression_sub_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	AdditiveExpression_sub_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -4509,7 +4536,10 @@ AdditiveExpression_sub_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CODEGEN(n->b);
+	CG_SUB();
 }
 #endif
 
@@ -4616,7 +4646,10 @@ ShiftExpression_lshift_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CODEGEN(n->b);
+	CG_LSHIFT();
 }
 #endif
 
@@ -4647,19 +4680,15 @@ static struct nodeclass ShiftExpression_lshift_nodeclass
 
 /* 11.7.2 */
 static void
-ShiftExpression_rshift_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+ShiftExpression_rshift_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4;
 	SEE_int32_t r5;
 	SEE_uint32_t r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	r5 = SEE_ToInt32(context->interpreter, r2);
-	r6 = SEE_ToUint32(context->interpreter, &r4);
+	r6 = SEE_ToUint32(context->interpreter, r4);
 	SEE_SET_NUMBER(res, r5 >> (r6 & 0x1f));
 }
 
@@ -4670,11 +4699,13 @@ ShiftExpression_rshift_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	ShiftExpression_rshift_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	ShiftExpression_rshift_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -4684,7 +4715,10 @@ ShiftExpression_rshift_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CODEGEN(n->b);
+	CG_RSHIFT();
 }
 #endif
 
@@ -4715,18 +4749,14 @@ static struct nodeclass ShiftExpression_rshift_nodeclass
 
 /* 11.7.3 */
 static void
-ShiftExpression_urshift_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+ShiftExpression_urshift_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4;
 	SEE_uint32_t r5, r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	r5 = SEE_ToUint32(context->interpreter, r2);
-	r6 = SEE_ToUint32(context->interpreter, &r4);
+	r6 = SEE_ToUint32(context->interpreter, r4);
 	SEE_SET_NUMBER(res, r5 >> (r6 & 0x1f));
 }
 
@@ -4737,11 +4767,13 @@ ShiftExpression_urshift_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	ShiftExpression_urshift_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	ShiftExpression_urshift_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -4751,7 +4783,10 @@ ShiftExpression_urshift_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CODEGEN(n->b);
+	CG_URSHIFT();
 }
 #endif
 
@@ -4917,7 +4952,12 @@ RelationalExpression_lt_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_LT();
 }
 #endif
 
@@ -4971,7 +5011,13 @@ RelationalExpression_gt_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_EXCH();
+	CG_LT();
 }
 #endif
 
@@ -5027,7 +5073,14 @@ RelationalExpression_le_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_EXCH();
+	CG_LT();
+	CG_NOT();
 }
 #endif
 
@@ -5084,7 +5137,13 @@ RelationalExpression_ge_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_LT();
+	CG_NOT();
 }
 #endif
 
@@ -5146,7 +5205,12 @@ RelationalExpression_instanceof_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_INSTANCEOF();
 }
 #endif
 
@@ -5206,7 +5270,12 @@ RelationalExpression_in_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_HASPROPERTY();
 }
 #endif
 
@@ -5429,7 +5498,12 @@ EqualityExpression_eq_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_EQ();
 }
 #endif
 
@@ -5482,7 +5556,13 @@ EqualityExpression_ne_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_EQ();
+	CG_NOT();
 }
 #endif
 
@@ -5534,7 +5614,12 @@ EqualityExpression_seq_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_SEQ();
 }
 #endif
 
@@ -5588,7 +5673,13 @@ EqualityExpression_sne_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_SEQ();
+	CG_NOT();
 }
 #endif
 
@@ -5670,18 +5761,14 @@ EqualityExpression_parse(parser)
 
 /* 11.10 */
 static void
-BitwiseANDExpression_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+BitwiseANDExpression_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	r5 = SEE_ToInt32(context->interpreter, r2);
-	r6 = SEE_ToInt32(context->interpreter, &r4);
+	r6 = SEE_ToInt32(context->interpreter, r4);
 	SEE_SET_NUMBER(res, r5 & r6);
 }
 
@@ -5692,11 +5779,13 @@ BitwiseANDExpression_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseANDExpression_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseANDExpression_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -5706,7 +5795,12 @@ BitwiseANDExpression_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_BAND();
 }
 #endif
 
@@ -5767,18 +5861,14 @@ BitwiseANDExpression_parse(parser)
 
 /* 11.10 */
 static void
-BitwiseXORExpression_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+BitwiseXORExpression_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	r5 = SEE_ToInt32(context->interpreter, r2);
-	r6 = SEE_ToInt32(context->interpreter, &r4);
+	r6 = SEE_ToInt32(context->interpreter, r4);
 	SEE_SET_NUMBER(res, r5 ^ r6);
 }
 
@@ -5789,11 +5879,13 @@ BitwiseXORExpression_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseXORExpression_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseXORExpression_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -5803,7 +5895,12 @@ BitwiseXORExpression_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_BXOR();
 }
 #endif
 
@@ -5864,18 +5961,14 @@ BitwiseXORExpression_parse(parser)
 
 /* 11.10 */
 static void
-BitwiseORExpression_common(r2, bn, context, res)
-	struct SEE_value *r2, *res;
-	struct node *bn;
+BitwiseORExpression_common(r2, r4, context, res)
+	struct SEE_value *r2, *r4, *res;
 	struct SEE_context *context;
 {
-	struct SEE_value r3, r4;
 	SEE_int32_t r5, r6;
 
-	EVAL(bn, context, &r3);
-	GetValue(context, &r3, &r4);
 	r5 = SEE_ToInt32(context->interpreter, r2);
-	r6 = SEE_ToInt32(context->interpreter, &r4);
+	r6 = SEE_ToInt32(context->interpreter, r4);
 	SEE_SET_NUMBER(res, r5 | r6);
 }
 
@@ -5886,11 +5979,13 @@ BitwiseORExpression_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseORExpression_common(&r2, n->b, context, res);
+	EVAL(n->b, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseORExpression_common(&r2, &r4, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -5900,7 +5995,12 @@ BitwiseORExpression_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_BOR();
 }
 #endif
 
@@ -5986,7 +6086,12 @@ LogicalANDExpression_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_LAND();
 }
 #endif
 
@@ -6087,7 +6192,12 @@ LogicalORExpression_codegen(na, cg)
 	struct SEE_code *cg;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);
+	CG_GETVALUE();
+	CODEGEN(n->b);
+	CG_GETVALUE();
+	CG_LOR();
 }
 #endif
 
@@ -6584,11 +6694,13 @@ AssignmentExpression_addeq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	AdditiveExpression_add_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	AdditiveExpression_add_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6639,11 +6751,13 @@ AssignmentExpression_subeq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	AdditiveExpression_sub_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r1);
+	GetValue(context, &r3, &r4);
+	AdditiveExpression_sub_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6750,11 +6864,13 @@ AssignmentExpression_rshifteq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	ShiftExpression_rshift_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	ShiftExpression_rshift_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6806,11 +6922,13 @@ AssignmentExpression_urshifteq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	ShiftExpression_urshift_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	ShiftExpression_urshift_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6863,11 +6981,13 @@ AssignmentExpression_andeq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseANDExpression_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseANDExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6918,11 +7038,13 @@ AssignmentExpression_xoreq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseXORExpression_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseXORExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
@@ -6973,11 +7095,13 @@ AssignmentExpression_oreq_eval(na, context, res)
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	struct SEE_value r1, r2;
+	struct SEE_value r1, r2, r3, r4;
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	BitwiseORExpression_common(&r2, n->expr, context, res);
+	EVAL(n->expr, context, &r3);
+	GetValue(context, &r3, &r4);
+	BitwiseORExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
 
