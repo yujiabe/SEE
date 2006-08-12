@@ -167,6 +167,18 @@ else
     AC_MSG_RESULT([no])
 fi
 
+AC_ARG_ENABLE(parser-codegen,
+    AC_HELP_STRING([--enable-parser-codegen],
+                   [Include parser code generator [[default=no]]]))
+AC_MSG_CHECKING([whether to include code generator])
+if test x"$enable_parser_codegen" = x"yes"; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE(WITH_PARSER_CODEGEN, [1],
+        [Define if you want to include experimental code generator])
+else
+    AC_MSG_RESULT([no])
+fi
+
 
 dnl ------------------------------------------------------------
 dnl external libraries

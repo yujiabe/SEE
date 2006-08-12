@@ -24,7 +24,7 @@ if PLATFORM_POSIX
 libsee_la_SOURCES += platform_posix.c
 endif
 
-noinst_HEADERS=    array.h cfunction_private.h dprint.h dtoa.h 		\
+noinst_HEADERS=    array.h cfunction_private.h code.h dprint.h dtoa.h 	\
 		   dtoa_config.h dprint.h enumerate.h function.h init.h \
 		   lex.h nmath.h parse.h platform.h printf.h regex.h 	\
 		   scope.h tokens.h unicase.inc unicode.h unicode.inc	\
