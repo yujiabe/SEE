@@ -374,7 +374,7 @@ regexp_proto_exec(interp, self, thisobj, argc, argv, res)
 	SEE_ToNumber(interp, &v, &iv);
 	if (!(ro->flags & FLAG_GLOBAL))
 		SEE_SET_NUMBER(&iv, 0);
-	if (SEE_NUMBER_ISINF(&iv) || 
+	if (!SEE_NUMBER_ISFINITE(&iv) || 
 	    iv.u.number < 0 || iv.u.number > S->length) 
 	{
 		SEE_SET_NUMBER(&v, 0);

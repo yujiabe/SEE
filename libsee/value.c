@@ -193,7 +193,7 @@ SEE_ToInteger(interp, val, res)
 	SEE_ToNumber(interp, val, res);
 	if (SEE_NUMBER_ISNAN(res))
 		res->u.number = 0.0;
-	else if (SEE_NUMBER_ISINF(res) || res->u.number == 0.0)
+	else if (!SEE_NUMBER_ISFINITE(res) || res->u.number == 0.0)
 		; /* nothing */
 	else
 		res->u.number = NUMBER_copysign(floor(
@@ -220,7 +220,7 @@ SEE_ToUint32(interp, val)
 	struct SEE_value i;
 
 	SEE_ToInteger(interp, val, &i);
-	if (SEE_NUMBER_ISINF(&i) || i.u.number == 0.0)
+	if (!SEE_NUMBER_ISFINITE(&i) || i.u.number == 0.0)
 		return 0;
 	else {
 		i.u.number = fmod(i.u.number, 4294967296.0); /* 2^32 */
@@ -240,7 +240,7 @@ SEE_ToUint16(interp, val)
 
 	/* NB: slightly different to standard, but equivalent */
 	SEE_ToInteger(interp, val, &i);
-	if (SEE_NUMBER_ISINF(&i) || i.u.number == 0.0)
+	if (!SEE_NUMBER_ISFINITE(&i) || i.u.number == 0.0)
 		return 0;
 	else {
 		i.u.number = fmod(i.u.number, 65536.0);	/* 2^16 */

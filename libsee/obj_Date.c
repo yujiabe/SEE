@@ -576,7 +576,7 @@ ToInteger(n)
 {
 	if (SEE_ISNAN(n))
 		return 0;
-	if (SEE_ISINF(n))
+	if (!SEE_ISFINITE(n))
 		return n;
 	return SGN(n) * NUMBER_floor(ABS(n));
 }

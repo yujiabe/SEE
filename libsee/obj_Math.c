@@ -336,7 +336,7 @@ math_exp(interp, self, thisobj, argc, argv, res)
 		SET_NO_RESULT(res);
 	else {
 		SEE_ToNumber(interp, argv[0], &v);
-		if (SEE_NUMBER_ISINF(&v))
+		if (!SEE_NUMBER_ISFINITE(&v) && !SEE_NUMBER_ISNAN(&v))
 			SEE_SET_NUMBER(res, v.u.number < 0 ? 0 : SEE_Infinity);
 		else
 			SEE_SET_NUMBER(res, NUMBER_exp(v.u.number));

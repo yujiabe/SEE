@@ -350,7 +350,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 		SEE_char_t ch;
 		int digit;
 
-		if (SEE_ISINF(factor)) {
+		if (!SEE_ISFINITE(factor)) {
 			n = factor;
 			break;
 		}

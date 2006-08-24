@@ -63,10 +63,17 @@ enum SEE_code_gen_op {
 	SEE_CODE_TONUMBER,		/* val | num */
 	SEE_CODE_TOBOOLEAN,		/* val | bool */
 	SEE_CODE_TOSTRING,		/* val | str */
+
+	SEE_CODE_STMT,			/* cmplt cmplt | cmplt */
+	SEE_CODE_COMPLETE_NORMAL 	/* val | cmplt */
 };
 
 enum SEE_code_branch_op {
-	SEE_CODE_BRANCH_ALWAYS
+	SEE_CODE_BRANCH_ALWAYS,		/* - | - */
+	SEE_CODE_BRANCH_IF_TRUE,	/* bool | - */
+	SEE_CODE_BRANCH_IF_NOT_NORMAL,	/* cmplt | cmplt */
+	SEE_CODE_BRANCH_IF_BREAK,	/* cmplt | cmplt */
+	SEE_CODE_BRANCH_IF_CONTINUE	/* cmplt | cmplt */
 };
 
 /* A branch target address in a code stream */
@@ -80,16 +87,20 @@ struct SEE_code_class {
 	void	(*gen_op)(struct SEE_code *, enum SEE_code_gen_op op);
 	void	(*gen_roll)(struct SEE_code *, unsigned char);
 	void	(*gen_call)(struct SEE_code *, enum SEE_code_call_op op, 
-				int argc);
+			int argc);
 	void	(*gen_loc)(struct SEE_code *, struct SEE_throw_location *);
 	void	(*gen_branch)(struct SEE_code *, enum SEE_code_branch_op op,
-				SEE_code_addr_t *);
+			SEE_code_addr_t *);
+	void	(*gen_target_branch)(struct SEE_code *,
+			enum SEE_code_branch_op op, void *target,
+			SEE_code_addr_t *);
 	void	(*patch)(struct SEE_code *, SEE_code_addr_t *);
+	void	(*label)(struct SEE_code *, SEE_code_addr_t *);
 };
 
 /* Public fields of the code context superclass */
 struct SEE_code {
-	struct SEE_code_class *code_class;
+	struct SEE_code_class *Class;
 	struct SEE_interpreter *interpreter;
 };
 
