@@ -88,7 +88,8 @@ _SEE_platform_tza(interp)
 	static SEE_number_t tza;
 
 	if (!initialized) {	/* XXX not thread safe */
-		time_t time0 = 0, diff;
+		time_t time0 = 0;
+		int diff;
 		struct tm *tm;
 
 		tm = localtime(&time0);
