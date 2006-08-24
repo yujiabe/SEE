@@ -201,7 +201,7 @@ fi
 
 AC_ARG_WITH(readline, 
     AC_HELP_STRING([--with-readline],
-	[see-shell interactive niceness, default=yes]),
+	[see-shell interactive niceness, default=no]),
 	[ac_cv_use_readline=$withval], [ac_cv_use_readline=no])
 if test x"$ac_cv_use_readline" != x"no"; then
     AC_CHECK_HEADERS([readline/readline.h readline.h],,,[;])
@@ -216,7 +216,7 @@ dnl std lib functions
 dnl
 
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([alloca])
+AC_FUNC_ALLOCA
 
 AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within
 
@@ -454,8 +454,6 @@ AH_TOP([#ifndef _SEE_h_config_
 #define _SEE_h_config_])
 AH_BOTTOM([#endif /* _SEE_h_config_ */])
 
-AH_TEMPLATE([HAVE_ATTRIBUTE_NORETURN], 
-	    [Define if your compiler understands __attribute__((__noreturn__))])
 AH_TEMPLATE([HAVE_CONSTANT_INF_DIV],
 	    [Define if your compiler treats the expression 1.0/0.0 as constant])
 AH_TEMPLATE([HAVE_CONSTANT_NAN_DIV],

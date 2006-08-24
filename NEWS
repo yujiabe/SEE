@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 49: detect alloca on FreeBSD and correct readline defaults
   Bug 50: use finite() instead of isinf() for libm portability
   Feature: SEE_call_args() counterpart to SEE_parse_args()
   Improved: thisobj field of constructors deprecated (it was never used)
