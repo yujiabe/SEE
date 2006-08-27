@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Example: 'ssp', a threaded server-side javascript HTTP server example
   Bug 52: attach tracebacks to try contexts when exceptions are thrown
   Bug 49: detect alloca on FreeBSD and correct readline defaults
   Bug 50: use finite() instead of isinf() for libm portability
