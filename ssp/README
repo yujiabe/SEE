@@ -15,3 +15,9 @@ plus the following:
 
 If the QUERY_STRING is "raw", then the raw javascript to be
 executed is shown.
+
+
+Run the server (httpd) from this source directory, it listens on port 8000.
+Then visit http://127.0.0.1:8000/test.ssp with your web browser. You should
+see the file in your browser with the <%..%> embedded parts evaluated.
+
