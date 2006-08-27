@@ -105,7 +105,10 @@ SEE_malloc_string(interp, size)
 
 	if (size == 0)
 		return NULL;
-	data = (*SEE_system.malloc_string)(interp, size);
+	if (SEE_system.malloc_string)
+		data = (*SEE_system.malloc_string)(interp, size);
+	else
+		data = (*SEE_system.malloc)(interp, size);
 	if (data == NULL) 
 		(*SEE_system.mem_exhausted)(interp);
 	return data;
