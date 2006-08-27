@@ -3277,6 +3277,8 @@ void <dfn id="SEE_PrintObject">SEE_PrintObject</dfn>(struct SEE_interpreter *int
                 struct SEE_object *obj, FILE *file);
 void <dfn id="SEE_PrintString">SEE_PrintString</dfn>(struct SEE_interpreter *interp, 
                 struct SEE_string *str, FILE *file);
+void <dfn id="SEE_PrintContextTraceback">SEE_PrintContextTraceback</dfn>(struct SEE_interpreter *interp, 
+                SEE_try_context_t *context, FILE *file);
 void <dfn id="SEE_PrintTraceback">SEE_PrintTraceback</dfn>(struct SEE_interpreter *interp, 
                 FILE *file);</pre>
 
@@ -3467,6 +3469,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
+<a href="#SEE_PrintContextTraceback">SEE_PrintContextTraceback</a> (2.1)<br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
@@ -3487,8 +3490,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
-<a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <td>
+<a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_toutf8">SEE_string_toutf8</a> (2.0)<br>
 <a href="#SEE_string_utf8_size">SEE_string_utf8_size</a> (2.0)<br>

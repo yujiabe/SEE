@@ -44,6 +44,9 @@
 #include <see/interpreter.h>
 #include "function.h"
 
+static void print_traceback(struct SEE_interpreter *interp,
+	struct SEE_traceback *traceback, FILE *f);
+
 /*
  * Print the contents of a value, without raising an exception
  */
@@ -211,19 +214,20 @@ SEE_PrintString(interp, s, f)
 	}
 }
 
-void
-SEE_PrintTraceback(interp, f)
+static void
+print_traceback(interp, traceback, f)
 	struct SEE_interpreter *interp;
+	struct SEE_traceback *traceback;
 	FILE *f;
 {
 	struct SEE_traceback *tb;
 	struct SEE_string *locstr, *fname;
 	struct SEE_object *fo;
 
-	if (!interp->traceback)
+	if (!traceback)
 		return;
 	fprintf(f, "traceback:\n");
-	for (tb = interp->traceback; tb; tb = tb->prev) {
+	for (tb = traceback; tb; tb = tb->prev) {
 		locstr = SEE_location_string(interp, tb->call_location);
 		fprintf(f, "\t");
 		SEE_string_fputs(locstr, f);
@@ -247,4 +251,21 @@ SEE_PrintTraceback(interp, f)
 		    SEE_PrintObject(interp, fo, f);
 		fprintf(f, "\n");
 	}
+}
+
+void
+SEE_PrintTraceback(interp, f)
+	struct SEE_interpreter *interp;
+	FILE *f;
+{
+	print_traceback(interp, interp->traceback, f);
+}
+
+void
+SEE_PrintContextTraceback(interp, context, f)
+	struct SEE_interpreter *interp;
+	volatile struct SEE_try_context *context;
+	FILE *f;
+{
+	print_traceback(interp, context->traceback, f);
 }

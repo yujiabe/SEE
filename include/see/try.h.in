@@ -68,18 +68,26 @@
  */
 
 #define SEE_TRY(interp, c) 					\
-	    for ((c).previous = (interp)->try_context,		\
-		 (interp)->try_context = &(c),			\
-		 (c).interpreter = (interp),			\
-		 SEE_SET_NULL(&(c).thrown),			\
-		 (c).done = 0;					\
-		 !(c).done && (_SEE_SETJMP(			\
-		    ((struct SEE_try_context *)&(c))->env) 	\
-		   ? ((c).interpreter->try_context = 		\
-		     (c).previous, 0)   			\
-		   : 1);					\
-		 (c).done = 1,					\
-		 (c).interpreter->try_context = (c).previous)
+    for (/* init: */						\
+    	 (c).previous = (interp)->try_context,			\
+	 (interp)->try_context = &(c),				\
+	 (c).interpreter = (interp),				\
+	 SEE_SET_NULL(&(c).thrown),				\
+	 (c).saved_traceback = (c).interpreter->traceback, 	\
+	 (c).done = 0;						\
+	 /* condition: */					\
+	 !(c).done && (_SEE_SETJMP(((struct SEE_try_context *)&(c))->env) \
+	   ? (/* longjmp caught */				\
+	      (c).interpreter->try_context = (c).previous,	\
+	      (c).traceback = (c).interpreter->traceback,	\
+	      (c).interpreter->traceback = (c).saved_traceback, \
+	      0 						\
+	     )			   				\
+	   : 1); 						\
+	 /* post: */						\
+	 (c).interpreter->try_context = (c).previous,		\
+         (c).interpreter->traceback = (c).saved_traceback,	\
+	 (c).done = 1)
 
 #define TRY_BREAK						\
 	    continue
@@ -108,10 +116,12 @@
 /* convenience macro */
 #define SEE_DEFAULT_CATCH(interp, c)				\
 	    do {						\
-		if (!(c).done) 					\
+		if (!(c).done) {				\
+		    (interp)->traceback = (c).traceback;	\
 		    SEE__THROW(interp, 				\
 			    (struct SEE_value *)&(c).thrown,	\
 			    (c).throw_file, (c).throw_line);	\
+		}						\
 	    } while (0)
 
 /*------------------------------------------------------------
@@ -131,6 +141,8 @@ struct SEE_try_context {
 	_SEE_JMPBUF env;			/* setjmp storage */
 	const char *throw_file;			/* (debugging) */
 	int throw_line;				/* (debugging) */
+	struct SEE_traceback *saved_traceback;	/* traceback at try start */
+	struct SEE_traceback *traceback;	/* traceback at throw time */
 };
 
 typedef struct SEE_try_context volatile SEE_try_context_t; 

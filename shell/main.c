@@ -151,7 +151,7 @@ run_input(interp, inp, res)
 		    fprintf(stderr, "  (thrown from %s:%d)\n", 
                         ctxt.throw_file, ctxt.throw_line);
 #endif
-		SEE_PrintTraceback(interp, stderr);
+		SEE_PrintContextTraceback(interp, &ctxt, stderr);
             }
             if (SEE_CAUGHT(ctxt2)) {
 		/* Exception while printing exception! */
