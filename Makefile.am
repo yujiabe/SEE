@@ -4,6 +4,9 @@
 AUTOMAKE_OPTIONS= foreign
 
 SUBDIRS = include libsee libltdl shell doc
+if SSP
+SUBDIRS += ssp
+endif
 
 EXTRA_DIST = AUTHORS COPYING INSTALL NEWS README TODO ChangeLog
 

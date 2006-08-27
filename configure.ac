@@ -16,6 +16,7 @@ AC_CONFIG_FILES([Makefile
 		 shell/Makefile
 		 shell/test/Makefile
 		 shell/test/mozilla/Makefile
+		 ssp/Makefile
 		 ])
 
 ## -- fix brokenness with automake-1.4
@@ -177,6 +178,18 @@ if test x"$enable_parser_codegen" = x"yes"; then
         [Define if you want to include experimental code generator])
 else
     AC_MSG_RESULT([no])
+fi
+
+AC_ARG_ENABLE(ssp,
+    AC_HELP_STRING([--enable-ssp],
+	           [Enable SSP example [default=no]]))
+AM_CONDITIONAL(SSP, test x"$enable_ssp" = x"yes")
+
+if test x"$enable_ssp" = x"yes"; then
+    PTHREADS_CFLAGS=-pthreads
+    PTHREADS_LDFLAGS=-lpthread
+    AC_SUBST(PTHREADS_CFLAGS)
+    AC_SUBST(PTHREADS_LDFLAGS)
 fi
 
 
