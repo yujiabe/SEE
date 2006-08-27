@@ -10,3 +10,4 @@ httpd_CFLAGS=		    $(PTHREADS_CFLAGS)
 INCLUDES=                   -I$(top_builddir)/include \
                             -I$(top_srcdir)/include
 
+EXTRA_DIST=		test.ssp include.ssp
