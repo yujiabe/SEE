@@ -8,7 +8,7 @@ rm -rf autom4te.cache
 
 #-- select the right autoconf tools for OpenBSD
 if test x"$AUTOCONF_VERSION" = x""; then
-	AUTOCONF_VERSION=2.59; export AUTOCONF_VERSION
+	AUTOCONF_VERSION=2.60; export AUTOCONF_VERSION
 	echo "export AUTOCONF_VERSION=$AUTOCONF_VERSION" >&2
 fi
 if test x"$AUTOMAKE_VERSION" = x""; then
