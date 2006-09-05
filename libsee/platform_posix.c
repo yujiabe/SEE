@@ -74,7 +74,7 @@ _SEE_platform_time(interp)
 	return time(0) * 1000.0;
 # else
  # warning "no time() or gettimeofday(); accessing time will throw an error"
-	SEE_error_throw_sys(interp, interp->Error, "System time unavailable");
+	SEE_error_throw(interp, interp->Error, "System time unavailable");
 # endif
 #endif
 }
@@ -139,6 +139,9 @@ _SEE_platform_dst(interp, ysec, ily, wstart)
 	tm.tm_hour = (s / (60 * 60)) % 24;
 	jday = s / (60 * 60 * 24);
 
+        SEE_ASSERT(interp, jday >= 0);
+        SEE_ASSERT(interp, jday < 365 + ily);
+
 	if (jday < 31)           { mon =  0; mday = jday + 1; }
 	else if (jday < 59+ily)  { mon =  1; mday = jday - 30; }
 	else if (jday < 90+ily)  { mon =  2; mday = jday - 58 - ily; }
@@ -150,9 +153,7 @@ _SEE_platform_dst(interp, ysec, ily, wstart)
 	else if (jday < 273+ily) { mon =  8; mday = jday - 242 - ily; }
 	else if (jday < 304+ily) { mon =  9; mday = jday - 272 - ily; }
 	else if (jday < 334+ily) { mon = 10; mday = jday - 303 - ily; }
-	else if (jday < 365+ily) { mon = 11; mday = jday - 334 - ily; }
-	else
-	    SEE_error_throw_sys(interp, interp->Error, "_SEE_platform_dst");
+	else                     { mon = 11; mday = jday - 334 - ily; }
 
 	tm.tm_mday = mday;
 	tm.tm_mon = mon;
@@ -164,7 +165,7 @@ _SEE_platform_dst(interp, ysec, ily, wstart)
 	tm.tm_isdst = 0;
 	nodst_time = mktime(&tm);
 
-	return (dst_time - nodst_time) * 1000;
+	return (nodst_time - dst_time) * 1000;
 #else
  # warning "no mktime(); daylight savings adjustments have been disabled"
  	return 0;
