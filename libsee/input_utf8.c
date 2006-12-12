@@ -63,7 +63,7 @@ static struct SEE_inputclass input_utf8_class = {
 
 struct input_utf8 {
 	struct SEE_input	inp;
-	const char *	s;
+	const unsigned char *	s;
 };
 
 static SEE_unicode_t
@@ -141,7 +141,7 @@ SEE_input_utf8(interp, s)
 	inpu->inp.inputclass = &input_utf8_class;
 	inpu->inp.filename = NULL;
 	inpu->inp.first_lineno = 1;
-	inpu->s = s;
+	inpu->s = (const unsigned char *)s;
 	SEE_INPUT_NEXT((struct SEE_input *)inpu);	/* prime */
 	return (struct SEE_input *)inpu;
 }
