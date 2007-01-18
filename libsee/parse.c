@@ -6755,7 +6755,7 @@ AssignmentExpression_subeq_eval(na, context, res)
 
 	EVAL(n->lhs, context, &r1);
 	GetValue(context, &r1, &r2);
-	EVAL(n->expr, context, &r1);
+	EVAL(n->expr, context, &r3);
 	GetValue(context, &r3, &r4);
 	AdditiveExpression_sub_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);

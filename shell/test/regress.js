@@ -38,4 +38,6 @@ test("h1(0)", 2);
 test("h2()", 1);
 test("h2(0)", 1);
 
+test("var a = 10; a -= NaN; isNaN(a)", true);		/* bug 61 */
+
 finish()

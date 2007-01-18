@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 61: fixed operator -= raising spurious TypeError exceptions
   Example: 'ssp', a threaded server-side javascript HTTP server example
   Bug 52: attach tracebacks to try contexts when exceptions are thrown
   Bug 49: detect alloca on FreeBSD; correct readline; fix daylight savings
