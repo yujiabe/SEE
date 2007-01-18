@@ -2432,6 +2432,11 @@ in the following table.
 </tbody>
 </table>
 
+<p>
+A cfunction may call 'back' into SEE using <code>SEE_Global_eval()</code>.
+In other words, cfunctions may be recursive. 
+The traceback context is automatically maintained by SEE.
+</p>
 
 <h3 id="function">6.6 User function objects</h3>
 
