@@ -1665,7 +1665,8 @@ the following <q>internal method</q> macros:
 <li><code>SEE_OBJECT_DELETE()</code>
         - delete a property; returns true on success 
           ('<code class="js">delete o.prop</code>');
-          also known as the <code class="js">[[Delete]]</code> internal method
+          also known as the <code class="js">[[Delete]]</code> internal method;
+          assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_DEFAULTVALUE()</code>
         - returns the string or number value associated with the object;
           also known as the <code class="js">[[DefaultValue]]</code> 

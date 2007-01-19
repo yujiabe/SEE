@@ -39,5 +39,6 @@ test("h2()", 1);
 test("h2(0)", 1);
 
 test("var a = 10; a -= NaN; isNaN(a)", true);		/* bug 61 */
+test("var b = new Array(1,2); delete b[1];0", 0);	/* bug 62 */
 
 finish()

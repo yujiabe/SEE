@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 62: document that SEE_OBJECT_DELETE assumes intern'd property
   Bug 61: fixed operator -= raising spurious TypeError exceptions
   Example: 'ssp', a threaded server-side javascript HTTP server example
   Bug 52: attach tracebacks to try contexts when exceptions are thrown

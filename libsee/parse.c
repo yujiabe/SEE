@@ -3543,7 +3543,7 @@ UnaryExpression_delete_eval_common(context, r1, res)
 	 */
 	if (!r1->u.reference.base || 
 	    SEE_OBJECT_DELETE(interp, r1->u.reference.base, 
-	    		      r1->u.reference.property))
+	    		      SEE_intern(interp, r1->u.reference.property)))
 		SEE_SET_BOOLEAN(res, 1);
 	else
 		SEE_SET_BOOLEAN(res, 0);

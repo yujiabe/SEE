@@ -1104,7 +1104,7 @@ function_inst_delete(interp, o, p)
 	struct SEE_object *common;
 
 	common = (struct SEE_object *)tofunction(interp, o)->function->common;
-	return SEE_OBJECT_DELETE(interp, common, p);
+	return SEE_OBJECT_DELETE(interp, common, SEE_intern(interp, p));
 }
 
 static struct SEE_enum *
