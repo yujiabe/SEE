@@ -94,6 +94,18 @@ static int		global_intern_tab_locked = 0;
 int			SEE_debug_intern;
 #endif
 
+#ifndef NDEBUG
+static int
+string_only_contains_ascii(s)
+	const char *s;
+{
+	for (; *s; s++)
+		if (*s & 0x80)
+			return 0;
+	return 1;
+}
+#endif
+
 /**
  * Make an intern entry in the hash table containing the string s,
  *  and flag s as being interned.
@@ -112,7 +124,7 @@ make(interp, s)
 	return i;
 }
 
-/** Compute the hash value of a string */
+/** Compute the hash value of a UTF-16 string */
 static unsigned int
 hash(s)
 	const struct SEE_string *s;
@@ -123,7 +135,12 @@ hash(s)
 	return h % HASHTABSZ;
 }
 
-/** Compute the hash value of an ASCII string */
+/** 
+ * Compute the hash value of an ASCII string.
+ * Returns the same value as if the ASCII string had been converted to a
+ * UTF-16 string and passed to hash().
+ * Assumes the input string is indeed ASCII (bytes in 0x00..0x7f).
+ */
 static unsigned int
 hash_ascii(s, lenret)
 	const char *s;
@@ -154,7 +171,10 @@ find(intern_tab, s, hash)
 	return x;
 }
 
-/** Returns true if an SEE_string contains the ASCII string s */
+/** 
+ * Returns true if a SEE_string matches the ASCII string s.
+ * Assumes the string s is ASCII (0x00..0x7f).
+ */
 static int
 ascii_eq(str, s)
 	struct SEE_string *str;
@@ -171,7 +191,7 @@ ascii_eq(str, s)
 	return *s == 0;
 }
 
-/** Find an interned string */
+/** Find an interned ASCII string */
 static struct intern **
 find_ascii(intern_tab, s, hash)
 	intern_tab_t *intern_tab;
@@ -289,6 +309,7 @@ SEE_intern_ascii(interp, s)
 #endif
 
 	SEE_ASSERT(interp, s != NULL);
+	SEE_ASSERT(interp, string_only_contains_ascii(s));
 
 	h = hash_ascii(s, &len);
 	x = find_ascii(&global_intern_tab, s, h);
