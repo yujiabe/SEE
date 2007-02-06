@@ -92,7 +92,8 @@ AC_DEFUN([SEE_CHECK___FUNCTION__],
   [AC_CACHE_CHECK([for __FUNCTION__], [ac_cv_have___FUNCTION__],
 		  [AC_TRY_RUN([int main() { return __FUNCTION__ ? 0 : 1; }],
 			      [ac_cv_have___FUNCTION__=yes], 
-			      [ac_cv_have___FUNCTION__=no])])
+			      [ac_cv_have___FUNCTION__=no],
+			      [ac_cv_have___FUNCTION__=unknown])])
    if test $ac_cv_have___FUNCTION__ = yes; then
        AC_DEFINE([HAVE___FUNCTION__], [1], 
 		 [Define to 1 if the compiler generates __FUNCTION__])
@@ -192,6 +193,11 @@ if test x"$enable_ssp" = x"yes"; then
     AC_SUBST(PTHREADS_LDFLAGS)
 fi
 
+AC_ARG_ENABLE(native-dtoa,
+    AC_HELP_STRING([--enable-native-dtoa],
+	           [Enable use of dtoa() in libc [default=no]]))
+AM_CONDITIONAL(NATIVE_DTOA, test x"$enable_native_dtoa" = x"yes")
+
 
 dnl ------------------------------------------------------------
 dnl external libraries
@@ -290,7 +296,8 @@ AC_CACHE_CHECK([for constant NaN], [ac_cv_cc_constant_NaN_div],
 		     #endif
 		     ],
 		    [ac_cv_cc_constant_NaN_div=yes],
-		    [ac_cv_cc_constant_NaN_div=no])])
+		    [ac_cv_cc_constant_NaN_div=no],
+		    [ac_cv_cc_constant_NaN_div=unknown])])
 test $ac_cv_cc_constant_NaN_div = yes && AC_DEFINE(HAVE_CONSTANT_NAN_DIV)
 
 AC_CACHE_CHECK([for constant Inf], [ac_cv_cc_constant_Inf_div],
@@ -306,7 +313,8 @@ AC_CACHE_CHECK([for constant Inf], [ac_cv_cc_constant_Inf_div],
 		     #endif
 		     ],
 		    [ac_cv_cc_constant_Inf_div=yes],
-		    [ac_cv_cc_constant_Inf_div=no])])
+		    [ac_cv_cc_constant_Inf_div=no],
+		    [ac_cv_cc_constant_Inf_div=unknown])])
 test $ac_cv_cc_constant_Inf_div = yes && AC_DEFINE(HAVE_CONSTANT_INF_DIV)
 
 dnl
@@ -326,7 +334,8 @@ AC_CACHE_CHECK([for hex float constants], [ac_cv_cc_constant_hex_float],
 		     int main() { exit( number == 8 ? 0:1 ); }
 		     ],
 		    [ac_cv_cc_constant_hex_float=yes],
-		    [ac_cv_cc_constant_hex_float=no])])
+		    [ac_cv_cc_constant_hex_float=no],
+		    [ac_cv_cc_constant_hex_float=unknown])])
 test $ac_cv_cc_constant_hex_float = yes && AC_DEFINE(HAVE_CONSTANT_HEX_FLOAT)
 
 dnl
@@ -334,7 +343,8 @@ dnl GNU-style variadic macros
 dnl
 
 AC_CACHE_CHECK([for variadic macros], [ac_cv_cc_variadic_macros],
-	[AC_TRY_RUN([
+	[AC_TRY_COMPILE([
+void f(void);
 #define f(a, b...) g(a, 5 , ## b)
 int g(v, w, x, y, z) int v,w,x,y,z; { return v*w*x*y*z; }
 int main() { exit( f(2,3,7,9) == 2*3*5*7*9 ? 0 : 1 ); }
@@ -360,7 +370,8 @@ AC_CACHE_CHECK([for working _longjmp()], [ac_cv_cc__longjmp_works],
 			exit(1);
 		     }],
 		    [ac_cv_cc__longjmp_works=yes],
-		    [ac_cv_cc__longjmp_works=no])])
+		    [ac_cv_cc__longjmp_works=no],
+		    [ac_cv_cc__longjmp_works=unknown])])
 test $ac_cv_cc__longjmp_works = yes && AC_DEFINE(HAVE__LONGJMP)
 
 AC_CACHE_CHECK([for working longjmp()], [ac_cv_cc_longjmp_works],
@@ -375,8 +386,15 @@ AC_CACHE_CHECK([for working longjmp()], [ac_cv_cc_longjmp_works],
 			exit(1);
 		     }],
 		    [ac_cv_cc_longjmp_works=yes],
-		    [ac_cv_cc_longjmp_works=no])])
-test $ac_cv_cc_longjmp_works = yes && AC_DEFINE(HAVE_LONGJMP)
+		    [ac_cv_cc_longjmp_works=no],
+		    [ac_cv_cc_longjmp_works=unknown])])
+
+if test $ac_cv_cc_longjmp_works != no; then
+	if test $ac_cv_cc_longjmp_works = unknown; then
+		AC_MSG_WARN([assuming that longjmp() will actually work])
+	fi
+	AC_DEFINE(HAVE_LONGJMP)
+fi
 
 if test $ac_cv_cc__longjmp_works = no -a \
         $ac_cv_cc_longjmp_works = no; then
@@ -411,7 +429,8 @@ AC_CACHE_CHECK([for working vsnprintf(0,0,,)], [ac_cv_libc_vsnprintf_works],
 			exit( ret == 11 ? 0 : 1);
 		     }],
 		    [ac_cv_libc_vsnprintf_works=yes],
-		    [ac_cv_libc_vsnprintf_works=no])])
+		    [ac_cv_libc_vsnprintf_works=no],
+		    [ac_cv_libc_vsnprintf_works=unknown])])
 
 dnl ------------------------------------------------------------
 dnl IEEE doubles/floats
@@ -445,10 +464,11 @@ AC_CACHE_CHECK([for 64-bit IEEE754 fp], [ac_cv_cc_ieee754],
 	    exit(0);
 	}],
     [ac_cv_cc_ieee754=yes],
-    [ac_cv_cc_ieee754=no])])
+    [ac_cv_cc_ieee754=no],
+    [ac_cv_cc_ieee754=unknown])])
 
 if test x"$ac_cv_cc_ieee754" != x"yes"; then
-    AC_MSG_WARN([SEE's ECMAScript compliance depends on native IEEE754 support])
+    AC_MSG_WARN([SEE's ECMAScript compliance relies on native IEEE754 support])
 fi
 
 AC_CACHE_CHECK([platform class], [ac_cv_see_platform], [
