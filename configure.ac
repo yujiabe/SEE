@@ -347,8 +347,8 @@ AC_CACHE_CHECK([for variadic macros], [ac_cv_cc_variadic_macros],
 void f(void);
 #define f(a, b...) g(a, 5 , ## b)
 int g(v, w, x, y, z) int v,w,x,y,z; { return v*w*x*y*z; }
-int main() { exit( f(2,3,7,9) == 2*3*5*7*9 ? 0 : 1 ); }
 		     ],
+		    [exit( f(2,3,7,9) == 2*3*5*7*9 ? 0 : 1 );],
 		    [ac_cv_cc_variadic_macros=yes],
 		    [ac_cv_cc_variadic_macros=no])])
 test $ac_cv_cc_variadic_macros = yes && AC_DEFINE(HAVE_VARIADIC_MACROS)
