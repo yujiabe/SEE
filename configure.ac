@@ -105,12 +105,39 @@ dnl ------------------------------------------------------------
 dnl features
 dnl
 
-AC_ARG_ENABLE(developer,
-    AC_HELP_STRING([--enable-developer],
-	           [Enable developer warnings and checks [default=no]]))
+dnl
+dnl Helper macro to build sensible --enable-FEATURE options
+dnl Usage is: SEE_ARG_ENABLE([feature],[default],[feature description],
+dnl                          [auto-actions], [yes-actions],[no-actions])
+dnl the auto-actions are run when enable_feature==auto. It should detect
+dnl and set dnl $enable_feature=yes if it makes sense to do so.
+dnl
+AC_DEFUN([_SEE_ARG_ENABLED],[
+ AC_ARG_ENABLE([$1],
+  AC_HELP_STRING(ifelse($2,yes,[--disable-$1],$2,no,[--enable-$1],$2,no,[--enable-$1]),
+   [$3 ]default=[ifelse($2,yes,enabled,$2,no,disabled,$2,auto,auto)]),
+  [dnl (( # two parens help editor balance
+   case "$enableval" in ifelse($4,,,auto|)yes|no) :;; *) #
+    AC_MSG_WARN([unexpected value '$enableval' for --enable-$1. Using '$2'.])
+    $7=$2
+    ;; esac],
+  [$7=$2])
+  AS_IF(test x"[$]$7" = x"auto",
+   [$4
+    AC_MSG_CHECKING([whether to enable $1])
+    AC_MSG_RESULT([$]$7) 
+    AS_IF(test x"[$]$7" = x"auto",[AC_MSG_ERROR([bad value for enable-$1])])])
+  AS_IF([ifelse($2,yes,test x"[$]$7" != x"no",$2,no,test x"[$]$7" = x"yes")],
+   [$5],[$6])
+])
+dnl SEE_ARG_ENABLED(FEATURE,DEFAULT,HELPTEXT,AUTO_ACTION,YES_ACTION,NO_ACTION)
+AC_DEFUN([SEE_ARG_ENABLE],
+ [_SEE_ARG_ENABLED([$1],[$2],[$3],[$4],[$5],[$6],[enable_]m4_bpatsubst([$1], -, _))])
 
-if test x"$enable_developer" = x"yes"; then
-    for flag in -Wall -Wmissing-declarations \
+
+SEE_ARG_ENABLE(developer,[no],
+   [pedantic compiler warnings],,
+   [for flag in -Wall -Wmissing-declarations \
     		 -Wmissing-prototypes  -Wtraditional -pedantic
     do
 	AC_MSG_CHECKING([for $flag])
@@ -121,82 +148,49 @@ if test x"$enable_developer" = x"yes"; then
 			  [AC_MSG_RESULT(no)
 			   CFLAGS="$CFLAGS_save"])
     done
-fi
+])
 
-AC_ARG_ENABLE(debug,
-    AC_HELP_STRING([--disable-debug],
-	           [Enable internal consistency checks [default=yes]]))
-if test x"$enable_debug" = x"no"; then
-    if test x"$enable_developer" = x"yes"; then
-        AC_MSG_WARN([Developer mode enabled, but debug was disabled!])
+SEE_ARG_ENABLE(diagnostic,[yes],
+   [internal consistency checks],,
+   [if test x"$enable_developer" = x"yes"; then
+        AC_MSG_WARN([Developer mode enabled, but diagnostic was disabled!])
     fi
     CPPFLAGS="$CPPFLAGS -DNDEBUG"
-fi
+])
 
-AC_ARG_ENABLE(full-unicode,
-    AC_HELP_STRING([--disable-full-unicode],
-	           [Include unicode tables [[default=yes]]]))
-AC_MSG_CHECKING([for unicode tables])
-if test x"$enable_full_unicode" != x"no"; then
-    AC_MSG_RESULT([yes])
-    AC_DEFINE(WITH_UNICODE_TABLES, [1],
+SEE_ARG_ENABLE(full-unicode,[yes],
+   [chooses Unicode over ASCII tables],,
+   [AC_DEFINE(WITH_UNICODE_TABLES, [1],
     	[Define to 1 if you want the Unicode tables for ECMA262 compliance])
-else
-    AC_MSG_RESULT([no])
-fi
+])
 
-AC_ARG_ENABLE(parser-print,
-    AC_HELP_STRING([--disable-parser-print],
-                   [Include parser printing code [[default=yes]]]))
-AC_MSG_CHECKING([whether to include parser printer code])
-if test x"$enable_parser_print" != x"no"; then
-    AC_MSG_RESULT([yes])
-    AC_DEFINE(WITH_PARSER_PRINT, [1],
+SEE_ARG_ENABLE(parser-print,[yes],
+   [include function printing code],,
+   [AC_DEFINE(WITH_PARSER_PRINT, [1],
         [Define if you want to be able to print function bodies])
-else
-    AC_MSG_RESULT([no])
-fi
+])
 
-AC_ARG_ENABLE(parser-visit,
-    AC_HELP_STRING([--enable-parser-visit],
-                   [Include parser node visiting code [[default=no]]]))
-AC_MSG_CHECKING([whether to include AST node visitor code])
-if test x"$enable_parser_visit" = x"yes"; then
-    AC_MSG_RESULT([yes])
-    AC_DEFINE(WITH_PARSER_VISIT, [1],
+SEE_ARG_ENABLE(parser-visit,[no],
+   [experimental node visiting API],,
+   [AC_DEFINE(WITH_PARSER_VISIT, [1],
         [Define if you want to include experimental AST visitor code])
-else
-    AC_MSG_RESULT([no])
-fi
+])
 
-AC_ARG_ENABLE(parser-codegen,
-    AC_HELP_STRING([--enable-parser-codegen],
-                   [Include parser code generator [[default=no]]]))
-AC_MSG_CHECKING([whether to include code generator])
-if test x"$enable_parser_codegen" = x"yes"; then
-    AC_MSG_RESULT([yes])
-    AC_DEFINE(WITH_PARSER_CODEGEN, [1],
+dnl XXX is this incompatible with parser_print?
+SEE_ARG_ENABLE(bytecode,[no],
+   [use bytecode over executable AST],,
+   [AC_DEFINE(WITH_PARSER_CODEGEN, [1],
         [Define if you want to include experimental code generator])
-else
-    AC_MSG_RESULT([no])
-fi
+])
 
-AC_ARG_ENABLE(ssp,
-    AC_HELP_STRING([--enable-ssp],
-	           [Enable SSP example [default=no]]))
-AM_CONDITIONAL(SSP, test x"$enable_ssp" = x"yes")
-
-if test x"$enable_ssp" = x"yes"; then
-    PTHREADS_CFLAGS=-pthreads
+SEE_ARG_ENABLE(ssp,[yes],
+   [build SSP example],,
+   [PTHREADS_CFLAGS=-pthreads
     PTHREADS_LDFLAGS=-lpthread
     AC_SUBST(PTHREADS_CFLAGS)
     AC_SUBST(PTHREADS_LDFLAGS)
-fi
-
-AC_ARG_ENABLE(native-dtoa,
-    AC_HELP_STRING([--enable-native-dtoa],
-	           [Enable use of dtoa() in libc [default=no]]))
-AM_CONDITIONAL(NATIVE_DTOA, test x"$enable_native_dtoa" = x"yes")
+])
+AM_CONDITIONAL(SSP, test x"$enable_ssp" = x"yes")
 
 
 dnl ------------------------------------------------------------
@@ -251,8 +245,13 @@ fi
 dnl --- things to add later?
 dnl  AC_CHECK_FUNCS([srand srandom vsprintf funopen])
 dnl  AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
-dnl  AM_FUNC_STRTOD
-dnl  AC_CHECK_FUNCS([dtoa freedtoa])
+
+SEE_ARG_ENABLE(native-dtoa,[auto],
+    [use dtoa() from libc],
+    [enable_native_dtoa=yes
+     AC_CHECK_FUNCS([strtod dtoa freedtoa],,[enable_native_dtoa=no])])
+AM_CONDITIONAL(NATIVE_DTOA, 
+    test x"$enable_native_dtoa" = x"yes" -a x"$have_native_dtoa" = x"yes")
 
 AC_CHECK_FUNC(rand_r)
 
