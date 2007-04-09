@@ -11059,6 +11059,7 @@ eval(context, thisobj, argc, argv, res)
 	}
 	
 	inp = SEE_input_string(interp, argv[0]->u.string);
+	inp->filename = STR(eval_input_name);
 	f = SEE_parse_program(interp, inp);
 	SEE_INPUT_CLOSE(inp);
 

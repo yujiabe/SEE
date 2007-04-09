@@ -44,6 +44,7 @@ no_string_space = "No string space left"
 bad_utf16_string = "Invalid UTF-16 sequence was found in the string"
 unknown_file = "<input>"
 string_input_name = "<string>"
+eval_input_name = "<eval>"
 duplicate_label = "Duplicate label '"
 previous_definition = "Previous definition"
 
