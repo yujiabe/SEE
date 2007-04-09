@@ -38,7 +38,7 @@
  * Pass dtoa() et al. calls through to the native implementation.
  */
 
-double strtod(const char *s00, char **se)
+double strtod(const char *s00, char **se);
 char *dtoa(double d, int mode, int ndigits, int *decpt, int *sign, char **rve);
 void freedtoa(char *s);
 
