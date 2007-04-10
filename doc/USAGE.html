@@ -84,9 +84,10 @@ for SEE version 2.1
  </ul>
 <li><a href="#mem">3 Memory management</a>
  <ul>
- <li><a href="#mem2">3.1 On memory allocators</a>
- <li><a href="#memother">3.2 Interacting with an external allocator</a>
- <li><a href="#memfinal">3.3 Finalization</a>
+ <li><a href="#memgrow">3.1 Growable memory regions</a>
+ <li><a href="#mem2">3.2 On memory allocators</a>
+ <li><a href="#memother">3.3 Interacting with an external allocator</a>
+ <li><a href="#memfinal">3.4 Finalization</a>
  </ul>
 <li><a href="#eval">4 Running programs</a>
  <ul>
@@ -236,7 +237,7 @@ Although the SEE library is essentially self-contained, it does depend on you
       for some obscure architecture, you should check.</dd>
  <dt>a garbage-collecting memory allocator</dt>
  <dd>The free <a href="#ref-boehm">Boehm gc</a> is highly recommended
-      (See also <a href="#mem">&sect;3.1</a>).</dd>
+      (See also <a href="#mem">&sect;3.2</a>).</dd>
 </dl>
 
 <p>
@@ -494,7 +495,81 @@ It is worth familiarizing yourself with the macro definitions
 in <code>&lt;see/mem.h&gt;</code> to see what they do.
 </p>
 
-<h3 id="mem2">3.1 On memory allocators</h3>
+<h3 id="memgrow">3.1 Growable memory regions</h3>
+
+<p>
+SEE provides a convenience function <code>SEE_grow_to()</code>
+that exponentially enlarges an allocated region to handle resize requests.
+This makes it useful for implementing efficient, resizeable arrays.
+</p>
+
+<ul>
+<li><code>SEE_GROW_INIT()</code>
+- initialises a <code>SEE_grow</code> structure, 
+  and zeros the pointer, length counter and allocated storage counter.
+  It sets the <code>element_size</code> field to the size of 
+  an individual element in the <code>ptr</code> array.
+<li><code>SEE_grow_to()</code>
+- sets the length counter to the given value, ensuring that the array
+  has sufficient storage, in a manner similar to realloc. 
+  Newly allocated elements are left uninitialised. 
+</ul>
+
+<pre>void <dfn id="SEE_GROW_INIT">SEE_GROW_INIT</dfn>(struct SEE_interpreter *interp, T *&amp;ptr, unsigned int &amp;len);
+void <dfn id="SEE_grow_to">SEE_grow_to</dfn>(struct SEE_interpreter *interp, struct SEE_growable *grow, unsigned int new_len);
+
+<dfn id="struct_SEE_growable">struct SEE_growable</dfn> {
+    void **data_ptr;            <i>/* Reference to base pointer */</i>
+    unsigned int *length_ptr;   <i>/* Reference to element use count */</i>
+    SEE_size_t element_size;    <i>/* Size of an element */</i>
+    SEE_size_t allocated;       <i>/* Valid storage addressed by *data_ptr */</i>
+    unsigned int is_string : 1; <i>/* Use SEE_malloc_string */</i>
+};
+</pre>
+
+<p>
+This facility is intended for when you have a separated array pointer
+and a length field. When you want to change the length, call
+<code>SEE_grow_to</code>: It will ensure that the array pointer
+points to sufficient storage, and set the length field automatically.
+</p>
+
+<p>
+Here is an example:
+</p>
+
+<pre>#include &lt;see/mem.h&gt;
+
+void example() 
+{
+    int *numbers;
+    unsigned int numbers_len;
+    <b>struct SEE_growable</b> numbers_grow;
+
+    <i>/* Initialises numbers to NULL, numbers_len to 0, 
+     * and prepares the numbers_grow structure for growth. */</i>
+    <b>SEE_GROW_INIT</b>(interp, &amp;numbers_grow, numbers, numbers_len);
+
+    <i>/* Because the array does not contain any GC'able pointers, 
+     * we will make SEE_grow_to use the 'string' allocators. This 
+     * gives a performance advantage when the numbers array gets large. */</i>
+    numbers_grow.is_string = 1;
+
+    <i>/* Set numbers_len = 1, growing the array as needed */</i>
+    <b>SEE_grow_to</b>(interp, &amp;numbers_grow, 2);
+
+    <i>/* Now it is safe to access elements 0 and 1 of numbers */</i>
+    numbers[0] = 1234;
+    numbers[1] = 5678;
+}</pre>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_growable</code> structure and related functions
+first appeared in API 2.0
+</p>
+
+<h3 id="mem2">3.2 On memory allocators</h3>
 
 <p>
 Why is SEE so dependent on a garbage collector?
@@ -537,7 +612,7 @@ They can often be tuned to meet your
 application's usage patterns.
 </ul>
 
-<h3 id="memother">3.2 Interacting with an external allocator</h3>
+<h3 id="memother">3.3 Interacting with an external allocator</h3>
 
 <p>
 If you will be embedding SEE in a host application that uses
@@ -593,7 +668,7 @@ reference counting.
 </p>
 
 
-<h3 id="memfinal">3.3 Finalization</h3>
+<h3 id="memfinal">3.4 Finalization</h3>
 
 <p>
 Host objects that acquire operating system resources
@@ -1548,7 +1623,7 @@ struct SEE_string *<dfn id="SEE_intern_ascii">SEE_intern_ascii</dfn>(struct SEE_
 SEE supports statically initialised strings.
 If you have a large number of strings to create and use (e.g. properties
 and method names) over many interpreter instances, statically initialised
-strings can save space, and improve performance.
+strings can save space, and slightly improve performance.
 </p>
 
 <p>
@@ -3409,16 +3484,19 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_Function_new">SEE_Function_new</a><br>
 <a href="#SEE_gcollect">SEE_gcollect</a> (2.0)<br>
 <a href="#SEE_Global_eval">SEE_Global_eval</a><br>
+<a href="#struct_SEE_growable">SEE_growable</a> struct (2.0)<br>
+<a href="#SEE_GROW_INIT">SEE_GROW_INIT</a> (2.0)<br>
+<a href="#SEE_grow_to">SEE_grow_to</a> (2.0)<br>
 <a href="#SEE_Infinity">SEE_Infinity</a><br>
 <a href="#struct_SEE_input">SEE_input</a> struct<br>
 <a href="#struct_SEE_inputclass">SEE_inputclass</a> struct<br>
 <a href="#SEE_INPUT_CLOSE">SEE_INPUT_CLOSE</a><br>
 <a href="#SEE_input_file">SEE_input_file</a><br>
 <a href="#SEE_INPUT_NEXT">SEE_INPUT_NEXT</a><br>
+<td>
 <a href="#SEE_input_string">SEE_input_string</a><br>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
-<td>
 <a href="#SEE_intern_ascii">SEE_intern_ascii</a> (2.0)<br>
 <a href="#SEE_intern_global">SEE_intern_global</a> (2.0*)<br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
@@ -3441,10 +3519,10 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_NEW_ARRAY">SEE_NEW_ARRAY</a><br>
 <a href="#SEE_NEW_FINALIZE">SEE_NEW_FINALIZE</a> (2.0)<br>
 <a href="#SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</a><br>
+<td>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
-<td>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
@@ -3467,10 +3545,10 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_OBJECT_HAS_CONSTRUCT">SEE_OBJECT_HAS_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</a><br>
 <a href="#SEE_OBJECT_HAS_GET_SEC_DOMAIN">SEE_OBJECT_HAS_GET_SEC_DOMAIN</a> (2.0)<br>
+<td>
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
-<td>
 <a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
@@ -3493,10 +3571,10 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
 <a href="#SEE_string_dup">SEE_string_dup</a><br>
+<td>
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
-<td>
 <a href="#SEE_string_sprintf">SEE_string_sprintf</a><br>
 <a href="#SEE_string_substr">SEE_string_substr</a><br>
 <a href="#SEE_string_toutf8">SEE_string_toutf8</a> (2.0)<br>
@@ -3519,6 +3597,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_version">SEE_version</a><br>
 <a href="#SEE_VERSION_API_MAJOR">SEE_VERSION_API_MAJOR</a><br>
 <a href="#SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</a><br>
+<!-- td -->
 </table>
 
 <hr>

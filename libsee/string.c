@@ -38,12 +38,6 @@
 # include <stdarg.h>
 #endif
 
-#if HAVE_LIMITS_H
-# include <limits.h>
-#else
-# define UINT_MAX (~(unsigned int)0)
-#endif
-
 #include <see/mem.h>
 #include <see/type.h>
 #include <see/string.h>
@@ -303,38 +297,12 @@ SEE_string_fputs(s, f)
  */
 struct simple_string {
 	struct SEE_string string;
-	unsigned int space;
+	struct SEE_growable grow;
 };
-
-/*
- * Tunable parameters, specified in bytes.
- * These can be varied at build time to suit a particular platform.
- * TODO: provide support for segmented strings?
- */
-#ifndef STRING_INITIAL_SIZE
-# define STRING_INITIAL_SIZE	512
-#endif
-#ifndef STRING_MAXIMUM_SIZE
-# define STRING_MAXIMUM_SIZE	UINT_MAX
-#endif
-#ifndef STRING_MAXIMUM_PADDING
-# define STRING_MAXIMUM_PADDING	4096
-#endif
-
-/*
- * Derived variables, in 'SEE_char_t's:
- *   INITSPACE: initial length of a string
- *   MAXSPACE:  biggest string length possible with length type
- *   BIGSPACE:  largest string length allocation likely to succeed
- */
-#define INITSPACE	(STRING_INITIAL_SIZE / sizeof (SEE_char_t))
-#define MAXSPACE	(STRING_MAXIMUM_SIZE / sizeof (SEE_char_t))
-#define BIGSPACE	((STRING_MAXIMUM_SIZE - STRING_MAXIMUM_PADDING) / \
-			 sizeof (SEE_char_t))
 
 /* 
  * Grows the string storage to have at least current+extra elements of storage.
- * Simple strings never shrink. Growth is in powers of two from INITSPACE.
+ * Simple strings never shrink. 
  */
 static void
 simple_growby(s, extra)
@@ -342,40 +310,16 @@ simple_growby(s, extra)
 	unsigned int extra;
 {
 	struct simple_string *ss = (struct simple_string *)s;
-	unsigned int minspace, new_space;
-	SEE_char_t *new_data;
-	struct SEE_interpreter *interp = s->interpreter;
+	unsigned int len_save;
 
-	if (s->length > MAXSPACE - extra)
-		SEE_error_throw_string(interp, interp->Error,
-		                STR(string_limit_reached));
-	minspace = s->length + extra;
-
-	if (ss->space < minspace) {
-	    /*
-	     * The non-empty string space starts at INITSPACE, and then
-	     * doubles until it would exceepd BIGSPACE, at which point it
-	     * is set to BIGSPACE (the practical size limit of memory 
-	     * allocations). A further increase is permitted to MAXSPACE,
-	     * but the memory subsystem is expected to complain at that
-	     */
-	    new_space = ss->space;
-	    while (new_space < minspace) {
-		if (new_space == 0)
-		    new_space = INITSPACE;
-		else if (ss->space >= BIGSPACE)
-		    new_space = MAXSPACE;
-		else if (ss->space > BIGSPACE/2)
-		    new_space = BIGSPACE;
-		else
-		    new_space = new_space * 2;
-	    }
-	    new_data = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, new_space);
-	    if (s->length)
-		memcpy(new_data, s->data, s->length * sizeof (SEE_char_t));
-	    ss->string.data = new_data;
-            ss->space = new_space;
-	}
+	/*
+	 * The grow_to API increments the length, but the growby contract
+	 * is simply to ensure that the length can be incremented up
+	 * to that point. So we save the length before calling grow_to().
+	 */
+	len_save = ss->string.length;
+	SEE_grow_to(s->interpreter, &ss->grow, ss->string.length + extra);
+	ss->string.length = len_save;
 }
 
 static struct SEE_stringclass simple_stringclass = {
@@ -394,11 +338,10 @@ SEE_string_new(interp, space)
 {
 	struct simple_string *ss = SEE_NEW(interp, struct simple_string);
 
-	ss->string.length = 0;
-	ss->string.data = NULL;
 	ss->string.interpreter = interp;
 	ss->string.flags = 0;
-	ss->space = 0;
+	SEE_GROW_INIT(interp, &ss->grow, ss->string.data, ss->string.length);
+	ss->grow.is_string = 1;
 	ss->string.stringclass = &simple_stringclass;
 	if (space)
 	    simple_growby((struct SEE_string *)ss, space);
@@ -418,7 +361,6 @@ SEE_string_vsprintf(interp, fmt, ap)
 	
 	ss = (struct simple_string *)SEE_string_new(interp, 0);
 	_SEE_vsprintf(interp, &ss->string, fmt, ap);
-	ss->space = ss->string.length;
 	return (struct SEE_string *)ss;
 }
 
@@ -624,9 +566,17 @@ simple_concat(interp, a, b)
 {
 	struct simple_string *cp;
 
+	/* Copy a to cp, carefully moving the SEE_growable structure  */
 	cp = SEE_NEW(interp, struct simple_string);
 	memcpy(cp, a, sizeof (struct simple_string));
+	cp->grow.data_ptr = &cp->string.data;
+	cp->grow.length_ptr = &cp->string.length;
+
+	/* Invalidate a so that it can no longer grow */
+	a->grow.data_ptr = NULL;
+	a->grow.length_ptr = NULL;
 	MAKE_UNGROWABLE(&a->string);
+
 	SEE_string_append(&cp->string, b);
 	return (struct SEE_string *)cp;
 }

@@ -1,6 +1,9 @@
 
 describe("Regression tests from bugzilla.")
 
+// Tests the string concatenation optimisation that broke during dev
+test('var a = "foo", b = a + "bar"; a', "foo")
+
 function foo () { 1; }
 test(foo.prototype.constructor, foo)			/* bug 9 */
 

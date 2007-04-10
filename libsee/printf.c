@@ -52,9 +52,11 @@
 # include <string.h>
 #endif
 
+#include <see/interpreter.h>
 #include <see/type.h>
 #include <see/string.h>
 #include <see/mem.h>
+#include <see/error.h>
 
 #include "printf.h"
 
@@ -98,13 +100,15 @@ _SEE_vsprintf(interp, s, fmt, ap)
     int phase;
     const char *str = 0;
     char strch, fmtch;
-    SEE_char_t *out, *outbuf = 0, *sstr = 0, sstrch;
+    SEE_char_t *out, *sstr = 0, sstrch;
     const char *fmtstart = 0;
     double dbl;
 
 #define OUTPUT(c) do { \
 	if (out) *out++ = (c); else outlen++; \
     } while (0)
+
+    SEE_ASSERT(interp, s->length == 0);
 
     /*
      * Phase 0: scan fmt to figure out how much buffer space is needed
@@ -122,8 +126,8 @@ _SEE_vsprintf(interp, s, fmt, ap)
 	    	break;
 	    va_copy(ap, ap0);
 	    fmt = fmtstart;
-	    outbuf = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, outlen);
-	    out = outbuf;
+	    (*s->stringclass->growby)(s, outlen);
+	    out = s->data;
 	}
 
 	while (*fmt) {
@@ -357,6 +361,4 @@ _SEE_vsprintf(interp, s, fmt, ap)
 	    }
 	}
     }
-    s->data = outbuf;
-    s->length = outlen;
 }

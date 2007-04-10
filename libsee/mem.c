@@ -32,9 +32,20 @@
 # include <config.h>
 #endif
 
+#if HAVE_LIMITS_H
+# include <limits.h>
+#else
+# define UINT_MAX (~(unsigned int)0)
+#endif
+
+#include <string.h>
+
 #include <see/mem.h>
 #include <see/system.h>
+#include <see/error.h>
+#include <see/string.h>
 
+#include "stringdefs.h"
 #include "dprint.h"
 
 #ifndef NDEBUG
@@ -45,6 +56,7 @@ int SEE_mem_debug = 0;
 #undef SEE_malloc_finalize
 #undef SEE_malloc_string
 #undef SEE_free
+#undef SEE_grow_to
 
 /*------------------------------------------------------------
  * Wrappers around memory allocators that check for failure
@@ -227,4 +239,80 @@ _SEE_free_debug(interp, memp, file, line, arg)
 		dprintf("free %p (%s:%d '%s')", *memp, file, line, arg);
 #endif
 	SEE_free(interp, memp);
+}
+
+/* 
+ * Memory segments start at GROW_INITIAL_SIZE and double until
+ * they would surpass GROW_MAXIMUM_SIZE. That should be slightly
+ * less than the maximum hardware segment size (to account for
+ * malloc overhead
+ */
+#ifndef GROW_INITIAL_SIZE
+# define GROW_INITIAL_SIZE   1024		/* bytes */
+#endif
+#ifndef GROW_MAXIMUM_SIZE
+# define GROW_MAXIMUM_SIZE   (UINT_MAX - 128)	/* bytes */
+#endif
+
+void
+SEE_grow_to(interp, grow, new_len)
+	struct SEE_interpreter *interp;
+	struct SEE_growable *grow;
+	unsigned int new_len;
+{
+	SEE_size_t new_alloc;
+	void *new_ptr;
+
+	if (new_len > GROW_MAXIMUM_SIZE / grow->element_size)
+	    SEE_error_throw_string(interp, interp->Error,
+		STR(string_limit_reached));
+	new_alloc = grow->allocated;
+	while (new_len > new_alloc / grow->element_size)
+	    if (new_alloc == 0)
+		new_alloc = GROW_INITIAL_SIZE;
+	    else if (new_alloc >= GROW_MAXIMUM_SIZE / 2)
+		new_alloc = GROW_MAXIMUM_SIZE;
+	    else
+		new_alloc *= 2;
+
+	if (new_alloc != grow->allocated) {
+	    if (grow->is_string)
+		new_ptr = SEE_malloc(interp, new_alloc);
+	    else
+		new_ptr = SEE_malloc_string(interp, new_alloc);
+	    if (*grow->length_ptr)
+		memcpy(new_ptr, *grow->data_ptr, 
+		    *grow->length_ptr * grow->element_size);
+	    if (*grow->data_ptr)
+		SEE_free(interp, *grow->data_ptr);
+#ifndef NDEBUG
+	    if (SEE_mem_debug)
+		dprintf("grow from %p/%u/%u -> %p/%u/%u%s\n", 
+		    *grow->data_ptr, *grow->length_ptr, grow->allocated,
+		    new_ptr, new_len, new_alloc, 
+		    grow->is_string ? " [string]":"");
+#endif
+	    *grow->data_ptr = new_ptr;
+	    grow->allocated = new_alloc;
+	}
+	*grow->length_ptr = new_len;
+}
+
+void
+_SEE_grow_to_debug(interp, grow, new_len, file, line)
+	struct SEE_interpreter *interp;
+	struct SEE_growable *grow;
+	unsigned int new_len;
+	const char *file;
+	int line;
+{
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("grow %p %d->%d (%s:%d)", 
+		    grow, 
+		    grow && grow->length_ptr ? *grow->length_ptr : -1,
+		    new_len,
+		    file, line);
+#endif
+	SEE_grow_to(interp, grow, new_len);
 }
