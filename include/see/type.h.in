@@ -183,7 +183,7 @@ extern const unsigned char
  #  pragma alloca
 #  else
 #   ifndef alloca 		/* predefined by HP cc +Olibcalls */
-#    ifndef @HAVE_ALLOCA@
+#    if !(@HAVE_ALLOCA@)
 #     undef SEE_ALLOCA
 #     define SEE_ALLOCA(i,t,n) SEE_NEW_ARRAY(i,t,n)
 #     undef SEE_STRING_ALLOCA
