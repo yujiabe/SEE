@@ -112,9 +112,11 @@ struct regex {
 	int			ncaptures, ncounters, nmarks, maxref;
 	int			statesz;
 	unsigned char	       *code;
-	int			codealloc, codelen;
+	unsigned int		codelen;
+	struct SEE_growable	codegrow;
 	struct charclass      **cc;
-	int			ccalloc, cclen;
+	unsigned int		cclen;
+	struct SEE_growable	ccgrow;
 	int			flags;
 };
 
@@ -370,21 +372,8 @@ cc_intern(recontext, c)
 	for (i = 0; i < regex->cclen; i++)
 		if (cc_cmp(c, regex->cc[i]) == 0)
 			return i;
-	if (regex->cclen == regex->ccalloc) {
-	    int new_sz;
-	    struct charclass **new_cc;
-
-	    new_sz = regex->ccalloc ? regex->ccalloc * 2 : 256;
-	    new_cc = SEE_NEW_ARRAY(interp, struct charclass *, new_sz);
-	    
-	    if (regex->cclen)
-		memcpy(new_cc, regex->cc, regex->cclen * 
-		    sizeof (struct charclass *));
-
-	    regex->cc = new_cc;
-	    regex->ccalloc = new_sz;
-	}
-	i = regex->cclen++;
+	i = regex->cclen;
+	SEE_grow_to(interp, &regex->ccgrow, regex->cclen + 1);
 	regex->cc[i] = c;
 	return i;
 }
@@ -488,12 +477,11 @@ regex_new(recontext)
 	regex->ncounters = 0;
 	regex->nmarks = 0;
 	regex->statesz = 0;
-	regex->code = NULL;
-	regex->codealloc = 0;
-	regex->codelen = 0;
-	regex->cc = NULL;
-	regex->ccalloc = 0;
-	regex->cclen = 0;
+	SEE_GROW_INIT(recontext->interpreter, &regex->codegrow,
+	    regex->code, regex->codelen);
+	regex->codegrow.is_string = 1;
+	SEE_GROW_INIT(recontext->interpreter, &regex->ccgrow,
+	    regex->cc, regex->cclen);
 	regex->flags = 0;
 	return regex;
 }
@@ -506,21 +494,11 @@ code_add(recontext, c)
 {
 	struct regex *regex = recontext->regex;
 	struct SEE_interpreter *interp = recontext->interpreter;
+	unsigned int i;
 
-	if (regex->codealloc <= regex->codelen) {
-	    unsigned char *new_code;
-	    int new_size;
-
-	    new_size = regex->codealloc ? regex->codealloc * 2 : 512;
-	    new_code = SEE_NEW_STRING_ARRAY(interp, unsigned char, new_size);
-
-	    if (regex->codealloc)
-		memcpy(new_code, regex->code, 
-		    regex->codelen * sizeof (unsigned char));
-	    regex->code = new_code;
-	    regex->codealloc = new_size;
-	}
-	regex->code[regex->codelen++] = c;
+	i = regex->codelen;
+	SEE_grow_to(interp, &regex->codegrow, i + 1);
+	regex->code[i] = c;
 }
 
 /* insert some bytes into the middle of the p-code, resizing as needed */
@@ -1362,9 +1340,7 @@ dprint_regex(regex)
 
 	dprintf("regex %p\n", regex);
 	dprintf("\tncaptures = %d\n", regex->ncaptures);
-	dprintf("\tcodealloc = %d\n", regex->codealloc);
 	dprintf("\tcodelen = %d\n", regex->codelen);
-	dprintf("\tccalloc = %d\n", regex->ccalloc);
 	dprintf("\tcclen = %d\n", regex->cclen);
 	dprintf("\tflags = 0x%x\n", regex->flags);
 	dprintf("\tcc:\n");
