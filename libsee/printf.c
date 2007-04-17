@@ -127,6 +127,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
 	    va_copy(ap, ap0);
 	    fmt = fmtstart;
 	    (*s->stringclass->growby)(s, outlen);
+	    s->length = outlen;
 	    out = s->data;
 	}
 
