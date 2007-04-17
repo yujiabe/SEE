@@ -103,6 +103,7 @@
 #include "stringdefs.h"
 #include "dtoa.h"
 #include "dprint.h"
+#include "nmath.h"
 
 #if WITH_PARSER_CODEGEN
 # include "code.h"
