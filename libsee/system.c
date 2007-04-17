@@ -62,6 +62,7 @@ extern void *GC_malloc_atomic(int);
 # if HAVE_GC_FREE
 extern void GC_free(void *);
 # endif
+typedef void *GC_PTR;
 #endif
 
 #include <see/interpreter.h>
