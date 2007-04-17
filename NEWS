@@ -1,14 +1,16 @@
 $Id$
 
 2.1 [unreleased]
-  bug 16: use floor() instead of rint()
+  bug 14: use floor() instead of rint()
+  bug 16: support for keeping static strings in a resource segment
   bug 66: fix line numbering with '//' and '<!--' comments
   bug 65: fixed alloca support on some systems
-  Feature: added SEE_grow_to() for limited, growable memory regions
+  bug 20: added SEE_grow_to() for limited, growable memory regions
   Improved: error messages from eval() label as <eval> instead of <string>
   Bug 62: document that SEE_OBJECT_DELETE assumes intern'd property
   Bug 61: fixed operator -= raising spurious TypeError exceptions
   Example: 'ssp', a threaded server-side javascript HTTP server example
+  Bug 53: improved support for cross-compiling
   Bug 52: attach tracebacks to try contexts when exceptions are thrown
   Bug 49: detect alloca on FreeBSD; correct readline; fix daylight savings
   Bug 50: use finite() instead of isinf() for libm portability
