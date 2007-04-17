@@ -260,9 +260,9 @@ radix_tostring(s, n, radix)
 
 	if (n >= radix) {
 		radix_tostring(s, n / radix, radix);
-		n = fmod(n, (SEE_number_t)radix);
+		n = NUMBER_fmod(n, (SEE_number_t)radix);
 	}
-	d = floor(n);
+	d = NUMBER_floor(n);
 	if (d < 10) SEE_string_addch(s, '0' + d);
 	else        SEE_string_addch(s, 'a' + d - 10);
 }
@@ -338,7 +338,7 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 			}
 		} else
 			expon = 0;
-		ni = floor(n);
+		ni = NUMBER_floor(n);
 		nf = n - ni;
 		radix_tostring(s, ni, radix);
 		if (nf > 0) {
@@ -349,13 +349,9 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 			    SEE_number_t d;
 			    nf *= radix;
 			    if (i == MAXPREC - 1) {
-#if HAVE_RINT
-				    d = rint(nf);
-#else /* !HAVE_RINT */
-				    d = floor(nf + 0.5);
-#endif /* !HAVE_RINT */
+				    d = NUMBER_floor(nf + 0.5);
 			    } else {
-				    d = floor(nf);
+				    d = NUMBER_floor(nf);
 				    nf -= d;
 			    }
 			    if (d < 10) SEE_string_addch(s, '0' + (int)d);

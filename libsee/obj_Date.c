@@ -620,7 +620,7 @@ MakeDay(year, month, date)
 	    DayFromYear(y) >  100000000)
 		return SEE_NaN;
 
-	ily = isleapyear(NUMBER_rint(y));
+	ily = isleapyear(NUMBER_floor(y));
 	t = (DayFromYear(y) + (ily ? julian_ly:julian)[(int)m] - 1) * msPerDay;
 
 #ifndef NDEBUG

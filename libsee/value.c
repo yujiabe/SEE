@@ -196,7 +196,7 @@ SEE_ToInteger(interp, val, res)
 	else if (!SEE_NUMBER_ISFINITE(res) || res->u.number == 0.0)
 		; /* nothing */
 	else
-		res->u.number = NUMBER_copysign(floor(
+		res->u.number = NUMBER_copysign(NUMBER_floor(
 			NUMBER_copysign(res->u.number, 1.0)),
 				  	 res->u.number);
 
@@ -223,7 +223,7 @@ SEE_ToUint32(interp, val)
 	if (!SEE_NUMBER_ISFINITE(&i) || i.u.number == 0.0)
 		return 0;
 	else {
-		i.u.number = fmod(i.u.number, 4294967296.0); /* 2^32 */
+		i.u.number = NUMBER_fmod(i.u.number, 4294967296.0); /* 2^32 */
 		if (i.u.number < 0)
 			i.u.number += 4294967296.0;
 		return (SEE_uint32_t)i.u.number;
@@ -243,7 +243,7 @@ SEE_ToUint16(interp, val)
 	if (!SEE_NUMBER_ISFINITE(&i) || i.u.number == 0.0)
 		return 0;
 	else {
-		i.u.number = fmod(i.u.number, 65536.0);	/* 2^16 */
+		i.u.number = NUMBER_fmod(i.u.number, 65536.0);	/* 2^16 */
 		if (i.u.number < 0)
 			return (SEE_uint16_t)(i.u.number + 65536.0);
 		else

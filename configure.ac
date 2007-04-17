@@ -256,7 +256,7 @@ AM_CONDITIONAL(NATIVE_DTOA,
 AC_CHECK_FUNC(rand_r)
 
 dnl -- functions that we *need* (i.e. don't have workarounds for):
-AC_CHECK_FUNCS([copysign rint \
+AC_CHECK_FUNCS([copysign \
 		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
 		snprintf vsnprintf \
 		abort memcpy memset \

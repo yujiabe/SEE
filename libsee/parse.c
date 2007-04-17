@@ -4318,7 +4318,7 @@ MultiplicativeExpression_mod_common(r2, r4, context, res)
 
 	SEE_ToNumber(context->interpreter, r2, &r5);
 	SEE_ToNumber(context->interpreter, r4, &r6);
-	SEE_SET_NUMBER(res, fmod(r5.u.number, r6.u.number));
+	SEE_SET_NUMBER(res, NUMBER_fmod(r5.u.number, r6.u.number));
 }
 
 static void
