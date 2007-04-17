@@ -151,7 +151,7 @@ SEE_ARG_ENABLE(developer,[no],
 ])
 
 SEE_ARG_ENABLE(diagnostic,[yes],
-   [internal consistency checks],,
+   [internal consistency checks],,,
    [if test x"$enable_developer" = x"yes"; then
         AC_MSG_WARN([Developer mode enabled, but diagnostic was disabled!])
     fi
@@ -178,19 +178,20 @@ SEE_ARG_ENABLE(parser-visit,[no],
 
 dnl XXX is this incompatible with parser_print?
 SEE_ARG_ENABLE(bytecode,[no],
-   [use bytecode over executable AST],,
+   [experimental bytecode generator],,
    [AC_DEFINE(WITH_PARSER_CODEGEN, [1],
         [Define if you want to include experimental code generator])
 ])
 
-SEE_ARG_ENABLE(ssp,[yes],
-   [build SSP example],,
+dnl XXX need to find a better way to get pthreads flags in
+SEE_ARG_ENABLE(ssp-example,[no],
+   [build SEE Servlet Pages example],,
    [PTHREADS_CFLAGS=-pthreads
     PTHREADS_LDFLAGS=-lpthread
     AC_SUBST(PTHREADS_CFLAGS)
     AC_SUBST(PTHREADS_LDFLAGS)
 ])
-AM_CONDITIONAL(SSP, test x"$enable_ssp" = x"yes")
+AM_CONDITIONAL(SSP, test x"$enable_ssp_example" = x"yes")
 
 
 dnl ------------------------------------------------------------
