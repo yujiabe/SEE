@@ -47,7 +47,7 @@ struct SEE_growable {
     void **data_ptr;		/* Reference to base pointer */
     unsigned int *length_ptr;	/* Reference to element use count */
     SEE_size_t element_size;	/* Size of an element */
-    SEE_size_t allocated;	/* Valid storage addressed by *data_ptr */
+    SEE_size_t allocated;	/* Bytes of storage addressed by *data_ptr */
     unsigned int is_string : 1;	/* Use SEE_malloc_string */
 };
 
@@ -68,6 +68,14 @@ void	_SEE_grow_to_debug(struct SEE_interpreter *i,
 # define SEE_grow_to(i, g, n) \
 		_SEE_grow_to_debug(i,g,n,__FILE__,__LINE__)
 #endif
+
+/* A slightly faster variant of SEE_grow_to() */
+#define SEE_GROW_TO(i,g,l) do {				\
+	if ((l) > (g)->allocated / (g)->element_size)	\
+	    SEE_grow_to(i, g, l);			\
+	else						\
+	    *(g)->length_ptr = (l);			\
+    } while (0)
 
 /* Convenience macros */
 #define SEE_NEW(i, t)		(t *)SEE_malloc(i, sizeof (t))
