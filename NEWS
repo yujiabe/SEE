@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  bug 66: fix line numbering with '//' and '<!--' comments
   bug 65: fixed alloca support on some systems
   Feature: added SEE_grow_to() for limited, growable memory regions
   Improved: error messages from eval() label as <eval> instead of <string>

@@ -328,6 +328,7 @@ SGMLComment(lex)
 		SKIP;
 	if (ATEOF)
 		return tEND;
+	lex->next_lineno++;
 	SKIP; /* line terminator */
 	return tLINETERMINATOR;
 }
@@ -645,6 +646,7 @@ CommentDiv(lex)
 			SKIP;
 		if (ATEOF)
 			return tEND;
+		lex->next_lineno++;
 		SKIP; /* line terminator */
 		return tLINETERMINATOR;
 	}

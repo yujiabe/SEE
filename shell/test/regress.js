@@ -44,4 +44,18 @@ test("h2(0)", 1);
 test("var a = 10; a -= NaN; isNaN(a)", true);		/* bug 61 */
 test("var b = new Array(1,2); delete b[1];0", 0);	/* bug 62 */
 
+/* bug 66 */
+function error_lineno(statement) {
+    try { eval(statement); } 
+    catch (e) { return Number(/<eval>:(\d+)/.exec(e.message)[1]); }
+    return "no error";
+}
+test('error_lineno("an error")', 1)
+test('error_lineno("\\nan error")', 2)
+test('error_lineno("/* Comment */\\nan error")', 2)
+test('error_lineno("// Comment\\nan error")', 2)
+compat('sgmlcom')
+test('error_lineno("<!-- Comment\\nan error")', 2)
+compat('')
+
 finish()
