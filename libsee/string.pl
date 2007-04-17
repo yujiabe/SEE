@@ -44,8 +44,10 @@
 #
 # Modes:
 #   'h': generate a C header file which defines 
+#            struct SEE_string *STRn(int);
+#            int                STRi(<ident>);
 #            struct SEE_string *STR(<ident>);
-#            extern struct SEE_string SEE_stringtab[];
+#            extern struct SEE_string *SEE_stringtab;
 #            extern int SEE_nstringtab;
 #   'c': generates a C file that implements the header using
 #        a static table of strings
@@ -101,10 +103,20 @@ sub h_mode {
 	print "/* This is a generated file: do not edit */
 
 struct SEE_string;
-extern struct SEE_string SEE_stringtab[];
 extern const unsigned int SEE_nstringtab;
 
-#define STR(x) (&SEE_stringtab[SEE_STR_##x])
+#define STRi(x) SEE_STR_##x
+#define STR(x) STRn(SEE_STR_##x)
+
+#if STATIC_STRINGS
+/* Address calculated at link time */
+# define STRn(i) (&SEE_static_stringtab[i])
+extern struct SEE_string SEE_static_stringtab[];
+#else
+/* Address calculated at run time */
+extern struct SEE_string *SEE_stringtab;
+# define STRn(i) (SEE_stringtab + (i))
+#endif
 ";
 	for ($i = 0; $i <= $#strings; $i++) {
 	    my $ident = $strings[$i]->{'ident'};
@@ -137,7 +149,12 @@ static const SEE_char_t stringtext[] = {\n";
 	    $prevlen = $#cp + 1;
 	}
 	print "};
-struct SEE_string SEE_stringtab[] = {
+#if STATIC_STRINGS
+struct SEE_string SEE_static_stringtab[]
+#else
+static struct SEE_string stringtab[]
+#endif
+= {
 ";
 	for ($i = 0; $i <= $#strings; $i++) {
 	    print ",\n" if $i;
@@ -145,6 +162,9 @@ struct SEE_string SEE_stringtab[] = {
 	    print "\tSTR_SEGMENT($offset, $length)";
 	}
 	print "};
+#if !(STATIC_STRINGS)
+struct SEE_string *SEE_stringtab = stringtab;
+#endif
 const unsigned int SEE_nstringtab = ".($#strings + 1).";
 ";
 }

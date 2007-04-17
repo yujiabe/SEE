@@ -693,11 +693,13 @@ Token(lex)
 
 		/* match keywords */
 		if (!hasescape)
-		    for (i = 0; i < SEE_tok_nkeywords; i++)
-			if (SEE_tok_keywords[i].str->length == s->length
-		         && SEE_string_cmp(SEE_tok_keywords[i].str, s) 
-			 == 0)
-			 {
+		    for (i = 0; i < SEE_tok_nkeywords; i++) {
+			const struct SEE_string *keyword;
+			
+			keyword = STRn(SEE_tok_keywords[i].index);
+			if (keyword->length == s->length &&
+		            SEE_string_cmp(keyword, s) == 0)
+			{
 			    int token = SEE_tok_keywords[i].token;
 			    if (token == tRESERVED &&
 /* EXT:3 */			SEE_COMPAT_JS(interp, >=, JS11))
@@ -711,7 +713,8 @@ Token(lex)
 			        break;
 			    }
 			    return token;
-			 }
+			}
+		     }
 
 		SEE_intern_and_free(interp, &s);
 		SEE_SET_STRING(&lex->value, s);

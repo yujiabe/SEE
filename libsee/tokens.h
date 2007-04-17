@@ -10,7 +10,7 @@ struct SEE_string;
 
 /* Token tables */
 struct strtoken {
-	struct SEE_string *str;
+	unsigned int index; /* index for STRn() */
 	int token;
 };
 extern struct strtoken SEE_tok_keywords[];

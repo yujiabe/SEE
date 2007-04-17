@@ -232,7 +232,7 @@ is_uninternable(s)
 {
 	return s == NULL || 
 	    (s->flags & SEE_STRING_FLAG_INTERNED) ||
-	    (s >= &SEE_stringtab[0] && s < &SEE_stringtab[SEE_nstringtab]);
+	    (s >= STRn(0) && s < STRn(SEE_nstringtab));
 }
 
 /**
@@ -375,10 +375,10 @@ global_init()
 
 	/* Add all the predefined strings to the global intern table */
 	for (i = 0; i < SEE_nstringtab; i++) {
-		h = hash(&SEE_stringtab[i]);
-		x = find(&global_intern_tab, &SEE_stringtab[i], h);
+		h = hash(STRn(i));
+		x = find(&global_intern_tab, STRn(i), h);
 		if (*x == NULL) 
-			*x = make(NULL, &SEE_stringtab[i]);
+			*x = make(NULL, STRn(i));
 	}
 	global_intern_tab_initialized = 1;
 }

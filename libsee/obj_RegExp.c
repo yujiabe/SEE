@@ -567,12 +567,7 @@ regexp_set_static(interp, S, regex, captures, source)
         struct capture *captures;
 	struct SEE_string *source;
 {
-        static struct SEE_string * property[] = {
-	    STR(dollar_ampersand),
-            STR(dollar_1), STR(dollar_2), STR(dollar_3),
-            STR(dollar_4), STR(dollar_5), STR(dollar_6),
-            STR(dollar_7), STR(dollar_8), STR(dollar_9),
-	};
+        struct SEE_string * property;
         int i, flags;
 	struct SEE_value v;
 	unsigned int ncaptures;
@@ -589,6 +584,18 @@ regexp_set_static(interp, S, regex, captures, source)
 	flags = SEE_regex_get_flags(regex);
 
         for (i = 0; i < 10; i++) {
+	    switch (i) {
+	    case 0: property = STR(dollar_ampersand);
+	    case 1: property = STR(dollar_1);
+	    case 2: property = STR(dollar_2);
+	    case 3: property = STR(dollar_3);
+	    case 4: property = STR(dollar_4);
+	    case 5: property = STR(dollar_5);
+	    case 6: property = STR(dollar_6);
+	    case 7: property = STR(dollar_7);
+	    case 8: property = STR(dollar_8);
+	    case 9: property = STR(dollar_9);
+	    }
 	    if (i < ncaptures && !CAPTURE_IS_UNDEFINED(captures[i]))
 		SEE_SET_STRING(&v, SEE_string_substr(interp, S, 
 		    captures[i].start, captures[i].end - captures[i].start));
@@ -596,9 +603,9 @@ regexp_set_static(interp, S, regex, captures, source)
 	    	SEE_SET_STRING(&v, STR(empty_string));
 	    if (i > 0 && i < ncaptures)
 	        lastParen = v.u.string;
-	    SEE_OBJECT_PUT(interp, RegExp, property[i], &v, 
+	    SEE_OBJECT_PUT(interp, RegExp, property, &v, 
 		SEE_ATTR_DEFAULT);
-	    if (property[i] == STR(dollar_ampersand))	/* $&, lastMatch */
+	    if (property == STR(dollar_ampersand))	/* $&, lastMatch */
 	        SEE_OBJECT_PUT(interp, RegExp, STR(lastMatch), &v, 
 		    SEE_ATTR_DEFAULT);
 	}

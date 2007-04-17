@@ -272,15 +272,18 @@ intstr(interp, sp, i)
 	struct SEE_string **sp;
 	SEE_uint32_t i;
 {
-	/* A small set of common, interned integers for speed */
-#define NCOMMON 10
-	static struct SEE_string *common_int[NCOMMON] = {
-		STR(zero_digit), STR(1), STR(2), STR(3), STR(4), 
-		STR(5), STR(6), STR(7), STR(8), STR(9)
-	};
-
-	if (i < NCOMMON)
-	    return common_int[i];
+	switch (i) {
+	case 0: return STR(zero_digit);
+	case 1: return STR(1);
+	case 2: return STR(2);
+	case 3: return STR(3);
+	case 4: return STR(4);
+	case 5: return STR(5);
+	case 6: return STR(6);
+	case 7: return STR(7);
+	case 8: return STR(8);
+	case 9: return STR(9);
+	}
 
 	if (!*sp)
 		*sp = SEE_string_new(interp, 9);
@@ -288,7 +291,6 @@ intstr(interp, sp, i)
 		(*sp)->length = 0;
 	intstr_p(*sp, i);
 	return SEE_intern(interp, *sp);
-#undef NCOMMON
 }
 
 /*
