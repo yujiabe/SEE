@@ -141,6 +141,7 @@ SEE_ToBoolean(interp, val, res)
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(toboolean_bad));
 	}
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(res) == SEE_BOOLEAN);
 }
 
 /* 9.3 */
@@ -182,6 +183,7 @@ SEE_ToNumber(interp, val, res)
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(tonumber_bad));
 	}
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(res) == SEE_NUMBER);
 }
 
 /* 9.4 */
@@ -343,6 +345,7 @@ SEE_ToString(interp, val, res)
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(tostring_bad));
 	}
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(res) == SEE_STRING);
 }
 
 /* 9.9 */
@@ -351,8 +354,9 @@ SEE_ToObject(interp, val, res)
 	struct SEE_interpreter *interp;
 	struct SEE_value *val, *res;
 {
-	struct SEE_object *obj;
 	struct SEE_value *arg[1];
+
+	arg[0] = val;
 
 	switch (SEE_VALUE_GET_TYPE(val)) {
 	case SEE_UNDEFINED:
@@ -363,20 +367,22 @@ SEE_ToObject(interp, val, res)
 			STR(toobject_null));
 	case SEE_OBJECT:
 		SEE_VALUE_COPY(res, val);
-		return;
+		break;
 	case SEE_BOOLEAN:
-		obj = interp->Boolean;
+		SEE_OBJECT_CONSTRUCT(interp, interp->Boolean, NULL, 
+			1, arg, res);
 		break;
 	case SEE_NUMBER:
-		obj = interp->Number;
+		SEE_OBJECT_CONSTRUCT(interp, interp->Number, NULL, 
+			1, arg, res);
 		break;
 	case SEE_STRING:
-		obj = interp->String;
+		SEE_OBJECT_CONSTRUCT(interp, interp->String, NULL, 
+			1, arg, res);
 		break;
 	default:
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(toobject_bad));
 	}
-	arg[0] = val;
-	SEE_OBJECT_CONSTRUCT(interp, obj, NULL, 1, arg, res);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(res) == SEE_OBJECT);
 }
