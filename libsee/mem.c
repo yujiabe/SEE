@@ -284,7 +284,7 @@ SEE_grow_to(interp, grow, new_len)
 		memcpy(new_ptr, *grow->data_ptr, 
 		    *grow->length_ptr * grow->element_size);
 	    if (*grow->data_ptr)
-		SEE_free(interp, *grow->data_ptr);
+		SEE_free(interp, grow->data_ptr);
 #ifndef NDEBUG
 	    if (SEE_mem_debug)
 		dprintf("grow from %p/%u/%u -> %p/%u/%u%s\n", 
