@@ -4,9 +4,6 @@
 #ifndef _SEE_h_platform_
 #define _SEE_h_platform_
 
-#include <stdarg.h>
-#include <see/type.h>
-
 struct SEE_interpreter;
 
 /* Returns the time right now in milliseconds since Jan 1 1970 UTC 0:00 */
@@ -20,6 +17,7 @@ SEE_number_t _SEE_platform_dst(struct SEE_interpreter *interp,
 		SEE_number_t ysec, int ily, int wstart);
 
 /* Abort the current system with a message */
-void _SEE_platform_abort(struct SEE_interpreter *interp, const char *msg);
+void _SEE_platform_abort(struct SEE_interpreter *interp, const char *msg)
+    SEE_dead;
 
 #endif /* _SEE_h_platform_ */

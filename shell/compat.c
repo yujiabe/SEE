@@ -5,7 +5,7 @@
 # include <config.h>
 #endif
 
-#if STDC_HEADERS
+#if HAVE_STRING_H
 # include <string.h>
 #endif
 

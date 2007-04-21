@@ -13,9 +13,12 @@
 
 # if STDC_HEADERS
 #  include <stdio.h>
-#  include <string.h>
 #  include <stdlib.h>
 # endif
+
+#if HAVE_STRING_H
+#  include <string.h>
+#endif
 
 # if HAVE_UNISTD_H
 #  include <unistd.h>

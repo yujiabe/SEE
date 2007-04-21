@@ -38,7 +38,9 @@
 # define UINT_MAX (~(unsigned int)0)
 #endif
 
-#include <string.h>
+#if HAVE_STRING_H
+# include <string.h>
+#endif
 
 #include <see/mem.h>
 #include <see/system.h>

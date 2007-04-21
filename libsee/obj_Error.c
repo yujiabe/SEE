@@ -34,8 +34,11 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
-# include <string.h>
 # include <stdarg.h>
+#endif
+
+#if HAVE_STRING_H
+# include <string.h>
 #endif
 
 #include <see/value.h>

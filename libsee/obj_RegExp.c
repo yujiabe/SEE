@@ -567,7 +567,7 @@ regexp_set_static(interp, S, regex, captures, source)
         struct capture *captures;
 	struct SEE_string *source;
 {
-        struct SEE_string * property;
+        struct SEE_string *property;
         int i, flags;
 	struct SEE_value v;
 	unsigned int ncaptures;
@@ -585,6 +585,7 @@ regexp_set_static(interp, S, regex, captures, source)
 
         for (i = 0; i < 10; i++) {
 	    switch (i) {
+	    default:
 	    case 0: property = STR(dollar_ampersand);
 	    case 1: property = STR(dollar_1);
 	    case 2: property = STR(dollar_2);

@@ -34,6 +34,9 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
+#endif
+
+#if HAVE_STRING_H
 # include <string.h>
 #endif
 

@@ -13,8 +13,11 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
-# include <string.h>
 # include <stdlib.h>
+#endif
+
+#if HAVE_STRING_H
+# include <string.h>
 #endif
 
 #if HAVE_UNISTD_H
@@ -306,7 +309,7 @@ run_html(interp, filename)
 	    if (ch == '\n' || ch == '\r') lineno++;
 	    if (toupper(ch) != *p) {
 		if (p != script_start)
-		    printf("%.*s", p - script_start, script_start);
+		    printf("%.*s", (int)(p - script_start), script_start);
 		p = script_start;
 	    }
 	    if (toupper(ch) == *p) {

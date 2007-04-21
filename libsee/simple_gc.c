@@ -53,6 +53,9 @@
 
 #if STDC_INCLUDES
 # include <stdlib.h>
+#endif
+
+#if HAVE_STRING_H
 # include <string.h>
 #endif
 

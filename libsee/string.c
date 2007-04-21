@@ -34,8 +34,11 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
-# include <string.h>
 # include <stdarg.h>
+#endif
+
+#if HAVE_STRING_H
+# include <string.h>
 #endif
 
 #include <see/mem.h>
@@ -569,7 +572,7 @@ simple_concat(interp, a, b)
 	/* Copy a to cp, carefully moving the SEE_growable structure  */
 	cp = SEE_NEW(interp, struct simple_string);
 	memcpy(cp, a, sizeof (struct simple_string));
-	cp->grow.data_ptr = &cp->string.data;
+	cp->grow.data_ptr = /* (void**) */&cp->string.data;
 	cp->grow.length_ptr = &cp->string.length;
 
 	/* Invalidate a so that it can no longer grow */

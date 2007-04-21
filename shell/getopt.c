@@ -37,7 +37,9 @@
 # include <config.h>
 #endif
 
-#include <stdio.h>
+#if STDC_HEADERS
+# include <stdio.h>
+#endif
 
 #if !HAVE_GETOPT
 
