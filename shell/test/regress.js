@@ -58,4 +58,8 @@ compat('sgmlcom')
 test('error_lineno("<!-- Comment\\nan error")', 2)
 compat('')
 
+/* bug 68 */
+test('var s = ""; for (i = 0; i < 8192; i++) s = s + " "; s.length', 8192)
+
+
 finish()

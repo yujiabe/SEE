@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  bug 68: free the right pointer in SEE_grow_to()
   bug 14: use floor() instead of rint()
   bug 16: support for keeping static strings in a resource segment
   bug 66: fix line numbering with '//' and '<!--' comments
