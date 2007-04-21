@@ -112,12 +112,12 @@ dnl                          [auto-actions], [yes-actions],[no-actions])
 dnl the auto-actions are run when enable_feature==auto. It should detect
 dnl and set dnl $enable_feature=yes if it makes sense to do so.
 dnl
-AC_DEFUN([_SEE_ARG_ENABLED],[
+AC_DEFUN([_SEE_ARG_ENABLE],[
  AC_ARG_ENABLE([$1],
-  AC_HELP_STRING(ifelse($2,yes,[--disable-$1],$2,no,[--enable-$1],$2,no,[--enable-$1]),
+  AC_HELP_STRING([ifelse($2,yes,[--disable-$1],$2,no,[--enable-$1],$2,no,[--enable-$1])],
    [$3 ]default=[ifelse($2,yes,enabled,$2,no,disabled,$2,auto,auto)]),
   [dnl (( # two parens help editor balance
-   case "$enableval" in ifelse($4,,,auto|)yes|no) :;; *) #
+   case "$enableval" in ifelse([$4],,,auto|)yes|no) :;; *) #
     AC_MSG_WARN([unexpected value '$enableval' for --enable-$1. Using '$2'.])
     $7=$2
     ;; esac],
@@ -132,7 +132,7 @@ AC_DEFUN([_SEE_ARG_ENABLED],[
 ])
 dnl SEE_ARG_ENABLED(FEATURE,DEFAULT,HELPTEXT,AUTO_ACTION,YES_ACTION,NO_ACTION)
 AC_DEFUN([SEE_ARG_ENABLE],
- [_SEE_ARG_ENABLED([$1],[$2],[$3],[$4],[$5],[$6],[enable_]m4_bpatsubst([$1], -, _))])
+ [_SEE_ARG_ENABLE([$1],[$2],[$3],[$4],[$5],[$6],[enable_]m4_bpatsubst([$1], -, _))])
 
 
 SEE_ARG_ENABLE(developer,[no],
