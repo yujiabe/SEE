@@ -153,6 +153,19 @@ SEE_Object_init(interp)
 	PUTFUNC(isPrototypeOf, 1)
 	PUTFUNC(propertyIsEnumerable, 1)
 
+	if (SEE_COMPAT_JS(interp, <=, JS12)) {
+	    /*
+	     * The execution system checks for calls to interp->Global_eval
+	     * and diverts to a special handler that carries the context 
+	     * through in a way that can't be emulated through the normal 
+	     * cfunction way. Global_eval is a special non-NULL function
+	     * pointer that should never be called directly.
+	     */
+	    SEE_SET_OBJECT(&v, interp->Global_eval);
+	    SEE_OBJECT_PUT(interp, Object_prototype, STR(eval), &v, 
+		    SEE_ATTR_DEFAULT);
+	}
+
 	/* 15.2.3.1 Object.prototype */
 	SEE_SET_OBJECT(&v, Object_prototype);
 	SEE_OBJECT_PUT(interp, Object, STR(prototype), &v, 
