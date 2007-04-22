@@ -378,16 +378,16 @@ main(argc, argv)
 
 #define INIT_INTERP()	if (!interp_initialised) {	\
 	SEE_interpreter_init(&interp);			\
-	interp.compatibility = SEE_COMPAT_STRICT;	\
 	interp_initialised = 1;				\
     }
 
 	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:l:r:V")) != -1)
 	    switch (ch) {
 	    case 'c':
-		INIT_INTERP();
-		if (compat_tovalue(optarg, &interp.compatibility) == -1)
+		if (compat_tovalue(optarg, &SEE_system.default_compat_flags)
+			== -1)
 		    error = 1;
+		INIT_INTERP();
 		break;
 	    case 'd':
 		INIT_INTERP();
@@ -411,8 +411,8 @@ main(argc, argv)
 			debugger = debug_new(&interp);
 		break;
 	    case 'h':
+		SEE_system.default_compat_flags |= SEE_COMPAT_SGMLCOM;
 		INIT_INTERP();
-		interp.compatibility |= SEE_COMPAT_SGMLCOM;
 		if (!document_added) {
 		    shell_add_document(&interp);
 		    document_added = 1;
