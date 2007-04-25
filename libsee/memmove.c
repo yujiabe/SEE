@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003
+ * Copyright (c) 2007
  *      David Leonard.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $Id$ */
+/* $Id: memcmp.c 751 2004-12-02 11:24:25Z d $ */
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -34,20 +34,67 @@
 
 #include "replace.h"
 
-#if !HAVE_MEMCMP
-/* ANSI memcmp() for systems that don't have it. */
+#if !HAVE_MEMMOVE
+/* ANSI memmove() for systems that don't have it. */
 int
-memcmp(a, b, n)
+memmove(a, b, n)
 	void *a, *b;
 	int n;
 {
-	const char *aa = (const char *)a;
-	const char *bb = (const char *)b;
-	int diff = 0;
+	char *aa = (char *)a;
+	char *bb = (char *)b;
 
-	while (n-- > 0)
-		if ((diff = (int)*aa++ - (int)*bb++) != 0)
-			break;
-	return diff;
+	if (aa > bb)
+	    while (n-- > 0)
+		*bb++ = *aa++;
+	else if (aa < bb) {
+	    aa += n;
+	    bb += n;
+	    while (n-- > 0)
+		*(--bb) = *(--aa);
+	}
+}
+#endif
+
+
+#if TEST
+int main()
+{
+    char x[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    char e[10] = { 1, 2, 5, 6, 7, 8, 9, 8, 9, 10 };
+    char f[10] = { 1, 2, 3, 4, 3, 4, 5, 6, 7, 10 };
+    char w[10];
+
+    /* Test copying down */
+    memcpy(w, x, sizeof w);
+    memmove(w + 4, w + 2, 5);
+    if (memcmp(w, e, sizeof w) != 0)
+	return 1;
+
+    /* Test copying up */
+    memcpy(w, x, sizeof w);
+    memmove(w + 2, w + 4, 5);
+    if (memcmp(w, f, sizeof w) != 0)
+	return 2;
+
+    /* Test copying to same destination */
+    memcpy(w, x, sizeof w);
+    memmove(w + 2, w + 2, 5);
+    if (memcmp(w, x, sizeof w) != 0)
+	return 3;
+
+    /* Test copying down with size 0 */
+    memcpy(w, x, sizeof w);
+    memmove(w + 2, w + 4, 0);
+    if (memcmp(w, x, sizeof w) != 0)
+	return 4;
+
+    /* Test copying up with size 0 */
+    memcpy(w, x, sizeof w);
+    memmove(w + 4, w + 2, 0);
+    if (memcmp(w, x, sizeof w) != 0)
+	return 5;
+
+    return 0;
 }
 #endif

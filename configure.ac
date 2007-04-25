@@ -231,6 +231,7 @@ dnl
 
 AC_FUNC_MEMCMP
 AC_FUNC_ALLOCA
+AC_REPLACE_FUNCS([memmove])
 
 AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within
 

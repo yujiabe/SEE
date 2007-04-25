@@ -63,6 +63,7 @@
 #include "init.h"
 #include "dprint.h"
 #include "nmath.h"
+#include "replace.h"
 
 #define POSITIVE	(1)
 #define NEGATIVE	(-1)
