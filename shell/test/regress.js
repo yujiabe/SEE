@@ -61,5 +61,7 @@ compat('')
 /* bug 68 */
 test('var s = ""; for (i = 0; i < 8192; i++) s = s + " "; s.length', 8192)
 
+/* bug 69 (may segfault) */
+test('(function(){var v=String.prototype.toLocaleString;v();})()', 'exception')
 
 finish()
