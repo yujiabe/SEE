@@ -36,7 +36,7 @@
 
 #if !HAVE_MEMMOVE
 /* ANSI memmove() for systems that don't have it. */
-int
+void
 memmove(a, b, n)
 	void *a, *b;
 	int n;
