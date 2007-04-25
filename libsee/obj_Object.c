@@ -42,6 +42,7 @@
 #include <see/intern.h>
 #include <see/cfunction.h>
 #include <see/interpreter.h>
+#include <see/error.h>
 
 #include "stringdefs.h"
 #include "init.h"
@@ -245,6 +246,10 @@ object_proto_toString(interp, self, thisobj, argc, argv, res)
 		int first = 1;
 		struct SEE_enum *e = NULL;
 
+		if (!thisobj)
+		    SEE_error_throw_string(interp, interp->TypeError,
+		       STR(null_thisobj));
+
                 SEE_string_addch(s, '{');
 		if (SEE_OBJECT_HAS_ENUMERATOR(thisobj)) {
 		    e = SEE_OBJECT_ENUMERATOR(interp, thisobj);
@@ -300,6 +305,10 @@ object_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 {
 	struct SEE_value v1, v2;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError,
+	       STR(null_thisobj));
+
 	/* "return the result of calling toString()" */
 	SEE_OBJECT_GET(interp, thisobj, STR(toString), &v1);
 	SEE_ToObject(interp, &v1, &v2);
@@ -334,6 +343,10 @@ object_proto_hasOwnProperty(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *is;
 	int hasit;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError,
+	       STR(null_thisobj));
+
 	/* XXX - should be a nicer way of determining how to do this: */
 	if (argc > 0 && 
 	    thisobj->objectclass->HasProperty == SEE_native_hasproperty)
@@ -356,6 +369,10 @@ object_proto_isPrototypeOf(interp, self, thisobj, argc, argv, res)
 	struct SEE_value *res;
 {
 	struct SEE_object *v;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError,
+	       STR(null_thisobj));
 
 	if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) != SEE_OBJECT) {
 		SEE_SET_BOOLEAN(res, 0);
@@ -382,6 +399,10 @@ object_proto_propertyIsEnumerable(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_string *is;
 	int isenum = 0;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError,
+	       STR(null_thisobj));
 
 	if (argc > 0 &&
 	    thisobj->objectclass->HasProperty == SEE_native_hasproperty)

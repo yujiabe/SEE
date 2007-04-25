@@ -81,6 +81,8 @@ struct cfunction {
 	void *sec_domain;
 };
 
+static struct cfunction *tocfunction(struct SEE_interpreter *interp,
+	struct SEE_object *o);
 static void cfunction_get(struct SEE_interpreter *, struct SEE_object *, 
 	struct SEE_string *, struct SEE_value *);
 static int cfunction_hasproperty(struct SEE_interpreter *, 
@@ -139,6 +141,17 @@ SEE_cfunction_make(interp, func, name, length)
 	return (struct SEE_object *)f;
 }
 
+static struct cfunction *
+tocfunction(interp, o)
+	struct SEE_interpreter *interp;
+	struct SEE_object *o;
+{
+	if (!o || o->objectclass != &SEE_cfunction_class)
+		SEE_error_throw_string(interp, interp->TypeError,
+		   STR(not_cfunction));
+	return (struct cfunction *)o;
+}
+
 /*------------------------------------------------------------
  * CFunction class methods
  */
@@ -183,6 +196,7 @@ cfunction_call(interp, o, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	struct cfunction *f = (struct cfunction *)o;
+
 	(*f->func)(interp, o, thisobj, argc, argv, res);
 }
 
@@ -194,7 +208,7 @@ SEE_cfunction_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	struct SEE_string *s;
-	struct cfunction *f = (struct cfunction *)thisobj;
+	struct cfunction *f = tocfunction(interp, thisobj);
 
 	s = SEE_string_new(interp, 0);
 	SEE_string_append(s, STR(cfunction_body1));

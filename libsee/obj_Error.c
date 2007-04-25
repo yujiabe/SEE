@@ -241,6 +241,10 @@ error_proto_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_value name, message;
 	struct SEE_string *s;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
 	SEE_OBJECT_GET(interp, thisobj, STR(name), &name);
 	SEE_OBJECT_GET(interp, thisobj, STR(message), &message);
 

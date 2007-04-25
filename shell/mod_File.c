@@ -319,13 +319,15 @@ File_init(interp)
  * (non-file) object and invoke them, we cannot assume the thisobj pointer 
  * always points to a 'struct file_object' structure. 
  * In effect, this function is a 'safe' cast.
+ * NOTE: There is a check for null because 'thisobj' can potentially
+ * be a NULL pointer.
  */
 static struct file_object *
 tofile(interp, o)
         struct SEE_interpreter *interp;
         struct SEE_object *o;
 {
-        if (o->objectclass != &file_inst_class)
+        if (!o || o->objectclass != &file_inst_class)
                 SEE_error_throw(interp, interp->TypeError, NULL);
         return (struct file_object *)o;
 }

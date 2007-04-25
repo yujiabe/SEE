@@ -2259,7 +2259,8 @@ are described in the following table:
         (<code class="js">Math.sqrt</code> here)</td></tr>
 <tr><td><code>thisobj</code></td>
     <td>the <code class="js">this</code> object 
-        (the <code class="js">Math</code> object here)</td></tr>
+        (the <code class="js">Math</code> object here)
+	- may be <code>NULL</code></td></tr>
 <tr><td><code>argc</code></td>
     <td>number of arguments</td></tr>
 <tr><td><code>argv</code></td>
@@ -2277,7 +2278,9 @@ If the function uses <code>thisobj</code>,
 it should check any assumptions made about it, especially if it is expected
 to be a host object.
 This is because method functions can easily be attached to
-other objects by user code.
+other objects by user code, and
+under other circumstances, the function can be called in a way that
+makes the <code>thisobj</code> pointer <code>NULL</code>.
 </p>
 
 <p>

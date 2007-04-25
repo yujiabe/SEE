@@ -199,7 +199,7 @@ tonumber(interp, o)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
 {
-	if (o->objectclass != &number_inst_class)
+	if (!o || o->objectclass != &number_inst_class)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		    STR(not_number));
 	return (struct number_object *)o;
@@ -381,9 +381,8 @@ number_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 	int argc;
 	struct SEE_value **argv, *res;
 {
-	struct number_object *no;
-
-	no = tonumber(interp, thisobj);
+	/* struct number_object *no;
+	no = tonumber(interp, thisobj); */
 
 	/* XXX - really should use localeconv() */
 	number_proto_toString(interp, self, thisobj, 0, NULL, res);

@@ -413,6 +413,10 @@ array_proto_toString(interp, self, thisobj, argc, argv, res)
 		struct SEE_value v, vs;
 		unsigned int j;
 
+		if (!thisobj)
+		    SEE_error_throw_string(interp, interp->TypeError, 
+		       STR(null_thisobj));
+
 		SEE_string_addch(s, '[');
 		SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 		length = SEE_ToUint32(interp, &v);
@@ -464,6 +468,10 @@ array_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v, r6, r7;
 	struct SEE_string *separator, *s, *n = NULL;
 	SEE_uint32_t length, i;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
@@ -517,6 +525,10 @@ array_proto_concat(interp, self, thisobj, argc, argv, res)
 	int i;
 	struct SEE_string *nsbuf = NULL, *ns;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
 	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
 	n = 0;
@@ -562,6 +574,10 @@ array_proto_join(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *separator, *s, *n = NULL;
 	SEE_uint32_t length, i;
 	int use_comma;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
@@ -611,6 +627,10 @@ array_proto_pop(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t i;
 	struct SEE_string *s = NULL, *si;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	i = SEE_ToUint32(interp, &v);
 	if (i == 0) {
@@ -639,6 +659,10 @@ array_proto_push(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_string *np = NULL;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
         SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
         n = SEE_ToUint32(interp, &v);
 	for (i = 0; i < argc; i++) {
@@ -662,6 +686,10 @@ array_proto_reverse(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v, r9, r10;
 	struct SEE_string *r7, *r7s = NULL, *r8, *r8s = NULL;
 	SEE_uint32_t k, r2, r3, r6;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	r2 = SEE_ToUint32(interp, &v);
@@ -702,6 +730,10 @@ array_proto_shift(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_string *s = NULL, *p;
 	SEE_uint32_t k, r2;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	r2 = SEE_ToUint32(interp, &v);
@@ -744,6 +776,10 @@ array_proto_slice(interp, self, thisobj, argc, argv, res)
 		SEE_SET_UNDEFINED(res);
 		return;
 	}
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
@@ -914,6 +950,10 @@ array_proto_sort(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v;
 	struct SEE_object *cmpfn;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	length = SEE_ToUint32(interp, &v);
 
@@ -949,6 +989,10 @@ array_proto_splice(interp, self, thisobj, argc, argv, res)
 	struct SEE_object *A;
 	SEE_uint32_t r3, r5, r6, r17, k;
 	struct SEE_string *s = NULL, *s9, *s11, *s22, *s33, *s39;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 /*1*/	SEE_OBJECT_CONSTRUCT(interp, interp->Array, NULL, 0, NULL, &v);
 	A = v.u.object;
@@ -1023,6 +1067,10 @@ array_proto_unshift(interp, self, thisobj, argc, argv, res)
 	SEE_uint32_t r2, r3, k;
 	struct SEE_value v;
 	struct SEE_string *s = NULL, *p;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	SEE_OBJECT_GET(interp, thisobj, STR(length), &v);
 	r2 = SEE_ToUint32(interp, &v);

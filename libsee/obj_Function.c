@@ -690,6 +690,10 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s = NULL;
 	int i, the_argc;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
+
 	if (!SEE_OBJECT_HAS_CALL(thisobj))
 		SEE_error_throw_string(interp, interp->TypeError, 
 			STR(not_callable));
@@ -743,6 +747,10 @@ function_proto_call(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
 	struct SEE_value thisv;
+
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError, 
+	       STR(null_thisobj));
 
 	if (!SEE_OBJECT_HAS_CALL(thisobj))
 		SEE_error_throw_string(interp, interp->TypeError, 

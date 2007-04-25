@@ -348,6 +348,10 @@ string_proto_toString(interp, self, thisobj, argc, argv, res)
 {
 	struct string_object *so;
 
+	if (!thisobj)
+	    SEE_error_throw_string(interp, interp->TypeError,
+	       STR(null_thisobj));
+
 	if (thisobj->objectclass != &string_inst_class)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(not_string));

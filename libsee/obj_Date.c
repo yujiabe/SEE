@@ -1040,7 +1040,7 @@ todate(interp, o)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
 {
-	if (o->objectclass != &date_inst_class)
+	if (!o || o->objectclass != &date_inst_class)
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(not_date));
 	return (struct date_object *)o;

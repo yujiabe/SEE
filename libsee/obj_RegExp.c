@@ -434,8 +434,8 @@ int
 SEE_is_RegExp(o)
 	struct SEE_object *o;
 {
-	return o->objectclass == &regexp_inst_class ||
-	       o->objectclass == &regexp_JS_inst_class;
+	return o && (o->objectclass == &regexp_inst_class ||
+	             o->objectclass == &regexp_JS_inst_class);
 }
 
 int
@@ -514,7 +514,7 @@ regexp_proto_toString(interp, self, thisobj, argc, argv, res)
 	 * "Object", and that methods where thisobj's [[Class]] is not "RegExp",
 	 * it has to throw a TypeError.
 	 */
-	if (SEE_GET_JS_COMPAT(interp) && (thisobj == interp->RegExp_prototype)) {
+	if (SEE_GET_JS_COMPAT(interp) && (thisobj == interp->RegExp_prototype)){
 		/*
 		 * Sadly, mozilla's test cases often want to print the 
 		 * RegExp.prototype. This special case is handled here. 
