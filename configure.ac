@@ -230,6 +230,7 @@ dnl std lib functions
 dnl
 
 AC_FUNC_MEMCMP
+test $ac_cv_func_memcmp_working = yes && AC_DEFINE(HAVE_MEMCMP)
 AC_FUNC_ALLOCA
 AC_REPLACE_FUNCS([memmove])
 
@@ -500,6 +501,8 @@ AH_TEMPLATE([HAVE_LONGJMP],
 	    [Define if you have working longjmp() and setjmp() functions])
 AH_TEMPLATE([HAVE__LONGJMP],
 	    [Define if you have working _longjmp() and _setjmp() functions])
+AH_TEMPLATE([HAVE_MEMCMP],
+	    [Define if you have a working memcmp() function])
 
 dnl ------------------------------------------------------------
 dnl tests
