@@ -48,6 +48,7 @@
 #endif
 
 #include <see/type.h>
+#include <see/value.h>
 #include <see/string.h>
 
 #include "stringdefs.h"

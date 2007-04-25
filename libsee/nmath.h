@@ -1,8 +1,8 @@
 /* Copyright (c) 2005, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _SEE_h_nmath
-#define _SEE_h_nmath
+#ifndef _SEE_h_nmath_
+#define _SEE_h_nmath_
 
 #if STDC_HEADERS
 # include <math.h>
@@ -51,4 +51,4 @@
 # define MAX(a,b)	((a) < (b) ? (b) : (a))
 #endif
 
-#endif /* _SEE_h_nmath */
+#endif /* _SEE_h_nmath_ */

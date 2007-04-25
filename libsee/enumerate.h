@@ -4,6 +4,7 @@
 #ifndef _SEE_h_enumerate_
 #define _SEE_h_enumerate_
 
+struct SEE_interpreter;
 struct SEE_string;
 struct SEE_object;
 

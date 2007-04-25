@@ -11,8 +11,6 @@ struct SEE_context;
 struct SEE_input;
 struct function;
 
-#include <see/eval.h>
-
 struct function *SEE_parse_function(struct SEE_interpreter *i,
 	struct SEE_string *name, struct SEE_input *param_input, 
 	struct SEE_input *body_input);

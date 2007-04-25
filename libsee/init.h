@@ -1,8 +1,10 @@
 /* Copyright (c) 2004, David Leonard. All rights reserved. */
 /* $Id$ */
 
-#ifndef _SEE_h_init
-#define _SEE_h_init
+#ifndef _SEE_h_init_
+#define _SEE_h_init_
+
+struct SEE_interpreter;
 
 /*
  * Initialisers and allocators used by the interpreter initialisation
@@ -58,4 +60,4 @@ void _SEE_module_alloc(struct SEE_interpreter *);
 void _SEE_module_init(struct SEE_interpreter *);
 void _SEE_module_fini(struct SEE_interpreter *);
 
-#endif /* _SEE_h_init */
+#endif /* _SEE_h_init_ */

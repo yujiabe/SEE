@@ -9,8 +9,7 @@
  * the input stream.
  */
 
-#include <see/value.h>
-
+struct SEE_input;
 struct SEE_string;
 
 struct lex {

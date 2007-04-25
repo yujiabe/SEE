@@ -7,6 +7,9 @@
 #include <see/type.h>
 
 struct SEE_object;
+struct SEE_interpreter;
+struct SEE_value;
+struct SEE_string;
 
 int	SEE_is_Array(struct SEE_object *a);
 void	SEE_Array_push(struct SEE_interpreter *i, struct SEE_object *a,

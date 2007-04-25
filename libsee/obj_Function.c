@@ -51,6 +51,7 @@
 #include <see/interpreter.h>
 #include <see/try.h>
 #include <see/context.h>
+#include <see/eval.h>
 #include <see/intern.h>
 
 #include "array.h"

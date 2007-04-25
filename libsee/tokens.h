@@ -13,13 +13,14 @@ struct strtoken {
 	unsigned int index; /* index for STRn() */
 	int token;
 };
-extern struct strtoken SEE_tok_keywords[];
-extern int SEE_tok_nkeywords;
 
 struct token {
 	SEE_char_t identifier[4];
 	int token;
 };
+
+extern struct strtoken SEE_tok_keywords[];
+extern int SEE_tok_nkeywords;
 extern struct token *SEE_tok_operators[];
 extern int SEE_tok_noperators;
 

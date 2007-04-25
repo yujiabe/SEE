@@ -20,4 +20,4 @@ void SEE_scope_lookup(struct SEE_interpreter *, struct SEE_scope *scope,
 int SEE_scope_eq(struct SEE_scope *scope1, struct SEE_scope *scope2);
 
 
-#endif /* _SEE_h_context_ */
+#endif /* _SEE_h_scope_ */
