@@ -10,12 +10,12 @@
 
 #if !HAVE_MEMCMP
 #define memcmp _SEE_memcmp
-int memcmp(void *, void *, int);
+int memcmp(const void *a, const void *b, int);
 #endif
 
 #if !HAVE_MEMMOVE
 #define memmove _SEE_memmove
-void memmove(void *, void *, int);
+void memmove(void *dst, void *src, int n);
 #endif
 
 #endif /* _SEE_h_replace_ */

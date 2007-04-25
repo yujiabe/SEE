@@ -37,21 +37,21 @@
 #if !HAVE_MEMMOVE
 /* ANSI memmove() for systems that don't have it. */
 void
-memmove(a, b, n)
-	void *a, *b;
+memmove(adst, asrc, n)
+	void *adst, *asrc;
 	int n;
 {
-	char *aa = (char *)a;
-	char *bb = (char *)b;
+	char *dst = (char *)adst;
+	char *src = (char *)asrc;
 
-	if (aa > bb)
+	if (src > dst)
 	    while (n-- > 0)
-		*bb++ = *aa++;
-	else if (aa < bb) {
-	    aa += n;
-	    bb += n;
+		*dst++ = *src++;
+	else if (src < dst) {
+	    src += n;
+	    dst += n;
 	    while (n-- > 0)
-		*(--bb) = *(--aa);
+		*(--dst) = *(--src);
 	}
 }
 #endif
@@ -67,13 +67,13 @@ int main()
 
     /* Test copying down */
     memcpy(w, x, sizeof w);
-    memmove(w + 4, w + 2, 5);
+    memmove(w + 2, w + 4, 5);
     if (memcmp(w, e, sizeof w) != 0)
 	return 1;
 
     /* Test copying up */
     memcpy(w, x, sizeof w);
-    memmove(w + 2, w + 4, 5);
+    memmove(w + 4, w + 2, 5);
     if (memcmp(w, f, sizeof w) != 0)
 	return 2;
 
@@ -85,13 +85,13 @@ int main()
 
     /* Test copying down with size 0 */
     memcpy(w, x, sizeof w);
-    memmove(w + 2, w + 4, 0);
+    memmove(w + 4, w + 2, 0);
     if (memcmp(w, x, sizeof w) != 0)
 	return 4;
 
     /* Test copying up with size 0 */
     memcpy(w, x, sizeof w);
-    memmove(w + 4, w + 2, 0);
+    memmove(w + 2, w + 4, 0);
     if (memcmp(w, x, sizeof w) != 0)
 	return 5;
 

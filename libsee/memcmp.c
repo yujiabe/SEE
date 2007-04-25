@@ -38,7 +38,8 @@
 /* ANSI memcmp() for systems that don't have it. */
 int
 memcmp(a, b, n)
-	void *a, *b;
+	const void *a;
+	const void *b;
 	int n;
 {
 	const char *aa = (const char *)a;
