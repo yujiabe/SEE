@@ -51,6 +51,7 @@ struct SEE_growable {
     unsigned int is_string : 1;	/* Use SEE_malloc_string */
 };
 
+/* Sets the new length of a growable array */
 void	SEE_grow_to(struct SEE_interpreter *i, struct SEE_growable *grow,
 		    unsigned int new_len);
 #define SEE_GROW_INIT(i,g,ptr,len) do {			\
