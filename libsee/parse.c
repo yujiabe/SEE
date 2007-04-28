@@ -11127,10 +11127,12 @@ SEE_context_eval(context, expr, res)
 	struct SEE_value *res;
 {
 	struct SEE_value s, *argv[1];
+	struct SEE_value ref;
 
 	argv[0] = &s;
 	SEE_SET_STRING(argv[0], expr);
-	eval(context, context->interpreter->Global, 1, argv, res);
+	eval(context, context->interpreter->Global, 1, argv, &ref);
+	GetValue(context, &ref, res);
 }
 
 /*
