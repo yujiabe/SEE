@@ -1,0 +1,339 @@
+
+SEE's intermediate bytecode representation
+------------------------------------------
+
+This document describes and defines SEE's intermediate code generation
+virtual machine model and instructions.
+
+SEE is designed to support different code generators. The model defined
+in this document is an interface between the parser and the code generation-
+execution back-end which implements the virtual machine.
+
+The virtual machine executes a sequence of virtual instructions that 
+ultimatgely operate on 
+
+    * the environment available through a SEE_context structure
+    * a virtual stack of SEE_values of known maximum size
+    * a 'C' register (a SEE_value always of type SEE_COMPLETION)
+    * an 'L' register (a SEE_location)
+    * a program counter 'PC' (index into the instruction stream)
+
+A sequence of instructions implements a SourceElements production
+minus any FunctionDeclarations. That is, the code generator is used to
+build bytecode that implements exactly one function. Thus, there is only
+one entry point.
+
+This document does not define a physical byte code format, instead
+it defines the instructions identified by the enumerated types of code.h.
+Some instructions take operands. It is up to the code generator how to
+encode these operands. The operands given include
+    * addresses (branch instructions)
+    * actual parameter count (for call instructions)
+    * SEE_value (for the literal instruction)
+
+Notation
+--------
+
+Instructions that operate on the stack describe the before and after
+states of the stack in the form "before | after". For example, the
+subtraction operator SUB is indicated like this:
+
+	SUB    num1 num2 | num3
+
+Indicating that num2 is first popped off the stack, followed by num1,
+then num3 is pushed. The top of the stack is always rightmost in the list.
+An empty list is represented by "-"
+
+The elements on the stack are of constrained types. The abbreviations used
+are:
+
+    * bool	- SEE_BOOLEAN
+    * num	- SEE_NUMBER
+    * str	- SEE_STRING
+    * obj	- SEE_OBJECT
+    * ref	- SEE_REFERENCE (possibly)
+    * cmpl	- SEE_COMPLETION
+    * null	- SEE_NULL
+    * undef	- SEE_UNDEFINED
+
+    * any	- any SEE_value (i.e. unknown type)
+    * val	- sam as any, excluding cmpl or ref
+    * prim	- same as val, excluding obj
+
+Two further abbreviations are used to refer to special implementation values:
+
+    * enum	- a value encapsulating a struct SEE_enum *
+    * ctxt	- a value encapsulating a SEE_context_t
+
+
+Call instructions
+-----------------
+
+    NEW<n>	objC any1..anyn | valR
+
+	1. If Type(objC) is not object, throw a TypeError exception
+	2. If objC does not implement [[Construct]] throw a TypeError exception
+	3. Call the [[Construct]] method on objC, providing any0..anyn as
+	   the argument values (may be empty, i.e. n = 0) setting 
+
+    CALL<n>	anyC any0..anyn | valR 
+
+	1. Call GetValue(anyC) -> objC
+	2. If Type(objC) is not Object, throw a TypeError exception
+	3. If objC does not implement [[Call]] throw a TypeError exception
+	4. if anyC is a reference, t <- GetBase(anyC)
+	   otherwise t <- NULL
+	5. if t is an activation object then t <- NULL
+	6. Call the [[Call]] method on objC, providing any0..anyn as he
+	   argument values (may be empty) -> anyR
+
+	Postconditions:
+	    anyR is NOT a reference or a completion
+
+    The L and C registers are unchanged by the CALL/NEW instructions.
+
+Special instructions
+
+    LITERAL<val>    - | val
+	Pushes a literal value onto the stack.
+
+    LOC<filename,lineno>    - | -
+	Sets the current location ('L' register).
+
+    END		    - | -
+	Terminates the virtual machine. (Register 'C' is returned to caller)
+
+Generic instructions
+
+    DUP		any1 | any1 any1
+	Duplicates the value on top of the stack
+
+    POP		any1 | -
+	Removes the topmost element on the stack
+
+    ROLL<n>	a0 .. an-1 an | an a0 .. an-1
+	Pushes the topmost value n items down into the stack
+	(Note: ROLL<0> is a no-op, and ROLL<1> is a simple swap)
+
+Context instructions
+
+    THIS	- | obj
+	Pushes the 'this' object from the current context
+
+    OBJECT	- | obj
+	Pushes the object interp->Object onto the stack
+
+Primitive instructions
+
+    REF		obj str | ref
+	Creates a reference from obj and str
+
+    GETVALUE	ref | val
+	Computes GetValue(ref) (8.7.1), which calls [[Get]] on an object
+	and therefore may throw an exception
+
+    LOOKUP	str | ref
+	Builds a reference from the current scope (10.1.4)
+
+    PUTVALUE	ref val1 | -
+	Computes PutValue(ref, val1) (8.7.2), which calls [[Put]] on an object
+	and therefore may throw an exception. 
+
+    DELETE	any1 | bool
+	1. If any is a reference, then pushes TRUE
+	2. Otherwise call [[Delete]] on the reference (11.4.1)
+	3. Push the result of the [[Delete]] call
+
+    TYPEOF	any | str
+	1. If any is a reference with null base, push "undefined"
+	2. If any is a reference, call GetValue(any)
+	3. Push a string representing the type (11.4.3)
+
+Conversion instructions
+
+    TOOBJECT	val | obj
+	Calls ToObject(val) (9.9). May throw an exception
+
+    TONUMBER	val | num
+	Calls ToObject(val) (9.3). May throw an exception
+
+    TOBOOLEAN	val | bool
+	Calls ToBoolean(val) (9.2)
+
+    TOSTRING	val | str
+	Calls ToString(val) (9.8). May throw an exception
+
+    TOPRIMITIVE	val | prim
+	Calls ToPrimitive(val) (9.1) May thrown an exception
+
+Arithmetic instructions (11.6.3)
+
+    NEG		num1 -> num2
+	if num1 is NaN, then num2 := NaN
+	otherwise num2 := -num1	(i.e. num1 with opposite sign)
+
+    INV		num1 -> num2
+	compute num2 := ~ToInt32(num1) (i.e. complement)
+
+    NOT		bool1 -> bool2
+	compute bool2 := !bool1
+
+    MUL		num1 num2 | num3
+    DIV		num1 num2 | num3
+    MOD		num1 num2 | num3
+	compute num3 <- num1 [*/%] num2 (see 11.5)
+
+    ADD		prim1 prim2 | prim3
+	If either of prim1 or prim2 is a string then
+	    prim3 = concat(ToString(prim1), ToString(prim2))
+	otherwise
+	    prim3 = ToNumber(prim1) + ToNumber(prim2)
+
+    SUB		num1 num2 | num3
+	Compute num3 <- num1 + num2
+
+    LSHIFT	num1 num2 | num3
+	Compute num3 <- ToInt32(num1) << (ToUint32(num2) & 0x1f)
+
+    RSHIFT	num1 num2 | num3
+	Compute num3 <- ToInt32(num1) >> (ToUint32(num2) & 0x1f) 
+	The most significant bit is propagated, and the result is signed.
+
+    URSHIFT	num1 num2 | num3
+	Compute num3 <- ToUint32(num1) >> (ToUint32(num2) & 0x1f)
+	The most signifiant bit of result is set to zero, and the result is
+	an unsigned 31 bit integer. (11.7.3)
+
+Relational instructions (11.8)
+
+    LT		val1 val2 | bool
+	Compute val1 < val2 (see 11.8.5)
+
+    INSTANCEOF	val1 val2 | bool
+	1. if val2 is not an object, throws a TypeError exception
+	2. compute val2.[[HasInstance]](val1)
+
+    IN		val1 val2 | bool
+	1. if val2 is not an object, throws a TypeError exception
+	2. compute val2.[[HasProperty]](ToString(val1))
+
+    EQ		val1 val2 | bool
+	Compute val1 == val2 (see 11.9.3)
+
+    SEQ		val1 val2 | bool
+	Compute val1 === val2 (see 11.9.6)
+
+Binary bitwise instructions (11.10)
+
+    BAND	num1 num2 | num3
+    BXOR	num1 num2 | num3
+    BOR		num1 num2 | num3
+	Compute num3 := ToInt32(num1) @ ToInt32(num2)
+
+Completion instructions
+
+    NORMAL	val | -
+	sets C <- (NORMAL, val, -)
+
+    BREAK<t> 	- | -
+	sets C <- (NORMAL, C.val, t)
+	Note that C.val is inherited
+
+    CONTINUE<t>	- | -
+	sets C <- (CONTINUE, C.val, t)
+	Note that C.val is inherited
+
+    RETURN	val | -
+	sets C <- (RETURN, val, -)
+
+    THROW	val | -
+	sets C <- (THROW, val, -)
+
+Branch instructions
+
+    B<x>	    - | -
+	Sets PC <- x
+
+    B.IF<x>	    bool | -
+	If bool is true, then set PC <- x
+
+    B.ABNORMAL<x>   - | -
+	If C.type != NORMAL, then set PC <- x
+
+    B.BREAK<t,x>    - | -
+	If C.type == BREAK and C.target == t, then 
+	    set PC <- x, and set C.type = NORMAL
+
+    B.CONTINUE<t,x>    - | -
+	If C.type == CONTINUE and C.target == t, then
+	    set PC <- x, and set C.type = NORMAL
+
+Enumeration instructions
+
+    ENUM	    obj | enum
+	Constructs an enumeration object, which is a sequence of
+	identifier strings.
+
+    B.ENUM<x>	    enum | enum str	(when branch not taken)
+		    enum | -		(when branch taken)
+	If the enumeration is exhausted, pops the enum object and
+	branches to <x>.
+	Otherwise, pushes the next string in the enumeration object
+	onto the stack and does not branch.
+	Identfier strings are skipped when enum.obj.HasProperty(str)
+	is false. (The instruction checks this each time)
+
+Scope instructions
+
+    WITH	    obj | -
+	Inserts obj into the front of the context's scope chain.
+
+    ENDWITH	    - | -
+	Removes the object at the front of the context's scope chain.
+
+    Note: the parser will put these into a try context to ensure the
+    scope chain is restored in the event of an exception, e.g.:
+
+	      WITH
+	      B.TRY<a>
+	       ...
+	      ENDTRY
+	    a:ENDWITH
+	      ENDFINALLY
+
+Exception instructions
+
+    THROW	    val | ?
+	Throws an exception using the given value
+
+    B.TRY<x>	    - | context		(when branch not taken)
+		    - | context		(when branch taken)
+	Establishes an exception context until ENDTRY is called.
+	The context is initialised to an 'uncaught' state.
+	Exceptions occuring before then will cause the following:
+	    * the context is set to a 'caught' state
+	    * the stack is restored to where it was immediately after
+	      the instruction (i.e with the context on the top).
+	    * the try context is released as if ENDTRY was executed
+
+    ENDTRY	    context | context
+	Concludes the try context by restoring the exception handler
+	immediately active before the last B.TRY instruction.
+	Parser guarantees that a context is released at most once
+	(either by this call or by a B.TRY branch being followed).
+
+    CATCH	    context | context val
+	Places the caught value onto the stack, and resets the context
+	to the 'uncaught' state. (Parser guarantees that this instruction
+	is reached only when the B.TRY<x> branch is taken.)
+
+    ENDFINALLY	    context | -
+	The context is popped from the stack.  If the context is in 
+	the 'caught' state, then immediately re-throws the exception.
+
+
+Initial conditions
+------------------
+    PC <- initial instruction
+    C <- (NORMAL, undefined, -)
+
