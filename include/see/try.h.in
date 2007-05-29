@@ -65,31 +65,43 @@
 
 /*
  * Exception handling macros
+ *
+ * _SEE_TRY_INIT(interp, c);
+ * if (_SEE_TRY_COND(interp, c))
  */
 
-#define SEE_TRY(interp, c) 					\
-    for (/* init: */						\
+/* Sets up a try context */
+#define _SEE_TRY_INIT(interp, c) 				\
     	 (c).previous = (interp)->try_context,			\
 	 (interp)->try_context = &(c),				\
 	 (c).interpreter = (interp),				\
 	 SEE_SET_NULL(&(c).thrown),				\
-	 (c).saved_traceback = (c).interpreter->traceback, 	\
-	 (c).done = 0;						\
-	 /* condition: */					\
-	 !(c).done && (_SEE_SETJMP(((struct SEE_try_context *)&(c))->env) \
-	   ? (/* longjmp caught */				\
-	      (c).interpreter->try_context = (c).previous,	\
-	      (c).traceback = (c).interpreter->traceback,	\
-	      (c).interpreter->traceback = (c).saved_traceback, \
-	      0 						\
-	     )			   				\
-	   : 1); 						\
-	 /* post: */						\
-	 (c).interpreter->try_context = (c).previous,		\
-         (c).interpreter->traceback = (c).saved_traceback,	\
-	 (c).done = 1)
+	 (c).saved_traceback = (c).interpreter->traceback 	\
 
-#define TRY_BREAK						\
+/* A setjmp-like function that calls FINI and returns true on catch */
+#define _SEE_TRY_SETJMP(interp, c)				\
+	 (_SEE_SETJMP(((struct SEE_try_context *)&(c))->env)	\
+	   ? (/* longjmp caught */				\
+	      (c).traceback = (c).interpreter->traceback,	\
+	      _SEE_TRY_FINI(interp, c),				\
+	      1 						\
+	     )			   				\
+	   : /* longjmp not caught */				\
+	      0)
+
+/* Called when the try block conpletes normally */
+#define _SEE_TRY_FINI(interp, c)				\
+	 (c).interpreter->try_context = (c).previous,		\
+         (c).interpreter->traceback = (c).saved_traceback
+
+/* A for-like macro that runs the body and finalizes exactly once */
+#define SEE_TRY(interp, c) 					\
+    for ((c).done = 0, _SEE_TRY_INIT(interp, c);		\
+         !(c).done && !_SEE_TRY_SETJMP(interp, c);		\
+         _SEE_TRY_FINI(interp, c), (c).done = 1)
+
+/* Breaks out of a SEE_TRY() loop */
+#define SEE_TRY_BREAK						\
 	    continue
 
 #define SEE_CAUGHT(c)						\
