@@ -52,6 +52,7 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/debug.h>
+#include <see/eval.h>
 #include <see/context.h>
 
 #include "stringdefs.h"

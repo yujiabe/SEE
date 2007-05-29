@@ -53,6 +53,7 @@
 #include "regex.h"
 #include "init.h"
 #include "nmath.h"
+#include "replace.h"
 
 /*
  * The String object.
