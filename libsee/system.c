@@ -70,6 +70,7 @@ typedef void *GC_PTR;
 
 #include "dprint.h"
 #include "platform.h"
+#include "code.h"
 
 /* Prototypes */
 static unsigned int simple_random_seed(void);
@@ -120,7 +121,8 @@ struct SEE_system SEE_system = {
 	simple_mem_exhausted,		/* mem_exhausted */
 	NULL,				/* gcollect */
 #endif
-	NULL				/* transit_sec_domain */
+	NULL,				/* transit_sec_domain */
+	_SEE_code1_alloc		/* code_alloc */
 };
 
 /*

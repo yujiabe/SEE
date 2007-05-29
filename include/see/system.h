@@ -7,6 +7,7 @@
 struct SEE_interpreter;
 struct SEE_throw_location;
 struct SEE_context;
+struct SEE_code;
 
 #include <see/interpreter.h>		/* for enum SEE_trace_event */
 #include <see/type.h>
@@ -44,6 +45,8 @@ struct SEE_system {
 	/* Security domain tracking */
 	void *(*transit_sec_domain)(struct SEE_interpreter *, void *);
 
+	/* Bytecode backend */
+	struct SEE_code *(*code_alloc)(struct SEE_interpreter *);
 };
 
 extern struct SEE_system SEE_system;

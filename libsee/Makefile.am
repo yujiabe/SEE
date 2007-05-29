@@ -15,10 +15,10 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dprint.c enumerate.c \
                    obj_String.c object.c parse.c printf.c regex.c 	\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
-		   module.c
+		   module.c code1.c
 
 libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
-		     dprint.h enumerate.h function.h init.h 		\
+		     dprint.h enumerate.h function.h init.h code1.h	\
 		     lex.h nmath.h parse.h platform.h printf.h regex.h 	\
 		     scope.h tokens.h unicase.inc unicode.h unicode.inc	\
 		     stringdefs.h stringdefs.inc replace.h

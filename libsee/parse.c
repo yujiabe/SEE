@@ -112,6 +112,9 @@
 # include "code.h"
 #endif
 
+#define MAX3(a,b,c)   MAX(MAX(a,b),c)
+#define MAX4(a,b,c,d) MAX(MAX(a,b),MAX(c,d))
+
 #ifndef NDEBUG
 int SEE_parse_debug = 0;
 int SEE_eval_debug = 0;
@@ -134,6 +137,29 @@ struct printer;
 typedef void (*visitor_fn_t)(struct node *, void *);
 #endif
 
+#if WITH_PARSER_CODEGEN
+struct code_context {
+	struct SEE_code *code;
+
+	/* A structure used to hold the break and continue patchables */
+	struct patchables {
+		SEE_code_patchable_t *cont_patch;
+		unsigned int ncont_patch;
+		struct SEE_growable gcont_patch;
+		SEE_code_patchable_t *break_patch;
+		unsigned int nbreak_patch;
+		struct SEE_growable gbreak_patch;
+		void *target;
+		struct patchables *prev;
+		int continuable;
+		unsigned int block_depth;
+	} *patchables;
+
+	/* The current block depth. Starts at zero. */
+	unsigned int block_depth, max_block_depth;
+};
+#endif
+
 struct nodeclass {
 #ifndef NDEBUG
 	const char *decl_file; int decl_line;
@@ -146,7 +172,7 @@ struct nodeclass {
 #endif
 	void (*eval)(struct node *, struct SEE_context *, struct SEE_value *);
 #if WITH_PARSER_CODEGEN
-	void (*codegen)(struct node *, struct SEE_code *);
+	void (*codegen)(struct node *, struct code_context *);
 #endif
 	void (*fproc)(struct node *, struct SEE_context *);
 #if WITH_PARSER_PRINT
@@ -179,8 +205,39 @@ struct nodeclass {
 struct node {
 	struct nodeclass *nodeclass;
 	struct SEE_throw_location location;
-	int isconst_valid : 1;		/* true if isconst is valid */
-	int isconst : 1;		/* true if node is a constant eval */
+	int isconst_valid : 1,		/* true if isconst is valid */
+	    isconst : 1;		/* true if node is a constant eval */
+
+#if WITH_PARSER_CODEGEN
+
+	/* Keeps track of the maximum stack space needed
+	 * to run the code. */
+	unsigned int maxstack;
+	
+	/* Represents a union of the possible types that
+	 * are left on top of the stack when code from
+	 * an Expression node is run */
+	unsigned int is;
+# define CG_TYPE_UNDEFINED	0x01
+# define CG_TYPE_NULL		0x02
+# define CG_TYPE_BOOLEAN	0x04
+# define CG_TYPE_NUMBER		0x08
+# define CG_TYPE_STRING		0x10
+# define CG_TYPE_OBJECT		0x20
+# define CG_TYPE_REFERENCE	0x40
+# define CG_TYPE_PRIMITIVE	(CG_TYPE_UNDEFINED | \
+				 CG_TYPE_NULL | \
+				 CG_TYPE_BOOLEAN | \
+				 CG_TYPE_NUMBER | \
+				 CG_TYPE_STRING)
+# define CG_TYPE_VALUE		(CG_TYPE_PRIMITIVE | CG_TYPE_OBJECT)
+# define CG_IS_VALUE(n)	    (!((n)->is & CG_TYPE_REFERENCE))
+# define CG_IS_PRIMITIVE(n) (!((n)->is & (CG_TYPE_REFERENCE|CG_TYPE_OBJECT)))
+# define CG_IS_BOOLEAN(n)   ((n)->is == CG_TYPE_BOOLEAN)
+# define CG_IS_NUMBER(n)    ((n)->is == CG_TYPE_NUMBER)
+# define CG_IS_STRING(n)    ((n)->is == CG_TYPE_STRING)
+# define CG_IS_OBJECT(n)    ((n)->is == CG_TYPE_OBJECT)
+#endif
 };
 
 struct label {
@@ -408,7 +465,9 @@ static void ObjectLiteral_eval(struct node *na, struct SEE_context *context,
 static struct node *ObjectLiteral_parse(struct parser *parser);
 static void Arguments_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static void Arguments_codegen(struct node *na, struct SEE_code *cg);
+#if WITH_PARSER_CODEGEN
+static void Arguments_codegen(struct node *na, struct code_context *cc);
+#endif
 static int Arguments_isconst(struct node *na, 
         struct SEE_interpreter *interp);
 static struct Arguments_node *Arguments_parse(struct parser *parser);
@@ -899,6 +958,28 @@ static void Function_visit(struct node *na, visitor_fn_t v, void *va);
 static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 #endif
 
+#if WITH_PARSER_CODEGEN
+static void push_patchables(struct code_context *cc, void *target, int cont);
+static void pop_patchables(struct code_context *cc, 
+	SEE_code_addr_t cont_addr, SEE_code_addr_t break_addr);
+static struct patchables *patch_find(struct code_context *cc, void *target,
+	int tok);
+static void patch_add_continue(struct code_context *cc, struct patchables *p,
+	SEE_code_patchable_t pa);
+static void patch_add_break(struct code_context *cc, struct patchables *p,
+	SEE_code_patchable_t pa);
+#endif
+
+#if WITH_PARSER_CODEGEN
+static void cg_init(struct SEE_interpreter *interp, struct code_context *cc);
+static struct SEE_code *cg_fini(struct SEE_interpreter *interp,
+	struct code_context *cc, unsigned int maxstack);
+static void cg_block_enter(struct code_context *cc);
+static void cg_block_leave(struct code_context *cc);
+static unsigned int cg_block_current(struct code_context *cc);
+#endif
+static void *make_body(struct parser *parser, struct node *node);
+
 #define CONTINUABLE 1
 static int target_matches(struct Targetable_node *, void *);
 static void target_init(struct Targetable_node *, struct parser *, int);
@@ -1151,123 +1232,130 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 #if WITH_PARSER_CODEGEN
 
 # define CODEGEN(node)				\
-	(*(node)->nodeclass->codegen)(node, cg)
+	(*(node)->nodeclass->codegen)(node, cc)
   /*
    * Note: there is no need to restore the _loc_save in
    * a try-finally block
    */
 
-# define CG_VALUE(valp) 		/* - | val */	\
-	(*cg->code_class->gen_value)(cg, valp)
+/* Call/construct operators */
+# define _CG_OP1(name, n) \
+    (*cc->code->code_class->gen_op1)(cc->code, SEE_CODE_##name, n)
+#define CG_NEW(n)		_CG_OP1(NEW, n)
+#define CG_CALL(n)		_CG_OP1(CALL, n)
+#define CG_END(n)		_CG_OP1(END, n)
+
+/* Generic operators */
+# define _CG_OP0(name) \
+    (*cc->code->code_class->gen_op0)(cc->code, SEE_CODE_##name)
+# define CG_NOP()		_CG_OP0(NOP)
+# define CG_DUP()		_CG_OP0(DUP)
+# define CG_POP()		_CG_OP0(POP)
+# define CG_EXCH()		_CG_OP0(EXCH)
+# define CG_ROLL3()		_CG_OP0(ROLL3)
+# define CG_THROW()		_CG_OP0(THROW)
+# define CG_SETC()		_CG_OP0(SETC)
+# define CG_GETC()		_CG_OP0(GETC)
+# define CG_THIS()		_CG_OP0(THIS)
+# define CG_OBJECT()		_CG_OP0(OBJECT)
+# define CG_ARRAY()		_CG_OP0(ARRAY)
+# define CG_REGEXP()		_CG_OP0(REGEXP)
+# define CG_REF()		_CG_OP0(REF)
+# define CG_GETVALUE()		_CG_OP0(GETVALUE)
+# define CG_LOOKUP()		_CG_OP0(LOOKUP)
+# define CG_PUTVALUE()		_CG_OP0(PUTVALUE)
+# define CG_PUTVAR()		_CG_OP0(PUTVAR)
+# define CG_VAR()		_CG_OP0(VAR)
+# define CG_DELETE()		_CG_OP0(DELETE)
+# define CG_TYPEOF()		_CG_OP0(TYPEOF)
+# define CG_TOOBJECT()		_CG_OP0(TOOBJECT)
+# define CG_TONUMBER()		_CG_OP0(TONUMBER)
+# define CG_TOBOOLEAN()		_CG_OP0(TOBOOLEAN)
+# define CG_TOSTRING()		_CG_OP0(TOSTRING)
+# define CG_TOPRIMITIVE()	_CG_OP0(TOPRIMITIVE)
+# define CG_NEG()		_CG_OP0(NEG)
+# define CG_INV()		_CG_OP0(INV)
+# define CG_NOT()		_CG_OP0(NOT)
+# define CG_MUL()		_CG_OP0(MUL)
+# define CG_DIV()		_CG_OP0(DIV)
+# define CG_MOD()		_CG_OP0(MOD)
+# define CG_ADD()		_CG_OP0(ADD)
+# define CG_SUB()		_CG_OP0(SUB)
+# define CG_LSHIFT()		_CG_OP0(LSHIFT)
+# define CG_RSHIFT()		_CG_OP0(RSHIFT)
+# define CG_URSHIFT()		_CG_OP0(URSHIFT)
+# define CG_LT()		_CG_OP0(LT)
+# define CG_INSTANCEOF()	_CG_OP0(INSTANCEOF)
+# define CG_IN()		_CG_OP0(IN)
+# define CG_EQ()		_CG_OP0(EQ)
+# define CG_SEQ()		_CG_OP0(SEQ)
+# define CG_BAND()		_CG_OP0(BAND)
+# define CG_BXOR()		_CG_OP0(BXOR)
+# define CG_BOR()		_CG_OP0(BOR)
+# define CG_S_ENUM()		_CG_OP0(S_ENUM)
+# define CG_S_WITH()		_CG_OP0(S_WITH)
+
+/* Literals */
+# define CG_LITERAL(vp) \
+	(*cc->code->code_class->gen_literal)(cc->code, vp)
+
+# define CG_UNDEFINED() do {		/* - | num */	\
+	struct SEE_value _cgtmp;			\
+	SEE_SET_UNDEFINED(&_cgtmp);			\
+	CG_LITERAL(&_cgtmp);				\
+  } while (0)
 
 # define CG_STRING(str) do {		/* - | str */	\
 	struct SEE_value _cgtmp;			\
 	SEE_SET_STRING(&_cgtmp, str);			\
-	CG_VALUE(&_cgtmp);				\
+	CG_LITERAL(&_cgtmp);				\
   } while (0)
 
 # define CG_NUMBER(num) do {		/* - | num */	\
 	struct SEE_value _cgtmp;			\
 	SEE_SET_NUMBER(&_cgtmp, num);			\
-	CG_VALUE(&_cgtmp);				\
+	CG_LITERAL(&_cgtmp);				\
   } while (0)
 
-# define CG_OBJECT(obj) do {		/* - | obj */	\
+# define CG_BOOLEAN(bool) do {		/* - | bool */	\
 	struct SEE_value _cgtmp;			\
-	SEE_SET_OBJECT(&_cgtmp, obj);			\
-	CG_VALUE(&_cgtmp);				\
+	SEE_SET_BOOLEAN(&_cgtmp, bool);			\
+	CG_LITERAL(&_cgtmp);				\
   } while (0)
+# define CG_TRUE()   CG_BOOLEAN(1)	/* - | true */
+# define CG_FALSE()  CG_BOOLEAN(0)	/* - | false */
 
-static const struct SEE_value cg_undefined = { SEE_UNDEFINED };
-# define CG_UNDEFINED(num) 		/* - | undef */	\
-	CG_VALUE(&cg_undefined)
+/* Function instance */
+# define CG_FUNC(fn) \
+	(*cc->code->code_class->gen_func)(cc->code, fn)	/* - | obj */
 
-# define CG_INTERP(field)		/* - | obj */	\
-	CG_OBJECT(cg->interpreter->field)
+/* Record source location */
+# define CG_LOC(loc) \
+	(*cc->code->code_class->gen_loc)(cc->code, loc)
 
-# define CG_CONSTRUCT(argc)		/* obj arg0..argn | obj */ \
-	(*cg->code_class->gen_call)(cg, SEE_CODE_CONSTRUCT, argc)
-# define CG_CALL(argc)			/* ref arg0..argn | val */ \
-	(*cg->code_class->gen_call)(cg, SEE_CODE_CALL, argc)
+/* Branching and patching */
+# define CG_HERE()						\
+	(*cc->code->code_class->here)(cc->code)
 
-# define CG_LOC(loc)			/* Record source location */ \
-	(*cg->code_class->gen_loc)(cg, loc)
+  /* Patch a previously saved address to point to CG_HERE() */
+# define CG_LABEL(var)				\
+	(*cc->code->code_class->patch)(cc->code, &(var), CG_HERE())
 
-# define CG_DUP()			/* val | val val */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_DUP)
-# define CG_POP()			/* val | - */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_POP)
-# define CG_EXCH()  CG_ROLL(1)		/* val1 val2 | val2 val1 */
-# define CG_ROLL(n)			/* v0 v1..vn | vn v0..vn-1 */ \
-	(*cg->code_class->gen_roll)(cg, n)
+# define _CG_OPA(name, patchp, addr) \
+    (*cc->code->code_class->gen_opa)(cc->code, SEE_CODE_##name, patchp, addr)
 
-# define CG_THIS()			/* - | obj */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_THIS)
-# define CG_REF()			/* obj str | ref */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_REF)
-# define CG_LOOKUP()			/* str | ref */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_LOOKUP)
-# define CG_PUT()			/* obj str val | - */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_PUT)
-# define CG_GET()			/* obj str | - */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_GET)
-# define CG_DELETE()			/* ref | bool */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_DELETE)
-# define CG_TYPEOF()			/* ref | str */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_TYPEOF)
+/* Backward (_b) and forward (_f) branching */
+# define CG_B_ALWAYS_b(addr)		_CG_OPA(B_ALWAYS, 0, addr)
+# define CG_B_TRUE_b(addr)		_CG_OPA(B_TRUE, 0, addr)
+# define CG_B_ENUM_b(addr)		_CG_OPA(B_ENUM, 0, addr)
+# define CG_S_TRYC_b(addr)		_CG_OPA(S_TRYC, 0, addr)
+# define CG_S_TRYF_b(addr)		_CG_OPA(S_TRYF, 0, addr)
 
-/* num num | num */
-# define CG_ADD()	(*cg->code_class->gen_op)(cg, SEE_CODE_ADD)
-# define CG_SUB()	(*cg->code_class->gen_op)(cg, SEE_CODE_SUB)
-# define CG_MUL()	(*cg->code_class->gen_op)(cg, SEE_CODE_MUL)
-# define CG_DIV()	(*cg->code_class->gen_op)(cg, SEE_CODE_DIV)
-# define CG_MOD()	(*cg->code_class->gen_op)(cg, SEE_CODE_MOD)
-# define CG_LSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_LSHIFT)
-# define CG_RSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_RSHIFT)
-# define CG_URSHIFT()	(*cg->code_class->gen_op)(cg, SEE_CODE_URSHIFT)
-
-/* num | num */
-# define CG_NEG()	(*cg->code_class->gen_op)(cg, SEE_CODE_NEG)
-# define CG_INV()	(*cg->code_class->gen_op)(cg, SEE_CODE_INV) /*~ToInt32*/
-
-/* bool | bool */
-# define CG_NOT()	(*cg->code_class->gen_op)(cg, SEE_CODE_NOT)
-
-/* val val | bool */
-# define CG_LT()	(*cg->code_class->gen_op)(cg, SEE_CODE_LT)
-# define CG_EQ()	(*cg->code_class->gen_op)(cg, SEE_CODE_EQ)
-# define CG_SEQ()	(*cg->code_class->gen_op)(cg, SEE_CODE_SEQ)
-# define CG_BAND()	(*cg->code_class->gen_op)(cg, SEE_CODE_BAND)
-# define CG_BXOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_BXOR)
-# define CG_BOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_BOR)
-# define CG_LAND()	(*cg->code_class->gen_op)(cg, SEE_CODE_LAND)
-# define CG_LOR()	(*cg->code_class->gen_op)(cg, SEE_CODE_LOR)
-
-/* val obj | bool */
-# define CG_INSTANCEOF() (*cg->code_class->gen_op)(cg, SEE_CODE_INSTANCEOF)
-
-/* str obj | bool */
-# define CG_HASPROPERTY() (*cg->code_class->gen_op)(cg, SEE_CODE_HASPROPERTY)
-
-# define CG_GETVALUE()			/* ref | val */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_GETVALUE)
-# define CG_PUTVALUE()			/* ref val | - */	\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_PUTVALUE)
-
-# define CG_TOOBJECT()			/* val | obj */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_TOOBJECT)
-# define CG_TONUMBER()			/* val | num */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_TONUMBER)
-# define CG_TOBOOLEAN()			/* val | bool */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_TOBOOLEAN)
-# define CG_TOSTRING()			/* val | str */		\
-	(*cg->code_class->gen_op)(cg, SEE_CODE_TOSTRING)
-
-# define CG_PATCH(addr)			/*  *(addr) = here; */	\
-	(*cg->code_class->patch)(cg, addr)
-
-# define CG_BRANCH_ALWAYS(paddr)					\
-	(*cg->code_class->gen_branch)(cg, SEE_CODE_BRANCH_ALWAYS, paddr)
+# define CG_B_ALWAYS_f(var)		_CG_OPA(B_ALWAYS, &(var), 0)
+# define CG_B_TRUE_f(var)		_CG_OPA(B_TRUE, &(var), 0)
+# define CG_B_ENUM_f(var)		_CG_OPA(B_ENUM, &(var), 0)
+# define CG_S_TRYC_f(var)		_CG_OPA(S_TRYC, &(var), 0)
+# define CG_S_TRYF_f(var)		_CG_OPA(S_TRYF, &(var), 0)
 
 #endif /* WITH_PARSER_CODEGEN */
 
@@ -1293,6 +1381,12 @@ new_node(parser, sz, nc, dbg_nc)
 	n->nodeclass = nc;
 	n->location.filename = NEXT_FILENAME;
 	n->location.lineno = NEXT_LINENO;
+	n->isconst_valid = 0;
+	n->isconst = 0;
+#if WITH_PARSER_CODEGEN
+	n->is = 0;
+	n->maxstack = 0;
+#endif
 
 #ifndef NDEBUG
 	if (SEE_parse_debug) 
@@ -1551,6 +1645,183 @@ target_init(itn, parser, continuable)
 	    label_set_continuable(parser, parser->current_labelset);
 }
 
+#if WITH_PARSER_CODEGEN
+/* Creates a new patchables for breaking/continuing */
+static void
+push_patchables(cc, target, continuable)
+	struct code_context *cc;
+	void *target;
+	int continuable;
+{
+	struct patchables *p;
+	struct SEE_interpreter *interp = cc->code->interpreter;
+
+	/* Initialise two empty lists of patchable locations */
+	p = SEE_NEW(interp, struct patchables);
+	SEE_GROW_INIT(interp, &p->gcont_patch, p->cont_patch,
+	    p->ncont_patch);
+	SEE_GROW_INIT(interp, &p->gbreak_patch, p->break_patch, 
+	    p->nbreak_patch);
+	p->target = target;
+	p->continuable = continuable;
+	p->block_depth = cc->block_depth;
+	p->prev = cc->patchables;
+	cc->patchables = p;
+}
+
+/* Pops a patchables, performing the previously pending patches */
+static void
+pop_patchables(cc, cont_addr, break_addr)
+	struct code_context *cc;
+	SEE_code_addr_t cont_addr;
+	SEE_code_addr_t break_addr;
+{
+	struct patchables *p = cc->patchables;
+	unsigned int i;
+
+	/* Patch the continue locations with the break addresses */
+	for (i = 0; i < p->ncont_patch; i++)
+	    (*cc->code->code_class->patch)(cc->code, p->cont_patch[i], 
+		cont_addr);
+
+	/* Patch the break locations with the break address */
+	for (i = 0; i < p->nbreak_patch; i++)
+	    (*cc->code->code_class->patch)(cc->code, p->break_patch[i], 
+		break_addr);
+
+	cc->patchables = p->prev;
+}
+
+/* Return the right patchables when breaking/continuing */
+static struct patchables *
+patch_find(cc, target, tok)
+	struct code_context *cc;
+	void *target;
+	int tok;    /* tBREAK or tCONTINUE */
+{
+	struct patchables *p;
+
+	if (target == NULL && tok == tCONTINUE) {
+	    for (p = cc->patchables; p; p = p->prev)
+		if (p->continuable)
+		    return p;
+	} else if (target == NULL)
+	    return cc->patchables;
+	else
+	    for (p = cc->patchables; p; p = p->prev)
+		if (p->target == target)
+		    return p;
+	SEE_error_throw_string(cc->code->interpreter, 
+		cc->code->interpreter->Error, STR(internal_error));
+}
+
+/* Add a pending continue patch */
+static void
+patch_add_continue(cc, p, pa)
+	struct code_context *cc;
+	struct patchables *p;
+	SEE_code_patchable_t pa;
+{
+	struct SEE_interpreter *interp = cc->code->interpreter;
+	unsigned int n = p->ncont_patch;
+
+	SEE_GROW_TO(interp, &p->gcont_patch, n + 1);
+	p->cont_patch[n] = pa;
+}
+
+/* Add a pending break patch */
+static void
+patch_add_break(cc, p, pa)
+	struct code_context *cc;
+	struct patchables *p;
+	SEE_code_patchable_t pa;
+{
+	struct SEE_interpreter *interp = cc->code->interpreter;
+	unsigned int n = p->nbreak_patch;
+
+	SEE_GROW_TO(interp, &p->gbreak_patch, n + 1);
+	p->break_patch[n] = pa;
+}
+#endif
+
+/*------------------------------------------------------------
+ * Code generator helper functions
+ */
+
+#if WITH_PARSER_CODEGEN
+static void
+cg_init(interp, cc)
+	struct SEE_interpreter *interp;
+	struct code_context *cc;
+{
+	cc->code = (*SEE_system.code_alloc)(interp);
+	cc->patchables = NULL;
+	cc->block_depth = 0;
+	cc->max_block_depth = 0;
+}
+
+static struct SEE_code *
+cg_fini(interp, cc, maxstack)
+	struct SEE_interpreter *interp;
+	struct code_context *cc;
+	unsigned int maxstack;
+{
+	struct SEE_code *co = cc->code;
+
+	SEE_ASSERT(interp, cc->block_depth = 0);
+	(*co->code_class->maxstack)(co, maxstack);
+	(*co->code_class->maxblock)(co, cc->max_block_depth);
+	(*co->code_class->close)(co);
+	cc->code = NULL;
+	return (maxstack || cc->max_block_depth) ? co : NULL;
+}
+
+/* Called when entering a block. Increments the block depth */
+static void
+cg_block_enter(cc)
+	struct code_context *cc;
+{
+	cc->block_depth++;
+	if (cc->block_depth > cc->max_block_depth)
+	    cc->max_block_depth = cc->block_depth;
+}
+
+/* Called when leaving a block. Restores the block depth */
+static void
+cg_block_leave(cc)
+	struct code_context *cc;
+{
+	cc->block_depth--;
+}
+
+/* Returns the current block depth, suitable for CG_END() */
+static unsigned int
+cg_block_current(cc)
+	struct code_context *cc;
+{
+	return cc->block_depth;
+}
+#endif
+
+/* Returns a body suitable for use by SEE_eval_functionbody() */
+static void *
+make_body(parser, node)
+	struct parser *parser;
+	struct node *node;
+{
+#if WITH_PARSER_CODEGEN
+	struct code_context ccstorage, *cc;
+
+	cc = &ccstorage;
+	cg_init(parser->interpreter, cc);
+	CODEGEN(node);
+	return cg_fini(parser->interpreter, cc, node->maxstack);
+#else
+	return node;
+#endif
+}
+
+
 /*------------------------------------------------------------
  * LL(2) lookahead implementation
  */
@@ -1779,13 +2050,18 @@ Literal_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-Literal_codegen(na, cg)
+Literal_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Literal_node *n = CAST_NODE(na, Literal);
 
-	CG_VALUE(&n->value);
+	CG_LITERAL(&n->value);		    /* val */
+	if (SEE_VALUE_GET_TYPE(&n->value) == SEE_BOOLEAN)
+	    n->node.is = CG_TYPE_BOOLEAN;
+	else if (SEE_VALUE_GET_TYPE(&n->value) == SEE_NULL)
+	    n->node.is = CG_TYPE_NULL;
+	n->node.maxstack = 1;
 }
 #endif
 
@@ -1796,17 +2072,12 @@ Literal_print(na, printer)
 	struct printer *printer;
 {
 	struct Literal_node *n = CAST_NODE(na, Literal);
-	struct SEE_value str;
 
 	switch (SEE_VALUE_GET_TYPE(&n->value)) {
 	case SEE_BOOLEAN:
 		PRINT_STRING(n->value.u.boolean
 			? STR(true)
 			: STR(false));
-		break;
-	case SEE_NUMBER:
-		SEE_ToString(printer->interpreter, &n->value, &str);
-		PRINT_STRING(str.u.string);
 		break;
 	case SEE_NULL:
 		PRINT_STRING(STR(null));
@@ -1903,13 +2174,15 @@ StringLiteral_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-StringLiteral_codegen(na, cg)
+StringLiteral_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct StringLiteral_node *n = CAST_NODE(na, StringLiteral);
 
-	CG_STRING(n->string);
+	CG_STRING(n->string);		/* str */
+	n->node.is = CG_TYPE_STRING;
+	n->node.maxstack = 1;
 }
 #endif
 
@@ -2005,17 +2278,20 @@ RegularExpressionLiteral_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RegularExpressionLiteral_codegen(na, cg)
+RegularExpressionLiteral_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct RegularExpressionLiteral_node *n = 
 		CAST_NODE(na, RegularExpressionLiteral);
 
-	CG_INTERP(RegExp);
-	CG_VALUE(n->argv[0]);
-	CG_VALUE(n->argv[1]);
-	CG_CONSTRUCT(2);
+	CG_REGEXP();			/* obj */
+	CG_LITERAL(&n->pattern);	/* obj str */
+	CG_LITERAL(&n->flags);		/* obj str str */
+	CG_NEW(2);			/* obj */
+
+	n->node.is = CG_TYPE_OBJECT;
+	n->node.maxstack = 3;
 }
 #endif
 
@@ -2105,11 +2381,14 @@ PrimaryExpression_this_eval(n, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-PrimaryExpression_this_codegen(n, cg)
+PrimaryExpression_this_codegen(n, cc)
 	struct node *n;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
-	CG_THIS();
+	CG_THIS();		/* obj */
+
+	n->is = CG_TYPE_OBJECT;
+	n->maxstack = 1;
 }
 #endif
 
@@ -2153,15 +2432,18 @@ PrimaryExpression_ident_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-PrimaryExpression_ident_codegen(na, cg)
+PrimaryExpression_ident_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct PrimaryExpression_ident_node *n = 
 		CAST_NODE(na, PrimaryExpression_ident);
 
-	CG_STRING(n->string);
-	CG_LOOKUP();
+	CG_STRING(n->string);		/* str */
+	CG_LOOKUP();			/* ref */
+
+	n->node.is = CG_TYPE_REFERENCE;
+	n->node.maxstack = 2;
 }
 #endif
 
@@ -2294,34 +2576,43 @@ ArrayLiteral_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ArrayLiteral_codegen(na, cg)
+ArrayLiteral_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct ArrayLiteral_node *n = CAST_NODE(na, ArrayLiteral);
 	struct ArrayLiteral_element *element;
 	struct SEE_string *ind;
-	struct SEE_interpreter *interp = cg->interpreter;
+	struct SEE_interpreter *interp = cc->code->interpreter;
+	unsigned int maxstack = 0;
 
 	ind = SEE_string_new(interp, 16);
 
-	CG_INTERP(Array);	/* obj */
-	CG_CONSTRUCT(0);
+	CG_ARRAY();			    /* Array */
+	CG_NEW(0);			    /* a */
 
 	for (element = n->first; element; element = element->next) {
-		CG_DUP();
+		CG_DUP();		    /* a a */
 		ind->length = 0;
 		SEE_string_append_int(ind, element->index);
-		CG_STRING(SEE_intern(interp, ind));
-		CODEGEN(element->expr);
-		CG_GETVALUE();
-		CG_PUT();
+		CG_STRING(SEE_intern(interp, ind)); /* a a "element" */
+		CG_REF();		    /* a a[element] */
+		CODEGEN(element->expr);	    /* a a[element] ref */
+		maxstack = MAX(maxstack, element->expr->maxstack);
+
+		if (!CG_IS_VALUE(element->expr))
+		    CG_GETVALUE();	    /* a a[element] val */
+		CG_PUTVALUE();		    /* a */
 	}
 	
-	CG_DUP();
-	CG_STRING(STR(length));
-	CG_NUMBER(n->length);
-	CG_PUT();
+	CG_DUP();			    /* a a */
+	CG_STRING(STR(length));		    /* a a "length" */
+	CG_REF();			    /* a a.length */
+	CG_NUMBER(n->length);		    /* a a.length num */ 
+	CG_PUTVALUE();			    /* a */
+
+	n->node.is = CG_TYPE_OBJECT;
+	n->node.maxstack = MAX(3, 2 + maxstack);
 }
 #endif
 
@@ -2464,22 +2755,29 @@ ObjectLiteral_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ObjectLiteral_codegen(na, cg)
+ObjectLiteral_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct ObjectLiteral_node *n = CAST_NODE(na, ObjectLiteral);
 	struct ObjectLiteral_pair *pair;
+	unsigned int maxstack = 0;
 
-	CG_INTERP(Object);	/* obj */
-	CG_CONSTRUCT(0);
+	CG_OBJECT();			    /* Object */
+	CG_NEW(0);			    /* o */
 	for (pair = n->first; pair; pair = pair->next) {
-		CG_DUP();
-		CG_STRING(pair->name);
-		CODEGEN(pair->value);
-		CG_GETVALUE();
-		CG_PUT();
+		CG_DUP();		    /* o o */
+		CG_STRING(pair->name);	    /* o o name */
+		CG_REF();		    /* o o.name */
+		CODEGEN(pair->value);	    /* o o.name ref */
+		maxstack = MAX(maxstack, pair->value->maxstack);
+		if (!CG_IS_VALUE(pair->value))
+		    CG_GETVALUE();	    /* o o.name val */
+		CG_PUTVALUE();		    /* o */
 	}
+
+	n->node.is = CG_TYPE_OBJECT;
+	n->node.maxstack = MAX(maxstack + 2, 3);
 }
 #endif
 
@@ -2667,17 +2965,22 @@ Arguments_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-Arguments_codegen(na, cg)
+Arguments_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Arguments_node *n = CAST_NODE(na, Arguments);
 	struct Arguments_arg *arg;
+	unsigned int maxstack = 0;
 
 	for (arg = n->first; arg; arg = arg->next) {
-		CODEGEN(arg->expr);
-		CG_GETVALUE();
+					    /* ... */
+		CODEGEN(arg->expr);	    /* ... ref */
+		maxstack = MAX(maxstack, arg->expr->maxstack);
+		if (!CG_IS_VALUE(arg->expr))
+		    CG_GETVALUE();	    /* ... val */
 	}
+	n->node.maxstack = maxstack;
 }
 #endif
 
@@ -2817,22 +3120,30 @@ MemberExpression_new_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MemberExpression_new_codegen(na, cg)
+MemberExpression_new_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct MemberExpression_new_node *n = 
 		CAST_NODE(na, MemberExpression_new);
 	int argc;
+	int maxstack = 0;
 
-	CODEGEN(n->mexp);
-	CG_GETVALUE();
+	CODEGEN(n->mexp);		/* ref */
+	if (!CG_IS_VALUE(n->mexp))
+	    CG_GETVALUE();		/* val */
 	if (n->args) {
-		Arguments_codegen((struct node *)n->args, cg);
+		Arguments_codegen((struct node *)n->args, cc);
+					/* val arg1..argn */
 		argc = n->args->argc;
+		maxstack = ((struct node *)n->args)->maxstack;
 	} else
 		argc = 0;
-	CG_CONSTRUCT(argc);
+	CG_NEW(argc);			/* obj */
+
+	/* Assume that 'new' always yields an object by s8.6.2 */
+	n->node.is = CG_TYPE_OBJECT;	
+	n->node.maxstack = maxstack + 1;
 }
 #endif
 
@@ -2903,18 +3214,23 @@ MemberExpression_dot_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MemberExpression_dot_codegen(na, cg)
+MemberExpression_dot_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct MemberExpression_dot_node *n = 
 		CAST_NODE(na, MemberExpression_dot);
 
-	CODEGEN(n->mexp);
-	CG_GETVALUE();
-	CG_TOOBJECT();
-	CG_STRING(n->name);
-	CG_REF();
+	CODEGEN(n->mexp);	    /* ref */
+	if (!CG_IS_VALUE(n->mexp))
+	    CG_GETVALUE();	    /* val */
+	if (!CG_IS_OBJECT(n->mexp))
+	    CG_TOOBJECT();	    /* obj */
+	CG_STRING(n->name);	    /* obj "name" */
+	CG_REF();		    /* ref */
+
+	n->node.is = CG_TYPE_REFERENCE;
+	n->node.maxstack = MAX(2, n->mexp->maxstack);
 }
 #endif
 
@@ -2984,22 +3300,32 @@ MemberExpression_bracket_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MemberExpression_bracket_codegen(na, cg)
+MemberExpression_bracket_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct MemberExpression_bracket_node *n = 
 		CAST_NODE(na, MemberExpression_bracket);
 
-	CODEGEN(n->mexp);
-	CG_GETVALUE();
-	CODEGEN(n->name);
-	CG_GETVALUE();
-	CG_EXCH();
-	CG_TOOBJECT();
-	CG_EXCH();
-	CG_TOSTRING();
-	CG_REF();
+	CODEGEN(n->mexp);	    /* ref1 */
+	if (!CG_IS_VALUE(n->mexp))
+	    CG_GETVALUE();	    /* val1 */
+	CODEGEN(n->name);	    /* val1 ref2 */
+	if (!CG_IS_VALUE(n->name))
+	    CG_GETVALUE();	    /* val1 val2 */
+	/* Note: we have to fritz with EXCH to match
+	 * the semantics of 11.2.1 */
+	if (!CG_IS_OBJECT(n->mexp)) {
+	    CG_EXCH();		    /* val2 val1 */
+	    CG_TOOBJECT();	    /* val2 obj1 */
+	    CG_EXCH();		    /* obj1 val2 */
+	}
+	if (!CG_IS_STRING(n->name))
+	    CG_TOSTRING();	    /* obj1 str2 */
+	CG_REF();		    /* ref */
+
+	n->node.is = CG_TYPE_REFERENCE;
+	n->node.maxstack = MAX(n->mexp->maxstack, 1 + n->name->maxstack);
 }
 #endif
 
@@ -3185,15 +3511,19 @@ CallExpression_eval_common(context, loc, r1, argc, argv, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-CallExpression_codegen(na, cg)
+CallExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct CallExpression_node *n = CAST_NODE(na, CallExpression);
 
-	CODEGEN(n->exp);
-	Arguments_codegen((struct node *)n->args, cg);
-	CG_CALL(n->args->argc);	/* see CallExpression_eval_common() */
+	CODEGEN(n->exp);		/* ref */
+	Arguments_codegen((struct node *)n->args, cc);	/* ref arg1 .. argn */
+	CG_CALL(n->args->argc);		/* val */
+
+	/* Called functions only return values */
+	n->node.is = CG_TYPE_VALUE;
+	n->node.maxstack = 1 + ((struct node *)n->args)->maxstack;
 }
 #endif
 
@@ -3370,21 +3700,63 @@ PostfixExpression_inc_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-PostfixExpression_inc_codegen(na, cg)
+PostfixExpression_inc_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
 	CODEGEN(n->a);		/* ref */
 	CG_DUP();		/* ref ref */
-	CG_GETVALUE();		/* ref val */
-	CG_TONUMBER();		/* ref num */
-	CG_NUMBER(1);		/* ref num 1 */
-	CG_ADD();		/* ref num */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* ref val */
+	if (!CG_IS_NUMBER(n->a))
+	    CG_TONUMBER();	/* ref num */
 	CG_DUP();		/* ref num num */
-	CG_ROLL(2);		/* num ref num */
+	CG_ROLL3();		/* num ref num */
+	CG_NUMBER(1);		/* num ref num 1 */
+	CG_ADD();		/* num ref num+1 */
 	CG_PUTVALUE();		/* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 3);
+
+	/*
+	 * Peephole optimisation note:
+	 *		ref num
+	 *  DUP		ref num num
+	 *  ROLL3       num ref num
+	 *  LITERAL,?   num ref num ?
+	 *  ADD|SUB     num ref ?
+	 *  PUTVALUE    num
+	 *  POP         -
+	 *
+	 * is equivalent to:
+	 *              ref num
+	 *  LITERAL,?   ref num ?
+	 *  ADD|SUB     ref ?
+	 *  PUTVALUE	-
+	 */
+
+	/*
+	 * Peephole optimisation note:
+	 *		ref num
+	 *  DUP		ref num num
+	 *  ROLL3       num ref num
+	 *  LITERAL,?   num ref num ?
+	 *  ADD|SUB     num ref ?
+	 *  PUTVALUE    num
+	 *  SETC        -
+	 *
+	 * is equivalent to:
+	 *              ref num
+	 *  LITERAL,?   ref num ?
+	 *  ADD|SUB     ref ?
+	 *  DUP		ref ? ?
+	 *  SETC	ref ?
+	 *  PUTVALUE	-
+	 */
+
 }
 #endif
 
@@ -3431,21 +3803,26 @@ PostfixExpression_dec_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-PostfixExpression_dec_codegen(na, cg)
+PostfixExpression_dec_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);	/* ref */
-	CG_DUP();	/* ref ref */
-	CG_GETVALUE();	/* ref val */
-	CG_TONUMBER();	/* ref num */
-	CG_DUP();	/* ref num num */
-	CG_ROLL(2);	/* num ref num */
-	CG_NUMBER(1);	/* num ref num 1 */
-	CG_SUB();	/* num ref num */
-	CG_PUTVALUE();	/* num */
+	CODEGEN(n->a);		/* aref */
+	CG_DUP();		/* aref aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* aref aval */
+	if (!CG_IS_NUMBER(n->a))
+	    CG_TONUMBER();	/* aref anum */
+	CG_DUP();		/* aref anum anum */
+	CG_ROLL3();		/* anum aref anum */
+	CG_NUMBER(1);		/* anum aref anum 1 */
+	CG_SUB();		/* anum aref anum-1 */
+	CG_PUTVALUE();		/* anum */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 3);
 }
 #endif
 
@@ -3555,14 +3932,17 @@ UnaryExpression_delete_eval_common(context, r1, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_delete_codegen(na, cg)
+UnaryExpression_delete_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);
-	CG_DELETE();	/* UnaryExpression_delete_eval_common */
+	CODEGEN(n->a);	/* ref */
+	CG_DELETE();	/* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -3606,16 +3986,21 @@ UnaryExpression_void_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_void_codegen(na, cg)
+UnaryExpression_void_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
+	static const struct SEE_value cg_undefined = { SEE_UNDEFINED };
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CG_POP();
-	CG_UNDEFINED();
+	CODEGEN(n->a);		    /* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	    /* val */
+	CG_POP();		    /* - */
+	CG_LITERAL(&cg_undefined);  /* undef */
+
+	n->node.is = CG_TYPE_UNDEFINED;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -3690,14 +4075,17 @@ UnaryExpression_typeof_eval_common(context, r1, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_typeof_codegen(na, cg)
+UnaryExpression_typeof_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 	
-	CODEGEN(n->a);
-	CG_TYPEOF();
+	CODEGEN(n->a);	    /* ref */
+	CG_TYPEOF();	    /* str */
+
+	n->node.is = CG_TYPE_STRING;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -3742,21 +4130,25 @@ UnaryExpression_preinc_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_preinc_codegen(na, cg)
+UnaryExpression_preinc_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);	/* ref */
-	CG_DUP();	/* ref ref */
-	CG_GETVALUE();	/* ref val */
-	CG_TONUMBER();	/* ref num */
-	CG_NUMBER(1);	/* ref num 1 */
-	CG_ADD();	/* ref num */
-	CG_DUP();	/* ref num num */
-	CG_ROLL(2);	/* num ref num */
-	CG_PUTVALUE();	/* num */
+	/* Note: Makes no sense to check n->a is already a value */
+	CODEGEN(n->a);	/* aref */
+	CG_DUP();	/* aref aref */
+	CG_GETVALUE();	/* aref aval */
+	CG_TONUMBER();	/* aref anum */
+	CG_NUMBER(1);	/* aref anum 1 */
+	CG_ADD();	/* aref anum+1 */
+	CG_DUP();	/* aref anum+1 anum+1 */
+	CG_ROLL3();	/* anum+1 aref anum+1 */
+	CG_PUTVALUE();	/* anum+1 */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 3);
 }
 #endif
 
@@ -3803,21 +4195,25 @@ UnaryExpression_predec_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_predec_codegen(na, cg)
+UnaryExpression_predec_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);	/* ref */
-	CG_DUP();	/* ref ref */
-	CG_GETVALUE();	/* ref val */
-	CG_TONUMBER();	/* ref num */
-	CG_NUMBER(1);	/* ref num 1 */
-	CG_SUB();	/* ref num */
-	CG_DUP();	/* ref num num */
-	CG_ROLL(2);	/* num ref num */
-	CG_PUTVALUE();	/* num */
+	/* Note: Makes no sense to check n->a is already a value */
+	CODEGEN(n->a);	/* aref */
+	CG_DUP();	/* aref aref */
+	CG_GETVALUE();	/* aref aval */
+	CG_TONUMBER();	/* aref anum */
+	CG_NUMBER(1);	/* aref anum 1 */
+	CG_SUB();	/* aref anum-1 */
+	CG_DUP();	/* aref anum-1 anum-1 */
+	CG_ROLL3();   	/* anum-1 aref anum-1 */
+	CG_PUTVALUE();	/* anum-1 */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 3);
 }
 #endif
 
@@ -3862,15 +4258,20 @@ UnaryExpression_plus_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_plus_codegen(na, cg)
+UnaryExpression_plus_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CG_TONUMBER();
+	CODEGEN(n->a);		/* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* aval */
+	if (!CG_IS_NUMBER(n->a))
+	    CG_TONUMBER();	/* anum */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -3915,16 +4316,21 @@ UnaryExpression_minus_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_minus_codegen(na, cg)
+UnaryExpression_minus_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CG_TONUMBER();
-	CG_NEG();
+	CODEGEN(n->a);		/* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* aval */
+	if (!CG_IS_NUMBER(n->a))
+	    CG_TONUMBER();	/* anum */
+	CG_NEG();		/* -anum */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -3981,15 +4387,19 @@ UnaryExpression_inv_eval_common(context, r2, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_inv_codegen(na, cg)
+UnaryExpression_inv_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CG_NEG();
+	CODEGEN(n->a);		/* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* aval */
+	CG_INV();		/* ~aval */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -4034,16 +4444,21 @@ UnaryExpression_not_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-UnaryExpression_not_codegen(na, cg)
+UnaryExpression_not_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CG_TOBOOLEAN();
-	CG_NOT();
+	CODEGEN(n->a);		    /* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	    /* aval */
+	if (!CG_IS_BOOLEAN(n->a))
+	    CG_TOBOOLEAN();	    /* abool */
+	CG_NOT();		    /* !abool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -4205,17 +4620,46 @@ MultiplicativeExpression_mul_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MultiplicativeExpression_mul_codegen(na, cg)
+Binary_common_codegen(n, cc)
+	struct Binary_node *n;
+	struct code_context *cc;
+{
+	CODEGEN(n->a);	    /* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();  /* aval */
+	CODEGEN(n->b);	    /* aval bref */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();  /* aval bval */
+}
+
+static void
+MultiplicativeExpression_common_codegen(n, cc)
+	struct Binary_node *n;
+	struct code_context *cc;
+{
+	Binary_common_codegen(n, cc); /* val val */
+	if (!CG_IS_NUMBER(n->a)) {
+	    /* Exchanges needed to match spec semantics */
+	    CG_EXCH();	    /* bval aval */
+	    CG_TONUMBER();  /* bval anum */
+	    CG_EXCH();	    /* anum bval */
+	}
+	if (!CG_IS_NUMBER(n->b))
+	    CG_TONUMBER();  /* anum bnum */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
+}
+
+static void
+MultiplicativeExpression_mul_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_MUL();
+	MultiplicativeExpression_common_codegen(n, cc); /* num num */
+	CG_MUL();	    /* num */
 }
 #endif
 
@@ -4274,17 +4718,14 @@ MultiplicativeExpression_div_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MultiplicativeExpression_div_codegen(na, cg)
+MultiplicativeExpression_div_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_DIV();
+	MultiplicativeExpression_common_codegen(n, cc); /* num num */
+	CG_DIV();	    /* num */
 }
 #endif
 
@@ -4343,17 +4784,14 @@ MultiplicativeExpression_mod_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-MultiplicativeExpression_mod_codegen(na, cg)
+MultiplicativeExpression_mod_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_MOD();
+	MultiplicativeExpression_common_codegen(n, cc); /* num num */
+	CG_MOD();	    /* num */
 }
 #endif
 
@@ -4468,15 +4906,30 @@ AdditiveExpression_add_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AdditiveExpression_add_codegen(na, cg)
+AdditiveExpression_add_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CODEGEN(n->b);
-	CG_ADD();
+	Binary_common_codegen(n, cc); /* val val */
+	if (!CG_IS_PRIMITIVE(n->a)) {
+	    CG_EXCH();		/* bval aval */
+	    CG_TOPRIMITIVE();	/* bval aprim */
+	    CG_EXCH();		/* aprim bval */
+	}
+	if (!CG_IS_PRIMITIVE(n->b))
+	    CG_TOPRIMITIVE();	/* aprim bprim */
+	CG_ADD();		/* val */
+
+	/* Carefully figure out if the result type can be restricted */
+	if (CG_IS_STRING(n->a) || CG_IS_STRING(n->b))
+	    n->node.is = CG_TYPE_STRING;
+	else if (CG_IS_PRIMITIVE(n->a) && CG_IS_PRIMITIVE(n->b))
+	    n->node.is = CG_TYPE_NUMBER;
+	else
+	    n->node.is = CG_TYPE_STRING | CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -4535,15 +4988,24 @@ AdditiveExpression_sub_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AdditiveExpression_sub_codegen(na, cg)
+AdditiveExpression_sub_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CODEGEN(n->b);
-	CG_SUB();
+	Binary_common_codegen(n, cc); /* aval bval */
+	if (!CG_IS_NUMBER(n->a)) {
+	    CG_EXCH();	    /* bval aval */
+	    CG_TONUMBER();  /* bval anum */
+	    CG_EXCH();	    /* anum bval */
+	}
+	if (!CG_IS_NUMBER(n->b))
+	    CG_TONUMBER();  /* anum bnum */
+	CG_SUB();	    /* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -4645,15 +5107,17 @@ ShiftExpression_lshift_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ShiftExpression_lshift_codegen(na, cg)
+ShiftExpression_lshift_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CODEGEN(n->b);
-	CG_LSHIFT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_LSHIFT();		/* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -4714,15 +5178,17 @@ ShiftExpression_rshift_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ShiftExpression_rshift_codegen(na, cg)
+ShiftExpression_rshift_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CODEGEN(n->b);
-	CG_RSHIFT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_RSHIFT();		/* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -4782,15 +5248,17 @@ ShiftExpression_urshift_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ShiftExpression_urshift_codegen(na, cg)
+ShiftExpression_urshift_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CODEGEN(n->b);
-	CG_URSHIFT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_URSHIFT();		      /* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -4951,17 +5419,17 @@ RelationalExpression_lt_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_lt_codegen(na, cg)
+RelationalExpression_lt_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_LT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_LT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5010,18 +5478,18 @@ RelationalExpression_gt_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_gt_codegen(na, cg)
+RelationalExpression_gt_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_EXCH();
-	CG_LT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_EXCH();		      /* bval aval */
+	CG_LT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5072,19 +5540,19 @@ RelationalExpression_le_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_le_codegen(na, cg)
+RelationalExpression_le_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_EXCH();
-	CG_LT();
-	CG_NOT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_EXCH();		      /* bval aval */
+	CG_LT();		      /* bool */
+	CG_NOT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5136,18 +5604,18 @@ RelationalExpression_ge_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_ge_codegen(na, cg)
+RelationalExpression_ge_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_LT();
-	CG_NOT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_LT();		      /* bool */
+	CG_NOT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5204,17 +5672,17 @@ RelationalExpression_instanceof_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_instanceof_codegen(na, cg)
+RelationalExpression_instanceof_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_INSTANCEOF();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_INSTANCEOF();	      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5269,17 +5737,25 @@ RelationalExpression_in_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-RelationalExpression_in_codegen(na, cg)
+RelationalExpression_in_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_HASPROPERTY();
+	/* Binary_common_codegen(n, cc); */
+	CODEGEN(n->a);			/* aref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();		/* aval */
+	if (!CG_IS_STRING(n->a))
+	    CG_TOSTRING();		/* astr */
+	CODEGEN(n->b);			/* astr bref */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();		/* aval bval */
+	CG_IN();		        /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5497,17 +5973,17 @@ EqualityExpression_eq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-EqualityExpression_eq_codegen(na, cg)
+EqualityExpression_eq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_EQ();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_EQ();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5555,18 +6031,18 @@ EqualityExpression_ne_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-EqualityExpression_ne_codegen(na, cg)
+EqualityExpression_ne_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_EQ();
-	CG_NOT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_EQ();		      /* bool */
+	CG_NOT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5613,17 +6089,17 @@ EqualityExpression_seq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-EqualityExpression_seq_codegen(na, cg)
+EqualityExpression_seq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_SEQ();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_SEQ();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5672,18 +6148,18 @@ EqualityExpression_sne_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-EqualityExpression_sne_codegen(na, cg)
+EqualityExpression_sne_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_SEQ();
-	CG_NOT();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_SEQ();		      /* bool */
+	CG_NOT();		      /* bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5794,17 +6270,17 @@ BitwiseANDExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-BitwiseANDExpression_codegen(na, cg)
+BitwiseANDExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_BAND();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_BAND();		      /* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5894,17 +6370,17 @@ BitwiseXORExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-BitwiseXORExpression_codegen(na, cg)
+BitwiseXORExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_BXOR();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_BXOR();		      /* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -5994,17 +6470,17 @@ BitwiseORExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-BitwiseORExpression_codegen(na, cg)
+BitwiseORExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_BOR();
+	Binary_common_codegen(n, cc); /* aval bval */
+	CG_BOR();		      /* num */
+
+	n->node.is = CG_TYPE_NUMBER;
+	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
 }
 #endif
 
@@ -6085,17 +6561,32 @@ LogicalANDExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-LogicalANDExpression_codegen(na, cg)
+LogicalANDExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
+	SEE_code_patchable_t L1, L2;
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_LAND();
+	CODEGEN(n->a);				/* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();			/* val */
+	if (!CG_IS_BOOLEAN(n->a))
+	    CG_TOBOOLEAN();			/* bool */
+	CG_B_TRUE_f(L1);			/* -  (L1)*/
+	CG_FALSE();				/* false */
+	CG_B_ALWAYS_f(L2);			/* false (2) */
+
+	CG_LABEL(L1);				/* 1: - */
+	CODEGEN(n->b);				/* ref */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();			/* val */
+	if (!CG_IS_BOOLEAN(n->b))
+	    CG_TOBOOLEAN();			/* bool */
+	CG_LABEL(L2);				/* 2: bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -6191,17 +6682,34 @@ LogicalORExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-LogicalORExpression_codegen(na, cg)
+LogicalORExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
+	SEE_code_patchable_t L1, L2;
 
-	CODEGEN(n->a);
-	CG_GETVALUE();
-	CODEGEN(n->b);
-	CG_GETVALUE();
-	CG_LOR();
+	CODEGEN(n->a);				/* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();			/* val */
+	if (!CG_IS_BOOLEAN(n->a))
+	    CG_TOBOOLEAN();			/* bool */
+	CG_B_TRUE_f(L1);		 	/* -  (1)*/
+
+	CODEGEN(n->b);				/* ref */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();			/* val */
+	if (!CG_IS_BOOLEAN(n->b))
+	    CG_TOBOOLEAN();			/* bool */
+
+	CG_B_ALWAYS_f(L2);
+
+    CG_LABEL(L1);				/* 1: - */
+	CG_TRUE();				/* true */
+    CG_LABEL(L2);				/* 2: bool */
+
+	n->node.is = CG_TYPE_BOOLEAN;
+	n->node.maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -6308,13 +6816,40 @@ ConditionalExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ConditionalExpression_codegen(na, cg)
+ConditionalExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct ConditionalExpression_node *n = 
 		CAST_NODE(na, ConditionalExpression);
-	/* TBD */
+	SEE_code_patchable_t L1, L2;
+
+	CODEGEN(n->a);				/*     ref      */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();			/*     val      */
+	if (!CG_IS_BOOLEAN(n->a))
+	    CG_TOBOOLEAN();			/*     bool     */
+	CG_B_TRUE_f(L1);			/*     -    (1) */
+
+	/* The false branch */
+	CODEGEN(n->c);				/*     ref      */
+	if (!CG_IS_VALUE(n->c))
+	    CG_GETVALUE();			/*     val      */
+	CG_B_ALWAYS_f(L2);			/*     val  (2) */
+
+	/* The true branch */
+	CG_LABEL(L1);				/* 1:  -        */
+	CODEGEN(n->b);				/*     ref      */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();			/*     val      */
+
+	CG_LABEL(L2);				/* 2:  val      */
+
+	if (!CG_IS_VALUE(n->b) || !CG_IS_VALUE(n->c))
+	    n->node.is = CG_TYPE_VALUE;
+	else
+	    n->node.is = n->b->is | n->c->is;
+	n->node.maxstack = MAX3(n->a->maxstack, n->b->maxstack, n->c->maxstack);
 }
 #endif
 
@@ -6474,13 +7009,93 @@ AssignmentExpression_simple_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_simple_codegen(na, cg)
+AssignmentExpression_common_codegen_pre(n, cc)	/* - | ref num num */
+	struct AssignmentExpression_node *n;
+	struct code_context *cc;
+{
+	CODEGEN(n->lhs);	/* ref */
+	CG_DUP();		/* ref ref */
+	CG_GETVALUE();		/* ref val */
+	CG_TONUMBER();		/* ref num */
+	CODEGEN(n->expr);	/* ref num ref */
+	if (!CG_IS_VALUE(n->expr))
+	    CG_GETVALUE();	/* ref num val */
+	if (!CG_IS_NUMBER(n->expr))
+	    CG_TONUMBER();	/* ref num num */
+}
+
+static void
+AssignmentExpression_common_codegen_shiftpre(n, cc)	/* - | ref val val */
+	struct AssignmentExpression_node *n;
+	struct code_context *cc;
+{
+	CODEGEN(n->lhs);	/* ref */
+	CG_DUP();		/* ref ref */
+	CG_GETVALUE();		/* ref val */
+	CODEGEN(n->expr);	/* ref num ref */
+	if (!CG_IS_VALUE(n->expr))
+	    CG_GETVALUE();	/* ref num val */
+}
+
+static void
+AssignmentExpression_common_codegen_post(n, cc) /* ref val | val */
+	struct AssignmentExpression_node *n;
+	struct code_context *cc;
+{
+	CG_DUP();		/* ref val val */
+	CG_ROLL3();   		/* val ref val */
+	CG_PUTVALUE();		/* val */
+	n->node.maxstack = MAX(n->lhs->maxstack, 2 + n->expr->maxstack);
+
+	/* Peephole optimisation note:
+	 *                  ref val
+	 *   DUP	    ref val val
+	 *   ROLL3   	    val ref val
+	 *   PUTVALUE	    val
+	 *   POP	    -
+	 *
+	 * is equivalent to:
+	 *                  ref val
+	 *   PUTVALUE       -
+	 * 
+	 * The backend could check for this when the 'POP' instruction
+	 * is generated.
+	 */
+
+	/* Peephole optimisation note:
+	 *                  ref val
+	 *   DUP	    ref val val
+	 *   ROLL3   	    val ref val
+	 *   PUTVALUE	    val
+	 *   SETC	    -
+	 *
+	 * is equivalent to:
+	 *                  ref val
+	 *   DUP	    ref val val
+	 *   SETC	    ref val
+	 *   PUTVALUE       -
+	 * 
+	 * The backend could check for this when the 'SETC' instruction
+	 * is generated.
+	 */
+
+}
+
+
+static void
+AssignmentExpression_simple_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	CODEGEN(n->lhs);	/* ref */
+	CODEGEN(n->expr);	/* ref ref */
+	if (!CG_IS_VALUE(n->expr))
+	    CG_GETVALUE();	/* ref val */
+	AssignmentExpression_common_codegen_post(n, cc);/* val */
+	n->node.is = !CG_IS_VALUE(n->expr) ?  CG_TYPE_VALUE : n->expr->is;
 }
 #endif
 
@@ -6530,22 +7145,17 @@ AssignmentExpression_muleq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_muleq_codegen(na, cg)
+AssignmentExpression_muleq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
 
-	CODEGEN(n->lhs);	/* ref */
-	CG_DUP();		/* ref ref */
-	CG_GETVALUE();		/* ref val */
-	CODEGEN(n->expr);	/* ref val ref */
-	CG_GETVALUE();		/* ref val val */
-	CG_MUL();		/* ref val */
-	CG_DUP();		/* ref val val */
-	CG_ROLL(2);		/* val ref val */
-	CG_PUTVALUE();		/* val */
+	AssignmentExpression_common_codegen_pre(n, cc);	/* ref num num */
+	CG_MUL();
+	AssignmentExpression_common_codegen_post(n, cc);/* val */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6596,13 +7206,17 @@ AssignmentExpression_diveq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_diveq_codegen(na, cg)
+AssignmentExpression_diveq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	/* ref num num */
+	CG_DIV();					/* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);/* val */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6653,13 +7267,17 @@ AssignmentExpression_modeq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_modeq_codegen(na, cg)
+AssignmentExpression_modeq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	/* ref num num */
+	CG_MOD();					/* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);/* val */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6710,13 +7328,31 @@ AssignmentExpression_addeq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_addeq_codegen(na, cg)
+AssignmentExpression_addeq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	CODEGEN(n->lhs);	/* ref1 */
+	CG_DUP();		/* ref1 ref1 */
+	CG_GETVALUE();		/* ref1 val1 */
+	CODEGEN(n->expr);	/* ref1 val1 ref2 */
+	if (!CG_IS_VALUE(n->expr))
+	    CG_GETVALUE();	/* ref1 val1 val2 */
+	CG_EXCH();		/* ref1 val2 val1 */
+	CG_TOPRIMITIVE();	/* ref1 val2 prim1 */
+	CG_EXCH();		/* ref1 prim1 val2 */
+	if (!CG_IS_PRIMITIVE(n->expr))
+	    CG_TOPRIMITIVE();	/* ref1 prim1 prim2 */
+	CG_ADD();		/* ref1 prim3 */
+	AssignmentExpression_common_codegen_post(n, cc);/* prim3 */
+
+	if (CG_IS_STRING(n->expr))
+	    n->node.is = CG_TYPE_STRING;
+	else 
+	    n->node.is = CG_TYPE_STRING | CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6767,13 +7403,17 @@ AssignmentExpression_subeq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_subeq_codegen(na, cg)
+AssignmentExpression_subeq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	/* ref num num */
+	CG_SUB();
+	AssignmentExpression_common_codegen_post(n, cc);/* val */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6822,13 +7462,17 @@ AssignmentExpression_lshifteq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_lshifteq_codegen(na, cg)
+AssignmentExpression_lshifteq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_shiftpre(n, cc);/* ref val val */
+	CG_LSHIFT();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6880,13 +7524,17 @@ AssignmentExpression_rshifteq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_rshifteq_codegen(na, cg)
+AssignmentExpression_rshifteq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_shiftpre(n, cc);/* ref val val */
+	CG_RSHIFT();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6938,13 +7586,17 @@ AssignmentExpression_urshifteq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_urshifteq_codegen(na, cg)
+AssignmentExpression_urshifteq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_shiftpre(n, cc);/* ref val val */
+	CG_URSHIFT();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -6997,13 +7649,17 @@ AssignmentExpression_andeq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_andeq_codegen(na, cg)
+AssignmentExpression_andeq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	    /* ref num num */
+	CG_BAND();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -7054,13 +7710,17 @@ AssignmentExpression_xoreq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_xoreq_codegen(na, cg)
+AssignmentExpression_xoreq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	    /* ref num num */
+	CG_BXOR();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -7111,13 +7771,17 @@ AssignmentExpression_oreq_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-AssignmentExpression_oreq_codegen(na, cg)
+AssignmentExpression_oreq_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct AssignmentExpression_node *n = 
 		CAST_NODE(na, AssignmentExpression);
-	/* TBD */
+
+	AssignmentExpression_common_codegen_pre(n, cc);	    /* ref num num */
+	CG_BOR();					    /* ref num */
+	AssignmentExpression_common_codegen_post(n, cc);    /* num */
+	n->node.is = CG_TYPE_NUMBER;
 }
 #endif
 
@@ -7225,6 +7889,10 @@ AssignmentExpression_parse(parser)
  *	:	AssignmentExpressionNoIn
  *	|	ExpressionNoIn ',' AssignmentExpressionNoIn
  *	;
+ *
+ * Codgen notes:
+ * All Expression nodes leave a val on the stack; i.e.   - | val
+ *
  */
 
 /* 11.14 */
@@ -7245,12 +7913,22 @@ Expression_comma_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-Expression_comma_codegen(na, cg)
+Expression_comma_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);		/* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* val */
+	CG_POP();		/* -   */
+	CODEGEN(n->b);		/* ref */
+	if (!CG_IS_VALUE(n->b))
+	    CG_GETVALUE();	/* val */
+
+	n->node.is = CG_IS_VALUE(n->b) ? n->b->is : CG_TYPE_VALUE;
+	n->node.maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -7276,7 +7954,6 @@ static struct nodeclass Expression_comma_nodeclass
 	    PARSER_PRINT(Expression_comma_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
-
 
 static struct node *
 Expression_parse(parser)
@@ -7316,6 +7993,10 @@ Expression_parse(parser)
  *	|	ThrowStatement
  *	|	TryStatement
  *	;
+ *
+ * Codegen note:
+ *   All statements expect to have a NORMAL completion value on the stack
+ *   already. At the end of the statement, the value is replaced as needed.
  */
 
 static struct node *
@@ -7391,11 +8072,12 @@ Block_empty_eval(n, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-Block_empty_codegen(n, cg)
+Block_empty_codegen(n, cc)
 	struct node *n;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
-	/* TBD */
+						/* - | - */
+	n->maxstack = 0;
 }
 #endif
 
@@ -7464,12 +8146,15 @@ StatementList_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-StatementList_codegen(na, cg)
+StatementList_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);				 /*    -      */
+	CODEGEN(n->b);				 /*    -      */
+	n->node.maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -7556,12 +8241,15 @@ VariableStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-VariableStatement_codegen(na, cg)
+VariableStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
-	/* TBD */
+
+	/* Note: VariableDeclaration leaves nothing on the stack */
+	CODEGEN(n->a);	    /* - */
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -7618,12 +8306,15 @@ VariableDeclarationList_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-VariableDeclarationList_codegen(na, cg)
+VariableDeclarationList_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);			/* - */
+	CODEGEN(n->b);			/* - */
+	n->node.maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -7696,13 +8387,22 @@ VariableDeclaration_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-VariableDeclaration_codegen(na, cg)
+VariableDeclaration_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct VariableDeclaration_node *n = 
 		CAST_NODE(na, VariableDeclaration);
-	/* TBD */
+	if (n->init) {
+		CG_STRING(n->var.name);		/* str */
+		CG_LOOKUP();			/* ref */
+		CODEGEN(n->init);		/* ref ref */
+		if (!CG_IS_VALUE(n->init))
+		    CG_GETVALUE();		/* ref val */
+		CG_PUTVALUE();			/* val */
+		CG_POP();			/* -   */
+	}
+	n->node.maxstack = n->init ? 1 + n->init->maxstack : 0;
 }
 #endif
 
@@ -7804,11 +8504,12 @@ EmptyStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-EmptyStatement_codegen(na, cg)
+EmptyStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
-	/* TBD */
+	/* CG_NOP(); */		/* - */
+	na->maxstack = 0;
 }
 #endif
 
@@ -7868,12 +8569,18 @@ ExpressionStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ExpressionStatement_codegen(na, cg)
+ExpressionStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
-	/* TBD */
+
+	CODEGEN(n->a);			/* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();		/* val */
+	CG_SETC();			/* -   */
+
+	n->node.maxstack = n->a->maxstack;
 }
 #endif
 
@@ -7949,12 +8656,26 @@ IfStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-IfStatement_codegen(na, cg)
+IfStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
-	/* TBD */
+	SEE_code_patchable_t L1, L2;
+
+	CODEGEN(n->cond);			/*     ref      */
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();			/*     val      */
+	CG_B_TRUE_f(L1);			/*     -   (L1) */
+	if (n->bfalse)
+	    CODEGEN(n->bfalse);			/*     -        */
+	CG_B_ALWAYS_f(L2);			/*     -   (L2) */
+    CG_LABEL(L1);				/* L1: -        */
+	CODEGEN(n->btrue);			/*     -        */
+    CG_LABEL(L2);				/* L2: -        */
+
+	n->node.maxstack = MAX3(n->cond->maxstack,
+	    n->btrue->maxstack, n->bfalse ? n->bfalse->maxstack : 0);
 }
 #endif
 
@@ -8096,7 +8817,7 @@ IterationStatement_dowhile_eval(na, context, res)
 	struct SEE_value *v, r7, r8, r9;
 
 	v = NULL;
-step2:	EVAL(n->body, context, res);
+ step2:	EVAL(n->body, context, res);
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
@@ -8104,30 +8825,45 @@ step2:	EVAL(n->body, context, res);
 	    goto step7;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    target_matches(&n->targetable, res->u.completion.target))
-	{
-	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
-	    return;
-	}
+	    goto step11;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
-	    return;
+	    goto out;
  step7: TRACE(&na->location, context, SEE_TRACE_STATEMENT);
  	EVAL(n->cond, context, &r7);
 	GetValue(context, &r7, &r8);
 	SEE_ToBoolean(context->interpreter, &r8, &r9);
 	if (r9.u.boolean)
-		goto step2;
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	    goto step2;
+ step11:_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+ out:	;
 }
 
 #if WITH_PARSER_CODEGEN
+
 static void
-IterationStatement_dowhile_codegen(na, cg)
+IterationStatement_dowhile_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
-	/* TBD */
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+    L1 = CG_HERE();
+	CODEGEN(n->body);
+    L2 = CG_HERE();			    /* continue point */
+	CODEGEN(n->cond);
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();
+	CG_B_TRUE_b(L1);
+    L3 = CG_HERE();			    /* break point */
+
+	pop_patchables(cc, L2, L3);
+
+	na->maxstack = MAX(n->cond->maxstack, n->body->maxstack);
 }
 #endif
 
@@ -8237,13 +8973,32 @@ IterationStatement_while_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-IterationStatement_while_codegen(na, cg)
+IterationStatement_while_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
-	/* TBD */
+	SEE_code_patchable_t P1;
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+	CG_B_ALWAYS_f(P1);
+    L1 = CG_HERE();
+	CODEGEN(n->body);
+    CG_LABEL(P1);
+    L2 = CG_HERE();			    /* continue point */
+	CODEGEN(n->cond);
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();
+	CG_B_TRUE_b(L1);
+    L3 = CG_HERE();			    /* break point */
+
+	pop_patchables(cc, L2, L3);
+
+	na->maxstack = MAX(n->cond->maxstack, n->body->maxstack);
 }
 #endif
 
@@ -8348,13 +9103,48 @@ step19:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 
 #if WITH_PARSER_CODEGEN
 static void
-IterationStatement_for_codegen(na, cg)
+IterationStatement_for_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
-	/* TBD */
+	SEE_code_patchable_t P1;
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+	if (n->init) {
+		CODEGEN(n->init);
+		if (!CG_IS_VALUE(n->init))
+		    CG_GETVALUE();
+		CG_POP();
+	}
+	CG_B_ALWAYS_f(P1);
+    L1 = CG_HERE();
+	CODEGEN(n->body);
+    L2 = CG_HERE();			    /* continue point */
+	if (n->incr) {
+		CODEGEN(n->incr);
+		if (!CG_IS_VALUE(n->incr))
+		    CG_GETVALUE();
+		CG_POP();
+	}
+    CG_LABEL(P1);
+	CODEGEN(n->cond);
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();
+	CG_B_TRUE_b(L1);
+    L3 = CG_HERE();			    /* break point */
+
+	pop_patchables(cc, L2, L3);
+
+	na->maxstack = MAX(
+	    MAX(n->incr ? n->incr->maxstack : 0,
+		n->init ? n->init->maxstack : 0),
+	    MAX(n->cond->maxstack, 
+		n->body->maxstack));
 }
 #endif
 
@@ -8482,13 +9272,46 @@ step17:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 
 #if WITH_PARSER_CODEGEN
 static void
-IterationStatement_forvar_codegen(na, cg)
+IterationStatement_forvar_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_for_node *n = 
 		CAST_NODE(na, IterationStatement_for);
-	/* TBD */
+	SEE_code_patchable_t P1;
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+	CODEGEN(n->init);
+	if (!CG_IS_VALUE(n->init))
+	    CG_GETVALUE();
+	CG_POP();
+	CG_B_ALWAYS_f(P1);
+    L1 = CG_HERE();
+	CODEGEN(n->body);
+    L2 = CG_HERE();			    /* continue point */
+	if (n->incr) {
+		CODEGEN(n->incr);
+		if (!CG_IS_VALUE(n->incr))
+		    CG_GETVALUE();
+		CG_POP();
+	}
+    CG_LABEL(P1);
+	CODEGEN(n->cond);
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();
+	CG_B_TRUE_b(L1);
+    L3 = CG_HERE();			    /* break point */
+
+	pop_patchables(cc, L2, L3);
+
+	na->maxstack = MAX(
+	    MAX(n->incr ? n->incr->maxstack : 0,
+		n->init->maxstack),
+	    MAX(n->cond->maxstack, 
+		n->body->maxstack));
 }
 #endif
 
@@ -8584,13 +9407,51 @@ IterationStatement_forin_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-IterationStatement_forin_codegen(na, cg)
+IterationStatement_forin_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_forin_node *n = 
 		CAST_NODE(na, IterationStatement_forin);
-	/* TBD */
+	SEE_code_patchable_t P1;
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	CODEGEN(n->list);		/* ref */
+	if (!CG_IS_VALUE(n->list))
+	    CG_GETVALUE();		/* val */
+	if (!CG_IS_OBJECT(n->list))
+	    CG_TOOBJECT();		/* obj */
+
+	CG_S_ENUM();			/* -  */
+	cg_block_enter(cc);
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+	CG_B_ALWAYS_f(P1);
+
+    L1 = CG_HERE();
+	CODEGEN(n->lhs);		/* str ref */
+	CG_EXCH();			/* ref str */
+	CG_PUTVALUE();			/* - */
+
+	CODEGEN(n->body);
+
+    L2 = CG_HERE();			/* continue point */
+    CG_LABEL(P1);
+	CG_B_ENUM_b(L1);
+
+    L3 = CG_HERE();			/* break point */
+	pop_patchables(cc, L2, L3);
+
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX4(
+	    2,
+	    n->list->maxstack,
+	    1 + n->lhs->maxstack,
+	    n->body->maxstack);
 }
 #endif
 
@@ -8671,6 +9532,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	    if (!SEE_OBJECT_HASPROPERTY(interp, r4.u.object, *props))
 		    continue;	/* property was deleted! */
 	    SEE_SET_STRING(&r6, *props);
+	    /* spec bug: "see 0" in step 7 */
 	    SEE_scope_lookup(context->interpreter, context->scope, 
 	    	lhs->var.name, &r7);
 	    PutValue(context, &r7, &r6);
@@ -8692,13 +9554,54 @@ IterationStatement_forvarin_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-IterationStatement_forvarin_codegen(na, cg)
+IterationStatement_forvarin_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct IterationStatement_forin_node *n = 
 		CAST_NODE(na, IterationStatement_forin);
-	/* TBD */
+	struct VariableDeclaration_node *lhs 
+		= CAST_NODE(n->lhs, VariableDeclaration);
+	SEE_code_patchable_t P1;
+	SEE_code_addr_t L1, L2, L3;
+	void *targ = &n->targetable;
+
+	CODEGEN(n->lhs);		/* - */
+	CODEGEN(n->list);		/* ref */
+	if (!CG_IS_VALUE(n->list))
+	    CG_GETVALUE();		/* val */
+	if (!CG_IS_OBJECT(n->list))
+	    CG_TOOBJECT();		/* obj */
+
+	CG_S_ENUM();			/* -  */
+	cg_block_enter(cc);
+
+	push_patchables(cc, targ, CONTINUABLE);
+
+	CG_B_ALWAYS_f(P1);
+
+    L1 = CG_HERE();
+	CG_STRING(lhs->var.name);	/* str str */
+	CG_LOOKUP();			/* str ref */
+	CG_EXCH();			/* ref str */
+	CG_PUTVALUE();			/* - */
+
+	CODEGEN(n->body);
+
+    L2 = CG_HERE();			/* continue point */
+    CG_LABEL(P1);
+	CG_B_ENUM_b(L1);
+
+    L3 = CG_HERE();			/* break point */
+	pop_patchables(cc, L2, L3);
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX4(
+	    2,
+	    n->list->maxstack,
+	    1 + n->lhs->maxstack,
+	    n->body->maxstack);
 }
 #endif
 
@@ -8902,12 +9805,24 @@ ContinueStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ContinueStatement_codegen(na, cg)
+ContinueStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct ContinueStatement_node *n = CAST_NODE(na, ContinueStatement);
-	/* TBD */
+	struct patchables *patchables;
+	SEE_code_patchable_t pa;
+
+	patchables = patch_find(cc, n->target, tCONTINUE);
+	
+	/* Generate an END instruction if we are continuing to an outer block */
+	if (patchables->block_depth < cc->block_depth)
+	    CG_END(patchables->block_depth);
+
+	CG_B_ALWAYS_f(pa);
+	patch_add_continue(cc, patchables, pa);
+
+	n->node.maxstack = 0;
 }
 #endif
 
@@ -8989,12 +9904,24 @@ BreakStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-BreakStatement_codegen(na, cg)
+BreakStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct BreakStatement_node *n = CAST_NODE(na, BreakStatement);
-	/* TBD */
+	struct patchables *patchables;
+	SEE_code_patchable_t pa;
+
+	patchables = patch_find(cc, n->target, tBREAK);
+
+	/* Generate an END instruction if we are breaking to an outer block */
+	if (patchables->block_depth < cc->block_depth)
+	    CG_END(patchables->block_depth);
+
+	CG_B_ALWAYS_f(pa);
+	patch_add_break(cc, patchables, pa);
+
+	n->node.maxstack = 0;
 }
 #endif
 
@@ -9078,12 +10005,19 @@ ReturnStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ReturnStatement_codegen(na, cg)
+ReturnStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
-	/* TBD */
+
+	CODEGEN(n->expr);			/* ref */
+	if (!CG_IS_VALUE(n->expr))
+	    CG_GETVALUE();			/* val */
+	CG_SETC();				/* - */
+	CG_END(0);				/* (halt) */
+
+	n->node.maxstack = n->expr->maxstack;
 }
 #endif
 
@@ -9138,11 +10072,15 @@ ReturnStatement_undef_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ReturnStatement_undef_codegen(na, cg)
+ReturnStatement_undef_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
-	/* TBD */
+	CG_UNDEFINED();			    /* undef */
+	CG_SETC();			    /* - */
+	CG_END(0);			    /* (halt) */
+
+	na->maxstack = 1;
 }
 #endif
 
@@ -9178,7 +10116,7 @@ ReturnStatement_parse(parser)
 		    &ReturnStatement_undef_nodeclass);
 	EXPECT(tRETURN);
 	if (!parser->funcdepth)
-		ERRORm("'return' statement not inside function");
+		ERRORm("'return' not within a function");
 	if (!NEXT_IS_SEMICOLON) {
 	    rn->node.nodeclass = &ReturnStatement_nodeclass;
 	    rn->expr = PARSE(Expression);
@@ -9224,12 +10162,27 @@ WithStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-WithStatement_codegen(na, cg)
+WithStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
-	/* TBD */
+
+	CODEGEN(n->a);			/* ref */
+	if (!CG_IS_VALUE(n->a))	
+	    CG_GETVALUE();		/* val */
+	if (!CG_IS_OBJECT(n->a))
+	    CG_TOOBJECT();		/* obj */
+
+	CG_S_WITH();			/* - */
+	cg_block_enter(cc);
+
+	CODEGEN(n->b);
+
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
 #endif
 
@@ -9380,12 +10333,63 @@ SwitchStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-SwitchStatement_codegen(na, cg)
+SwitchStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct SwitchStatement_node *n = CAST_NODE(na, SwitchStatement);
-	/* TBD */
+	void *targ = &n->targetable;
+	struct case_list *c;
+	int ncases, i;
+	SEE_code_patchable_t *case_patches, default_patch;
+	unsigned int expr_maxstack = 0, body_maxstack = 0;
+
+	for (ncases = 0, c = n->cases; c; c = c->next)
+	    if (c->expr)
+		ncases++;
+	case_patches = SEE_ALLOCA(cc->code->interpeter, 
+	    SEE_code_patchable_t, ncases);
+
+	CODEGEN(n->cond);		/* ref */
+	if (!CG_IS_VALUE(n->cond))
+	    CG_GETVALUE();		/* val */
+
+	for (i = 0, c = n->cases; c; c = c->next)
+	    if (c->expr) {
+		CG_DUP();		/* val val */
+		CODEGEN(c->expr);	/* val val ref */
+		expr_maxstack = MAX(expr_maxstack, 2 + c->expr->maxstack);
+		if (!CG_IS_VALUE(c->expr))
+		    CG_GETVALUE();	/* val val val */
+		CG_SEQ();		/* val bool */
+		CG_B_TRUE_f(case_patches[i]);	/* val */
+		i++;
+	    }
+	CG_B_ALWAYS_f(default_patch);
+
+	push_patchables(cc, targ, !CONTINUABLE);
+
+	for (i = 0, c = n->cases; c; c = c->next) {
+	    if (!c->expr)
+		CG_LABEL(default_patch);
+	    else {
+		CG_LABEL(case_patches[i]);
+		i++;
+	    }
+	    if (c->body) {
+		CODEGEN(c->body);	/* val */
+		body_maxstack = MAX(body_maxstack, 1 + c->body->maxstack);
+	    }
+	}
+
+	/* If there was no default body, patch through to the end */
+	if (!n->defcase)
+	    CG_LABEL(default_patch);
+	
+	pop_patchables(cc, 0, CG_HERE());   /* All breaks lead here */
+	CG_POP();
+
+	na->maxstack = MAX3(n->cond->maxstack, expr_maxstack, body_maxstack);
 }
 #endif
 
@@ -9544,12 +10548,14 @@ LabelledStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-LabelledStatement_codegen(na, cg)
+LabelledStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct LabelledStatement_node *n = CAST_NODE(na, LabelledStatement);
-	/* TBD */
+
+	CODEGEN(n->unary.a);
+	na->maxstack = n->unary.a->maxstack;
 }
 #endif
 
@@ -9646,12 +10652,18 @@ ThrowStatement_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-ThrowStatement_codegen(na, cg)
+ThrowStatement_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
-	/* TBD */
+
+	CODEGEN(n->a);		/* ref */
+	if (!CG_IS_VALUE(n->a))
+	    CG_GETVALUE();	/* val */
+	CG_THROW();		/* - */
+
+	na->maxstack = n->a->maxstack;
 }
 #endif
 
@@ -9780,12 +10792,26 @@ TryStatement_catch_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-TryStatement_catch_codegen(na, cg)
+TryStatement_catch_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	/* TBD */
+	SEE_code_patchable_t L1, L2;
+
+	CG_STRING(n->ident);	    /* str */
+	CG_S_TRYC_f(L1);	    /* - */
+	cg_block_enter(cc);
+	CODEGEN(n->block);	    /* - */
+	CG_B_ALWAYS_f(L2);
+    CG_LABEL(L1);
+	CODEGEN(n->bcatch);	    /* - */
+    CG_LABEL(L2);
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX3(1, n->block->maxstack, n->bcatch->maxstack);
+
 }
 #endif
 
@@ -9863,12 +10889,27 @@ TryStatement_finally_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-TryStatement_finally_codegen(na, cg)
+TryStatement_finally_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	/* TBD */
+	SEE_code_patchable_t L1, L2;
+
+	CG_S_TRYF_f(L1);	    /* - */
+	cg_block_enter(cc);
+	CODEGEN(n->block);	    /* - */
+	CG_B_ALWAYS_f(L2);
+    CG_LABEL(L1);
+	CG_GETC();		    /* val */
+	CODEGEN(n->bfinally);	    /* val */
+	CG_SETC();		    /* - */
+    CG_LABEL(L2);
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX3(1, n->block->maxstack, 1 + n->bfinally->maxstack);
+
 }
 #endif
 
@@ -9966,12 +11007,44 @@ TryStatement_catchfinally_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-TryStatement_catchfinally_codegen(na, cg)
+TryStatement_catchfinally_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	/* TBD */
+	SEE_code_patchable_t L1, L2, L3a, L3b;
+
+	CG_S_TRYF_f(L1);	    /* - */
+	cg_block_enter(cc);
+	CG_STRING(n->ident);	    /* str */
+	CG_S_TRYC_f(L2);	    /* - */
+	cg_block_enter(cc);
+	CODEGEN(n->block);	    /* - */
+	CG_B_ALWAYS_f(L3a);
+    CG_LABEL(L2);
+	CODEGEN(n->bcatch);	    /* - */
+	CG_B_ALWAYS_f(L3b);
+    CG_LABEL(L1);
+	CG_GETC();		    /* val */
+	CODEGEN(n->bfinally);	    /* val */
+	CG_SETC();		    /* - */
+    CG_LABEL(L3a);
+    CG_LABEL(L3b);
+	cg_block_leave(cc);
+	CG_END(cg_block_current(cc));
+	cg_block_leave(cc);
+
+	na->maxstack = MAX4(1, n->block->maxstack, 
+		n->bcatch->maxstack, 1 + n->bfinally->maxstack);
+
+
+	/*
+	 * Peephole optimizer note:
+	 * Sometimes two SETCs will be generated in a row. This
+	 * would be slightly faster if the first SETC were converted
+	 * into a POP
+	 */
+
 }
 #endif
 
@@ -10117,9 +11190,9 @@ FunctionDeclaration_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-FunctionDeclaration_codegen(na, cg)
+FunctionDeclaration_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Function_node *n = CAST_NODE(na, Function);
 	/* TBD */
@@ -10235,7 +11308,7 @@ FunctionDeclaration_parse(parser)
 	EXPECT('}');
 
 	n->function = SEE_function_make(parser->interpreter, 
-		name, formal, body);
+		name, formal, make_body(parser, body));
 
 	return (struct node *)n;
 }
@@ -10286,12 +11359,38 @@ FunctionExpression_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-FunctionExpression_codegen(na, cg)
+FunctionExpression_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Function_node *n = CAST_NODE(na, Function);
-	/* TBD */
+
+	if (n->function->name == NULL) {
+	    CG_FUNC(n->function);	    /* obj */
+
+	    na->maxstack = 1;
+	} else {
+	    /*
+	     * The following creates a new mini-scope with S.WITH.
+	     * The scope is inherited by the FUNC instruction. This is so
+	     * the function can call itself recursively by name
+	     */
+	    CG_OBJECT();		    /* obj */
+	    CG_DUP();			    /* obj obj */
+	    CG_S_WITH();		    /* obj */
+	    cg_block_enter(cc);
+	    CG_STRING(n->function->name);   /* obj str */
+	    CG_REF();			    /* ref */
+	    CG_FUNC(n->function);	    /* ref obj */
+	    CG_END(cg_block_current(cc));  
+	    cg_block_leave(cc);
+	    CG_DUP();			    /* ref obj obj */
+	    CG_ROLL3();			    /* obj ref obj */
+	    CG_PUTVALUE();		    /* obj */
+		/* XXX PutValue should use DONTDELETE|READONLY here */
+
+	    na->maxstack = 3;
+	}
 }
 #endif
 
@@ -10338,7 +11437,7 @@ FunctionExpression_parse(parser)
 	EXPECT('}');
 
 	n->function = SEE_function_make(parser->interpreter,
-		name, formal, body);
+		name, formal, make_body(parser, body));
 
 	/* Restore parser state */
 	parser->noin = noin_save;
@@ -10384,18 +11483,24 @@ FunctionBody_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
+
 	FPROC(n->a, context);
 	EVAL(n->a, context, res);
 }
 
 #if WITH_PARSER_CODEGEN
 static void
-FunctionBody_codegen(na, cg)
+FunctionBody_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
-	/* TBD */
+
+	/* Note that SourceElements_codegen includes the fproc action */
+	CODEGEN(n->a);
+	CG_END(0);		/* explicit return */
+
+	na->maxstack = n->a->maxstack;
 }
 #endif
 
@@ -10501,10 +11606,10 @@ Program_parse(parser)
 		ERRORm("unmatched ']'");
 	if (NEXT != tEND)
 		ERRORm("unexpected token");
-	return SEE_function_make(parser->interpreter,
-		NULL, NULL, body);
-}
 
+	return SEE_function_make(parser->interpreter,
+		NULL, NULL, make_body(parser, body));
+}
 
 struct SourceElements_node {
 	struct node node;
@@ -10540,12 +11645,43 @@ SourceElements_eval(na, context, res)
 
 #if WITH_PARSER_CODEGEN
 static void
-SourceElements_codegen(na, cg)
+SourceElements_codegen(na, cc)
 	struct node *na;
-	struct SEE_code *cg;
+	struct code_context *cc;
 {
 	struct SourceElements_node *n = CAST_NODE(na, SourceElements);
-	/* TBD */
+	unsigned int maxstack = 0;
+	struct SourceElement *e;
+	struct var *v;
+
+	/* SourceElements fproc:
+	 * - create function closures of the current scope
+	 * - initialise 'var's.
+	 */
+
+	for (e = n->functions; e; e = e->next) {
+	    struct Function_node *fn = CAST_NODE(e->node, Function);
+	    CG_STRING(fn->function->name);	/* str */
+	    CG_FUNC(fn->function);		/* str obj */
+	    CG_PUTVAR();			/* - */
+	    maxstack = MAX(maxstack, 2);
+	}
+
+	for (v = n->vars; v; v = v->next) {
+	    CG_STRING(v->name);			/* str */
+	    CG_VAR();				/* - */
+	    maxstack = MAX(maxstack, 1);
+	}
+
+	/* SourceElements eval:
+	 * - execute each statement
+	 */
+	for (e = n->statements; e; e = e->next) {
+	    CODEGEN(e->node);
+	    maxstack = MAX(maxstack, e->node->maxstack);
+	}
+
+	na->maxstack = maxstack;
 }
 #endif
 
@@ -10748,7 +11884,8 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 	parser->funcdepth--;
 	EXPECT_NOSKIP(tEND);
 
-	return SEE_function_make(interp, name, formal, body);
+	return SEE_function_make(interp, name, formal, 
+	    make_body(parser, body));
 }
 
 /*
@@ -10788,7 +11925,12 @@ SEE_eval_functionbody(f, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
+#if WITH_PARSER_CODEGEN
+	struct SEE_code *co = (struct SEE_code *)f->body;
+	(*co->code_class->eval)(co, context, res);
+#else
 	EVAL((struct node *)f->body, context, res);
+#endif
 }
 
 int
@@ -10796,7 +11938,11 @@ SEE_functionbody_isempty(interp, f)
 	struct SEE_interpreter *interp;
 	struct function *f;
 {
+#if WITH_PARSER_CODEGEN
+	return f->body == NULL;
+#else
 	return FunctionBody_isempty(interp, (struct node *)f->body);
+#endif
 }
 
 /* Returns true if the FunctionBody is empty. */

@@ -59,6 +59,9 @@ SEE_version()
 #if WITH_PARSER_VISIT
 		" +visit"
 #endif
+#if WITH_PARSER_CODEGEN
+		" +codegen"
+#endif
 		;
 	return version;
 }
