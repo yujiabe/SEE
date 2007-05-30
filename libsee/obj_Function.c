@@ -536,7 +536,7 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 
 	/* Run it (adds vars and func decls to context.variable) */
 	SEE_TRY(interp, ctxt) {
-		SEE_eval_functionbody(fi->function, &context, &v);
+		SEE_eval_functionbody(fi->function, &context, res);
 	}
 
 	/* Restore f.arguments */
@@ -556,14 +556,6 @@ function_inst_call(interp, self, thisobj, argc, argv, res)
 	}
 
 	SEE_DEFAULT_CATCH(interp, ctxt);
-
-	if (v.u.completion.type == SEE_COMPLETION_NORMAL)
-		SEE_SET_UNDEFINED(res);
-	else if (v.u.completion.type == SEE_COMPLETION_RETURN)
-		SEE_VALUE_COPY(res, v.u.completion.value);
-	else
-		SEE_error_throw_string(interp, interp->Error, 
-			STR(internal_error));
 }
 
 /* 13.2.2 */

@@ -86,6 +86,7 @@ toLocaleString_notstring = "toLocaleString() property did not return a string"
 too_many_args =		"Too many arguments"
 string_not_ascii =	"String contains non-ASCII character(s)"
 string_contains_null =	"String contains null character(s)"
+not_implemented =	"Not implemented"
 
 # Function body strings
 implementation_dependent = "ECMA-262 'implementation dependent' result"

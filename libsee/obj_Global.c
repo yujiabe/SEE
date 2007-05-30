@@ -947,30 +947,7 @@ SEE_Global_eval(interp, inp, res)
 	context.varattr = SEE_ATTR_DONTDELETE;
 	context.thisobj = interp->Global;
 
-	SEE_SET_UNDEFINED(&cres);
-	SEE_eval_functionbody(f, &context, &cres);
-
-	if (SEE_VALUE_GET_TYPE(&cres) != SEE_COMPLETION)
-		SEE_error_throw_string(interp, interp->Error, 
-			STR(internal_error));
-	if (cres.u.completion.type != SEE_COMPLETION_NORMAL)
-		SEE_error_throw_string(interp, interp->Error, 
-			STR(internal_error));
-
-	v = cres.u.completion.value;
-	if (res) {
-	    if (!v)
-		SEE_SET_UNDEFINED(res);
-	    else if (SEE_VALUE_GET_TYPE(v) == SEE_REFERENCE) {
-		/* GetValue */
-		if (v->u.reference.base == NULL)
-		    SEE_SET_UNDEFINED(res);
-		else
-		    SEE_OBJECT_GET(interp, v->u.reference.base, 
-			v->u.reference.property, res);
-	    } else 
-		SEE_VALUE_COPY(res, cres.u.completion.value);
-	}
+	SEE_eval_functionbody(f, &context, res ? res : &cres);
 
 	interp->traceback = old_traceback;
 }

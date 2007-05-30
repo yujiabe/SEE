@@ -68,33 +68,36 @@
 #define INST_URSHIFT		0x23
 
 #define INST_LT			0x24
-#define INST_INSTANCEOF		0x25
-#define INST_IN			0x26
-#define INST_EQ			0x27
-#define INST_SEQ		0x28
+#define INST_GT			0x25
+#define INST_LE			0x26
+#define INST_GE			0x27
 
-#define INST_BAND		0x29
-#define INST_BXOR		0x2a
-#define INST_BOR		0x2b
+#define INST_INSTANCEOF		0x28
+#define INST_IN			0x29
+#define INST_EQ			0x2a
+#define INST_SEQ		0x2b
 
-#define INST_S_ENUM		0x2c
-#define INST_S_WITH		0x2d
+#define INST_BAND		0x2c
+#define INST_BXOR		0x2d
+#define INST_BOR		0x2e
 
-#define INST_NEW		0x2e
-#define INST_CALL	    	0x2f
-#define INST_END 	    	0x30
+#define INST_S_ENUM		0x2f
+#define INST_S_WITH		0x30
 
-#define INST_B_ALWAYS		0x31
-#define INST_B_TRUE		0x32
-#define INST_B_ENUM		0x33
-#define INST_S_TRYC		0x34
-#define INST_S_TRYF		0x35
+#define INST_NEW		0x31
+#define INST_CALL	    	0x32
+#define INST_END 	    	0x33
 
-#define INST_FUNC		0x36
-#define INST_LITERAL		0x37
-#define INST_LOC		0x38
+#define INST_B_ALWAYS		0x34
+#define INST_B_TRUE		0x35
+#define INST_B_ENUM		0x36
+#define INST_S_TRYC		0x37
+#define INST_S_TRYF		0x38
 
-/* (don't exceed 0x3f!) */
+#define INST_FUNC		0x39
+#define INST_LITERAL		0x3a
+#define INST_LOC		0x3b
+/*                (Don't exceed 0x3f!) */
 
 struct SEE_code;
 struct SEE_value;

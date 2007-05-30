@@ -76,7 +76,7 @@ static void code1_patch(struct SEE_code *co, SEE_code_patchable_t patch,
 static void code1_maxstack(struct SEE_code *co, int);
 static void code1_maxblock(struct SEE_code *co, int);
 static void code1_close(struct SEE_code *co);
-static void code1_eval(struct SEE_code *co, struct SEE_context *ctxt,
+static void code1_exec(struct SEE_code *co, struct SEE_context *ctxt,
 		struct SEE_value *res);
 
 static unsigned int add_literal(struct code1 *code, 
@@ -84,6 +84,7 @@ static unsigned int add_literal(struct code1 *code,
 static unsigned int add_function(struct code1 *code, struct function *f);
 static void add_byte(struct code1 *code, unsigned int c);
 static unsigned int here(struct code1 *code);
+
 
 static struct SEE_code_class code1_class = {
     "code1",
@@ -98,8 +99,14 @@ static struct SEE_code_class code1_class = {
     code1_maxstack,
     code1_maxblock,
     code1_close,
-    code1_eval
+    code1_exec
 };
+
+#ifndef NDEBUG
+extern int SEE_eval_debug;
+int SEE_code1_debug;
+static SEE_int32_t disasm(struct code1 *, SEE_int32_t pc);
+#endif
 
 struct SEE_code *
 _SEE_code1_alloc(interp)
@@ -127,13 +134,55 @@ add_literal(code, val)
     const struct SEE_value *val;
 {
     unsigned int i;
+    int match = 0;
     struct SEE_interpreter *interp = code->code.interpreter;
+    const struct SEE_value *li;
 
-    for (i = 0; i < code->nliteral; i++)
-	if (memcmp(val, code->literal + i, sizeof *val) == 0)
+    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
+    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_COMPLETION);
+
+    for (i = 0; i < code->nliteral; i++) {
+	li = code->literal + i;
+	if (SEE_VALUE_GET_TYPE(li) != SEE_VALUE_GET_TYPE(val))
+	    continue;
+
+	switch (SEE_VALUE_GET_TYPE(val)) {
+	case SEE_UNDEFINED:
+	case SEE_NULL:
+	    match = 1;
+	    break;
+	case SEE_BOOLEAN:
+	    match = !val->u.boolean == !li->u.boolean;
+	    break;
+	case SEE_NUMBER:
+	    match = (memcmp(&val->u.number, &li->u.number, 
+			sizeof val->u.number) == 0);
+	    break;
+	case SEE_STRING:
+	    match = (SEE_string_cmp(val->u.string, li->u.string) == 0);
+	    break;
+	case SEE_OBJECT:
+	    match = (val->u.object == li->u.object);
+	    break;
+	default: 
+	    SEE_ASSERT(interp, !"bad value type");
+	}
+	if (match)
 	    return i;
+    }
+
+    SEE_ASSERT(interp, i == code->nliteral);
     SEE_GROW_TO(interp, &code->gliteral, code->nliteral + 1);
-    memcpy((void *)val, code->literal + i, sizeof *val);
+    memcpy(code->literal + i, (void *)val, sizeof *val);
+
+#ifndef NDEBUG
+    if (SEE_code1_debug > 1) {
+	dprintf("add_literal: [%d] = ", i);
+	dprintv(interp, code->literal + i);
+	dprintf("\n");
+    }
+#endif
+
     return i;
 }
 
@@ -162,9 +211,14 @@ add_byte(code, c)
     unsigned int c;
 {
     struct SEE_interpreter *interp = code->code.interpreter;
+    unsigned int offset = code->ninst;
 
+#ifndef NDEBUG
+    if (SEE_code1_debug > 1)
+	dprintf("add_byte(0x%02x)\n", c);
+#endif
     SEE_GROW_TO(interp, &code->ginst, code->ninst + 1);
-    code->inst[code->ninst - 1] = c;
+    code->inst[offset] = c;
 }
 
 static unsigned int
@@ -180,11 +234,15 @@ add_word(code, n)
     struct code1 *code;
     SEE_int32_t n;
 {
-    unsigned int i = code->ninst;
     struct SEE_interpreter *interp = code->code.interpreter;
+    unsigned int offset = code->ninst;
 
-    SEE_GROW_TO(interp, &code->ginst, i + sizeof n);
-    memcpy(code->func + i, &n, sizeof n);
+#ifndef NDEBUG
+    if (SEE_code1_debug > 1)
+	dprintf("add_word(%d)\n", n);
+#endif
+    SEE_GROW_TO(interp, &code->ginst, offset + sizeof n);
+    memcpy(code->inst + offset, &n, sizeof n);
 }
 
 /* Inserts a 32-bit signed integer into the code stream  */
@@ -194,7 +252,7 @@ put_word(code, n, offset)
     SEE_int32_t n;
     unsigned int offset;
 {
-    memcpy(code->func + offset, &n, sizeof n);
+    memcpy(code->inst + offset, &n, sizeof n);
 }
 
 /* Adds a byte followed by a compact integer */
@@ -242,6 +300,9 @@ code1_gen_op0(sco, op)
 	enum SEE_code_op0 op;
 {
 	struct code1 *co = CAST_CODE(sco);
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
 
 	switch (op) {
 	case SEE_CODE_NOP:	add_byte(co, INST_NOP); break;
@@ -281,6 +342,9 @@ code1_gen_op0(sco, op)
 	case SEE_CODE_RSHIFT:	add_byte(co, INST_RSHIFT); break;
 	case SEE_CODE_URSHIFT:	add_byte(co, INST_URSHIFT); break;
 	case SEE_CODE_LT:	add_byte(co, INST_LT); break;
+	case SEE_CODE_GT:	add_byte(co, INST_GT); break;
+	case SEE_CODE_LE:	add_byte(co, INST_LE); break;
+	case SEE_CODE_GE:	add_byte(co, INST_GE); break;
 	case SEE_CODE_INSTANCEOF:add_byte(co, INST_INSTANCEOF); break;
 	case SEE_CODE_IN:	add_byte(co, INST_IN); break;
 	case SEE_CODE_EQ:	add_byte(co, INST_EQ); break;
@@ -292,6 +356,11 @@ code1_gen_op0(sco, op)
 	case SEE_CODE_S_WITH:	add_byte(co, INST_S_WITH); break;
 	default: SEE_ASSERT(sco->interpreter, !"bad op0");
 	}
+
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static void
@@ -301,6 +370,9 @@ code1_gen_op1(sco, op, n)
 	int n;
 {
 	struct code1 *co = CAST_CODE(sco);
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
 
 	switch (op) {
 	case SEE_CODE_NEW:	add_byte_arg(co, INST_NEW, n); break;
@@ -313,6 +385,11 @@ code1_gen_op1(sco, op, n)
 	    if (n > co->maxargc)
 		co->maxargc = n;
 	}
+
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static void
@@ -322,8 +399,15 @@ code1_gen_literal(sco, v)
 {
 	struct code1 *co = CAST_CODE(sco);
 	unsigned int id = add_literal(co, v);
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
 
 	add_byte_arg(co, INST_LITERAL, id);
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static void
@@ -333,8 +417,15 @@ code1_gen_func(sco, f)
 {
 	struct code1 *co = CAST_CODE(sco);
 	unsigned int id = add_function(co, f);
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
 
 	add_byte_arg(co, INST_FUNC, id);
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static void
@@ -354,6 +445,9 @@ code1_gen_opa(sco, opa, patchp, addr)
 {
 	struct code1 *co = CAST_CODE(sco);
 	unsigned char b;
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
 
 	switch (opa) {
 	case SEE_CODE_B_ALWAYS:	b = INST_B_ALWAYS; break;
@@ -365,8 +459,13 @@ code1_gen_opa(sco, opa, patchp, addr)
 	}
 	add_byte(co, b | INST_ARG_WORD);
 	if (patchp)
-	    *(unsigned int *)patchp = here(co);
-	add_word(co, (SEE_uint32_t)addr);
+	    *(SEE_int32_t *)patchp = here(co);
+	add_word(co, (SEE_int32_t)addr);
+
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static SEE_code_addr_t
@@ -385,9 +484,17 @@ code1_patch(sco, patch, addr)
 	SEE_code_addr_t addr;
 {
 	struct code1 *co = CAST_CODE(sco);
+	SEE_int32_t arg = (SEE_int32_t)addr;
+	SEE_int32_t offset = (SEE_int32_t)patch;
 
-	put_word(co, (SEE_uint32_t)addr, (unsigned int)patch);
+	put_word(co, arg, offset);
 
+#ifndef NDEBUG
+	if (SEE_code1_debug > 1) {
+	    dprintf("patch @0x%x <- 0x%x\n", offset, arg);
+	    disasm(co, offset - 1);
+	}
+#endif
 }
 
 static void
@@ -437,7 +544,55 @@ GetValue(interp, vp)
 }
 
 static void
-code1_eval(sco, ctxt, res)
+AbstractRelational(interp, x, y, res)
+	struct SEE_interpreter *interp;
+	struct SEE_value *x, *y, *res;
+{
+	struct SEE_value r1, r2, r4, r5;
+	struct SEE_value hint;
+	int k;
+
+	SEE_SET_OBJECT(&hint, interp->Number);
+
+	SEE_ToPrimitive(interp, x, &hint, &r1);
+	SEE_ToPrimitive(interp, y, &hint, &r2);
+	if (!(SEE_VALUE_GET_TYPE(&r1) == SEE_STRING && 
+	      SEE_VALUE_GET_TYPE(&r2) == SEE_STRING)) 
+	{
+	    SEE_ToNumber(interp, &r1, &r4);
+	    SEE_ToNumber(interp, &r2, &r5);
+	    if (SEE_NUMBER_ISNAN(&r4) || SEE_NUMBER_ISNAN(&r5))
+		SEE_SET_UNDEFINED(res);
+	    else if (r4.u.number == r5.u.number)
+		SEE_SET_BOOLEAN(res, 0);
+	    else if (SEE_NUMBER_ISPINF(&r4))
+		SEE_SET_BOOLEAN(res, 0);
+	    else if (SEE_NUMBER_ISPINF(&r5))
+		SEE_SET_BOOLEAN(res, 1);
+	    else if (SEE_NUMBER_ISNINF(&r5))
+		SEE_SET_BOOLEAN(res, 0);
+	    else if (SEE_NUMBER_ISNINF(&r4))
+		SEE_SET_BOOLEAN(res, 1);
+	    else 
+	        SEE_SET_BOOLEAN(res, r4.u.number < r5.u.number);
+	} else {
+	    for (k = 0; 
+		 k < r1.u.string->length && k < r2.u.string->length;
+		 k++)
+		if (r1.u.string->data[k] != r2.u.string->data[k])
+			break;
+	    if (k == r2.u.string->length)
+		SEE_SET_BOOLEAN(res, 0);
+	    else if (k == r1.u.string->length)
+		SEE_SET_BOOLEAN(res, 1);
+	    else
+		SEE_SET_BOOLEAN(res, r1.u.string->data[k] < 
+				 r2.u.string->data[k]);
+	}
+}
+
+static void
+code1_exec(sco, ctxt, res)
     struct SEE_code *sco;
     struct SEE_context *ctxt;
     struct SEE_value *res;
@@ -489,6 +644,7 @@ code1_eval(sco, ctxt, res)
 	/* Macro to prepare pushing a value onto the	\
 	 * stack. vp is set to point to the storage. */	\
 	vp = stack++;					\
+	SEE_ASSERT(interp, stack <= stackbottom + co->maxstack); \
     } while (0)
 
 #define TOP(vp)	do {					\
@@ -515,6 +671,31 @@ code1_eval(sco, ctxt, res)
     }							\
  } while (0)
 
+#define NOT_IMPLEMENTED					\
+	SEE_error_throw_string(interp, interp->Error,	\
+	    STR(not_implemented));
+
+#ifndef NDEBUG
+    SEE_eval_debug = 2;
+    if (SEE_eval_debug) {
+	dprintf("ninst    = 0x%x\n", co->ninst);
+	dprintf("nliteral = %d\n", co->nliteral);
+	dprintf("maxstack = %d\n", co->maxstack);
+	dprintf("maxargc  = %d\n", co->maxargc);
+	dprintf("-- literals:\n");
+	for (i = 0; i < co->nliteral; i++) {
+	    dprintf("@%d ", i);
+	    dprintv(interp, co->literal + i);
+	    dprintf("\n");
+	}
+	dprintf("-- code:\n");
+	i = 0;
+	while (i < co->ninst)
+	    i += disasm(co, i);
+	dprintf("--\n");
+    }
+#endif
+
     SEE_ASSERT(interp, co->maxstack >= 0);
 
     stackbottom = SEE_ALLOCA(interp, struct SEE_value, co->maxstack);
@@ -528,6 +709,36 @@ code1_eval(sco, ctxt, res)
     pc = co->inst;
     stack = stackbottom;
     for (;;) {
+
+	SEE_ASSERT(interp, pc >= co->inst);
+	SEE_ASSERT(interp, pc < co->inst + co->ninst);
+
+#ifndef NDEBUG
+	if (SEE_eval_debug > 1) {
+	    dprintf("C=");
+	    dprintv(interp, res);
+	    dprintf(" stack=");
+	    if (stack == stackbottom)
+		dprintf("[]");
+	    else {
+		dprintf("[");
+		if (stack < stackbottom + 4)
+		    i = 0;
+		else {
+		    i = stack - (stackbottom + 4);
+		    dprintf(" ...");
+		}
+		for (; i < stack - stackbottom; i++) {
+		    dprintf(" ");
+		    dprintv(interp, stackbottom + i);
+		}
+		dprintf(" ]");
+	    }
+	    dprintf("\n");
+	    disasm(co, pc - co->inst);
+	}
+#endif
+
 	/* Fetch next instruction byte */
 	op = *pc++;
 
@@ -832,7 +1043,39 @@ code1_eval(sco, ctxt, res)
 	    break;
 
 	case INST_LT:
-	    /* TBD */
+	    POP(vp);	/* y */
+	    TOP(up);	/* x */
+	    AbstractRelational(interp, up, vp, up);
+	    if (SEE_VALUE_GET_TYPE(up) == SEE_UNDEFINED)
+		SEE_SET_BOOLEAN(up, 0);
+	    break;
+
+	case INST_GT:
+	    POP(vp);	/* y */
+	    TOP(up);	/* x */
+	    AbstractRelational(interp, vp, up, up);
+	    if (SEE_VALUE_GET_TYPE(up) == SEE_UNDEFINED)
+		SEE_SET_BOOLEAN(up, 0);
+	    break;
+
+	case INST_LE:
+	    POP(vp);	/* y */
+	    TOP(up);	/* x */
+	    AbstractRelational(interp, vp, up, up);
+	    if (SEE_VALUE_GET_TYPE(up) == SEE_UNDEFINED)
+		SEE_SET_BOOLEAN(up, 0);
+	    else
+		up->u.boolean = !up->u.boolean;
+	    break;
+
+	case INST_GE:
+	    POP(vp);	/* y */
+	    TOP(up);	/* x */
+	    AbstractRelational(interp, up, vp, up);
+	    if (SEE_VALUE_GET_TYPE(up) == SEE_UNDEFINED)
+		SEE_SET_BOOLEAN(up, 0);
+	    else
+		up->u.boolean = !up->u.boolean;
 	    break;
 
 	case INST_INSTANCEOF:
@@ -860,11 +1103,11 @@ code1_eval(sco, ctxt, res)
 	    break;
 
 	case INST_EQ:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_SEQ:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_BAND:
@@ -889,11 +1132,11 @@ code1_eval(sco, ctxt, res)
 	    break;
 
 	case INST_S_ENUM:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_S_WITH:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	/*--------------------------------------------------
@@ -955,9 +1198,9 @@ code1_eval(sco, ctxt, res)
 	    break;
 
 	case INST_END:
-	    /* TBD */
 	    if (arg == 0)
 		return;
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	/*--------------------------------------------------
@@ -976,28 +1219,34 @@ code1_eval(sco, ctxt, res)
 	    break;
 
 	case INST_B_ENUM:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_S_TRYC:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_S_TRYF:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	case INST_FUNC:
-	    /* TBD */
+	    SEE_ASSERT(interp, arg >= 0);
+	    SEE_ASSERT(interp, arg < co->nfunc);
+	    PUSH(vp);
+	    SEE_SET_OBJECT(vp, SEE_function_inst_create(interp,
+		co->func[arg], ctxt->scope));
 	    break;
 
 	case INST_LITERAL:
+	    SEE_ASSERT(interp, arg >= 0);
+	    SEE_ASSERT(interp, arg < co->nliteral);
 	    PUSH(vp);
 	    SEE_VALUE_COPY(vp, co->literal + arg);
 	    break;
 
 	case INST_LOC:
-	    /* TBD */
+	    NOT_IMPLEMENTED; /* TBD */
 	    break;
 
 	default:
@@ -1006,3 +1255,107 @@ code1_eval(sco, ctxt, res)
     }
 }
 
+#ifndef NDEBUG
+static SEE_int32_t
+disasm(co, pc)
+	struct code1 *co;
+	SEE_int32_t pc;
+{
+	int i, len;
+	unsigned char op;
+	SEE_int32_t arg = 0;
+	const unsigned char *base = co->inst;
+
+	dprintf("%4x: ", pc);
+
+	op = base[pc];
+	if ((op & INST_ARG_MASK) == INST_ARG_NONE) {
+	    len = 1;
+	} else if ((op & INST_ARG_MASK) == INST_ARG_BYTE) {
+	    arg = base[pc + 1];
+	    len = 2;
+	} else {
+	    memcpy(&arg, base + pc + 1, sizeof arg);
+	    len = 1 + sizeof arg;
+	}
+
+	for (i = 0; i < 1 + sizeof arg; i++)
+	    if (i < len)
+		dprintf("%02x ", base[pc + i]);
+	    else
+		dprintf("   ");
+
+	switch (op & INST_OP_MASK) {
+	case INST_NOP:		dprintf("NOP"); break;
+	case INST_DUP:		dprintf("DUP"); break;
+	case INST_POP:		dprintf("POP"); break;
+	case INST_EXCH:		dprintf("EXCH"); break;
+	case INST_ROLL3:	dprintf("ROLL3"); break;
+	case INST_THROW:	dprintf("THROW"); break;
+	case INST_SETC:		dprintf("SETC"); break;
+	case INST_GETC:		dprintf("GETC"); break;
+	case INST_THIS:		dprintf("THIS"); break;
+	case INST_OBJECT:	dprintf("OBJECT"); break;
+	case INST_ARRAY:	dprintf("ARRAY"); break;
+	case INST_REGEXP:	dprintf("REGEXP"); break;
+	case INST_REF:		dprintf("REF"); break;
+	case INST_GETVALUE:	dprintf("GETVALUE"); break;
+	case INST_LOOKUP:	dprintf("LOOKUP"); break;
+	case INST_PUTVALUE:	dprintf("PUTVALUE"); break;
+	case INST_PUTVAR:	dprintf("PUTVAR"); break;
+	case INST_VAR:		dprintf("VAR"); break;
+	case INST_DELETE:	dprintf("DELETE"); break;
+	case INST_TYPEOF:	dprintf("TYPEOF"); break;
+	case INST_TOOBJECT:	dprintf("TOOBJECT"); break;
+	case INST_TONUMBER:	dprintf("TONUMBER"); break;
+	case INST_TOBOOLEAN:	dprintf("TOBOOLEAN"); break;
+	case INST_TOSTRING:	dprintf("TOSTRING"); break;
+	case INST_TOPRIMITIVE:	dprintf("TOPRIMITIVE"); break;
+	case INST_NEG:		dprintf("NEG"); break;
+	case INST_INV:		dprintf("INV"); break;
+	case INST_NOT:		dprintf("NOT"); break;
+	case INST_MUL:		dprintf("MUL"); break;
+	case INST_DIV:		dprintf("DIV"); break;
+	case INST_MOD:		dprintf("MOD"); break;
+	case INST_ADD:		dprintf("ADD"); break;
+	case INST_SUB:		dprintf("SUB"); break;
+	case INST_LSHIFT:	dprintf("LSHIFT"); break;
+	case INST_RSHIFT:	dprintf("RSHIFT"); break;
+	case INST_URSHIFT:	dprintf("URSHIFT"); break;
+	case INST_LT:		dprintf("LT"); break;
+	case INST_GT:		dprintf("GT"); break;
+	case INST_LE:		dprintf("LE"); break;
+	case INST_GE:		dprintf("GE"); break;
+	case INST_INSTANCEOF:	dprintf("INSTANCEOF"); break;
+	case INST_IN:		dprintf("IN"); break;
+	case INST_EQ:		dprintf("EQ"); break;
+	case INST_SEQ:		dprintf("SEQ"); break;
+	case INST_BAND:		dprintf("BAND"); break;
+	case INST_BXOR:		dprintf("BXOR"); break;
+	case INST_BOR:		dprintf("BOR"); break;
+	case INST_S_ENUM:	dprintf("S_ENUM"); break;
+	case INST_S_WITH:	dprintf("S_WITH"); break;
+
+	case INST_NEW:		dprintf("NEW,%d", arg); break;
+	case INST_CALL:		dprintf("CALL,%d", arg); break;
+	case INST_END:		dprintf("END,%d", arg); break;
+
+	case INST_B_ALWAYS:	dprintf("B_ALWAYS,0x%x", arg); break;
+	case INST_B_TRUE:	dprintf("B_TRUE,0x%x", arg); break;
+	case INST_B_ENUM:	dprintf("B_ENUM,0x%x", arg); break;
+	case INST_S_TRYC:	dprintf("S_TRYC,0x%x", arg); break;
+	case INST_S_TRYF:	dprintf("S_TRYF,0x%x", arg); break;
+
+	case INST_FUNC:		dprintf("FUNC [%d]", arg); break;
+	case INST_LITERAL:	
+		dprintf("@%d ", arg);
+		dprintv(co->code.interpreter, co->literal + arg);
+		break;
+	case INST_LOC:		dprintf("LOC [%d]", arg); break;
+	default:		dprintf("??? <%02x>,%d", op, arg);
+	}
+	dprintf("\n");
+
+	return len;
+}
+#endif

@@ -145,6 +145,10 @@ Call instructions
 
 Special instructions
 
+    FUNC,func	    - | obj
+	Pushes a function instance object onto the stack bound to 
+	the current scope.
+
     LITERAL,val    - | val
 	Pushes a literal value onto the stack.
 
@@ -283,7 +287,16 @@ Arithmetic instructions (11.6.3)
 Relational instructions (11.8)
 
     LT		val1 val2 | bool
-	Compute val1 < val2 (see 11.8.5)
+	Compute val1 < val2 (see 11.8.1)
+
+    GT		val1 val2 | bool
+	Compute val1 > val2 (see 11.8.2)
+
+    LE		val1 val2 | bool
+	Compute val1 <= val2 (see 11.8.3)
+
+    GE		val1 val2 | bool
+	Compute val1 >= val2 (see 11.8.4)
 
 *   INSTANCEOF	val1 val2 | bool
 	1. if val2 is not an object, throws a TypeError exception

@@ -74,6 +74,9 @@ enum SEE_code_op0 {
 	SEE_CODE_URSHIFT,		/*     val val | num        */
 
 	SEE_CODE_LT,			/*     val val | bool       */
+	SEE_CODE_GT,			/*     val val | bool       */
+	SEE_CODE_LE,			/*     val val | bool       */
+	SEE_CODE_GE,			/*     val val | bool       */
 	SEE_CODE_INSTANCEOF,		/*     val val | bool       */
 	SEE_CODE_IN,			/*     val val | bool       */
 	SEE_CODE_EQ,			/*     val val | bool	    */
@@ -148,7 +151,7 @@ struct SEE_code_class {
 
 	/* Executes the code in the given context. The result is always
 	 * of type SEE_COMPLETION. */
-	void	(*eval)(struct SEE_code *co, struct SEE_context *ctxt,
+	void	(*exec)(struct SEE_code *co, struct SEE_context *ctxt,
 	        	struct SEE_value *res);
 };
 

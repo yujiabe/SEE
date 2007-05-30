@@ -25,4 +25,8 @@ test("i3.getValue()", 789)
 
 test("i1.constructor", foo)
 
+// Ignore the last statement of a function
+test("(function(){123;})()", undefined);
+test("123", 123);
+
 finish()

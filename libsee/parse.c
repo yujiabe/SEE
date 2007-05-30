@@ -1231,12 +1231,8 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 
 #if WITH_PARSER_CODEGEN
 
-# define CODEGEN(node)				\
+# define CODEGEN(node)					\
 	(*(node)->nodeclass->codegen)(node, cc)
-  /*
-   * Note: there is no need to restore the _loc_save in
-   * a try-finally block
-   */
 
 /* Call/construct operators */
 # define _CG_OP1(name, n) \
@@ -1285,6 +1281,9 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 # define CG_RSHIFT()		_CG_OP0(RSHIFT)
 # define CG_URSHIFT()		_CG_OP0(URSHIFT)
 # define CG_LT()		_CG_OP0(LT)
+# define CG_GT()		_CG_OP0(GT)
+# define CG_LE()		_CG_OP0(LE)
+# define CG_GE()		_CG_OP0(GE)
 # define CG_INSTANCEOF()	_CG_OP0(INSTANCEOF)
 # define CG_IN()		_CG_OP0(IN)
 # define CG_EQ()		_CG_OP0(EQ)
@@ -1337,11 +1336,11 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 # define CG_HERE()						\
 	(*cc->code->code_class->here)(cc->code)
 
-  /* Patch a previously saved address to point to CG_HERE() */
-# define CG_LABEL(var)				\
-	(*cc->code->code_class->patch)(cc->code, &(var), CG_HERE())
+/* Patch a previously saved address to point to CG_HERE() */
+# define CG_LABEL(var)						\
+	(*cc->code->code_class->patch)(cc->code, var, CG_HERE())
 
-# define _CG_OPA(name, patchp, addr) \
+# define _CG_OPA(name, patchp, addr)				\
     (*cc->code->code_class->gen_opa)(cc->code, SEE_CODE_##name, patchp, addr)
 
 /* Backward (_b) and forward (_f) branching */
@@ -1356,6 +1355,9 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 # define CG_B_ENUM_f(var)		_CG_OPA(B_ENUM, &(var), 0)
 # define CG_S_TRYC_f(var)		_CG_OPA(S_TRYC, &(var), 0)
 # define CG_S_TRYF_f(var)		_CG_OPA(S_TRYF, &(var), 0)
+
+/* Execute program code */
+# define CG_EXEC(co, ctxt, res)		(*(co)->code_class->exec)(co, ctxt, res)
 
 #endif /* WITH_PARSER_CODEGEN */
 
@@ -1768,7 +1770,7 @@ cg_fini(interp, cc, maxstack)
 {
 	struct SEE_code *co = cc->code;
 
-	SEE_ASSERT(interp, cc->block_depth = 0);
+	SEE_ASSERT(interp, cc->block_depth == 0);
 	(*co->code_class->maxstack)(co, maxstack);
 	(*co->code_class->maxblock)(co, cc->max_block_depth);
 	(*co->code_class->close)(co);
@@ -5485,8 +5487,7 @@ RelationalExpression_gt_codegen(na, cc)
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
 	Binary_common_codegen(n, cc); /* aval bval */
-	CG_EXCH();		      /* bval aval */
-	CG_LT();		      /* bool */
+	CG_GT();		      /* bool */
 
 	n->node.is = CG_TYPE_BOOLEAN;
 	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
@@ -5547,9 +5548,7 @@ RelationalExpression_le_codegen(na, cc)
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
 	Binary_common_codegen(n, cc); /* aval bval */
-	CG_EXCH();		      /* bval aval */
-	CG_LT();		      /* bool */
-	CG_NOT();		      /* bool */
+	CG_LE();		      /* bool */
 
 	n->node.is = CG_TYPE_BOOLEAN;
 	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
@@ -5611,8 +5610,7 @@ RelationalExpression_ge_codegen(na, cc)
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
 	Binary_common_codegen(n, cc); /* aval bval */
-	CG_LT();		      /* bool */
-	CG_NOT();		      /* bool */
+	CG_GE();		      /* bool */
 
 	n->node.is = CG_TYPE_BOOLEAN;
 	n->node.maxstack = MAX(n->a->maxstack, 1 + n->b->maxstack);
@@ -8399,8 +8397,7 @@ VariableDeclaration_codegen(na, cc)
 		CODEGEN(n->init);		/* ref ref */
 		if (!CG_IS_VALUE(n->init))
 		    CG_GETVALUE();		/* ref val */
-		CG_PUTVALUE();			/* val */
-		CG_POP();			/* -   */
+		CG_PUTVALUE();			/* - */
 	}
 	n->node.maxstack = n->init ? 1 + n->init->maxstack : 0;
 }
@@ -11478,16 +11475,37 @@ FormalParameterList_parse(parser)
 }
 
 
+struct FunctionBody_node {
+	struct Unary_node u;
+	int is_program;
+};
+
 static void
 FunctionBody_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	struct Unary_node *n = CAST_NODE(na, Unary);
+	struct FunctionBody_node *n = CAST_NODE(na, FunctionBody);
+	struct SEE_value v;
 
-	FPROC(n->a, context);
-	EVAL(n->a, context, res);
+	FPROC(n->u.a, context);
+	EVAL(n->u.a, context, &v);
+
+	SEE_ASSERT(context->interpreter,
+	    SEE_VALUE_GET_TYPE(&v) == SEE_COMPLETION);
+	SEE_ASSERT(context->interpreter,
+	    v.u.completion.type == SEE_COMPLETION_NORMAL ||
+	    v.u.completion.type == SEE_COMPLETION_RETURN);
+
+	/* Functions convert 'normal' completion to 'return undefined',
+	 * while Programs return the value from their last 'normal' 
+	 * completion. */
+	if ((!n->is_program && v.u.completion.type == SEE_COMPLETION_NORMAL) ||
+		v.u.completion.value == NULL)
+	    SEE_SET_UNDEFINED(res);
+	else
+	    SEE_VALUE_COPY(res, v.u.completion.value);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -11496,19 +11514,21 @@ FunctionBody_codegen(na, cc)
 	struct node *na;
 	struct code_context *cc;
 {
-	struct Unary_node *n = CAST_NODE(na, Unary);
+	struct FunctionBody_node *n = CAST_NODE(na, FunctionBody);
 
 	/* Note that SourceElements_codegen includes the fproc action */
-	CODEGEN(n->a);
+	CODEGEN(n->u.a);	/* - */
+
+	/* Non-programs convert 'normal' completion to return undefined */
+	if (!n->is_program) {
+	    CG_UNDEFINED();	/* undef */
+	    CG_SETC();		/* - */
+	}
 	CG_END(0);		/* explicit return */
 
-	na->maxstack = n->a->maxstack;
+	na->maxstack = n->u.a->maxstack;
 }
 #endif
-
-struct FunctionBody_node {
-	struct Unary_node u;
-};
 
 static struct nodeclass FunctionBody_nodeclass
 	= { SUPERCLASS(Unary)
@@ -11527,6 +11547,7 @@ FunctionBody_parse(parser)
 
 	n = NEW_NODE(struct FunctionBody_node, &FunctionBody_nodeclass);
 	n->u.a = PARSE(SourceElements);
+	n->is_program = 0;
 	return (struct node *)n;
 }
 
@@ -11591,6 +11612,7 @@ Program_parse(parser)
 	struct parser *parser;
 {
 	struct node *body;
+	struct FunctionBody_node *f;
 
 	/*
 	 * NB: The semantics of Program are indistinguishable from that of
@@ -11608,6 +11630,9 @@ Program_parse(parser)
 		ERRORm("unmatched ']'");
 	if (NEXT != tEND)
 		ERRORm("unexpected token");
+
+	f = CAST_NODE(body, FunctionBody);
+	f->is_program = 1;
 
 	return SEE_function_make(parser->interpreter,
 		NULL, NULL, make_body(parser, body));
@@ -11928,11 +11953,14 @@ SEE_eval_functionbody(f, context, res)
 	struct SEE_value *res;
 {
 #if WITH_PARSER_CODEGEN
-	struct SEE_code *co = (struct SEE_code *)f->body;
-	(*co->code_class->eval)(co, context, res);
+	CG_EXEC((struct SEE_code *)f->body, context, res);
 #else
 	EVAL((struct node *)f->body, context, res);
 #endif
+	SEE_ASSERT(context->interpreter,
+	    SEE_VALUE_GET_TYPE(res) != SEE_COMPLETION);
+	SEE_ASSERT(context->interpreter,
+	    SEE_VALUE_GET_TYPE(res) != SEE_REFERENCE);
 }
 
 int
@@ -12197,7 +12225,6 @@ eval(context, thisobj, argc, argv, res)
 {
 	struct SEE_input *inp;
 	struct function *f;
-	struct SEE_value v;
 	struct SEE_context evalcontext;
 	struct SEE_interpreter *interp = context->interpreter;
 
@@ -12242,25 +12269,7 @@ eval(context, thisobj, argc, argv, res)
 	SEE_function_put_args(context, f, 0, NULL);
 
 	/* Evaluate the statement */
-	SEE_eval_functionbody(f, &evalcontext, &v);
-
-	if (SEE_VALUE_GET_TYPE(&v) != SEE_COMPLETION || 
-	    v.u.completion.type != SEE_COMPLETION_NORMAL) 
-	{
-#ifndef NDEBUG
-	    dprintf("eval'd string returned ");
-	    dprintv(interp, &v);
-	    dprintf("\n");
-#endif
-	    SEE_error_throw_string(
-		interp,
-		interp->EvalError,
-		STR(internal_error));
-        }
-	if (v.u.completion.value == NULL)
-	    SEE_SET_UNDEFINED(res);
-	else
-	    SEE_VALUE_COPY(res, v.u.completion.value);
+	SEE_eval_functionbody(f, &evalcontext, res);
 }
 
 /* 
