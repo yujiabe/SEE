@@ -8560,10 +8560,12 @@ ExpressionStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
+	struct SEE_value r1;
 	struct SEE_value *v = SEE_NEW(context->interpreter, struct SEE_value);
 
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
-	EVAL(n->a, context, v);
+	EVAL(n->a, context, &r1);
+	GetValue(context, &r1, v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 }
 
