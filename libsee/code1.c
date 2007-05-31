@@ -67,16 +67,18 @@ struct block {
 	struct SEE_scope with;
 	struct {
 	    SEE_try_context_t context;
+	    struct block *last_try_block;
 	    SEE_int32_t handler;
 	    unsigned int stack;
 	    unsigned int block;	/* Block level we are transiting to */
-	} *tryf;
+	} tryf;
 	struct {
 	    SEE_try_context_t context;
+	    struct block *last_try_block;
 	    SEE_int32_t handler;
 	    unsigned int stack;
 	    struct SEE_string *ident;
-	} *tryc;
+	} tryc;
     } u;
 };
 
@@ -623,22 +625,25 @@ code1_exec(sco, ctxt, res)
 	struct SEE_value *res;
 {
 	struct SEE_interpreter *interp = sco->interpreter;
-	struct code1 *co = CAST_CODE(sco);
+	struct code1 * const co = CAST_CODE(sco);
 	struct SEE_string *str;
 	struct SEE_value t, u, v;		/* scratch values */
 	struct SEE_value *up, *vp, *wp;
 	struct SEE_value **argv;
 	struct SEE_value undefined, Number;
 	struct SEE_object *obj, *baseobj;
-	unsigned char *pc;
-	struct SEE_value *stack, *stackbottom;
+	volatile unsigned char *pc;
+	struct SEE_value *stackbottom;
+	volatile struct SEE_value *stack;
 	struct SEE_location *location = NULL;
 	unsigned char op;
 	SEE_int32_t arg;
 	SEE_int32_t int32;
 	int i;
 	struct block *blockbottom, *block;
-	int blocklevel, new_blocklevel;
+	volatile struct block *try_block = NULL;
+	volatile int blocklevel;
+	int new_blocklevel;
 	struct enum_context *enum_context = NULL;
 	struct SEE_scope *scope;
 
@@ -765,7 +770,7 @@ code1_exec(sco, ctxt, res)
 		}
 		dprintf(" ]");
 	    }
-	    dprintf("\n");
+	    dprintf(" blocklevel=%d\n", blocklevel);
 	    disasm(co, pc - co->inst);
 	}
 #endif
@@ -1247,17 +1252,75 @@ code1_exec(sco, ctxt, res)
 
 	case INST_END:
 	    new_blocklevel = arg;
+    end:
     	    while (new_blocklevel <= blocklevel) {
 		if (blocklevel == 0)
 		    return;
 		blocklevel--;
 		block = &blockbottom[blocklevel];
 		if (block->type == BLOCK_ENUM) {
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending ENUM\n");
+#endif
 		    SEE_ASSERT(interp, enum_context == &block->u.enum_context);
 		    SEE_enumerate_free(interp, enum_context->props0);
 		    enum_context = enum_context->prev;
 		} else if (block->type == BLOCK_WITH) {
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending WITH\n");
+#endif
 		    scope = block->u.with.next;
+		} else if (block->type == BLOCK_TRYC) {
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending TRYC\n");
+#endif
+		    if (block->u.tryc.context.done) {
+			SEE_ASSERT(interp, block == try_block);
+			try_block = block->u.tryc.last_try_block;
+			_SEE_TRY_FINI(interp, block->u.tryc.context);
+		    }
+		    vp = SEE_CAUGHT(block->u.tryc.context);
+		    if (vp) {
+			stack = stackbottom + block->u.tryc.stack;
+			obj = SEE_Object_new(interp);
+			SEE_OBJECT_PUT(interp, obj, block->u.tryc.ident,
+			    vp, SEE_ATTR_DONTDELETE);
+			pc = co->inst + block->u.tryc.handler;
+			/* Convert the block into a WITH */
+			block->type = BLOCK_WITH;
+			block->u.with.next = scope;
+			block->u.with.obj = obj;
+			scope = &block->u.with;
+			blocklevel++;
+			break;
+		    } 
+		} else if (block->type == BLOCK_TRYF) {
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending TRYF - running handler\n");
+#endif
+		    if (block->u.tryf.context.done) {
+			SEE_ASSERT(interp, block == try_block);
+			try_block = block->u.tryf.last_try_block;
+			_SEE_TRY_FINI(interp, block->u.tryf.context);
+		    }
+		    block->u.tryf.block = new_blocklevel;
+		    stack = stackbottom + block->u.tryc.stack;
+		    pc = co->inst + block->u.tryf.handler;
+		    /* convert the block into a FINALLY */
+		    block->type = BLOCK_FINALLY;
+		    blocklevel++;
+		    break;
+		} else if (block->type == BLOCK_FINALLY) {
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending FINALLY\n");
+#endif
+		    new_blocklevel = block->u.tryf.block;
+		    SEE_DEFAULT_CATCH(interp, block->u.tryf.context);
 		}
 	    }
 	    break;
@@ -1291,11 +1354,45 @@ code1_exec(sco, ctxt, res)
 	    break;
 
 	case INST_S_TRYC:
-	    NOT_IMPLEMENTED; /* TBD */
+	    POP(vp);
+	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
+	    block = &blockbottom[blocklevel];
+	    block->type = BLOCK_TRYC;
+	    block->u.tryc.handler = arg;
+	    block->u.tryc.stack = stack - stackbottom;
+	    block->u.tryc.ident = vp->u.string;
+	    block->u.tryc.last_try_block = try_block;
+	    try_block = block;
+	    _SEE_TRY_INIT(interp, try_block->u.tryc.context);
+	    try_block->u.tryc.context.done = 1;
+	    if (_SEE_TRY_SETJMP(interp, try_block->u.tryc.context)) {
+		try_block->u.tryc.context.done = 0;
+		block = try_block;
+		try_block = block->u.tryc.last_try_block;
+		new_blocklevel = (block - blockbottom) + 1;
+		goto end;
+	    }
+	    blocklevel++;
 	    break;
 
 	case INST_S_TRYF:
-	    NOT_IMPLEMENTED; /* TBD */
+	    block = &blockbottom[blocklevel];
+	    block->type = BLOCK_TRYF;
+	    block->u.tryf.handler = arg;
+	    block->u.tryf.stack = stack - stackbottom;
+	    block->u.tryf.block = -1;
+	    block->u.tryf.last_try_block = try_block;
+	    try_block = block;
+	    _SEE_TRY_INIT(interp, try_block->u.tryf.context);
+	    try_block->u.tryf.context.done = 1;
+	    if (_SEE_TRY_SETJMP(interp, try_block->u.tryf.context)) {
+		try_block->u.tryf.context.done = 0;
+		block = try_block;
+		try_block = block->u.tryf.last_try_block;
+		new_blocklevel = (block - blockbottom) + 1;
+		goto end;
+	    }
+	    blocklevel++;
 	    break;
 
 	case INST_FUNC:
