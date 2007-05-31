@@ -52,8 +52,33 @@
 #include "scope.h"
 #include "nmath.h"
 #include "function.h"
+#include "enumerate.h"
 #include "code1.h"
 #include "replace.h"
+
+struct block {
+    enum { BLOCK_ENUM, BLOCK_WITH, BLOCK_TRYC, BLOCK_TRYF, BLOCK_FINALLY } type;
+    union {
+	struct enum_context {
+	    struct SEE_string **props0, **props;
+	    struct SEE_object *obj;
+	    struct enum_context *prev;
+	} enum_context;
+	struct SEE_scope with;
+	struct {
+	    SEE_try_context_t context;
+	    SEE_int32_t handler;
+	    unsigned int stack;
+	    unsigned int block;	/* Block level we are transiting to */
+	} *tryf;
+	struct {
+	    SEE_try_context_t context;
+	    SEE_int32_t handler;
+	    unsigned int stack;
+	    struct SEE_string *ident;
+	} *tryc;
+    } u;
+};
 
 #ifdef NDEBUG
 # define CAST_CODE(c)	((struct code1 *)(c))
@@ -593,26 +618,29 @@ AbstractRelational(interp, x, y, res)
 
 static void
 code1_exec(sco, ctxt, res)
-    struct SEE_code *sco;
-    struct SEE_context *ctxt;
-    struct SEE_value *res;
+	struct SEE_code *sco;
+	struct SEE_context *ctxt;
+	struct SEE_value *res;
 {
-    struct SEE_interpreter *interp = sco->interpreter;
-    struct code1 *co = CAST_CODE(sco);
-    struct SEE_string *str;
-    struct SEE_value t, u, v;		/* scratch values */
-    struct SEE_value *up, *vp, *wp;
-    struct SEE_value **argv;
-    struct SEE_value undefined, Number;
-    struct SEE_object *obj, *baseobj;
-    unsigned char *pc;
-    struct SEE_value *stack, *stackbottom;
-    struct SEE_location *location = NULL;
-    unsigned char op;
-    SEE_int32_t arg;
-    SEE_int32_t int32;
-    int i;
-
+	struct SEE_interpreter *interp = sco->interpreter;
+	struct code1 *co = CAST_CODE(sco);
+	struct SEE_string *str;
+	struct SEE_value t, u, v;		/* scratch values */
+	struct SEE_value *up, *vp, *wp;
+	struct SEE_value **argv;
+	struct SEE_value undefined, Number;
+	struct SEE_object *obj, *baseobj;
+	unsigned char *pc;
+	struct SEE_value *stack, *stackbottom;
+	struct SEE_location *location = NULL;
+	unsigned char op;
+	SEE_int32_t arg;
+	SEE_int32_t int32;
+	int i;
+	struct block *blockbottom, *block;
+	int blocklevel, new_blocklevel;
+	struct enum_context *enum_context = NULL;
+	struct SEE_scope *scope;
 
 /*
  * The PUSH() and POP() macros work by setting /pointers/ into
@@ -676,7 +704,7 @@ code1_exec(sco, ctxt, res)
 	    STR(not_implemented));
 
 #ifndef NDEBUG
-    SEE_eval_debug = 2;
+    /*SEE_eval_debug = 2; */
     if (SEE_eval_debug) {
 	dprintf("ninst    = 0x%x\n", co->ninst);
 	dprintf("nliteral = %d\n", co->nliteral);
@@ -700,6 +728,8 @@ code1_exec(sco, ctxt, res)
 
     stackbottom = SEE_ALLOCA(interp, struct SEE_value, co->maxstack);
     argv = SEE_ALLOCA(interp, struct SEE_value *, co->maxargc);
+    blockbottom = SEE_ALLOCA(interp, struct block, co->maxblock);
+    blocklevel = 0;
 
     /* Constants */
     SEE_SET_UNDEFINED(&undefined);
@@ -708,6 +738,7 @@ code1_exec(sco, ctxt, res)
     SEE_SET_UNDEFINED(res);	    /* C = undefined */
     pc = co->inst;
     stack = stackbottom;
+    scope = ctxt->scope;
     for (;;) {
 
 	SEE_ASSERT(interp, pc >= co->inst);
@@ -834,7 +865,7 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_STRING);
 	    str = up->u.string;
 	    PUSH(vp);	/* val */
-	    SEE_scope_lookup(interp, ctxt->scope, str, vp);
+	    SEE_scope_lookup(interp, scope, str, vp);
 	    break;
 
 	case INST_PUTVALUE:
@@ -1132,11 +1163,28 @@ code1_exec(sco, ctxt, res)
 	    break;
 
 	case INST_S_ENUM:
-	    NOT_IMPLEMENTED; /* TBD */
+	    POP(vp);	    /* obj */
+	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT);
+	    block = &blockbottom[blocklevel];
+	    block->type = BLOCK_ENUM;
+	    block->u.enum_context.props0 =
+		block->u.enum_context.props =
+		    SEE_enumerate(interp, vp->u.object);
+	    block->u.enum_context.obj = vp->u.object;
+	    block->u.enum_context.prev = enum_context;
+	    blocklevel++;
+	    enum_context = &block->u.enum_context;
 	    break;
 
 	case INST_S_WITH:
-	    NOT_IMPLEMENTED; /* TBD */
+	    POP(vp);	    /* obj */
+	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT);
+	    block = &blockbottom[blocklevel];
+	    block->type = BLOCK_WITH;
+	    block->u.with.next = scope;
+	    block->u.with.obj = vp->u.object;
+	    scope = &block->u.with;
+	    blocklevel++;
 	    break;
 
 	/*--------------------------------------------------
@@ -1198,9 +1246,20 @@ code1_exec(sco, ctxt, res)
 	    break;
 
 	case INST_END:
-	    if (arg == 0)
-		return;
-	    NOT_IMPLEMENTED; /* TBD */
+	    new_blocklevel = arg;
+    	    while (new_blocklevel <= blocklevel) {
+		if (blocklevel == 0)
+		    return;
+		blocklevel--;
+		block = &blockbottom[blocklevel];
+		if (block->type == BLOCK_ENUM) {
+		    SEE_ASSERT(interp, enum_context == &block->u.enum_context);
+		    SEE_enumerate_free(interp, enum_context->props0);
+		    enum_context = enum_context->prev;
+		} else if (block->type == BLOCK_WITH) {
+		    scope = block->u.with.next;
+		}
+	    }
 	    break;
 
 	/*--------------------------------------------------
@@ -1219,7 +1278,16 @@ code1_exec(sco, ctxt, res)
 	    break;
 
 	case INST_B_ENUM:
-	    NOT_IMPLEMENTED; /* TBD */
+	    SEE_ASSERT(interp, enum_context != NULL);
+	    while (*enum_context->props && !SEE_OBJECT_HASPROPERTY(interp, 
+			enum_context->obj, *enum_context->props))
+		enum_context->props++;
+	    if (*enum_context->props) {
+		PUSH(vp);
+		SEE_SET_STRING(vp, *enum_context->props);
+		pc = co->inst + arg;
+		enum_context->props++;
+	    }
 	    break;
 
 	case INST_S_TRYC:
@@ -1235,7 +1303,7 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, arg < co->nfunc);
 	    PUSH(vp);
 	    SEE_SET_OBJECT(vp, SEE_function_inst_create(interp,
-		co->func[arg], ctxt->scope));
+		co->func[arg], scope));
 	    break;
 
 	case INST_LITERAL:

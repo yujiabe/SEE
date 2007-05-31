@@ -3716,12 +3716,12 @@ PostfixExpression_inc_codegen(na, cc)
 	    CG_TONUMBER();	/* ref num */
 	CG_DUP();		/* ref num num */
 	CG_ROLL3();		/* num ref num */
-	CG_NUMBER(1);		/* num ref num 1 */
+	CG_NUMBER(1);		/* num ref num   1 */
 	CG_ADD();		/* num ref num+1 */
 	CG_PUTVALUE();		/* num */
 
 	n->node.is = CG_TYPE_NUMBER;
-	n->node.maxstack = MAX(n->a->maxstack, 3);
+	n->node.maxstack = MAX(n->a->maxstack, 4);
 
 	/*
 	 * Peephole optimisation note:
@@ -3819,12 +3819,12 @@ PostfixExpression_dec_codegen(na, cc)
 	    CG_TONUMBER();	/* aref anum */
 	CG_DUP();		/* aref anum anum */
 	CG_ROLL3();		/* anum aref anum */
-	CG_NUMBER(1);		/* anum aref anum 1 */
+	CG_NUMBER(1);		/* anum aref anum   1 */
 	CG_SUB();		/* anum aref anum-1 */
 	CG_PUTVALUE();		/* anum */
 
 	n->node.is = CG_TYPE_NUMBER;
-	n->node.maxstack = MAX(n->a->maxstack, 3);
+	n->node.maxstack = MAX(n->a->maxstack, 4);
 }
 #endif
 
