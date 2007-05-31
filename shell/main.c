@@ -70,16 +70,16 @@ debug(interp, c)
 	SEE_mem_debug;
 
 	switch (c) {
-	case 'E': SEE_Error_debug = 1; break;
+	case 'E': SEE_Error_debug++; break;
 	case 'T': interp->trace = trace; break;
-	case 'e': SEE_error_debug = 1; break;
-	case 'l': SEE_lex_debug = 1; break;
-	case 'm': SEE_mem_debug = 1; break;
-	case 'n': SEE_native_debug = 1; break;
-	case 'p': SEE_parse_debug = 1; break;
-	case 'r': SEE_regex_debug = 1; break;
-	case 's': SEE_scope_debug = 1; break;
-	case 'v': SEE_eval_debug = 1; break;
+	case 'e': SEE_error_debug++; break;
+	case 'l': SEE_lex_debug++; break;
+	case 'm': SEE_mem_debug++; break;
+	case 'n': SEE_native_debug++; break;
+	case 'p': SEE_parse_debug++; break;
+	case 'r': SEE_regex_debug++; break;
+	case 's': SEE_scope_debug++; break;
+	case 'v': SEE_eval_debug++; break;
 	default:
 		fprintf(stderr, "unknown debug flag '%c'\n", c);
 	}
