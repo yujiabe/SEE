@@ -14,6 +14,6 @@
 
 TESTS=		grammar.js regex.js function.js regress.js
 EXTRA_DIST=	grammar.js regex.js function.js regress.js common.js
-TESTS_ENVIRONMENT= ../see-shell.static -f $(srcdir)/common.js -f
+TESTS_ENVIRONMENT= ../see-shell.static $$TESTOPTS -f $(srcdir)/common.js -f
 SUBDIRS=
 DIST_SUBDIRS=	mozilla
