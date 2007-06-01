@@ -618,6 +618,93 @@ AbstractRelational(interp, x, y, res)
 	}
 }
 
+static int
+Seq(x, y)
+        struct SEE_value *x, *y;
+{
+        if (SEE_VALUE_GET_TYPE(x) != SEE_VALUE_GET_TYPE(y))
+            return 0;
+        else
+            switch (SEE_VALUE_GET_TYPE(x)) {
+            case SEE_UNDEFINED:
+                return 1;
+            case SEE_NULL:
+                return 1;
+            case SEE_NUMBER:
+                if (SEE_NUMBER_ISNAN(x) || SEE_NUMBER_ISNAN(y))
+                        return 0;
+                else
+                        return x->u.number == y->u.number;
+            case SEE_STRING:
+                return SEE_string_cmp(x->u.string, y->u.string) == 0;
+            case SEE_BOOLEAN:
+                return !x->u.boolean == !y->u.boolean;
+            case SEE_OBJECT:
+                return SEE_OBJECT_JOINED(x->u.object, y->u.object);
+            default:
+                return 0;
+            }
+}
+
+/* From EqualityExpression_eq() */
+static int
+Eq(interp, x, y)
+        struct SEE_interpreter *interp;
+        struct SEE_value *x, *y;
+{
+        struct SEE_value tmp;
+        int xtype, ytype;
+
+        if (SEE_VALUE_GET_TYPE(x) == SEE_VALUE_GET_TYPE(y))
+            switch (SEE_VALUE_GET_TYPE(x)) {
+            case SEE_UNDEFINED:
+            case SEE_NULL:
+                return 1;
+            case SEE_NUMBER:
+                if (SEE_NUMBER_ISNAN(x) || SEE_NUMBER_ISNAN(y))
+                    return 0;
+                else
+                    return x->u.number == y->u.number;
+            case SEE_STRING:
+                return SEE_string_cmp(x->u.string, y->u.string) == 0;
+            case SEE_BOOLEAN:
+                return !x->u.boolean == !y->u.boolean;
+            case SEE_OBJECT:
+                return SEE_OBJECT_JOINED(x->u.object, y->u.object);
+            default:
+                SEE_error_throw_string(interp, interp->Error,
+                        STR(internal_error));
+            }
+        xtype = SEE_VALUE_GET_TYPE(x);
+        ytype = SEE_VALUE_GET_TYPE(y);
+        if (xtype == SEE_NULL && ytype == SEE_UNDEFINED)
+                return 1;
+        else if (xtype == SEE_UNDEFINED && ytype == SEE_NULL)
+                return 1;
+        else if (xtype == SEE_NUMBER && ytype == SEE_STRING) {
+                SEE_ToNumber(interp, y, &tmp);
+                return Eq(interp, x, &tmp);
+        } else if (xtype == SEE_STRING && ytype == SEE_NUMBER) {
+                SEE_ToNumber(interp, x, &tmp);
+                return Eq(interp, &tmp, y);
+        } else if (xtype == SEE_BOOLEAN) {
+                SEE_ToNumber(interp, x, &tmp);
+                return Eq(interp, &tmp, y);
+        } else if (ytype == SEE_BOOLEAN) {
+                SEE_ToNumber(interp, y, &tmp);
+                return Eq(interp, x, &tmp);
+        } else if ((xtype == SEE_STRING || xtype == SEE_NUMBER) &&
+                    ytype == SEE_OBJECT) {
+                SEE_ToPrimitive(interp, y, x, &tmp);
+                return Eq(interp, x, &tmp);
+        } else if ((ytype == SEE_STRING || ytype == SEE_NUMBER) &&
+                    xtype == SEE_OBJECT) {
+                SEE_ToPrimitive(interp, x, y, &tmp);
+                return Eq(interp, &tmp, y);
+        } else
+                return 0;
+}
+
 static void
 code1_exec(sco, ctxt, res)
 	struct SEE_code *sco;
@@ -639,6 +726,7 @@ code1_exec(sco, ctxt, res)
 	unsigned char op;
 	SEE_int32_t arg;
 	SEE_int32_t int32;
+	SEE_uint32_t uint32;
 	int i;
 	struct block *blockbottom, *block;
 	volatile struct block *try_block = NULL;
@@ -646,6 +734,7 @@ code1_exec(sco, ctxt, res)
 	int new_blocklevel;
 	struct enum_context *enum_context = NULL;
 	struct SEE_scope *scope;
+	SEE_number_t number;
 
 /*
  * The PUSH() and POP() macros work by setting /pointers/ into
@@ -851,25 +940,23 @@ code1_exec(sco, ctxt, res)
 
 	case INST_REF:
 	    POP(up);	/* str */
-	    POP(vp);	/* obj */
+	    TOP(vp);	/* obj */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_STRING);
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT);
 	    str = up->u.string;
 	    obj = vp->u.object;
-	    PUSH(wp);	/* ref */
-	    _SEE_SET_REFERENCE(wp, obj, str);
+	    _SEE_SET_REFERENCE(vp, obj, str);
 	    break;
 
 	case INST_GETVALUE:
 	    TOP(vp);	/* any -> val */
-	    GetValue(interp, vp);
+	    GetValue(interp, vp);	    /* [in situ] */
 	    break;
 
 	case INST_LOOKUP:
-	    POP(up);	/* str */
-	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_STRING);
-	    str = up->u.string;
-	    PUSH(vp);	/* val */
+	    TOP(vp);	/* str */
+	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
+	    str = vp->u.string;
 	    SEE_scope_lookup(interp, scope, str, vp);
 	    break;
 
@@ -1008,7 +1095,8 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_NUMBER);
 	    TOP(up);	    /* num */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_NUMBER);
-	    SEE_SET_NUMBER(up, up->u.number * vp->u.number);
+	    number = up->u.number * vp->u.number;
+	    SEE_SET_NUMBER(up, number);
 	    break;
 
 	case INST_DIV:
@@ -1016,7 +1104,8 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_NUMBER);
 	    TOP(up);	    /* num */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_NUMBER);
-	    SEE_SET_NUMBER(up, up->u.number / vp->u.number);
+	    number = up->u.number / vp->u.number;
+	    SEE_SET_NUMBER(up, number);
 	    break;
 
 	case INST_MOD:
@@ -1024,13 +1113,13 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_NUMBER);
 	    TOP(up);	    /* num */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_NUMBER);
-	    SEE_SET_NUMBER(up, NUMBER_fmod(up->u.number, vp->u.number));
+	    number = NUMBER_fmod(up->u.number, vp->u.number);
+	    SEE_SET_NUMBER(up, number);
 	    break;
 
 	case INST_ADD:
 	    POP(vp);	/* prim */
 	    TOP(up);	/* prim -> num/str */
-	    wp = up;
 	    if (SEE_VALUE_GET_TYPE(up) == SEE_STRING ||
 		    SEE_VALUE_GET_TYPE(vp) == SEE_STRING)
 	    {
@@ -1038,14 +1127,16 @@ code1_exec(sco, ctxt, res)
 		    SEE_ToString(interp, up, &u), up = &u;
 		if (SEE_VALUE_GET_TYPE(vp) != SEE_STRING)
 		    SEE_ToString(interp, vp, &v), vp = &v;
-		SEE_SET_STRING(wp, SEE_string_concat(interp,
-		    up->u.string, vp->u.string));
+		str = SEE_string_concat(interp,
+		    up->u.string, vp->u.string);
+		SEE_SET_STRING(up, str);
 	    } else {
 		if (SEE_VALUE_GET_TYPE(up) != SEE_NUMBER)
 		    SEE_ToNumber(interp, up, &u), up = &u;
 		if (SEE_VALUE_GET_TYPE(vp) != SEE_NUMBER)
 		    SEE_ToNumber(interp, vp, &v), vp = &v;
-		SEE_SET_NUMBER(wp, up->u.number + vp->u.number);
+		number = up->u.number + vp->u.number;
+		SEE_SET_NUMBER(up, number);
 	    }
 	    break;
 
@@ -1054,28 +1145,32 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_NUMBER);
 	    TOP(up);	    /* num */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(up) == SEE_NUMBER);
-	    SEE_SET_NUMBER(up, up->u.number - vp->u.number);
+	    number = up->u.number - vp->u.number;
+	    SEE_SET_NUMBER(up, number);
 	    break;
 
 	case INST_LSHIFT:
 	    POP(vp);	/* val2 */
 	    TOP(up);	/* val1 */
-	    SEE_SET_NUMBER(up, SEE_ToInt32(interp, up) << 
-		    (SEE_ToUint32(interp, vp) & 0x1f));
+	    int32 = SEE_ToInt32(interp, up) << 
+		(SEE_ToUint32(interp, vp) & 0x1f);
+	    SEE_SET_NUMBER(up, int32);
 	    break;
 
 	case INST_RSHIFT:
 	    POP(vp);	/* val2 */
 	    TOP(up);	/* val1 */
-	    SEE_SET_NUMBER(up, SEE_ToInt32(interp, up) >> 
-		    (SEE_ToUint32(interp, vp) & 0x1f));
+	    int32 = SEE_ToInt32(interp, up) >> 
+		    (SEE_ToUint32(interp, vp) & 0x1f);
+	    SEE_SET_NUMBER(up, int32);
 	    break;
 
 	case INST_URSHIFT:
 	    POP(vp);	/* val2 */
 	    TOP(up);	/* val1 */
-	    SEE_SET_NUMBER(up, SEE_ToUint32(interp, up) >> 
-		    (SEE_ToUint32(interp, vp) & 0x1f));
+	    uint32 = SEE_ToUint32(interp, up) >> 
+		    (SEE_ToUint32(interp, vp) & 0x1f);
+	    SEE_SET_NUMBER(up, uint32);
 	    break;
 
 	case INST_LT:
@@ -1123,8 +1218,8 @@ code1_exec(sco, ctxt, res)
 	    if (!SEE_OBJECT_HAS_HASINSTANCE(vp->u.object))
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(no_hasinstance));
-	    SEE_SET_BOOLEAN(up,
-		SEE_OBJECT_HASINSTANCE(interp, vp->u.object, up));
+	    i = SEE_OBJECT_HASINSTANCE(interp, vp->u.object, up);
+	    SEE_SET_BOOLEAN(up, i);
 	    break;
 
 	case INST_IN:
@@ -1134,37 +1229,44 @@ code1_exec(sco, ctxt, res)
 	    if (SEE_VALUE_GET_TYPE(vp) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(in_not_object));
-	    SEE_SET_BOOLEAN(up, SEE_OBJECT_HASPROPERTY(interp,
-		vp->u.object, SEE_intern(interp, up->u.string)));
+	    i = SEE_OBJECT_HASPROPERTY(interp, /* [in situ] */
+		vp->u.object, SEE_intern(interp, up->u.string));
+	    SEE_SET_BOOLEAN(up, i);
 	    break;
 
 	case INST_EQ:
-	    NOT_IMPLEMENTED; /* TBD */
+	    POP(vp);
+	    TOP(up);
+	    i = Eq(interp, up, vp);
+	    SEE_SET_BOOLEAN(up, i);
 	    break;
 
 	case INST_SEQ:
-	    NOT_IMPLEMENTED; /* TBD */
+	    POP(vp);
+	    TOP(up);
+	    i = Seq(up, vp);
+	    SEE_SET_BOOLEAN(up, i);
 	    break;
 
 	case INST_BAND:
 	    POP(vp);	    /* val */
 	    TOP(up);	    /* val */
-	    SEE_SET_NUMBER(up, 
-		SEE_ToInt32(interp, up) & SEE_ToInt32(interp, vp));
+	    int32 = SEE_ToInt32(interp, up) & SEE_ToInt32(interp, vp);
+	    SEE_SET_NUMBER(up, int32);
 	    break;
 
 	case INST_BXOR:
 	    POP(vp);	    /* val */
 	    TOP(up);	    /* val */
-	    SEE_SET_NUMBER(up, 
-		SEE_ToInt32(interp, up) ^ SEE_ToInt32(interp, vp));
+	    int32 = SEE_ToInt32(interp, up) ^ SEE_ToInt32(interp, vp);
+	    SEE_SET_NUMBER(up, int32);
 	    break;
 
 	case INST_BOR:
 	    POP(vp);	    /* val */
 	    TOP(up);	    /* val */
-	    SEE_SET_NUMBER(up, 
-		SEE_ToInt32(interp, up) | SEE_ToInt32(interp, vp));
+	    int32 = SEE_ToInt32(interp, up) | SEE_ToInt32(interp, vp);
+	    SEE_SET_NUMBER(up, int32);
 	    break;
 
 	case INST_S_ENUM:
@@ -1225,7 +1327,7 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, arg <= co->maxargc);
 	    for (i = 0; i < arg; i++)
 		argv[i] = stack + i;
-	    POP(vp);      /* ref */
+	    TOP(vp);      /* ref */
 
 	    baseobj = NULL;
 	    if (SEE_VALUE_GET_TYPE(vp) == SEE_REFERENCE) {
@@ -1244,9 +1346,19 @@ code1_exec(sco, ctxt, res)
 	    if (!SEE_OBJECT_HAS_CALL(obj))
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(not_callable));
-	    PUSH(up);
 	    /* XXX SEE_TRACE_CALL */
-	    SEE_OBJECT_CALL(interp, obj, baseobj, arg, argv, up);
+	    if (obj == interp->Global_eval) {
+		struct SEE_context context2;
+		memcpy(&context2, ctxt, sizeof context2);
+		context2.scope = scope;
+		if (arg == 0)
+		    SEE_SET_UNDEFINED(vp);
+		else if (SEE_VALUE_GET_TYPE(argv[0]) != SEE_STRING)
+		    SEE_VALUE_COPY(vp, argv[0]);
+		else
+		    SEE_context_eval(&context2, argv[0]->u.string, vp);
+	    } else 
+		SEE_OBJECT_CALL(interp, obj, baseobj, arg, argv, vp);
 	    /* XXX SEE_TRACE_RETURN */
 	    break;
 
