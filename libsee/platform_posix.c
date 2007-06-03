@@ -52,6 +52,7 @@
 #endif
 
 #include <see/type.h>
+#include <see/system.h>
 #include <see/error.h>
 #include <see/interpreter.h>
 

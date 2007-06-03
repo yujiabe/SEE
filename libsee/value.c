@@ -46,6 +46,7 @@
 #include <see/string.h>
 #include <see/object.h>
 #include <see/input.h>
+#include <see/system.h>
 #include <see/error.h>
 #include <see/interpreter.h>
 

@@ -42,6 +42,7 @@
 #include <see/mem.h>
 #include <see/error.h>
 #include <see/debug.h>
+#include <see/system.h>
 #include <see/interpreter.h>
 
 #include "stringdefs.h"

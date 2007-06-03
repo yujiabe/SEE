@@ -56,6 +56,7 @@
 #include <see/type.h>
 #include <see/string.h>
 #include <see/mem.h>
+#include <see/system.h>
 #include <see/error.h>
 
 #include "printf.h"

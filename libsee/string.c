@@ -45,6 +45,7 @@
 #include <see/type.h>
 #include <see/string.h>
 #include <see/object.h>
+#include <see/system.h>
 #include <see/error.h>
 #include <see/try.h>
 #include <see/interpreter.h>

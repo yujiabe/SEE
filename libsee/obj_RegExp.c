@@ -42,6 +42,7 @@
 #include <see/object.h>
 #include <see/native.h>
 #include <see/cfunction.h>
+#include <see/system.h>
 #include <see/error.h>
 #include <see/interpreter.h>
 

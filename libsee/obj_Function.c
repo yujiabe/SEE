@@ -47,6 +47,7 @@
 #include <see/cfunction.h>
 #include <see/string.h>
 #include <see/input.h>
+#include <see/system.h>
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/try.h>
