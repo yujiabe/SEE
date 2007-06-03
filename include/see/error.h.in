@@ -101,6 +101,17 @@ void SEE_error__throw_sys0(struct SEE_interpreter *i,
  * An assertion macro.
  */
 #ifndef NDEBUG
+# define __SEE_STRING1(x) #x
+# define __SEE_STRING(x) __SEE_STRING1(x)
+# if 1
+#  define SEE_ASSERT(i, x)						\
+    do {								\
+	if (!(x))							\
+	    SEE_ABORT(i,						\
+		__FILE__ ":" __SEE_STRING(__LINE__)			\
+		": assertion '" #x "' failed");				\
+    } while (0)
+# else
 #  define SEE_ASSERT(i, x)						\
     do {								\
 	if (!(x))							\
@@ -108,8 +119,9 @@ void SEE_error__throw_sys0(struct SEE_interpreter *i,
 		"%s:%d: assertion '%s' failed",				\
 		__FILE__, __LINE__, #x);				\
     } while (0)
+# endif
 #else /* NDEBUG */
-#  define SEE_ASSERT(i, x) /* ignore */
+# define SEE_ASSERT(i, x) /* ignore */
 #endif /* NDEBUG */
 
 #endif /* _SEE_h_error_ */
