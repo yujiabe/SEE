@@ -44,6 +44,7 @@
 #include <see/try.h>
 #include <see/string.h>
 #include <see/context.h>
+#include <see/system.h>
 #include <see/intern.h>
 
 #include "dprint.h"
@@ -956,7 +957,7 @@ code1_exec(sco, ctxt, res)
 	case INST_LOOKUP:
 	    TOP(vp);	/* str */
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
-	    str = vp->u.string;
+	    str = SEE_intern(interp, vp->u.string);
 	    SEE_scope_lookup(interp, scope, str, vp);
 	    break;
 
