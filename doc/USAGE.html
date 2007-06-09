@@ -46,7 +46,8 @@
         p.misc   { font-size: smaller; color: gray; }
         ul.misc li { font-size: smaller; color: gray; }
         blockquote { font-size: smaller; }
-        p.note   { margin-left: 2ex; font-size: smaller; }
+        p.note   { margin-left: 2ex; font-size: smaller; 
+		border: thin #f80 solid; }
         dt       { font: bold; }
         table.index { border: none }
         table.index td { font: x-small monospace; }
@@ -54,6 +55,10 @@
         .footnote { vertical-align: super;
                     font-size: smaller;
                     color: #008; }
+	div.example { margin-left: 4ex; margin-right: 4ex;
+		      padding-left: 1ex; padding-right: 1ex;
+		      border: thin dashed green;
+		      background: #f4fff4; }
 // -->
 </style>
 
@@ -218,8 +223,21 @@ Function definitions listed in the <a href="#idx">name index</a>
 appear in green, like this: <code><dfn>SEE_example()</dfn></code>
 </p>
 
+<p class="note">
+&#9888; Note:
+Notes of caution appear in boxes like this.
+</p>
+
 <p>
-The term ASCII refers to character codes in the decimal range 0 through 127,
+Short examples of usage appear in green boxes, like this:
+<div class="example">Example:
+Demonstrating intended or expected usage through code snippets:
+<pre>cut() &amp;&amp; paste(); <i>/* as required */</i></pre>
+</div>
+
+<p>
+The term ASCII in this document
+refers to character codes in the decimal range 0 through 127,
 inclusive.
 </p>
 
@@ -282,10 +300,10 @@ A pointer to the initialised <code>SEE_interpreter</code>
 is required for almost every function that SEE provides.
 The pointer is conventionally named <code>interp</code>.
 </p>
-<p>
-Here is an example where storage has been allocated on the stack,
+
+<div class="example">Example:
+Where storage has been allocated for the interpeter structure on the stack,
 and consequently the interpreter exists only until the function returns.
-</p>
 
 <pre>void
 example()
@@ -293,8 +311,9 @@ example()
     struct SEE_interpreter interp_storage;
 
     SEE_interpreter_init(&amp;interp_storage);
-    <i>/* now the interpreter is ready */</i>
+    <i>/* now the interpreter is ready for use */</i>
 }</pre>
+</div>
 
 <p>
 There is no mechanism for explicitly destroying an initialised
@@ -476,8 +495,10 @@ T * <dfn id="SEE_NEW_FINALIZE">SEE_NEW_FINALIZE</dfn>(struct SEE_interpreter *in
 T * <dfn id="SEE_ALLOCA">SEE_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);
 T * <dfn id="SEE_STRING_ALLOCA">SEE_STRING_ALLOCA</dfn>(struct SEE_interpreter *interp, type T, int length);</pre>
 
-<p>A usage example is:</p>
+<div class="example">Example:
+Allocating a buffer for 30 characters:
 <pre>char *buffer = SEE_NEW_STRING_ARRAY(interp, char, 30);</pre>
+</div>
 
 <p>
 The allocator macros and functions check for memory allocation failures,
@@ -534,9 +555,7 @@ and a length field. When you want to change the length, call
 points to sufficient storage, and set the length field automatically.
 </p>
 
-<p>
-Here is an example:
-</p>
+<div class="example">Example:
 
 <pre>#include &lt;see/mem.h&gt;
 
@@ -562,6 +581,7 @@ void example()
     numbers[0] = 1234;
     numbers[1] = 5678;
 }</pre>
+</div>
 
 <p class="note">
 &#9888; Note:
@@ -1601,14 +1621,14 @@ hash table and may be compared equal using pointer equality.
 The <code>SEE_intern()</code> function returns an 'internalized' copy of the 
 given string and is very fast on already-interned strings.
 It is worth using in lieu of <code>SEE_string_cmp()</code> if the strings 
-are likely to be intern'ed already. (For example, all property names in
-the standard library are.)
+are likely to be internalized already. (For example, all property names in
+the standard library are internalized.)
 </p>
 
 <p>
 The function <code>SEE_intern_ascii()</code> is a convenience function
 that first converts the C string into a <code>SEE_string</code> before
-intern'ing. The C string must be an ASCII string terminated by a null
+internalizing. The C string must be an ASCII string terminated by a null
 character.
 </p>
 
@@ -1626,11 +1646,7 @@ and method names) over many interpreter instances, statically initialised
 strings can save space, and slightly improve performance.
 </p>
 
-<p>
-A statically initialised string, '<code class="js">Hello, world</code>',
-would look like this:
-</p>
-
+<div class="example">Example:
 <pre><i>/* Example of a statically-initialised UTF-16 string */</i>
 static SEE_char_t hello_world_chars[12] = {
     'H', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd'
@@ -1638,7 +1654,12 @@ static SEE_char_t hello_world_chars[12] = {
 static struct SEE_string hello_world = {
     12,                                                <i>/* length */</i>
     hello_world_chars                                  <i>/* data */</i>
-};</pre>
+};
+
+<i>...</i>
+struct SEE_string *text = <b>&amp;hello_world</b>;
+</pre>
+</div>
 
 <p>
 The main problem with static strings is finding an elegant way
@@ -1658,7 +1679,7 @@ intern table <strong>before creating any interpreters</strong>.
 This is done by calling
 <code>SEE_intern_global()</code> for each string.
 Doing this can save a moderate amount of overhead, and can
-improve performance if the intern'ed string needs to be used often.
+improve performance if the internalized string needs to be used often.
 </p>
 
 <pre>struct SEE_string * <dfn id="SEE_intern_global">SEE_intern_global</dfn>(const char *str);</pre>
@@ -1928,7 +1949,9 @@ is to first create a private list of its property names, ensuring that it
 has exhausted the enumerator before attempting to modify the object.
 </p>
 
-<pre><i>/* An example of enumerating properties on an object from C */</i>
+<div class="example">Example:
+of enumerating properties on an object from C:
+<pre>
 void
 print_properties(struct SEE_interpreter *interp, struct SEE_object *obj)
 {
@@ -1945,6 +1968,7 @@ print_properties(struct SEE_interpreter *interp, struct SEE_object *obj)
                 printf("\n");
         }
 }</pre>
+</div>
 
 
 <h3 id="objimpl">6.3 The object implementation interface</h3>
@@ -1966,15 +1990,20 @@ All SEE objects are in-memory structures starting with a
 };</pre>
 
 <p>
-Normally, this structure is part of a larger structure that maintains the
-object's private state. For example, native <code class="js">Number</code>
-objects could be implemented with the following:
+Normally, the <code>SEE_object</code> structure
+is part of a larger structure that maintains the
+object's private state. 
 </p>
+
+<div class="example">Example:
+Implementing native <code class="js">Number</code>
+instance objects:
 
 <pre>struct number_object {             <i>/* example implementation of Number */</i>
         struct SEE_object object;
         SEE_number_t      number;
 };</pre>
+</div>
 
 <p>
 Keeping the <code>object</code> part at the top of the 
@@ -2011,8 +2040,9 @@ provides the object's behaviour. The class structure looks like this:
 
 <p class="note">
 &#9888; Note:
-The type of the <code>Class</code> field was a
-<code>struct SEE_string *</code> in API 1.0.
+The type of the <code>Class</code> field changed from
+<code>struct SEE_string *</code> in API 1.0 to
+<code>const char *</code> in API 2.0.
 </p>
 
 <p>
@@ -2190,6 +2220,13 @@ The integer becomes the function object's
 <code class="js">length</code> property, which is advisory only.
 </p>
 
+<p>
+Function objects are usually added as a property of another object.
+Remember that top level functions in ECMAScript (like 
+<code class="js">parseInt()</code> are actually properties of the 
+unamed [[Global]] object.
+</p>
+
 <pre>struct SEE_object *<dfn id="SEE_cfunction_make">SEE_cfunction_make</dfn>(struct SEE_interpreter *interp,
                 SEE_call_fn_t func, struct SEE_string *name, int argc);</pre>
 
@@ -2204,24 +2241,9 @@ across interpreters will be OK, but it is not recommended for future
 portability.)
 </p>
 
-<p>
-When attaching cfunctions to an object, you may find
-the <code>SEE_CFUNCTION_PUTA()</code> macro useful.
-It performs both the <code>SEE_cfunction_make()</code> and
-<code>SEE_OBJECT_PUT()</code> operations in one step.
-Its signature is:
-
-<pre>void <dfn id="SEE_CFUNCTION_PUTA">SEE_CFUNCTION_PUTA</dfn>(struct SEE_interpreter *interp, 
-                struct SEE_object *obj, const char *name,
-                SEE_call_fn_t func, int length, int attr);</pre>
-
-
-<p>
-The C function must conform to the <code>SEE_call_fn_t</code> signature.
-This is demonstrated below, with <code>math_sqrt()</code>, which is
+<div class="example">Example:
+This C function is 
 the actual code behind the <code class="js">Math.sqrt</code> object:
-</p>
-
 <pre><i>/* Implementation of Math.sqrt() method */</i>
 static void
 math_sqrt(interp, self, thisobj, argc, argv, res)
@@ -2239,6 +2261,35 @@ math_sqrt(interp, self, thisobj, argc, argv, res)
                 SEE_SET_NUMBER(res, sqrt(v.u.number));
         }
 }</pre>
+</div>
+
+<p>
+When attaching cfunctions to an object, you may find
+the <code>SEE_CFUNCTION_PUTA()</code> macro useful.
+It performs both the <code>SEE_cfunction_make()</code> and
+<code>SEE_OBJECT_PUT()</code> operations in one step.
+Its signature is:
+
+<pre>void <dfn id="SEE_CFUNCTION_PUTA">SEE_CFUNCTION_PUTA</dfn>(struct SEE_interpreter *interp, 
+                struct SEE_object *obj, const char *name,
+                SEE_call_fn_t func, int length, int attr);</pre>
+
+<p>
+The C function implementation must conform to the <code>SEE_call_fn_t</code>
+signature:
+</p>
+
+<pre>typedef void (*<dfn id="SEE_call_fn_t">SEE_call_fn_t</dfn>)(struct SEE_interpreter *i,
+                struct SEE_object *obj, struct SEE_object *thisobj,
+                int argc, struct SEE_value **argv,
+                struct SEE_value *res);</pre>
+
+<div class="example">Example:
+If you wanted to be able to call the C function <code>math_sqrt()</code> using
+the ECMAScript expression <code class="js">sqrt()</code> from the [[Global]] 
+name space, then use:
+<pre>SEE_CFUNCTION_PUTA(interp, interp-&gt;Global, "sqrt", math_sqrt, 1, 0);</pre>
+</div>
 
 <p>
 <!-- from <code>SEE_OBJECT_CALL</code> -->
@@ -2393,10 +2444,12 @@ The '<code>a</code>', '<code>A</code>',
 '<code>z</code>' and '<code>Z</code>' formats will throw
 an error if the resulting string would contain a null character.
 
-<p>An example of using <code>SEE_parse_args()</code>:
+<div class="example">Example:
+Using <code>SEE_parse_args()</code>
+in an alternate implementation of
+<code class="js">Math.sqrt()</code> method:
 
-<pre><i>/* Possible implementation of Math.sqrt() method */</i>
-static void
+<pre>static void
 math_sqrt_possible(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
         struct SEE_object *self, *thisobj;
@@ -2408,7 +2461,7 @@ math_sqrt_possible(interp, self, thisobj, argc, argv, res)
 	<b>SEE_parse_args</b>(interp, argc, argv, "n", &amp;n);
 	SEE_SET_NUMBER(res, sqrt(n));
 }</pre>
-
+</div>
 
 <p>
 A corresponding convenience function is provided for calling
@@ -2618,12 +2671,11 @@ constructor objects found in the <code>SEE_interpreter</code> structure:
 </tbody>
 </table>
 
-<p>
-A simple example:
-</p>
-
+<div class="example">Example:
+of how to throw a basic error:
 <pre>if (something_is_wrong)
         SEE_error_throw(interp, interp-&gt;Error, "something is wrong!");</pre>
+</div>
 
 <p>
 Although <code>Error</code> is usually sufficient for most errors,
@@ -3292,7 +3344,7 @@ You should also provide an 'empty' set constant which is not the
 <li>
 Design a structure to hold 
 <i>authorization statements</i>
-depening on the way your user will expresses  them.
+depening on the way your user will express them.
 These statements relate <i>permisions</i> to individual principals.
 These questions could be prompted dynamically, or might be read from an
 authorization file.
@@ -3306,7 +3358,7 @@ that searches the authorization statements and
 throws an exception if the current domain (the principal set stored in
 <code>interp-&gt;sec_domain</code>)
 does not have the required permission.
-Ensure this function is called in the sensitive places of your code.
+Call this function from the sensitive places of your code.
 <li>
 Implement the domain transition function 
 <code>SEE_system.transit_sec_domain()</code>
@@ -3351,7 +3403,7 @@ eval_in_domain(interp, input, <b>input_sec_domain</b>, result)
 <h3 id="debug-see">10.1 Debugging the SEE library (for developers)</h3>
 
 <p>
-The SEE library contains various debugging facilities, that are
+The SEE library contains various debugging facilities that are
 omitted if it is compiled with the <code>NDEBUG</code> preprocessor define.
 </p>
 
