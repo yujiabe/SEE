@@ -2,10 +2,11 @@ $Id$
 
 2.1 [unreleased]
   bug 77: portability improvements with isnan, finite, copysign
+  bug 75: fix crash when enumerating a host object with no enumerator
   bug 74: portability improvement in module loader
   Improved: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception
   bug 70: SEE_context_eval() was leaking reference values
-  bug 69: fix segfault when some methods are called without 'this' context
+  bug 69: fix crash when some methods are called without 'this' context
   bug 47: Added Object.prototype.eval for JS1.2 compatibility
   bug 68: free the right pointer in SEE_grow_to()
   bug 14: use floor() instead of rint()

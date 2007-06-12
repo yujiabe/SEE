@@ -95,17 +95,20 @@ make_list(interp, o, depth, head)
 	int dontenum;
 	int count;
 
-	e = SEE_OBJECT_ENUMERATOR(interp, o);
 	count = 0;
-	while ((s = SEE_ENUM_NEXT(interp, e, &dontenum)) != NULL) {
-		l = SEE_NEW(interp, struct propname_list);
-		l->name = s;
-		l->depth = depth;
-		l->dontenum = dontenum;
-		l->next = *head;
-		*head = l;
-		count++;
+	if (SEE_OBJECT_HAS_ENUMERATOR(o)) {
+		e = SEE_OBJECT_ENUMERATOR(interp, o);
+		while ((s = SEE_ENUM_NEXT(interp, e, &dontenum)) != NULL) {
+		    l = SEE_NEW(interp, struct propname_list);
+		    l->name = s;
+		    l->depth = depth;
+		    l->dontenum = dontenum;
+		    l->next = *head;
+		    *head = l;
+		    count++;
+		}
 	}
+	/* Assumes no prototype cycles! */
 	if (o->Prototype)
 		count += make_list(interp, o->Prototype, depth + 1, head);
 	return count;
