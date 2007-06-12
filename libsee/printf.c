@@ -61,6 +61,14 @@
 
 #include "printf.h"
 
+/* vararg copying */
+/* XXX This should be detected by autoconf'd */
+#ifdef _MSC_VER
+# define SEE_VA_COPY(a, b) (void)((a) = (b))
+#else
+# define SEE_VA_COPY(a, b) va_copy(a, b)       /* C99 */
+#endif
+
 #define isdigit(c) ((c) >= '0' && (c) <= '9')
 
 #define UNDEF (-1)
@@ -106,7 +114,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
     double dbl;
 
 #define OUTPUT(c) do { \
-	if (out) *out++ = (c); else outlen++; \
+	if (phase) *out++ = (c); else outlen++; \
     } while (0)
 
     SEE_ASSERT(interp, s->length == 0);
@@ -118,14 +126,14 @@ _SEE_vsprintf(interp, s, fmt, ap)
     for (phase = 0; phase < 2; phase++) {
 
 	if (phase == 0) {
-	    va_copy(ap0, ap);
+	    SEE_VA_COPY(ap0, ap);
 	    outlen = 0;
 	    out = 0;
 	    fmtstart = fmt;
 	} else {
 	    if (outlen == 0)
 	    	break;
-	    va_copy(ap, ap0);
+	    SEE_VA_COPY(ap, ap0);
 	    fmt = fmtstart;
 	    (*s->stringclass->growby)(s, outlen);
 	    s->length = outlen;
@@ -170,7 +178,7 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		}
 		fmt++;
 	    }
-	    if (pad_left && pad_zero)
+	    if (pad_left && pad_zero)		/* "%-0" */
 	        goto badform;
 
 	    if (*fmt == '*') {			/* "%*" -> read later */
