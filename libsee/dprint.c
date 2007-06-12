@@ -69,7 +69,10 @@ void
 SEE_dprints(s)
 	const struct SEE_string *s;
 {
-	(void)SEE_string_fputs(s, stderr);
+	if (!s)
+	    (void)fprintf(stderr, "(null)");
+	else
+	    (void)SEE_string_fputs(s, stderr);
 }
 
 /*
