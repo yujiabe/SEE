@@ -176,7 +176,7 @@ SEE_Global_init(interp)
 	SEE_OBJECT_PUT(interp, Global, STR(undefined), &v, 
 		SEE_ATTR_DONTENUM | SEE_ATTR_DONTDELETE);
 
-#define PUTFUNC(name,len) \
+#define PUTFUNC(name, len) \
 	SEE_SET_OBJECT(&v, SEE_cfunction_make(interp, global_##name, 	\
 		STR(name), len)); 					\
 	SEE_OBJECT_PUT(interp, Global, STR(name), &v, SEE_ATTR_DEFAULT);
@@ -368,7 +368,7 @@ global_parseInt(interp, self, thisobj, argc, argv, res)
 			digit = ch - 'A' + 10;
 		n += factor * digit;
 	}
-	SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
+	SEE_SET_NUMBER(res, SEE_COPYSIGN(n, sign));
 }
 
 
@@ -471,7 +471,7 @@ global_parseFloat(interp, self, thisobj, argc, argv, res)
 		return;
 	    }
 	}
-	SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
+	SEE_SET_NUMBER(res, SEE_COPYSIGN(n, sign));
 }
 
 

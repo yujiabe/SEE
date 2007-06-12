@@ -202,8 +202,8 @@ SEE_ToInteger(interp, val, res)
 	else if (!SEE_NUMBER_ISFINITE(res) || res->u.number == 0.0)
 		; /* nothing */
 	else
-		res->u.number = NUMBER_copysign(NUMBER_floor(
-			NUMBER_copysign(res->u.number, 1.0)),
+		res->u.number = SEE_COPYSIGN(NUMBER_floor(
+			SEE_COPYSIGN(res->u.number, 1.0)),
 				  	 res->u.number);
 
 }

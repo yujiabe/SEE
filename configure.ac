@@ -236,13 +236,20 @@ AC_REPLACE_FUNCS([memmove])
 
 AC_SEARCH_LIBS(sin, [m])		# the evil that lurks within
 
-dnl -- pick the right nan/finite functions for the 64-bit float
-if test $ac_cv_sizeof_float -eq 8; then
-	AC_CHECK_FUNCS([isnanf finitef],,
-		       [missing_funcs="$missing_funcs $ac_func"])
-else
-	AC_CHECK_FUNCS([isnan finite],,
-		       [missing_funcs="$missing_funcs $ac_func"])
+dnl -- pick the right nan/finite functions for 64-bit floating point type
+have_isnan=no
+have_finite=no
+have_copysign=no
+AC_CHECK_FUNCS([isnanf finitef isinff isinf _isinf copysignf])
+AC_CHECK_FUNCS([isnan _isnan],[have_isnan=yes])
+AC_CHECK_FUNCS([finite _finite isfinite],[have_finite=yes])
+AC_CHECK_FUNCS([copysign _copysign],[have_copysign=yes])
+
+dnl -- when using double isnan/finite must be available
+if test $ac_cv_sizeof_float -ne 8; then
+    test $have_isnan = no && missing_funcs="$missing_funcs isnan";
+    test $have_finite = no && missing_funcs="$missing_funcs finite";
+    test $have_copysign = no && missing_funcs="$missing_funcs copysign";
 fi
 
 dnl --- things to add later?
@@ -259,8 +266,7 @@ AM_CONDITIONAL(NATIVE_DTOA,
 AC_CHECK_FUNC(rand_r)
 
 dnl -- functions that we *need* (i.e. don't have workarounds for):
-AC_CHECK_FUNCS([copysign \
-		acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
+AC_CHECK_FUNCS([acos atan atan2 ceil cos exp floor log pow sin sqrt tan \
 		snprintf vsnprintf \
 		abort memcpy memset \
 		qsort strcmp strerror],,

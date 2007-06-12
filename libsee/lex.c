@@ -85,7 +85,7 @@ int SEE_lex_debug = 0;
 			} while (!ATEOF && is_FormatControl(NEXT))
 #define UNGET(c)	do { lex->la[++lex->lalen]=(c); } while (0)
 #define ATEOF		(lex->input->eof)
-#define LOOKAHEAD(buf,len) SEE_input_lookahead_copy(lex->input, buf, len)
+#define LOOKAHEAD(buf, len) SEE_input_lookahead_copy(lex->input, buf, len)
 #define CONSUME(ch)							\
     do {								\
 	if (ATEOF)							\
@@ -1027,7 +1027,7 @@ SEE_lex_number(interp, s, res)
 	while (!ATEOF && (is_WhiteSpace(NEXT) || is_LineTerminator(NEXT)))
 		SKIP;
 	if (ATEOF) {
-	    SEE_SET_NUMBER(res, NUMBER_copysign(n, sign));
+	    SEE_SET_NUMBER(res, SEE_COPYSIGN(n, sign));
 	    return 1;
 	}
 

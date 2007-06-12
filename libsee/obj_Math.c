@@ -54,8 +54,8 @@
  */
 
 #define SET_NO_RESULT(res)	SEE_SET_NUMBER(res, SEE_NaN)
-#define IS_NEGZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) < 0)
-#define IS_POSZERO(n)		((n) == 0 && NUMBER_copysign(1.0,n) > 0)
+#define IS_NEGZERO(n)		((n) == 0 && SEE_COPYSIGN(1.0, n) < 0)
+#define IS_POSZERO(n)		((n) == 0 && SEE_COPYSIGN(1.0, n) > 0)
 
 static void math_abs(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
@@ -181,7 +181,7 @@ math_abs(interp, self, thisobj, argc, argv, res)
 	else {
 		SEE_ToNumber(interp, argv[0], res);
 		if (!SEE_NUMBER_ISNAN(res))
-			res->u.number = NUMBER_copysign(res->u.number, 1.0);
+			res->u.number = SEE_COPYSIGN(res->u.number, 1.0);
 	}
 }
 
@@ -443,12 +443,12 @@ math_pow(interp, self, thisobj, argc, argv, res)
 		SEE_ToNumber(interp, argv[1], &v2);
 
 		if (IS_NEGZERO(v1.u.number) && v2.u.number < 0) 
-			SEE_SET_NUMBER(res, NUMBER_copysign(
+			SEE_SET_NUMBER(res, SEE_COPYSIGN(
 			    NUMBER_fmod(v2.u.number, 2.0), 1.0) == 1 
 				? -SEE_Infinity : SEE_Infinity); 
 		else if (v1.u.number == 0 && v2.u.number < 0) 
 			SEE_SET_NUMBER(res, 
-				NUMBER_copysign(SEE_Infinity,v1.u.number));
+				SEE_COPYSIGN(SEE_Infinity, v1.u.number));
 		else
 			SEE_SET_NUMBER(res, 
 				NUMBER_pow(v1.u.number, v2.u.number));

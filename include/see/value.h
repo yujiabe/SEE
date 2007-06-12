@@ -133,22 +133,26 @@ struct SEE_value {
 	(v)->u.completion.target = (tgt);	\
     } while (0)
 
-/* Convenience macros for numbers */
-#if SEE_NUMBER_IS_FLOAT
-# define SEE_ISNAN(n)		isnanf(n)
-# define SEE_ISFINITE(n)	finitef(n)
-#endif
-#if SEE_NUMBER_IS_DOUBLE
-# define SEE_ISNAN(n)    	isnan(n)
-# define SEE_ISFINITE(n) 	finite(n)
-#endif
-#define SEE_ISINF(n)	        (!SEE_ISNAN(n) && !SEE_ISFINITE(n))
+int _SEE_isnan(SEE_number_t n);
+int _SEE_isfinite(SEE_number_t n);
+SEE_number_t _SEE_copysign(SEE_number_t x, SEE_number_t y);
+int _SEE_ispinf(SEE_number_t n);
+int _SEE_isninf(SEE_number_t n);
+#define SEE_ISNAN(n)	        _SEE_isnan(n)
+#define SEE_ISFINITE(n)	        _SEE_isfinite(n)
+#define SEE_COPYSIGN(x, y)	_SEE_copysign(x, y)
+#define SEE_ISPINF(n)	        _SEE_ispinf(n)
+#define SEE_ISNINF(n)	        _SEE_isninf(n)
 
-#define SEE_NUMBER_ISNAN(v)    SEE_ISNAN((v)->u.number)
-#define SEE_NUMBER_ISINF(v)    SEE_ISINF((v)->u.number)
-#define SEE_NUMBER_ISFINITE(v) SEE_ISFINITE((v)->u.number)
-#define SEE_NUMBER_ISPINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number > 0)
-#define SEE_NUMBER_ISNINF(v)   (SEE_NUMBER_ISINF(v) && (v)->u.number < 0)
+/* Convenience macros for numbers */
+#define SEE_NUMBER_ISNAN(v)     SEE_ISNAN((v)->u.number)
+#define SEE_NUMBER_ISFINITE(v)  SEE_ISFINITE((v)->u.number)
+#define SEE_NUMBER_ISPINF(v)    SEE_ISPINF((v)->u.number)
+#define SEE_NUMBER_ISNINF(v)    SEE_ISNINF((v)->u.number)
+
+/* SEE_ISINF() and SEE_NUMBER_ISINF() are deprecated */
+#define SEE_ISINF(n)	        (SEE_ISPINF(n) || SEE_ISNINF(n))
+#define SEE_NUMBER_ISINF(n)	SEE_ISINF((v)->u.number)
 
 /* Converters */
 void SEE_ToPrimitive(struct SEE_interpreter *i,

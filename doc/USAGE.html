@@ -1365,15 +1365,19 @@ The following macros may be used to find information about a number value.
 <li><code>SEE_NUMBER_ISNAN()</code>  - return true if the value represents an error condition (not a number)
 <li><code>SEE_NUMBER_ISPINF()</code> - return true if the value is +&infin;
 <li><code>SEE_NUMBER_ISNINF()</code> - return true if the value is -&infin;
-<li><code>SEE_NUMBER_ISINF()</code>  - return true if the value is &plusmn;&infin;
 <li><code>SEE_NUMBER_ISFINITE()</code> - return true if the value is a finite number
 </ul>
 
 <pre>int <dfn id="SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</dfn>(struct SEE_value *val);
 int <dfn id="SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</dfn>(struct SEE_value *val);
 int <dfn id="SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</dfn>(struct SEE_value *val);
-int <dfn id="SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</dfn>(struct SEE_value *val);
 int <dfn id="SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</dfn>(struct SEE_value *val);</pre>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_NUMBER_ISINF() macro of API 1.0 has been deprecated in API 2.0.
+Previously, it returned true for values of &plusmn;&infin;
+</p>
 
 <p>
 SEE also provides constants <code>SEE_Infinity</code> and <code>SEE_NaN</code>
@@ -3581,7 +3585,6 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</a><br>
 <td>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
-<a href="#SEE_NUMBER_ISINF">SEE_NUMBER_ISINF</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
 <a href="#SEE_NUMBER_ISPINF">SEE_NUMBER_ISPINF</a><br>

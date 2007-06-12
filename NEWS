@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  bug 77: portability improvements with isnan, finite, copysign
   bug 74: portability improvement in module loader
   Improved: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception
   bug 70: SEE_context_eval() was leaking reference values
