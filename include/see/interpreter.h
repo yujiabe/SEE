@@ -11,6 +11,7 @@ struct SEE_try_context;
 struct SEE_throw_location;
 struct SEE_context;
 struct SEE_scope;
+struct SEE_traceback;
 
 enum SEE_trace_event {
 	SEE_TRACE_CALL,
@@ -62,20 +63,13 @@ struct SEE_interpreter {
 	volatile struct SEE_try_context * try_context;
 	struct SEE_throw_location * try_location;
 
-	/* Call traceback */
-	struct SEE_traceback {
-		struct SEE_throw_location *call_location;
-		struct SEE_object *callee;
-		int call_type;		/* SEE_CALLTYPE_* */
-		struct SEE_traceback *prev;
-	} *traceback;
-
+	struct SEE_traceback *traceback;/* call chain for traceback */
 	void **module_private;		/* private pointers for each module */
 	void *intern_tab;		/* interned string table */
 	unsigned int random_seed;	/* used by Math.random() */
 	const char *locale;		/* current locale (may be NULL) */
 	int recursion_limit;		/* -1 means don't care */
-	void *sec_domain;		/* security domain inherited by new code */
+	void *sec_domain;		/* security domain for new code */
 
 	/* Trace hook, called by interpreter at each step if not NULL */
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,
@@ -104,7 +98,13 @@ struct SEE_interpreter {
 #define SEE_SET_JS_COMPAT(i,c) \
 	(i)->compatibility = ((i)->compatibility & ~SEE_COMPAT_JS_MASK)|(c)
 
-/* traceback call_type */
+/* Call traceback */
+struct SEE_traceback {
+	struct SEE_throw_location *call_location;
+	struct SEE_object *callee;
+	int call_type;		/* SEE_CALLTYPE_* */
+	struct SEE_traceback *prev;
+};
 #define SEE_CALLTYPE_CALL	1
 #define SEE_CALLTYPE_CONSTRUCT	2
 
