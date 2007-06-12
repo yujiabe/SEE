@@ -41,9 +41,11 @@ load_module(name)
 	handle = lt_dlopenext(name);
 
 	/* If the filename is "foo", try "libfoo" */
-	if (!handle && strchr(name, '/') == 0) {
-	    char libname[1024];
-	    snprintf(libname, sizeof libname, "lib%s", name);
+	if (!handle && strchr(name, '/') == 0 && 
+		strlen(name) + 3 < FILENAME_MAX)
+	{
+	    char libname[FILENAME_MAX + 1] = "lib";
+	    strcpy(libname + 3, name);
 	    handle = lt_dlopenext(libname);
 	}
 
