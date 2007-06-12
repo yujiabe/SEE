@@ -494,7 +494,7 @@ array_proto_toLocaleString(interp, self, thisobj, argc, argv, res)
 		{
 		    SEE_ToObject(interp, &r6, &r7);
 		    SEE_OBJECT_GET(interp, r7.u.object, 
-		    	STR(toLocaleString),&v);
+		    	STR(toLocaleString), &v);
 		    if (SEE_VALUE_GET_TYPE(&v) != SEE_OBJECT ||
 				!SEE_OBJECT_HAS_CALL(v.u.object))
 			SEE_error_throw_string(interp, interp->TypeError,

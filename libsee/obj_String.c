@@ -247,11 +247,11 @@ SEE_String_init(interp)
 
 
 	if (interp->compatibility & SEE_COMPAT_262_3B ||
-	    SEE_COMPAT_JS(interp, >= ,JS11)) {
+	    SEE_COMPAT_JS(interp, >=, JS11)) {
 	    PUTFUNC(substr, 2)
 	} 
 
-	if (SEE_COMPAT_JS(interp, >= ,JS11)) {
+	if (SEE_COMPAT_JS(interp, >=, JS11)) {
 #define PUTNOPFUNC(name, len_IGNORED) \
 	SEE_OBJECT_PUT(interp, String_prototype, STR(name), &v,	\
 		SEE_ATTR_DEFAULT);
@@ -993,7 +993,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	else
 	    lim = SEE_ToUint32(interp, argv[1]);
 /*4*/	s = S->length;
-	if (s == 0 && SEE_COMPAT_JS(interp, == ,JS12))
+	if (s == 0 && SEE_COMPAT_JS(interp, ==, JS12))
 	    return;
 /*5*/	p = 0;
 /*6*/	if (argc < 1 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED) {
@@ -1006,7 +1006,7 @@ string_proto_split(interp, self, thisobj, argc, argv, res)
 	    ncap = SEE_RegExp_count_captures(interp, R->u.object);
 	} else {
 	    SEE_ToString(interp, argv[0], &separatorv);
-	    if (SEE_COMPAT_JS(interp, == ,JS12) &&
+	    if (SEE_COMPAT_JS(interp, ==, JS12) &&
 	        separatorv.u.string->length == 1 &&
 	        separatorv.u.string->data[0] == ' ')
 	    {
@@ -1100,8 +1100,8 @@ string_proto_substring(interp, self, thisobj, argc, argv, res)
 	    else
 		b = MIN(MAX(v.u.number, 0), s->length);
 	}
-	start = MIN(a,b);
-	end = MAX(a,b);
+	start = MIN(a, b);
+	end = MAX(a, b);
 	len = end - start;
 
 	if (len == 0)

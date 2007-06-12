@@ -133,7 +133,7 @@ struct recontext {
 #define NEXT			(recontext->input->lookahead)
 #define SKIP			SEE_INPUT_NEXT(recontext->input)
 #define ATEOF			(recontext->input->eof)
-#define LOOKAHEAD(buf,len)	SEE_input_lookahead_copy(	\
+#define LOOKAHEAD(buf, len)	SEE_input_lookahead_copy(	\
 					recontext->input, buf, len)
 #define SYNTAX_ERROR						\
 	SEE_error_throw_string(recontext->interpreter,		\
@@ -144,7 +144,7 @@ struct recontext {
 					SYNTAX_ERROR; 		\
 				     SKIP; } while (0)
 
-#define RELADDR(base,addr)	(addr) - (base)
+#define RELADDR(base, addr)	(addr) - (base)
 #define ASSERT(x)		SEE_ASSERT(recontext->interpreter, x)
 #define CODE_ADD(c)		code_add(recontext, c)
 #define CODE_INSERT(pos, n)	code_insert(recontext, pos, n)
@@ -158,21 +158,19 @@ struct recontext {
 #define CODE_PATCHI(pos, i) 					\
     do { CODE_PATCH(pos, ((i) >> 8) & 0xff); 			\
 	 CODE_PATCH((pos)+1, (i) & 0xff); } while (0)
-#define CODE_PATCHA(addr,i)	CODE_PATCHI(addr,RELADDR(addr, i))
+#define CODE_PATCHA(addr, i)	CODE_PATCHI(addr, RELADDR(addr, i))
 #define CODE_SZA	2
 #define CODE_SZI	2
 
-#define CODE_MAKEI(code, addr)						\
-	((code[addr] << 8) | code[(addr)+1])
-#define CODE_MAKEA(code, addr)						\
-		((CODE_MAKEI(code,addr) + (addr)) & 0xffff)
+#define CODE_MAKEI(code, addr)  ((code[addr] << 8) | code[(addr)+1])
+#define CODE_MAKEA(code, addr)  ((CODE_MAKEI(code, addr) + (addr)) & 0xffff)
 
-#define CC_NEW()	    cc_new(recontext)
-#define CC_ADDRANGE(cc,l,h) cc_add_range(recontext, cc, l, (h)+1)
-#define CC_ADDCHAR(cc, ch)  CC_ADDRANGE(cc, ch, ch)
-#define CC_INVERT(cc)	    cc_invert(recontext, cc)
-#define CC_ADDCC(dst, src)  cc_add_cc(recontext, dst, src)
-#define CC_INTERN(cc)	    cc_intern(recontext, cc)
+#define CC_NEW()                cc_new(recontext)
+#define CC_ADDRANGE(cc, l, h)   cc_add_range(recontext, cc, l, (h)+1)
+#define CC_ADDCHAR(cc, ch)      CC_ADDRANGE(cc, ch, ch)
+#define CC_INVERT(cc)	        cc_invert(recontext, cc)
+#define CC_ADDCC(dst, src)      cc_add_cc(recontext, dst, src)
+#define CC_INTERN(cc)	        cc_intern(recontext, cc)
 
 #define UNDEFINED 	(-1)
 #undef INFINITY /* XXX fixme - rename INFINITY in this file maybe? */

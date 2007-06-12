@@ -624,10 +624,10 @@ MakeDay(year, month, date)
 	t = (DayFromYear(y) + (ily ? julian_ly:julian)[(int)m] - 1) * msPerDay;
 
 #ifndef NDEBUG
-#define AS(x,y) do { SEE_number_t __x = (x); if (__x!=(y)) \
+#define AS(x, y) do { SEE_number_t __x = (x); if (__x!=(y)) \
 	dprintf("%s:%d: FAILURE: %s = %g; expected %g (%g/%g/%g:%d)\n",\
 	__FILE__, __LINE__, #x, __x, (SEE_number_t)(y), \
-	year,month,date,ily); } while(0)
+	year, month, date, ily); } while(0)
 AS(YearFromTime(t), y);
 AS(MonthFromTime(t), m);
 AS(DateFromTime(t), 1);
