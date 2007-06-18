@@ -130,6 +130,7 @@ static struct SEE_enumclass no_enumclass = {
 	no_enum_next
 };
 
+/* Deprecated */
 struct SEE_enum *
 SEE_no_enumerator(interp, o)
 	struct SEE_interpreter *interp;

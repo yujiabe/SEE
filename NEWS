@@ -2,6 +2,7 @@ $Id$
 
 2.1 [unreleased]
   bug 77: portability improvements with isnan, finite, copysign
+  Deprecated: SEE_no_enumerator (use NULL instead)
   bug 75: fix crash when enumerating a host object with no enumerator
   bug 74: portability improvement in module loader
   Improved: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception

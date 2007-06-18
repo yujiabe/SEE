@@ -111,7 +111,7 @@ struct SEE_objectclass SEE_cfunction_class = {
 	cfunction_hasproperty,	/* HasProperty */
 	SEE_no_delete,		/* Delete */
 	SEE_native_defaultvalue,/* DefaultValue */
-	SEE_no_enumerator,	/* enumerator */
+	NULL,			/* enumerator */
 	NULL,			/* Construct (15) */
 	cfunction_call,		/* Call */
 	NULL,			/* HasInstance */

@@ -21,6 +21,8 @@ int	SEE_no_delete(struct SEE_interpreter *, struct SEE_object *,
 		struct SEE_string *);
 void	SEE_no_defaultvalue(struct SEE_interpreter *, struct SEE_object *, 
 		struct SEE_value *, struct SEE_value *);
+
+/* SEE_no_enumerated is a deprecated function; use NULL instead */
 struct SEE_enum *SEE_no_enumerator(struct SEE_interpreter *, 
 		struct SEE_object *);
 
