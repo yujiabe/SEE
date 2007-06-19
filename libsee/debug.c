@@ -206,6 +206,10 @@ SEE_PrintString(interp, s, f)
 			fprintf(f, "\\x%02x", c);
 		else
 			fprintf(f, "\\u%04x", c);
+		if (i < s->length && i >= 1024) {
+			fprintf(f, "\\(...len=%u)", s->length);
+			break;
+		}
 	    }
 	    fprintf(f, "\"<%s%s%p>", 
 		    s->flags & SEE_STRING_FLAG_INTERNED ? "i" : "",
