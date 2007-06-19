@@ -1127,6 +1127,7 @@ code1_exec(sco, ctxt, res)
 	case INST_ADD:
 	    POP(vp);	/* prim */
 	    TOP(up);	/* prim -> num/str */
+	    wp = up;
 	    if (SEE_VALUE_GET_TYPE(up) == SEE_STRING ||
 		    SEE_VALUE_GET_TYPE(vp) == SEE_STRING)
 	    {
@@ -1136,14 +1137,14 @@ code1_exec(sco, ctxt, res)
 		    SEE_ToString(interp, vp, &v), vp = &v;
 		str = SEE_string_concat(interp,
 		    up->u.string, vp->u.string);
-		SEE_SET_STRING(up, str);
+		SEE_SET_STRING(wp, str);
 	    } else {
 		if (SEE_VALUE_GET_TYPE(up) != SEE_NUMBER)
 		    SEE_ToNumber(interp, up, &u), up = &u;
 		if (SEE_VALUE_GET_TYPE(vp) != SEE_NUMBER)
 		    SEE_ToNumber(interp, vp, &v), vp = &v;
 		number = up->u.number + vp->u.number;
-		SEE_SET_NUMBER(up, number);
+		SEE_SET_NUMBER(wp, number);
 	    }
 	    break;
 
