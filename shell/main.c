@@ -72,6 +72,13 @@ debug(interp, c)
 	switch (c) {
 	case 'E': SEE_Error_debug++; break;
 	case 'T': interp->trace = trace; break;
+	case 'c':
+#if WITH_PARSER_CODEGEN
+	{	extern int SEE_code_debug; SEE_code_debug++; }
+#else
+		fprintf(stderr, "debug flag 'c' ignored: no codegen\n");
+#endif
+		break;
 	case 'e': SEE_error_debug++; break;
 	case 'l': SEE_lex_debug++; break;
 	case 'm': SEE_mem_debug++; break;
@@ -453,7 +460,7 @@ main(argc, argv)
 	        "usage: %s [-l library] [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
 		argv[0],
 #ifndef NDEBUG
-	        "[-d[ETelmnprsv]] "
+	        "[-d[ETcelmnprsv]] "
 #else
 		""
 #endif

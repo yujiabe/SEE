@@ -62,12 +62,14 @@ although the trace option (-dT) can be useful. The flags are:
 
     -dE         - debug the error constructors
     -dT         - enable call tracing
-    -dc         - debug context and symbol scope operations
+    -dc         - debug the code generator
     -de         - debug exception try/catch
     -dl         - debug the lexical analysis stage
+    -dm         - trace memory allocation
     -dn         - debug the native object module interface
     -dp         - debug the parsing stage
     -dr         - debug regular expression processing
+    -ds         - debug context and symbol scope operations
     -dv         - debug the evaluation stage
 
 

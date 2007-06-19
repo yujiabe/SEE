@@ -132,7 +132,7 @@ static struct SEE_code_class code1_class = {
 
 #ifndef NDEBUG
 extern int SEE_eval_debug;
-int SEE_code1_debug;
+int SEE_code_debug;
 static SEE_int32_t disasm(struct code1 *, SEE_int32_t pc);
 #endif
 
@@ -169,6 +169,9 @@ add_literal(code, val)
     SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
     SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_COMPLETION);
 
+    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_STRING || 
+		 	(val->u.string->flags & SEE_STRING_FLAG_INTERNED));
+
     for (i = 0; i < code->nliteral; i++) {
 	li = code->literal + i;
 	if (SEE_VALUE_GET_TYPE(li) != SEE_VALUE_GET_TYPE(val))
@@ -180,14 +183,16 @@ add_literal(code, val)
 	    match = 1;
 	    break;
 	case SEE_BOOLEAN:
-	    match = !val->u.boolean == !li->u.boolean;
+	    match = val->u.boolean ? li->u.boolean : !li->u.boolean;
 	    break;
 	case SEE_NUMBER:
+	    /* Don't use == because -0 and +0 are different */
 	    match = (memcmp(&val->u.number, &li->u.number, 
 			sizeof val->u.number) == 0);
 	    break;
 	case SEE_STRING:
-	    match = (SEE_string_cmp(val->u.string, li->u.string) == 0);
+	    /* Strings are asserted above as interned */
+	    match = val->u.string == li->u.string;
 	    break;
 	case SEE_OBJECT:
 	    match = (val->u.object == li->u.object);
@@ -204,8 +209,8 @@ add_literal(code, val)
     memcpy(code->literal + i, (void *)val, sizeof *val);
 
 #ifndef NDEBUG
-    if (SEE_code1_debug > 1) {
-	dprintf("add_literal: [%d] = ", i);
+    if (SEE_code_debug > 1) {
+	dprintf("add_literal: %p [%d] = ", code, i);
 	dprintv(interp, code->literal + i);
 	dprintf("\n");
     }
@@ -242,8 +247,8 @@ add_byte(code, c)
     unsigned int offset = code->ninst;
 
 #ifndef NDEBUG
-    if (SEE_code1_debug > 1)
-	dprintf("add_byte(0x%02x)\n", c);
+    if (SEE_code_debug > 1)
+	dprintf("add_byte(%p, 0x%02x)\n", code, c);
 #endif
     SEE_GROW_TO(interp, &code->ginst, code->ninst + 1);
     code->inst[offset] = c;
@@ -266,8 +271,8 @@ add_word(code, n)
     unsigned int offset = code->ninst;
 
 #ifndef NDEBUG
-    if (SEE_code1_debug > 1)
-	dprintf("add_word(%d)\n", n);
+    if (SEE_code_debug > 1)
+	dprintf("add_word(%p, %d)\n", code, n);
 #endif
     SEE_GROW_TO(interp, &code->ginst, offset + sizeof n);
     memcpy(code->inst + offset, &n, sizeof n);
@@ -386,7 +391,7 @@ code1_gen_op0(sco, op)
 	}
 
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1)
+	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
 }
@@ -415,7 +420,7 @@ code1_gen_op1(sco, op, n)
 	}
 
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1)
+	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
 }
@@ -433,7 +438,7 @@ code1_gen_literal(sco, v)
 
 	add_byte_arg(co, INST_LITERAL, id);
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1)
+	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
 }
@@ -451,7 +456,7 @@ code1_gen_func(sco, f)
 
 	add_byte_arg(co, INST_FUNC, id);
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1)
+	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
 }
@@ -491,7 +496,7 @@ code1_gen_opa(sco, opa, patchp, addr)
 	add_word(co, (SEE_int32_t)addr);
 
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1)
+	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
 }
@@ -518,8 +523,8 @@ code1_patch(sco, patch, addr)
 	put_word(co, arg, offset);
 
 #ifndef NDEBUG
-	if (SEE_code1_debug > 1) {
-	    dprintf("patch @0x%x <- 0x%x\n", offset, arg);
+	if (SEE_code_debug > 1) {
+	    dprintf("patch [%p] @0x%x <- 0x%x\n", sco, offset, arg);
 	    disasm(co, offset - 1);
 	}
 #endif
@@ -801,6 +806,7 @@ code1_exec(sco, ctxt, res)
 #ifndef NDEBUG
     /*SEE_eval_debug = 2; */
     if (SEE_eval_debug) {
+	dprintf("code     = %p\n", co);
 	dprintf("ninst    = 0x%x\n", co->ninst);
 	dprintf("nliteral = %d\n", co->nliteral);
 	dprintf("maxstack = %d\n", co->maxstack);
