@@ -64,9 +64,7 @@ test('var s = ""; for (i = 0; i < 8192; i++) s = s + " "; s.length', 8192)
 /* bug 69 (may segfault) */
 test('(function(){var v=String.prototype.toLocaleString;v();})()', 'exception')
 
-/* bug 75 */
-
-/* isinf/isnan changes */
+/* bug 77 */
 test('isFinite(0)', true)
 test('isFinite(1000)', true)
 test('isFinite(-1000)', true)
