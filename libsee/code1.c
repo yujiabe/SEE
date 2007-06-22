@@ -109,6 +109,8 @@ static void code1_exec(struct SEE_code *co, struct SEE_context *ctxt,
 
 static unsigned int add_literal(struct code1 *code, 
 		const struct SEE_value *val);
+static unsigned int add_location(struct code1 *code, 
+		const struct SEE_throw_location *location);
 static unsigned int add_function(struct code1 *code, struct function *f);
 static void add_byte(struct code1 *code, unsigned int c);
 static unsigned int here(struct code1 *code);
@@ -149,6 +151,7 @@ _SEE_code1_alloc(interp)
     SEE_GROW_INIT(interp, &co->ginst, co->inst, co->ninst);
     SEE_GROW_INIT(interp, &co->gliteral, co->literal, co->nliteral);
     SEE_GROW_INIT(interp, &co->gfunc, co->func, co->nfunc);
+    SEE_GROW_INIT(interp, &co->glocation, co->location, co->nlocation);
     co->maxstack = -1;
     co->maxblock = -1;
     co->maxargc = 0;
@@ -234,6 +237,31 @@ add_function(code, f)
 	    return i;
     SEE_GROW_TO(interp, &code->gfunc, code->nfunc + 1);
     code->func[i] = f;
+    return i;
+}
+
+/* Adds a (unique) location to the code object, returning its index */
+static unsigned int
+add_location(code, loc)
+    struct code1 *code;
+    const struct SEE_throw_location *loc;
+{
+    unsigned int i;
+    struct SEE_interpreter *interp = code->code.interpreter;
+
+    SEE_ASSERT(interp, loc->filename->flags & SEE_STRING_FLAG_INTERNED);
+
+    /* Search backwards because if it's any line, its probably the last one */
+    i = code->nlocation;
+    while (i > 0) {
+	i--;
+	if (code->location[i].lineno == loc->lineno &&
+	    code->location[i].filename == loc->filename)
+	    return i;
+    }
+    i = code->nlocation;
+    SEE_GROW_TO(interp, &code->glocation, code->nlocation + 1);
+    code->location[i] = *loc;
     return i;
 }
 
@@ -466,7 +494,17 @@ code1_gen_loc(sco, loc)
 	struct SEE_code *sco;
 	struct SEE_throw_location *loc;
 {
-	/* TBD: XXX */
+	struct code1 *co = CAST_CODE(sco);
+	unsigned int id = add_location(co, loc);
+#ifndef NDEBUG
+	SEE_int32_t pc = co->ninst;
+#endif
+
+	add_byte_arg(co, INST_LOC, id);
+#ifndef NDEBUG
+	if (SEE_code_debug > 1)
+	    disasm(co, pc);
+#endif
 }
 
 static void
@@ -717,7 +755,7 @@ code1_exec(sco, ctxt, res)
 	struct SEE_context *ctxt;
 	struct SEE_value *res;
 {
-	struct SEE_interpreter *interp = sco->interpreter;
+	struct SEE_interpreter *interp = ctxt->interpreter;
 	struct code1 * const co = CAST_CODE(sco);
 	struct SEE_string *str;
 	struct SEE_value t, u, v;		/* scratch values */
@@ -728,7 +766,7 @@ code1_exec(sco, ctxt, res)
 	volatile unsigned char *pc;
 	struct SEE_value *stackbottom;
 	volatile struct SEE_value *stack;
-	struct SEE_location *location = NULL;
+	struct SEE_throw_location *location = NULL;
 	unsigned char op;
 	SEE_int32_t arg;
 	SEE_int32_t int32;
@@ -782,6 +820,16 @@ code1_exec(sco, ctxt, res)
 	vp = stack - 1;					\
     } while (0)
 
+
+/* Traces a statement-level event or call */
+#define TRACE(event) do {				\
+	if (SEE_system.periodic)			\
+	    (*SEE_system.periodic)(interp);		\
+	interp->try_location = location;		\
+	if (interp->trace) 				\
+	    (*interp->trace)(interp, location,		\
+		ctxt, event);				\
+    } while (0)
 
 /* TONUMBER() ensures that the value pointer vp points at a number value.
  * It may use storage at the work pointer! */
@@ -911,6 +959,7 @@ code1_exec(sco, ctxt, res)
 
 	case INST_THROW:
 	    POP(up);	/* val */
+	    TRACE(SEE_TRACE_THROW);
 	    SEE_THROW(interp, up);
 	    /* NOTREACHED */
 	    break;
@@ -1324,9 +1373,9 @@ code1_exec(sco, ctxt, res)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(not_a_constructor));
 	    PUSH(up);
-	    /* XXX SEE_TRACE_CALL */
+	    TRACE(SEE_TRACE_CALL);
 	    SEE_OBJECT_CONSTRUCT(interp, obj, NULL, arg, argv, up);
-	    /* XXX SEE_TRACE_RETURN */
+	    TRACE(SEE_TRACE_RETURN);
 	    break;
 
 	case INST_CALL:
@@ -1354,7 +1403,7 @@ code1_exec(sco, ctxt, res)
 	    if (!SEE_OBJECT_HAS_CALL(obj))
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(not_callable));
-	    /* XXX SEE_TRACE_CALL */
+	    TRACE(SEE_TRACE_CALL);
 	    if (obj == interp->Global_eval) {
 		struct SEE_context context2;
 		memcpy(&context2, ctxt, sizeof context2);
@@ -1367,9 +1416,12 @@ code1_exec(sco, ctxt, res)
 		    SEE_context_eval(&context2, argv[0]->u.string, vp);
 	    } else 
 		SEE_OBJECT_CALL(interp, obj, baseobj, arg, argv, vp);
-	    /* XXX SEE_TRACE_RETURN */
+	    TRACE(SEE_TRACE_RETURN);
 	    break;
 
+	/*
+	 * Ending one or more blocks
+	 */
 	case INST_END:
 	    new_blocklevel = arg;
     end:
@@ -1379,6 +1431,7 @@ code1_exec(sco, ctxt, res)
 		blocklevel--;
 		block = &blockbottom[blocklevel];
 		if (block->type == BLOCK_ENUM) {
+		    /* Ending an ENUM block terminates the enumerator */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending ENUM\n");
@@ -1387,12 +1440,15 @@ code1_exec(sco, ctxt, res)
 		    SEE_enumerate_free(interp, enum_context->props0);
 		    enum_context = enum_context->prev;
 		} else if (block->type == BLOCK_WITH) {
+		    /* Ending an WITH block restores the scope chain */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending WITH\n");
 #endif
 		    scope = block->u.with.next;
 		} else if (block->type == BLOCK_TRYC) {
+		    /* Ending a TRYC (catch) block handles a caught 
+		     * exception and converts into a WITH block */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending TRYC\n");
@@ -1418,6 +1474,8 @@ code1_exec(sco, ctxt, res)
 			break;
 		    } 
 		} else if (block->type == BLOCK_TRYF) {
+		    /* Ending a TRYF (try-finally) converts into a FINALLY
+		     * block and branches to the finally handler */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending TRYF - running handler\n");
@@ -1435,11 +1493,16 @@ code1_exec(sco, ctxt, res)
 		    blocklevel++;
 		    break;
 		} else if (block->type == BLOCK_FINALLY) {
+		    /* Ending a FINALLY block re-throws any
+		     * uncaught exceptions, and resumes unwinding
+		     * the block stack. */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending FINALLY\n");
 #endif
 		    new_blocklevel = block->u.tryf.block;
+		    if (SEE_CAUGHT(block->u.tryf.context))
+			TRACE(SEE_TRACE_THROW);
 		    SEE_DEFAULT_CATCH(interp, block->u.tryf.context);
 		}
 	    }
@@ -1531,7 +1594,10 @@ code1_exec(sco, ctxt, res)
 	    break;
 
 	case INST_LOC:
-	    NOT_IMPLEMENTED; /* TBD */
+	    SEE_ASSERT(interp, arg >= 0);
+	    SEE_ASSERT(interp, arg < co->nlocation);
+	    location = co->location + arg;
+	    TRACE(SEE_TRACE_STATEMENT);
 	    break;
 
 	default:

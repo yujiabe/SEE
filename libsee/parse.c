@@ -8268,6 +8268,7 @@ VariableStatement_codegen(na, cc)
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
 	/* Note: VariableDeclaration leaves nothing on the stack */
+	CG_LOC(&na->location);
 	CODEGEN(n->a);	    /* - */
 	n->node.maxstack = n->a->maxstack;
 }
@@ -8527,6 +8528,7 @@ EmptyStatement_codegen(na, cc)
 	struct node *na;
 	struct code_context *cc;
 {
+	CG_LOC(&na->location);
 	/* CG_NOP(); */		/* - */
 	na->maxstack = 0;
 }
@@ -8596,6 +8598,7 @@ ExpressionStatement_codegen(na, cc)
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
+	CG_LOC(&na->location);
 	CODEGEN(n->a);			/* ref */
 	if (!CG_IS_VALUE(n->a))
 	    CG_GETVALUE();		/* val */
@@ -8684,6 +8687,7 @@ IfStatement_codegen(na, cc)
 	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
 	SEE_code_patchable_t L1, L2;
 
+	CG_LOC(&na->location);
 	CODEGEN(n->cond);			/*     ref      */
 	if (!CG_IS_VALUE(n->cond))
 	    CG_GETVALUE();			/*     val      */
@@ -8878,6 +8882,7 @@ IterationStatement_dowhile_codegen(na, cc)
     L1 = CG_HERE();
 	CODEGEN(n->body);
     L2 = CG_HERE();			    /* continue point */
+	CG_LOC(&na->location);
 	CODEGEN(n->cond);
 	if (!CG_IS_VALUE(n->cond))
 	    CG_GETVALUE();
@@ -9013,6 +9018,7 @@ IterationStatement_while_codegen(na, cc)
 	CODEGEN(n->body);
     CG_LABEL(P1);
     L2 = CG_HERE();			    /* continue point */
+	CG_LOC(&na->location);
 	CODEGEN(n->cond);
 	if (!CG_IS_VALUE(n->cond))
 	    CG_GETVALUE();
@@ -9139,6 +9145,7 @@ IterationStatement_for_codegen(na, cc)
 	push_patchables(cc, targ, CONTINUABLE);
 
 	if (n->init) {
+		CG_LOC(&n->init->location);
 		CODEGEN(n->init);
 		if (!CG_IS_VALUE(n->init))
 		    CG_GETVALUE();
@@ -9149,6 +9156,7 @@ IterationStatement_for_codegen(na, cc)
 	CODEGEN(n->body);
     L2 = CG_HERE();			    /* continue point */
 	if (n->incr) {
+		CG_LOC(&n->incr->location);
 		CODEGEN(n->incr);
 		if (!CG_IS_VALUE(n->incr))
 		    CG_GETVALUE();
@@ -9156,12 +9164,15 @@ IterationStatement_for_codegen(na, cc)
 	}
     CG_LABEL(P1);
 	if (n->cond) {
+	    CG_LOC(&n->cond->location);
 	    CODEGEN(n->cond);
 	    if (!CG_IS_VALUE(n->cond))
 		CG_GETVALUE();
 	    CG_B_TRUE_b(L1);
-	} else
+	} else {
+	    CG_LOC(&na->location);
 	    CG_B_ALWAYS_b(L1);
+	}
     L3 = CG_HERE();			    /* break point */
 
 	pop_patchables(cc, L2, L3);
@@ -9310,6 +9321,7 @@ IterationStatement_forvar_codegen(na, cc)
 
 	push_patchables(cc, targ, CONTINUABLE);
 
+	CG_LOC(&n->init->location);
 	CODEGEN(n->init);
 	if (!CG_IS_VALUE(n->init))
 	    CG_GETVALUE();
@@ -9318,6 +9330,7 @@ IterationStatement_forvar_codegen(na, cc)
 	CODEGEN(n->body);
     L2 = CG_HERE();			    /* continue point */
 	if (n->incr) {
+		CG_LOC(&n->incr->location);
 		CODEGEN(n->incr);
 		if (!CG_IS_VALUE(n->incr))
 		    CG_GETVALUE();
@@ -9325,12 +9338,15 @@ IterationStatement_forvar_codegen(na, cc)
 	}
     CG_LABEL(P1);
 	if (n->cond) {
+	    CG_LOC(&n->cond->location);
 	    CODEGEN(n->cond);
 	    if (!CG_IS_VALUE(n->cond))
 		CG_GETVALUE();
 	    CG_B_TRUE_b(L1);
-	} else
+	} else {
+	    CG_LOC(&na->location);
 	    CG_B_ALWAYS_b(L1);
+	}
     L3 = CG_HERE();			    /* break point */
 
 	pop_patchables(cc, L2, L3);
@@ -9445,6 +9461,7 @@ IterationStatement_forin_codegen(na, cc)
 	SEE_code_addr_t L1, L2, L3;
 	void *targ = &n->targetable;
 
+	CG_LOC(&na->location);
 	CODEGEN(n->list);		/* ref */
 	if (!CG_IS_VALUE(n->list))
 	    CG_GETVALUE();		/* val */
@@ -9594,6 +9611,7 @@ IterationStatement_forvarin_codegen(na, cc)
 	SEE_code_addr_t L1, L2, L3;
 	void *targ = &n->targetable;
 
+	CG_LOC(&na->location);
 	CODEGEN(n->lhs);		/* - */
 	CODEGEN(n->list);		/* ref */
 	if (!CG_IS_VALUE(n->list))
@@ -9840,6 +9858,8 @@ ContinueStatement_codegen(na, cc)
 
 	patchables = patch_find(cc, n->target, tCONTINUE);
 	
+	CG_LOC(&na->location);
+
 	/* Generate an END instruction if we are continuing to an outer block */
 	if (patchables->block_depth < cc->block_depth)
 	    CG_END(patchables->block_depth);
@@ -9939,6 +9959,8 @@ BreakStatement_codegen(na, cc)
 
 	patchables = patch_find(cc, n->target, tBREAK);
 
+	CG_LOC(&na->location);
+
 	/* Generate an END instruction if we are breaking to an outer block */
 	if (patchables->block_depth < cc->block_depth)
 	    CG_END(patchables->block_depth);
@@ -10036,6 +10058,7 @@ ReturnStatement_codegen(na, cc)
 {
 	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
 
+	CG_LOC(&na->location);
 	CODEGEN(n->expr);			/* ref */
 	if (!CG_IS_VALUE(n->expr))
 	    CG_GETVALUE();			/* val */
@@ -10101,6 +10124,7 @@ ReturnStatement_undef_codegen(na, cc)
 	struct node *na;
 	struct code_context *cc;
 {
+	CG_LOC(&na->location);
 	CG_UNDEFINED();			    /* undef */
 	CG_SETC();			    /* - */
 	CG_END(0);			    /* (halt) */
@@ -10193,6 +10217,7 @@ WithStatement_codegen(na, cc)
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
 
+	CG_LOC(&na->location);
 	CODEGEN(n->a);			/* ref */
 	if (!CG_IS_VALUE(n->a))	
 	    CG_GETVALUE();		/* val */
@@ -10375,6 +10400,7 @@ SwitchStatement_codegen(na, cc)
 	case_patches = SEE_ALLOCA(cc->code->interpeter, 
 	    SEE_code_patchable_t, ncases);
 
+	CG_LOC(&na->location);
 	CODEGEN(n->cond);		/* ref */
 	if (!CG_IS_VALUE(n->cond))
 	    CG_GETVALUE();		/* val */
@@ -10688,6 +10714,7 @@ ThrowStatement_codegen(na, cc)
 {
 	struct Unary_node *n = CAST_NODE(na, Unary);
 
+	CG_LOC(&na->location);
 	CODEGEN(n->a);		/* ref */
 	if (!CG_IS_VALUE(n->a))
 	    CG_GETVALUE();	/* val */
@@ -10829,6 +10856,7 @@ TryStatement_catch_codegen(na, cc)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_code_patchable_t L1, L2;
 
+	CG_LOC(&na->location);
 	CG_STRING(n->ident);	    /* str */
 	CG_S_TRYC_f(L1);	    /* - */
 	cg_block_enter(cc);
@@ -10926,6 +10954,7 @@ TryStatement_finally_codegen(na, cc)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_code_patchable_t L1, L2;
 
+	CG_LOC(&na->location);
 	CG_S_TRYF_f(L1);	    /* - */
 	cg_block_enter(cc);
 	CODEGEN(n->block);	    /* - */
@@ -11044,6 +11073,7 @@ TryStatement_catchfinally_codegen(na, cc)
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_code_patchable_t L1, L2, L3a, L3b;
 
+	CG_LOC(&na->location);
 	CG_S_TRYF_f(L1);	    /* - */
 	cg_block_enter(cc);
 	CG_STRING(n->ident);	    /* str */
@@ -11555,6 +11585,8 @@ FunctionBody_codegen(na, cc)
 	    CG_UNDEFINED();	/* undef */
 	    CG_SETC();		/* - */
 	}
+	/* Add an explicit TRACE_STATEMENT event here for debuggers */
+	CG_LOC(&na->location);
 	CG_END(0);		/* explicit return */
 
 	na->maxstack = n->u.a->maxstack;

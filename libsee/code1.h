@@ -101,14 +101,14 @@
 
 struct SEE_code;
 struct SEE_value;
-struct SEE_location;
+struct SEE_throw_location;
 struct SEE_interpreter;
 
 struct code1 {
     struct SEE_code	 code;
     unsigned char	*inst;
     struct SEE_value	*literal;
-    struct SEE_location *location;
+    struct SEE_throw_location *location;
     struct function    **func;
     unsigned int	 ninst, nliteral, nlocation, nfunc;
     struct SEE_growable	 ginst, gliteral, glocation, gfunc;
