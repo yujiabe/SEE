@@ -702,7 +702,8 @@ user_command(interp, debug, loc, context)
 		    break;
 		}
 	    if (!cmdtab[i].name)
-	    	fprintf(stderr, "debugger: unknown command '%s'\n", cmd);
+	    	fprintf(stderr, "debugger: unknown command '%s' (try 'help')\n",
+			cmd);
 	}
 	free(line);
 	return result;
