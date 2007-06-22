@@ -11585,8 +11585,6 @@ FunctionBody_codegen(na, cc)
 	    CG_UNDEFINED();	/* undef */
 	    CG_SETC();		/* - */
 	}
-	/* Add an explicit TRACE_STATEMENT event here for debuggers */
-	CG_LOC(&na->location);
 	CG_END(0);		/* explicit return */
 
 	na->maxstack = n->u.a->maxstack;
