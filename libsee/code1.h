@@ -43,8 +43,8 @@
 #define INST_GETVALUE		0x0d
 #define INST_LOOKUP		0x0e
 #define INST_PUTVALUE		0x0f
-#define INST_PUTVAR		0x10
-#define INST_VAR		0x11
+#define INST_VREF  		0x10
+                             /* 0x11 was INST_VAR */
 #define INST_DELETE		0x12
 #define INST_TYPEOF		0x13
 
@@ -97,7 +97,12 @@
 #define INST_FUNC		0x39
 #define INST_LITERAL		0x3a
 #define INST_LOC		0x3b
-/*                (Don't exceed 0x3f!) */
+
+                             /* 0x3c unused */
+                             /* 0x3d unused */
+                             /* 0x3e unused */
+                             /* 0x3f unused */
+                             /* ---- don't exceed 0x3f! */
 
 struct SEE_code;
 struct SEE_value;
@@ -110,8 +115,9 @@ struct code1 {
     struct SEE_value	*literal;
     struct SEE_throw_location *location;
     struct function    **func;
-    unsigned int	 ninst, nliteral, nlocation, nfunc;
-    struct SEE_growable	 ginst, gliteral, glocation, gfunc;
+    unsigned int        *var;
+    unsigned int	 ninst, nliteral, nlocation, nfunc, nvar;
+    struct SEE_growable	 ginst, gliteral, glocation, gfunc, gvar;
     int	maxstack, maxblock, maxargc;
 };
 

@@ -28,7 +28,8 @@ struct SEE_code;
 enum SEE_code_op1 {
 	SEE_CODE_NEW,			/* obj any1..anyn | obj */
 	SEE_CODE_CALL, 			/* any any1..anyn | val */
-	SEE_CODE_END			/*              - | -   */
+	SEE_CODE_END,			/*              - | -   */
+	SEE_CODE_VREF  			/*                | ref */
 };
 
 /* Generic operators that work on the stack or virtual registers */
@@ -49,8 +50,6 @@ enum SEE_code_op0 {
 	SEE_CODE_GETVALUE,		/*         ref | val	    */
 	SEE_CODE_LOOKUP,		/*         str | ref	    */
 	SEE_CODE_PUTVALUE,		/*     ref val | -	    */
-	SEE_CODE_PUTVAR,		/*     str val | -	    */
-	SEE_CODE_VAR,   		/*         str | -	    */
 	SEE_CODE_DELETE,		/*         any | bool	    */
 	SEE_CODE_TYPEOF,		/*         any | str	    */
 
@@ -126,6 +125,9 @@ struct SEE_code_class {
 
 	/* Generates a location update instruction */
 	void	(*gen_loc)(struct SEE_code *co, struct SEE_throw_location *loc);
+
+	/* Adds a variable */
+	unsigned int (*gen_var)(struct SEE_code *co, struct SEE_string *ident);
 
 	/* Generates a instruction referring to an address. 
 	 * If patchp is not NULL, then addr is ignored and a patch ref 

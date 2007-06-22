@@ -138,6 +138,12 @@ typedef void (*visitor_fn_t)(struct node *, void *);
 #endif
 
 #if WITH_PARSER_CODEGEN
+struct code_varscope {
+	struct SEE_string *ident;
+	unsigned int id;
+	int in_scope;
+};
+
 struct code_context {
 	struct SEE_code *code;
 
@@ -157,6 +163,17 @@ struct code_context {
 
 	/* The current block depth. Starts at zero. */
 	unsigned int block_depth, max_block_depth;
+
+	/* True when directly in the variables scope. This
+	 * allows us to use VREF statements instead of LOOKUP.
+	 * It goes false inside 'with' and 'catch' blocks.
+	 * Individual vars can be descoped;
+	 */
+	int in_var_scope;
+
+	struct code_varscope *varscope;
+	unsigned int          nvarscope;
+	struct SEE_growable   gvarscope;
 };
 #endif
 
@@ -977,6 +994,10 @@ static struct SEE_code *cg_fini(struct SEE_interpreter *interp,
 static void cg_block_enter(struct code_context *cc);
 static void cg_block_leave(struct code_context *cc);
 static unsigned int cg_block_current(struct code_context *cc);
+static unsigned int cg_var_id(struct code_context *, struct SEE_string *);
+static int cg_var_is_in_scope(struct code_context *, struct SEE_string *);
+static void cg_var_set_scope(struct code_context *, struct SEE_string *, int);
+static int cg_var_set_all_scope(struct code_context *, int);
 #endif
 static void *make_body(struct parser *parser, struct node *node);
 
@@ -1237,9 +1258,10 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 /* Call/construct operators */
 # define _CG_OP1(name, n) \
     (*cc->code->code_class->gen_op1)(cc->code, SEE_CODE_##name, n)
-#define CG_NEW(n)		_CG_OP1(NEW, n)
-#define CG_CALL(n)		_CG_OP1(CALL, n)
-#define CG_END(n)		_CG_OP1(END, n)
+# define CG_NEW(n)		_CG_OP1(NEW, n)
+# define CG_CALL(n)		_CG_OP1(CALL, n)
+# define CG_END(n)		_CG_OP1(END, n)
+# define CG_VREF(n)		_CG_OP1(VREF, n)
 
 /* Generic operators */
 # define _CG_OP0(name) \
@@ -1260,8 +1282,6 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 # define CG_GETVALUE()		_CG_OP0(GETVALUE)
 # define CG_LOOKUP()		_CG_OP0(LOOKUP)
 # define CG_PUTVALUE()		_CG_OP0(PUTVALUE)
-# define CG_PUTVAR()		_CG_OP0(PUTVAR)
-# define CG_VAR()		_CG_OP0(VAR)
 # define CG_DELETE()		_CG_OP0(DELETE)
 # define CG_TYPEOF()		_CG_OP0(TYPEOF)
 # define CG_TOOBJECT()		_CG_OP0(TOOBJECT)
@@ -1770,6 +1790,8 @@ cg_init(interp, cc)
 	cc->patchables = NULL;
 	cc->block_depth = 0;
 	cc->max_block_depth = 0;
+	cc->in_var_scope = 1;
+	SEE_GROW_INIT(interp, &cc->gvarscope, cc->varscope, cc->nvarscope);
 }
 
 static struct SEE_code *
@@ -1781,6 +1803,7 @@ cg_fini(interp, cc, maxstack)
 	struct SEE_code *co = cc->code;
 
 	SEE_ASSERT(interp, cc->block_depth == 0);
+	SEE_ASSERT(interp, cc->in_var_scope);
 	(*co->code_class->maxstack)(co, maxstack);
 	(*co->code_class->maxblock)(co, cc->max_block_depth);
 	(*co->code_class->close)(co);
@@ -1813,7 +1836,117 @@ cg_block_current(cc)
 {
 	return cc->block_depth;
 }
+
+/* Returns the VREF ID of a identifier in the immediate variable scope */
+static unsigned int
+cg_var_id(cc, ident)
+	struct code_context *cc;
+	struct SEE_string *ident;
+{
+	unsigned int i;
+
+	for (i = 0; i < cc->nvarscope; i++)
+	    if (cc->varscope[i].ident == ident) {
+#ifndef NDEBUG
+		if (SEE_parse_debug) {
+		    dprintf("cg_var_id(");
+		    dprints(ident);
+		    dprintf(") = %u\n", cc->varscope[i].id);
+		}
 #endif
+		return cc->varscope[i].id;
+	    }
+	SEE_ASSERT(cc->code->interpreter, !"bad cg var identifier");
+	return ~0; /* unreachable */
+}
+
+/* Returns true if the identifier is a variable in the immediate scope */
+static int
+cg_var_is_in_scope(cc, ident)
+	struct code_context *cc;
+	struct SEE_string *ident;
+{
+	unsigned int i;
+
+	/* If in a 'with' block, then nothing is certain */
+	if (cc->in_var_scope)
+	    for (i = 0; i < cc->nvarscope; i++)
+		if (cc->varscope[i].ident == ident) {
+#ifndef NDEBUG
+		    if (SEE_parse_debug) {
+			dprintf("cg_var_is_in_scope(");
+			dprints(ident);
+			dprintf("): found, in_scope=%d\n",
+			    cc->varscope[i].in_scope);
+		    }
+#endif		    
+		    return cc->varscope[i].in_scope;
+		}
+#ifndef NDEBUG
+	if (SEE_parse_debug) {
+	    dprintf("cg_var_is_in_scope(");
+	    dprints(ident);
+	    dprintf("): not found\n");
+	}
+#endif		    
+	return 0;
+}
+
+/* Sets the scope of a variable identifier */
+static void
+cg_var_set_scope(cc, ident, in_scope)
+	struct code_context *cc;
+	struct SEE_string *ident;
+	int in_scope;
+{
+	unsigned int i;
+
+	for (i = 0; i < cc->nvarscope; i++)
+	    if (cc->varscope[i].ident == ident) {
+#ifndef NDEBUG
+		if (SEE_parse_debug) {
+		    dprintf("cg_var_set_scope(");
+		    dprints(ident);
+		    dprintf(", %d): previously %d\n",
+			in_scope, cc->varscope[i].in_scope);
+		}
+#endif		    
+		cc->varscope[i].in_scope = in_scope;
+		return;
+	    }
+	if (in_scope) {
+	    SEE_GROW_TO(cc->code->interpreter, &cc->gvarscope,
+			cc->nvarscope + 1);
+	    cc->varscope[i].ident = ident;
+	    cc->varscope[i].id = 
+		(*cc->code->code_class->gen_var)(cc->code, ident);
+	    cc->varscope[i].in_scope = 1;
+#ifndef NDEBUG
+	    if (SEE_parse_debug) {
+		dprintf("cg_var_set_scope(");
+		dprints(ident);
+		dprintf(", %d): NEW (id %u)\n", in_scope, cc->varscope[i].id);
+	    }
+#endif
+	}
+}
+
+/* Temporarily sets the scope visibility of all var idents. Returns old value.
+ * This is used when entering a 'with' scope */
+static int
+cg_var_set_all_scope(cc, in_scope)
+	struct code_context *cc;
+	int in_scope;
+{
+	int old_scope = cc->in_var_scope;
+	cc->in_var_scope = in_scope;
+#ifndef NDEBUG
+	if (SEE_parse_debug)
+	    dprintf("cg_var_set_all_scope(%d) -> %d\n", in_scope, old_scope);
+#endif
+	return old_scope;
+}
+#endif /* WITH_PARSER_CODEGEN */
 
 /* Returns a body suitable for use by SEE_eval_functionbody() */
 static void *
@@ -2460,8 +2593,12 @@ PrimaryExpression_ident_codegen(na, cc)
 	struct PrimaryExpression_ident_node *n = 
 		CAST_NODE(na, PrimaryExpression_ident);
 
-	CG_STRING(n->string);		/* str */
-	CG_LOOKUP();			/* ref */
+	if (cg_var_is_in_scope(cc, n->string)) 
+	    CG_VREF(cg_var_id(cc, n->string));	/* ref */
+	else {
+	    CG_STRING(n->string);		/* str */
+	    CG_LOOKUP();			/* ref */
+	}
 
 	n->node.is = CG_TYPE_REFERENCE;
 	n->node.maxstack = 2;
@@ -8415,12 +8552,16 @@ VariableDeclaration_codegen(na, cc)
 	struct VariableDeclaration_node *n = 
 		CAST_NODE(na, VariableDeclaration);
 	if (n->init) {
-		CG_STRING(n->var.name);		/* str */
-		CG_LOOKUP();			/* ref */
-		CODEGEN(n->init);		/* ref ref */
+		if (cg_var_is_in_scope(cc, n->var.name)) 
+		    CG_VREF(cg_var_id(cc, n->var.name));    /* ref */
+		else {
+		    CG_STRING(n->var.name);		    /* str */
+		    CG_LOOKUP();			    /* ref */
+		}
+		CODEGEN(n->init);			    /* ref ref */
 		if (!CG_IS_VALUE(n->init))
-		    CG_GETVALUE();		/* ref val */
-		CG_PUTVALUE();			/* - */
+		    CG_GETVALUE();			    /* ref val */
+		CG_PUTVALUE();				    /* - */
 	}
 	n->node.maxstack = n->init ? 1 + n->init->maxstack : 0;
 }
@@ -9627,8 +9768,12 @@ IterationStatement_forvarin_codegen(na, cc)
 	CG_B_ALWAYS_f(P1);
 
     L1 = CG_HERE();
-	CG_STRING(lhs->var.name);	/* str str */
-	CG_LOOKUP();			/* str ref */
+	if (cg_var_is_in_scope(cc, lhs->var.name)) 
+	    CG_VREF(cg_var_id(cc, lhs->var.name));    /* ref */
+	else {
+	    CG_STRING(lhs->var.name);		    /* str */
+	    CG_LOOKUP();			    /* ref */
+	}
 	CG_EXCH();			/* ref str */
 	CG_PUTVALUE();			/* - */
 
@@ -10216,6 +10361,7 @@ WithStatement_codegen(na, cc)
 	struct code_context *cc;
 {
 	struct Binary_node *n = CAST_NODE(na, Binary);
+	int old_var_scope;
 
 	CG_LOC(&na->location);
 	CODEGEN(n->a);			/* ref */
@@ -10226,11 +10372,13 @@ WithStatement_codegen(na, cc)
 
 	CG_S_WITH();			/* - */
 	cg_block_enter(cc);
+	old_var_scope = cg_var_set_all_scope(cc, 0);
 
 	CODEGEN(n->b);
 
 	CG_END(cg_block_current(cc));
 	cg_block_leave(cc);
+	cg_var_set_all_scope(cc, old_var_scope);
 
 	na->maxstack = MAX(n->a->maxstack, n->b->maxstack);
 }
@@ -10855,6 +11003,7 @@ TryStatement_catch_codegen(na, cc)
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_code_patchable_t L1, L2;
+	int in_scope;
 
 	CG_LOC(&na->location);
 	CG_STRING(n->ident);	    /* str */
@@ -10863,7 +11012,12 @@ TryStatement_catch_codegen(na, cc)
 	CODEGEN(n->block);	    /* - */
 	CG_B_ALWAYS_f(L2);
     CG_LABEL(L1);
+	in_scope = cg_var_is_in_scope(cc, n->ident);
+	if (in_scope)
+	    cg_var_set_scope(cc, n->ident, 0);
 	CODEGEN(n->bcatch);	    /* - */
+	if (in_scope)
+	    cg_var_set_scope(cc, n->ident, 1);
     CG_LABEL(L2);
 	CG_END(cg_block_current(cc));
 	cg_block_leave(cc);
@@ -11072,6 +11226,7 @@ TryStatement_catchfinally_codegen(na, cc)
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
 	SEE_code_patchable_t L1, L2, L3a, L3b;
+	int in_scope;
 
 	CG_LOC(&na->location);
 	CG_S_TRYF_f(L1);	    /* - */
@@ -11082,7 +11237,12 @@ TryStatement_catchfinally_codegen(na, cc)
 	CODEGEN(n->block);	    /* - */
 	CG_B_ALWAYS_f(L3a);
     CG_LABEL(L2);
+	in_scope = cg_var_is_in_scope(cc, n->ident);
+	if (in_scope)
+	    cg_var_set_scope(cc, n->ident, 0);
 	CODEGEN(n->bcatch);	    /* - */
+	if (in_scope)
+	    cg_var_set_scope(cc, n->ident, 1);
 	CG_B_ALWAYS_f(L3b);
     CG_LABEL(L1);
 	CG_GETC();		    /* val */
@@ -11424,6 +11584,7 @@ FunctionExpression_codegen(na, cc)
 	struct code_context *cc;
 {
 	struct Function_node *n = CAST_NODE(na, Function);
+	int in_scope;
 
 	if (n->function->name == NULL) {
 	    CG_FUNC(n->function);	    /* obj */
@@ -11439,11 +11600,16 @@ FunctionExpression_codegen(na, cc)
 	    CG_DUP();			    /* obj obj */
 	    CG_S_WITH();		    /* obj */
 	    cg_block_enter(cc);
+	    in_scope = cg_var_is_in_scope(cc, n->function->name);
+	    if (in_scope)
+		    cg_var_set_scope(cc, n->function->name, 0);
 	    CG_STRING(n->function->name);   /* obj str */
 	    CG_REF();			    /* ref */
 	    CG_FUNC(n->function);	    /* ref obj */
 	    CG_END(cg_block_current(cc));  
 	    cg_block_leave(cc);
+	    if (in_scope)
+		    cg_var_set_scope(cc, n->function->name, 1);
 	    CG_DUP();			    /* ref obj obj */
 	    CG_ROLL3();			    /* obj ref obj */
 	    CG_PUTVALUE();		    /* obj */
@@ -11741,6 +11907,7 @@ SourceElements_codegen(na, cc)
 	unsigned int maxstack = 0;
 	struct SourceElement *e;
 	struct var *v;
+	struct Function_node *fn;
 
 	/* SourceElements fproc:
 	 * - create function closures of the current scope
@@ -11748,16 +11915,16 @@ SourceElements_codegen(na, cc)
 	 */
 
 	for (e = n->functions; e; e = e->next) {
-	    struct Function_node *fn = CAST_NODE(e->node, Function);
-	    CG_STRING(fn->function->name);	/* str */
-	    CG_FUNC(fn->function);		/* str obj */
-	    CG_PUTVAR();			/* - */
+	    fn = CAST_NODE(e->node, Function);
+	    cg_var_set_scope(cc, fn->function->name, 1);
+	    CG_VREF(cg_var_id(cc, fn->function->name)); /* ref */
+	    CG_FUNC(fn->function);		        /* ref obj */
+	    CG_PUTVALUE();			        /* - */
 	    maxstack = MAX(maxstack, 2);
 	}
 
 	for (v = n->vars; v; v = v->next) {
-	    CG_STRING(v->name);			/* str */
-	    CG_VAR();				/* - */
+	    cg_var_set_scope(cc, v->name, 1);
 	    maxstack = MAX(maxstack, 1);
 	}
 

@@ -96,6 +96,7 @@ static void code1_gen_op1(struct SEE_code *co, enum SEE_code_op1 op, int n);
 static void code1_gen_literal(struct SEE_code *co, const struct SEE_value *v);
 static void code1_gen_func(struct SEE_code *co, struct function *f);
 static void code1_gen_loc(struct SEE_code *co, struct SEE_throw_location *loc);
+static unsigned int code1_gen_var(struct SEE_code *co, struct SEE_string *name);
 static void code1_gen_opa(struct SEE_code *co, enum SEE_code_opa op,
 		SEE_code_patchable_t *patchp, SEE_code_addr_t addr);
 static SEE_code_addr_t code1_here(struct SEE_code *co);
@@ -112,6 +113,7 @@ static unsigned int add_literal(struct code1 *code,
 static unsigned int add_location(struct code1 *code, 
 		const struct SEE_throw_location *location);
 static unsigned int add_function(struct code1 *code, struct function *f);
+static unsigned int add_var(struct code1 *code, struct SEE_string *ident);
 static void add_byte(struct code1 *code, unsigned int c);
 static unsigned int here(struct code1 *code);
 
@@ -123,6 +125,7 @@ static struct SEE_code_class code1_class = {
     code1_gen_literal,
     code1_gen_func,
     code1_gen_loc,
+    code1_gen_var,
     code1_gen_opa,
     code1_here,
     code1_patch,
@@ -152,6 +155,7 @@ _SEE_code1_alloc(interp)
     SEE_GROW_INIT(interp, &co->gliteral, co->literal, co->nliteral);
     SEE_GROW_INIT(interp, &co->gfunc, co->func, co->nfunc);
     SEE_GROW_INIT(interp, &co->glocation, co->location, co->nlocation);
+    SEE_GROW_INIT(interp, &co->gvar, co->var, co->nvar);
     co->maxstack = -1;
     co->maxblock = -1;
     co->maxargc = 0;
@@ -262,6 +266,27 @@ add_location(code, loc)
     i = code->nlocation;
     SEE_GROW_TO(interp, &code->glocation, code->nlocation + 1);
     code->location[i] = *loc;
+    return i;
+}
+
+/* Adds a (unique) location to the code object, returning its index */
+static unsigned int
+add_var(code, ident)
+    struct code1 *code;
+    struct SEE_string *ident;
+{
+    unsigned int i, id;
+    struct SEE_interpreter *interp = code->code.interpreter;
+    struct SEE_value v;
+
+    SEE_SET_STRING(&v, ident);
+    id = add_literal(code, &v);
+
+    for (i = 0; i < code->nvar; i++)
+	if (code->var[i] == id)
+	    return i;
+    SEE_GROW_TO(interp, &code->gvar, code->nvar + 1);
+    code->var[i] = id;
     return i;
 }
 
@@ -382,8 +407,6 @@ code1_gen_op0(sco, op)
 	case SEE_CODE_GETVALUE:	add_byte(co, INST_GETVALUE); break;
 	case SEE_CODE_LOOKUP:	add_byte(co, INST_LOOKUP); break;
 	case SEE_CODE_PUTVALUE:	add_byte(co, INST_PUTVALUE); break;
-	case SEE_CODE_PUTVAR:	add_byte(co, INST_PUTVAR); break;
-	case SEE_CODE_VAR:	add_byte(co, INST_VAR); break;
 	case SEE_CODE_DELETE:	add_byte(co, INST_DELETE); break;
 	case SEE_CODE_TYPEOF:	add_byte(co, INST_TYPEOF); break;
 	case SEE_CODE_TOOBJECT:	add_byte(co, INST_TOOBJECT); break;
@@ -439,6 +462,7 @@ code1_gen_op1(sco, op, n)
 	case SEE_CODE_NEW:	add_byte_arg(co, INST_NEW, n); break;
 	case SEE_CODE_CALL:	add_byte_arg(co, INST_CALL, n); break;
 	case SEE_CODE_END:	add_byte_arg(co, INST_END, n); break;
+	case SEE_CODE_VREF:	add_byte_arg(co, INST_VREF, n); break;
 	default: SEE_ASSERT(sco->interpreter, !"bad op1");
 	}
 
@@ -505,6 +529,24 @@ code1_gen_loc(sco, loc)
 	if (SEE_code_debug > 1)
 	    disasm(co, pc);
 #endif
+}
+
+static unsigned int
+code1_gen_var(sco, ident)
+	struct SEE_code *sco;
+	struct SEE_string *ident;
+{
+	struct code1 *co = CAST_CODE(sco);
+	unsigned int id = add_var(co, ident);
+
+#ifndef NDEBUG
+	if (SEE_code_debug) {
+	    dprintf("code1: var ");
+	    dprints(ident);
+	    dprintf(" -> id %u\n", id);
+	}
+#endif
+	return id;
 }
 
 static void
@@ -857,6 +899,7 @@ code1_exec(sco, ctxt, res)
 	dprintf("code     = %p\n", co);
 	dprintf("ninst    = 0x%x\n", co->ninst);
 	dprintf("nlocation= %d\n", co->nlocation);
+	dprintf("nvar=      %d\n", co->nvar);
 	dprintf("maxstack = %d\n", co->maxstack);
 	dprintf("maxargc  = %d\n", co->maxargc);
 	if (co->nliteral) {
@@ -901,6 +944,19 @@ code1_exec(sco, ctxt, res)
     SEE_SET_OBJECT(&Number, interp->Number);
 
     SEE_SET_UNDEFINED(res);	    /* C = undefined */
+
+    /* Initialise all vars, and build lookups */
+    for (i = 0; i < co->nvar; i++) {
+	struct SEE_string *ident;
+	SEE_ASSERT(ident, co->var[i] < co->nliteral);
+	SEE_ASSERT(ident, SEE_VALUE_GET_TYPE(&co->literal[co->var[i]]) == 
+			    SEE_STRING);
+	ident = co->literal[co->var[i]].u.string;
+	if (!SEE_OBJECT_HASPROPERTY(interp, ctxt->variable, ident))
+	    SEE_OBJECT_PUT(interp, ctxt->variable, ident, &undefined,
+	                        ctxt->varattr);
+    }
+
     pc = co->inst;
     stack = stackbottom;
     scope = ctxt->scope;
@@ -1046,20 +1102,15 @@ code1_exec(sco, ctxt, res)
 		    STR(bad_lvalue));
 	    break;
 
-	case INST_PUTVAR:
-	    POP(up);	/* val */
-	    POP(vp);	/* str */
-	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
-	    SEE_OBJECT_PUT(interp, ctxt->variable, vp->u.string, up,
-		ctxt->varattr);
-	    break;
-
-	case INST_VAR:
-	    POP(vp);	/* str */
-	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
-	    if (!SEE_OBJECT_HASPROPERTY(interp, ctxt->variable, vp->u.string))
-		SEE_OBJECT_PUT(interp, ctxt->variable, vp->u.string, &undefined,
-		    ctxt->varattr);
+	case INST_VREF:
+	    SEE_ASSERT(interp, arg >= 0);
+	    SEE_ASSERT(interp, arg < co->nvar);
+	    PUSH(vp);	/* ref */
+	    SEE_ASSERT(interp, co->var[arg] < co->nliteral);
+	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&co->literal[co->var[arg]])
+				    == SEE_STRING);
+	    _SEE_SET_REFERENCE(vp, ctxt->variable, 
+		    co->literal[co->var[arg]].u.string);
 	    break;
 
 	case INST_DELETE:
@@ -1669,8 +1720,15 @@ disasm(co, pc)
 	case INST_GETVALUE:	dprintf("GETVALUE"); break;
 	case INST_LOOKUP:	dprintf("LOOKUP"); break;
 	case INST_PUTVALUE:	dprintf("PUTVALUE"); break;
-	case INST_PUTVAR:	dprintf("PUTVAR"); break;
-	case INST_VAR:		dprintf("VAR"); break;
+	case INST_VREF:		dprintf("VREF,%-4d    ; ", arg);
+				if (arg >= 0 && arg < co->nvar &&
+				    co->var[arg] < co->nliteral &&
+				    SEE_VALUE_GET_TYPE(co->literal +
+					co->var[arg]) == SEE_STRING)
+				    dprints(co->literal[co->var[arg]].u.string);
+				else
+				    dprintf("<invalid!>");
+				break;
 	case INST_DELETE:	dprintf("DELETE"); break;
 	case INST_TYPEOF:	dprintf("TYPEOF"); break;
 	case INST_TOOBJECT:	dprintf("TOOBJECT"); break;

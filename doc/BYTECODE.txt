@@ -19,6 +19,7 @@ ultimatgely operate on
     * an 'L' register (a SEE_location)
     * an 'E' register (used by S.ENUM/B.ENUM)
     * a program counter 'PC' (index into the instruction stream)
+    * an array of variable identifiers (see VREF)
 
 A sequence of instructions implements a SourceElements production
 minus any FunctionDeclarations. That is, the code generator is used to
@@ -208,16 +209,16 @@ Primitive instructions
     LOOKUP	str | ref
 	Builds a reference from the current scope (10.1.4)
 
-*   PUTVALUE	ref val1 | -
-	Computes PutValue(ref, val1) (8.7.2), which calls [[Put]] on an object
+*   PUTVALUE	ref val | -
+	Computes PutValue(ref, val) (8.7.2), which calls [[Put]] on an object
 
-*   PUTVAR	str val | -
-	Assigns value as the property of the variable object.
-	This is used when processing function declarations (13)
-
-    VAR		str | -
-	Initialises a variable property to undefined, only if not already
-	initialised (i.e. by a function parameter).
+    VREF,n	- | ref
+	Returns a reference to a variable. Variables are always referenced
+	from the context variable object. Variables are always initialised
+	to undefined in the variables object before the function body begins,
+	unless they already exist.  The VREF instruction is equivalent to a 
+	LOOKUP with the variable name when the variable object is closest
+	in scope.
 
 *   DELETE	any1 | bool
 	1. If any is a reference, then pushes TRUE
