@@ -6,12 +6,11 @@
  *  print	- a function object which takes one
  *		  string argument and prints it, followed
  *		  by a newline.
- *  version	- a function that changes compatibility flags
- *		  based on an integer argument
  *  compat      - changes the compat flags. Returns old compat flags
  *  gc          - may force a garbage collection
+ *  version	- a function that changes compatibility flags
+ *		  based on an integer argument
  *
- *  Shell.args  - command line arguments [TODO]
  *  Shell.exit  - function to force immediate exit
  *  Shell.gcdump - calls GC_dump(), if it was detected
  *
@@ -20,7 +19,7 @@
  *  document		- a simple Object with some properties:
  *  document.write	- a function to print a string to stdout
  *  document.navigator	- a simple Object used as a placeholder
- *  document.userAgent 	- "SEE-shell"
+ *  document.userAgent 	- "SEE-shell ($package-$version)"
  *  document.window	- a reference to the Global object
  *
  */

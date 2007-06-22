@@ -49,6 +49,7 @@ static int run_input(struct SEE_interpreter *, struct SEE_input *,
 static void run_file(struct SEE_interpreter *, char *);
 static void run_interactive(struct SEE_interpreter *);
 static void run_html(struct SEE_interpreter *, char *);
+static void run_string(struct SEE_interpreter *, char *);
 
 static struct debug *debugger;
 
@@ -191,15 +192,14 @@ run_file(interp, filename)
 	FILE *f;
 	int ok;
 
-	if (strcmp(filename, "-") == 0) {
-		run_interactive(interp);
-		return;
-	}
-
-	f = fopen(filename, "r");
-	if (!f) {
-		perror(filename);
-		exit(4);	/* File argument not found */
+	if (strcmp(filename, "-") == 0)
+		f = stdin;	/* Note: stdin will be closed after this */
+	else {
+		f = fopen(filename, "r");
+		if (!f) {
+		    perror(filename);
+		    exit(4);	/* File argument not found */
+		}
 	}
 
 	/*
@@ -228,6 +228,7 @@ run_file(interp, filename)
 	SEE_INPUT_CLOSE(inp);
 	if (!ok)
 		exit(3);	/* Runtime error (uncaught exception) */
+
 }
 
 /*
@@ -275,6 +276,27 @@ run_interactive(interp)
 	    free(line);
 	}
 }
+
+/*
+ * Runs the ECMAscript program passed as a command line argument
+ */
+static void
+run_string(interp, program)
+	struct SEE_interpreter *interp;
+	char *program;
+{
+	struct SEE_input *inp;
+	struct SEE_value res;
+	int ok;
+
+	inp = SEE_input_utf8(interp, program);
+	inp->filename = SEE_intern_ascii(interp, "<command-line>");
+	ok = run_input(interp, inp, &res);
+	SEE_INPUT_CLOSE(inp);
+	if (!ok)
+		exit(3);	/* Runtime error (uncaught exception) */
+}
+
 
 /* Convert a character to uppercase */
 #undef toupper
@@ -367,6 +389,32 @@ run_html(interp, filename)
 	fclose(f);
 }
 
+static void
+add_shell_globals_once(interp)
+	struct SEE_interpreter *interp;
+{
+	static int shell_globals_added = 0;
+
+	if (!shell_globals_added) {
+	    shell_add_globals(interp);
+	    shell_globals_added = 1;
+	}
+}
+
+
+static void
+add_document_globals_once(interp)
+	struct SEE_interpreter *interp;
+{
+	static int document_globals_added = 0;
+
+	if (!document_globals_added) {
+	    shell_add_document(interp);
+	    document_globals_added = 1;
+	}
+}
+
+
 int
 main(argc, argv)
 	int argc;
@@ -375,58 +423,71 @@ main(argc, argv)
 	struct SEE_interpreter interp;
 	int interp_initialised = 0;
 	int ch, error = 0;
-	int do_interactive = 1;
-	int globals_added = 0;
-	int document_added = 0;
+	int ran_something = 0;
 	char *s;
 
 	/* Initialise the shell's global strings */
 	shell_strings();
 
-#define INIT_INTERP()	if (!interp_initialised) {	\
+	/* Helpful macro to initialise the interpreter just once */
+#define INIT_INTERP_ONCE do {				\
+    if (!interp_initialised) {				\
 	SEE_interpreter_init(&interp);			\
 	interp_initialised = 1;				\
-    }
+    }							\
+  } while (0)
 
-	while (!error && (ch = getopt(argc, argv, "c:d:f:gh:l:r:V")) != -1)
+	while (!error && (ch = getopt(argc, argv, "c:d:e:f:gh:il:r:V")) != -1)
 	    switch (ch) {
 	    case 'c':
 		if (compat_tovalue(optarg, &SEE_system.default_compat_flags)
 			== -1)
 		    error = 1;
-		INIT_INTERP();
 		break;
+
 	    case 'd':
-		INIT_INTERP();
+		INIT_INTERP_ONCE;
 		if (*optarg == '*')
 		    optarg = "nElpvecr";
 		for (s = optarg; *s; s++)
 		    debug(&interp, *s);
 		break;
-	    case 'f':
-		INIT_INTERP();
-		if (!globals_added) {
-		    shell_add_globals(&interp);
-		    globals_added = 1;
-		}
-		do_interactive = 0;
-		run_file(&interp, optarg);
+
+	    case 'e':
+		INIT_INTERP_ONCE;
+		add_shell_globals_once(&interp);
+		run_string(&interp, optarg);
+		ran_something = 1;
 		break;
+
+	    case 'f':
+		INIT_INTERP_ONCE;
+		add_shell_globals_once(&interp);
+		run_file(&interp, optarg);
+		ran_something = 1;
+		break;
+
 	    case 'g':
-		INIT_INTERP();
+		INIT_INTERP_ONCE;
 	    	if (!debugger)
 			debugger = debug_new(&interp);
 		break;
+
 	    case 'h':
 		SEE_system.default_compat_flags |= SEE_COMPAT_SGMLCOM;
-		INIT_INTERP();
-		if (!document_added) {
-		    shell_add_document(&interp);
-		    document_added = 1;
-		}
-		do_interactive = 0;
+		INIT_INTERP_ONCE;
+		add_document_globals_once(&interp);
 		run_html(&interp, optarg);
+		ran_something = 1;
 		break;
+
+	    case 'i':
+		INIT_INTERP_ONCE;
+		add_shell_globals_once(&interp);
+		run_interactive(&interp);
+		ran_something = 1;
+		break;
+
 	    case 'l':
 		if (interp_initialised) {
 			fprintf(stderr, "-l options must come first\n");
@@ -436,17 +497,20 @@ main(argc, argv)
 	    	if (!load_module(optarg))
 			exit(1);
 		break;
+
 	    case 'r':
-		INIT_INTERP();
+		INIT_INTERP_ONCE;
 		interp.recursion_limit = atoi(optarg);
 		printf("(Set recursion limit to %d)\n", 
 			interp.recursion_limit);
 		break;
+
 	    case 'V':
 	    	printf("SEE API version: %u.%u\n", SEE_VERSION_API_MAJOR,
 			SEE_VERSION_API_MINOR);
 	    	printf("Library version: %s\n", SEE_version());
-		break;
+		exit(0);
+
 	    default:
 		error = 1;
 	    }
@@ -457,7 +521,7 @@ main(argc, argv)
 
 	if (error) {
 	    fprintf(stderr, 
-	        "usage: %s [-l library] [-Vg] [-c flag] %s[-f file.js | -h file.html]...\n",
+	        "usage: %s [-l library] [-Vg] [-c flag] %s[-r maxrecurs] [-f file.js | -h file.html | -e program | -i]...\n",
 		argv[0],
 #ifndef NDEBUG
 	        "[-d[ETcelmnprsv]] "
@@ -468,10 +532,9 @@ main(argc, argv)
 	    exit(2); /* Invalid argument on command line */
 	}
 
-	if (do_interactive) {
-	    INIT_INTERP();
-	    if (!globals_added)
-		shell_add_globals(&interp);
+	if (!ran_something) {
+	    INIT_INTERP_ONCE;
+	    add_shell_globals_once(&interp);
 	    run_interactive(&interp);
 	}
 

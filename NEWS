@@ -1,6 +1,8 @@
 $Id$
 
 2.1 [unreleased]
+  Changed: see-shell has -i option for interactive use, instead of -f '-'
+  Improved: see-shell has -e option for executing javascript strings
   bug 77: portability improvements with isnan, finite, copysign
   Deprecated: SEE_no_enumerator (use NULL instead)
   bug 75: fix crash when enumerating a host object with no enumerator
