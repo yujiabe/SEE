@@ -856,14 +856,30 @@ code1_exec(sco, ctxt, res)
     if (SEE_eval_debug) {
 	dprintf("code     = %p\n", co);
 	dprintf("ninst    = 0x%x\n", co->ninst);
-	dprintf("nliteral = %d\n", co->nliteral);
+	dprintf("nlocation= %d\n", co->nlocation);
 	dprintf("maxstack = %d\n", co->maxstack);
 	dprintf("maxargc  = %d\n", co->maxargc);
-	dprintf("-- literals:\n");
-	for (i = 0; i < co->nliteral; i++) {
-	    dprintf("@%d ", i);
-	    dprintv(interp, co->literal + i);
-	    dprintf("\n");
+	if (co->nliteral) {
+	    dprintf("-- literals:\n");
+	    for (i = 0; i < co->nliteral; i++) {
+		dprintf("[%d] ", i);
+		dprintv(interp, co->literal + i);
+		dprintf("\n");
+	    }
+	}
+	if (co->nfunc) {
+	    dprintf("-- functions:\n");
+	    for (i = 0; i < co->nfunc; i++) {
+	        struct function *f = co->func[i];
+		dprintf("[%d] %p nparams=%d", i, f, f->nparams);
+		if (f->name) {
+		  dprintf(" name=");
+		  dprints(f->name);
+		}
+		if (f->is_empty)
+		    dprintf(" is_empty");
+		dprintf("\n");
+	    }
 	}
 	dprintf("-- code:\n");
 	i = 0;
@@ -1697,12 +1713,36 @@ disasm(co, pc)
 	case INST_S_TRYC:	dprintf("S_TRYC,0x%x", arg); break;
 	case INST_S_TRYF:	dprintf("S_TRYF,0x%x", arg); break;
 
-	case INST_FUNC:		dprintf("FUNC [%d]", arg); break;
+	case INST_FUNC:		dprintf("FUNC,%-4d    ;", arg);
+				if (arg >= 0 && arg < co->nfunc) {
+				    struct function *f = co->func[arg];
+				    dprintf(" %p", f);
+				    if (f->name) {
+				      dprintf(" name=");
+				      dprints(f->name);
+				    }
+				    dprintf(" nparams=%d", f->nparams);
+				    if (f->is_empty)
+					dprintf(" is_empty");
+				} else
+				    dprintf(" <invalid!>");
+				break;
 	case INST_LITERAL:	
-		dprintf("@%d ", arg);
-		dprintv(co->code.interpreter, co->literal + arg);
-		break;
-	case INST_LOC:		dprintf("LOC [%d]", arg); break;
+				dprintf("LITERAL,%-4d ; ", arg);
+				if (arg >= 0 && arg < co->nliteral)
+				    dprintv(co->code.interpreter, 
+					co->literal + arg);
+				else
+				    dprintf("<invalid!>");
+				break;
+	case INST_LOC:		dprintf("LOC,%-4d     ; ", arg); 
+				if (arg >= 0 && arg < co->nlocation) {
+				    dprintf("\"");
+				    dprints(co->location[arg].filename);
+				    dprintf(":%d\"", co->location[arg].lineno);
+				} else
+				    dprintf("<invalid!>");
+				break;
 	default:		dprintf("??? <%02x>,%d", op, arg);
 	}
 	dprintf("\n");
