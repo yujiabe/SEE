@@ -798,7 +798,7 @@ SEE_lex_init(lex, inp)
 	lex->input = inp;
 	SEE_SET_UNDEFINED(&lex->value);
 	lex->next_lineno = inp->first_lineno;
-	lex->next_filename = inp->filename;
+	lex->next_filename = SEE_intern(inp->interpreter, inp->filename);
 	(void)SEE_lex_next(lex);
 }
 
