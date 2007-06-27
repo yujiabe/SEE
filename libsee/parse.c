@@ -10623,9 +10623,11 @@ SwitchStatement_print(na, printer)
 			PRINT_CHAR(':');
 			PRINT_NEWLINE(0);
 		}
-		PRINT_NEWLINE(1);
-		PRINT(c->body);
-		PRINT_NEWLINE(-1);
+		if (c->body) {
+			PRINT_NEWLINE(1);
+			PRINT(c->body);
+			PRINT_NEWLINE(-1);
+		}
 	}
 
 	PRINT_CHAR('}');

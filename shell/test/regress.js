@@ -78,4 +78,7 @@ test('NaN == NaN', false)
 test('String(Infinity)', "Infinity")
 test('String(-Infinity)', "-Infinity")
 
+/* bug 78 */
+test("'void (function(a){switch(a){case 1:case 2:;}}).toString()', undefined);
+
 finish()
