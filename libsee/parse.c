@@ -11755,7 +11755,7 @@ FunctionBody_codegen(na, cc)
 	}
 	CG_END(0);		/* explicit return */
 
-	na->maxstack = n->u.a->maxstack;
+	na->maxstack = MAX(n->is_program ? 0 : 1, n->u.a->maxstack);
 }
 #endif
 
