@@ -20,12 +20,12 @@ an interactive (prompted) mode and a simple interactive debugger.
 The options are as follows:
 
     -c <compat>
-	    Sets compatibility flags in the interpreter which affect
+	    Sets default interpreter compatibility flags which affect
 	    how subsequent programs on the command line are run.
 
 	    The argument to this option must be a whitespace-separated
 	    sequence of identifiers from the list below, each optionally 
-	    prefixed with 'no'. If the string begins with the character '='
+	    prefixed with 'no_'. If the string begins with the character '='
 	    then the compatibility flag is initialised to zero, otherwise
 	    the arguments are bitwise-or'ed into the compatibility flag field.
 
@@ -42,6 +42,7 @@ The options are as follows:
 		js15        - enable JavaScript 1.5 compatibility
 
 	    The effect of these identifiers are documented in doc/USAGE.html.
+	    This option has no effect if used after -e, -f, -h or -i flags.
 
     -d <debugflags>
 	    Enables debugging in the SEE library. This results in 
@@ -93,7 +94,7 @@ The options are as follows:
 
     -l library
 	    Loads a library module.  This option must come before 
-	    any -e/-f/-h options.  See the section 'Dynamically loaded 
+	    any -e/-f/-h/-i options.  See the section 'Dynamically loaded 
 	    modules' below for details.
 
     -r maxrecurse

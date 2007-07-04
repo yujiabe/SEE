@@ -41,7 +41,7 @@ extern int optind;
 #include "module.h"
 
 /* Prototypes */
-static void debug(struct SEE_interpreter *, int);
+static void debug(int);
 static void trace(struct SEE_interpreter *, struct SEE_throw_location *, 
         struct SEE_context *, enum SEE_trace_event);
 static int run_input(struct SEE_interpreter *, struct SEE_input *, 
@@ -59,8 +59,7 @@ static struct debug *debugger;
  * debugging support (the default).
  */
 static void
-debug(interp, c)
-	struct SEE_interpreter *interp;
+debug(c)
 	int c;			/* promoted char */
 {
 #ifndef NDEBUG
@@ -72,7 +71,7 @@ debug(interp, c)
 
 	switch (c) {
 	case 'E': SEE_Error_debug++; break;
-	case 'T': interp->trace = trace; break;
+	case 'T': SEE_system.default_trace = trace; break;
 	case 'c':
 #if WITH_PARSER_CODEGEN
 	{	extern int SEE_code_debug; SEE_code_debug++; }
@@ -446,11 +445,10 @@ main(argc, argv)
 		break;
 
 	    case 'd':
-		INIT_INTERP_ONCE;
 		if (*optarg == '*')
 		    optarg = "nElpvecr";
 		for (s = optarg; *s; s++)
-		    debug(&interp, *s);
+		    debug(*s);
 		break;
 
 	    case 'e':
