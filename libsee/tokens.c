@@ -171,6 +171,7 @@ static struct token operators1[] = {
 	{ {'>','>','>'}, tURSHIFT },
 	{ {'=','=','='}, tSEQ },
 	{ {'!','=','='}, tSNE },
+	{ {'-','-','>'}, tSGMLCOMMENTEND },
 	{ {0}, 0 }
 }, operators4[] = {
 	{ {'<','!','-','-'}, tSGMLCOMMENT },
@@ -225,6 +226,7 @@ static struct {
 	{ "'if'",		tIF },
 	{ "'>>>='",		tURSHIFTEQ },
 	{ "'<!--'",		tSGMLCOMMENT },
+	{ "'-->'",		tSGMLCOMMENTEND },
 	{ "'>>='",		tRSHIFTEQ },
 	{ "'<<='",		tLSHIFTEQ },
 	{ "'>>>'",		tURSHIFT },

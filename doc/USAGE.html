@@ -2864,7 +2864,12 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 <td>
         This flag makes the lexical analyser stage 
         treat the 4-character sequence
-        '<code class="js">&lt;!--</code>' as if it were the
+        '<code class="js">&lt;!--</code>' 
+	(at any place)
+	and the 3-character sequence
+        '<code class="js">--&gt;</code>' 
+	(when preceded by whitespace only)
+	as if they were the
         '<code class="js">//</code>' comment introducer. 
         This is useful when parsing HTML SCRIPT elements.
 

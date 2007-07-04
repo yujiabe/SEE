@@ -81,4 +81,13 @@ test('String(-Infinity)', "-Infinity")
 /* bug 78 */
 test('void (function(a){switch(a){case 1:case 2:;}}).toString()', undefined);
 
+/* bug 79 */
+delete bar;
+compat('sgmlcom')
+test('1 --> bar', 'exception');
+test(' --> bar', undefined);
+test('1 \n --> bar', 1);
+test(' /* ... */ --> bar', undefined);
+compat('')
+
 finish()

@@ -19,6 +19,7 @@ struct lex {
 	int		   next_lineno;		/* line number of next */
 	struct SEE_string *next_filename;	/* source id for line number */
 	SEE_boolean_t	   next_follows_nl;	/* next was preceeded by NL */
+	SEE_boolean_t	   next_at_bol;		/* input at beginning of line */
 };
 
 void SEE_lex_init(struct lex *lex, struct SEE_input *input); 
@@ -94,6 +95,7 @@ int SEE_lex_number(struct SEE_interpreter *i,
 #define tTRUE		314
 #define tNULL		315
 #define tFALSE		316
-#define tSGMLCOMMENT	317	/* internal: '<!--' (treated like '//') */
+#define tSGMLCOMMENT	317	/* internal: '<!--' */
+#define tSGMLCOMMENTEND	318	/* internal: '-->'  */
 
 #endif /* _SEE_h_lex_ */

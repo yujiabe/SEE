@@ -51,6 +51,7 @@
 #include <see/error.h>
 #include <see/debug.h>
 #include <see/interpreter.h>
+#include <see/system.h>
 #include "tokens.h"
 #include "lex.h"
 #include "stringdefs.h"
@@ -120,7 +121,10 @@ static int is_IdentifierPart(struct lex *lex);
 static SEE_unicode_t HexEscape(struct lex *lex);
 static SEE_unicode_t UnicodeEscape(struct lex *lex);
 static int DivPunctuator(struct lex *lex);
+static int LineTerminator(struct lex *lex);
+static int SkipToEndOfLine(struct lex *lex);
 static int SGMLComment(struct lex *lex);
+static int SGMLCommentEnd(struct lex *lex);
 static int Punctuator(struct lex *lex);
 static int StringLiteral(struct lex *lex);
 static int RegularExpressionLiteral(struct lex *lex, int prev);
@@ -313,24 +317,49 @@ DivPunctuator(lex)
 }
 
 static int
-SGMLComment(lex)
-	struct lex *lex;			/* la <!-- */
+LineTerminator(lex)
+	struct lex *lex;			/* line terminator */
 {
+	SEE_ASSERT(lex->input->interpreter, is_LineTerminator(NEXT));
+	SKIP;
+	lex->next_lineno++;
+	return tLINETERMINATOR;
+}
 
-	/*
-	 * Treat SGML comment introducers the same as '//',
-	 * i.e. to ignore everything up to the end of the line.
-	 * The closing '-->' is assumed to be protected by an
-	 * actual '//' comment leader. (Refer to Chapter 9 of
-	 * 'Client-Side JavaScript Guide', by Netscape.
-	 */
+/* Skips all characters up to and including a line terminator (or EOF) */
+static int
+SkipToEndOfLine(lex)
+	struct lex *lex;
+{
 	while (!ATEOF && !is_LineTerminator(NEXT))
 		SKIP;
 	if (ATEOF)
 		return tEND;
-	lex->next_lineno++;
-	SKIP; /* line terminator */
-	return tLINETERMINATOR;
+	return LineTerminator(lex);
+}
+
+static int
+SGMLComment(lex)
+	struct lex *lex;			/* la <!-- */
+{
+	/*
+	 * Treat SGML comment introducers the same as '//',
+	 * i.e. to ignore everything up to the end of the line.
+	 */
+	return SkipToEndOfLine(lex);
+}
+
+static int
+SGMLCommentEnd(lex)
+	struct lex *lex;			/* la (^) --> */
+{
+	/*
+	 * The closing '-->' is supposed to be protected by an
+	 * actual '//' comment leader. (Refer to Chapter 9 of
+	 * 'Client-Side JavaScript Guide', by Netscape) but
+	 * we treat it as '//' for compatibility.
+	 */
+	return SkipToEndOfLine(lex);
 }
 
 static int
@@ -351,16 +380,22 @@ Punctuator(lex)
 	for (; len > 0; len--)
 		for (t = SEE_tok_operators[len]; t->token; t++) {
 			for (j = 0; j < len; j++)
-				if (t->identifier[j] != op[j])
-					goto out;
+			    if (t->identifier[j] != op[j])
+				goto out;
 			if (t->token == tSGMLCOMMENT) {
-				if (interp->compatibility & SEE_COMPAT_SGMLCOM)
-					return SGMLComment(lex);
-				else
-					goto out;
+			    if (interp->compatibility & SEE_COMPAT_SGMLCOM)
+				return SGMLComment(lex);
+			    else
+				goto out;
+			}
+			if (t->token == tSGMLCOMMENTEND && lex->next_at_bol) {
+			    if (interp->compatibility & SEE_COMPAT_SGMLCOM)
+				return SGMLCommentEnd(lex);
+			    else
+				goto out;
 			}
 			for (j = 0; j < len; j++)
-				SKIP;
+			    SKIP;
 			return t->token;
 	   out:
 			/* continue */ ;
@@ -633,23 +668,18 @@ CommentDiv(lex)
 				: tCOMMENT;
 			}
 			if (is_LineTerminator(NEXT)) {
-				lex->next_lineno++;
-				contains_newline = 1;
+			    (void)LineTerminator(lex);
+			    contains_newline = 1;
+			    starprev = 0;
+			} else {
+			    starprev = (NEXT == '*');
+			    SKIP;
 			}
-			starprev = (NEXT == '*');
-			SKIP;
 		}
 		SYNTAX_ERROR(STR(eof_in_c_comment));
 	}
-	if (lookahead_len >= 2 && lookahead[0] == '/' && lookahead[1] == '/') {
-		while (!ATEOF && !is_LineTerminator(NEXT))
-			SKIP;
-		if (ATEOF)
-			return tEND;
-		lex->next_lineno++;
-		SKIP; /* line terminator */
-		return tLINETERMINATOR;
-	}
+	if (lookahead_len >= 2 && lookahead[0] == '/' && lookahead[1] == '/')
+		return SkipToEndOfLine(lex);
 
 	/*
 	 * NB: This assumes regular expressions not wanted,
@@ -743,15 +773,11 @@ lex0(lex)
     again:
 
 	while (!ATEOF && is_WhiteSpace(NEXT) && !is_LineTerminator(NEXT)) 
-		SKIP;
+		SKIP;			/* skip non-newline whitespace */
 	if (ATEOF)
 		return tEND;
-
-	if (is_LineTerminator(NEXT)) {
-		lex->next_lineno++;
-		SKIP;
-		return tLINETERMINATOR;
-	}
+	if (is_LineTerminator(NEXT))
+		return LineTerminator(lex);
 
 	switch (NEXT) {
 	case '/':
@@ -799,6 +825,7 @@ SEE_lex_init(lex, inp)
 	SEE_SET_UNDEFINED(&lex->value);
 	lex->next_lineno = inp->first_lineno;
 	lex->next_filename = SEE_intern(inp->interpreter, inp->filename);
+	lex->next_at_bol = 1;
 	(void)SEE_lex_next(lex);
 }
 
@@ -835,14 +862,14 @@ SEE_lex_next(lex)
 	lex->next_follows_nl = 0;
 	next = lex->next;
 
-  again:
-
 	token = lex0(lex);
-
-	if (token == tLINETERMINATOR) {
+	while (token == tLINETERMINATOR) {
 		lex->next_follows_nl = 1;
-		goto again;
+		lex->next_at_bol = 1;
+		token = lex0(lex);
 	}
+	lex->next_at_bol = 0;
+
 	if (token == tEND)
 		lex->next_follows_nl = 1;
 	lex->next = token;

@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  bug 79: '-->' at start of line treated like '//' in SGMLCOM compat mode
   bug 78: fix crash when pretty-printing a switch with adjacent case clauses
   Changed: see-shell has -i option for interactive use, instead of -f '-'
   Improved: see-shell has -e option for executing javascript strings
