@@ -436,12 +436,23 @@ main(argc, argv)
     }							\
   } while (0)
 
+	/* Helpful macro to check that flags come in the right order */
+#define INTERP_NOT_INITTED do {				\
+    if (interp_initialised) {				\
+	fprintf(stderr, "option -%c must come before -e/-f/-h/-i\n", ch);\
+	error = 1;					\
+	break;						\
+    }							\
+  } while (0)
+
 	while (!error && (ch = getopt(argc, argv, "c:d:e:f:gh:il:r:V")) != -1)
 	    switch (ch) {
 	    case 'c':
 		if (compat_tovalue(optarg, &SEE_system.default_compat_flags)
 			== -1)
 		    error = 1;
+		if (interp_initialised)
+		    interp.compatibility = SEE_system.default_compat_flags;
 		break;
 
 	    case 'd':
@@ -449,6 +460,8 @@ main(argc, argv)
 		    optarg = "nElpvecr";
 		for (s = optarg; *s; s++)
 		    debug(*s);
+		if (interp_initialised)
+		    interp.trace = SEE_system.default_trace;
 		break;
 
 	    case 'e':
@@ -487,20 +500,17 @@ main(argc, argv)
 		break;
 
 	    case 'l':
-		if (interp_initialised) {
-			fprintf(stderr, "-l options must come first\n");
-			error = 1;
-			break;
-		}
+		INTERP_NOT_INITTED;
 	    	if (!load_module(optarg))
 			exit(1);
 		break;
 
 	    case 'r':
-		INIT_INTERP_ONCE;
-		interp.recursion_limit = atoi(optarg);
+		SEE_system.default_recursion_limit = atoi(optarg);
 		printf("(Set recursion limit to %d)\n", 
-			interp.recursion_limit);
+			SEE_system.default_recursion_limit);
+		if (interp_initialised)
+		    interp.recursion_limit = SEE_system.default_recursion_limit;
 		break;
 
 	    case 'V':

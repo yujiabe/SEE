@@ -20,7 +20,7 @@ an interactive (prompted) mode and a simple interactive debugger.
 The options are as follows:
 
     -c <compat>
-	    Sets default interpreter compatibility flags which affect
+	    Sets the interpreter compatibility flags which affect
 	    how subsequent programs on the command line are run.
 
 	    The argument to this option must be a whitespace-separated
@@ -42,7 +42,6 @@ The options are as follows:
 		js15        - enable JavaScript 1.5 compatibility
 
 	    The effect of these identifiers are documented in doc/USAGE.html.
-	    This option has no effect if used after -e, -f, -h or -i flags.
 
     -d <debugflags>
 	    Enables debugging in the SEE library. This results in 
