@@ -930,9 +930,25 @@ SEE_Global_eval(interp, inp, res)
 	struct SEE_input *inp;
 	struct SEE_value *res;
 {
+	SEE_eval(interp, inp, 
+		interp->Global,		    /* thisobj */
+		interp->Global,		    /* variable */
+		interp->Global_scope,	    /* scope */
+		res);
+}
+
+void
+SEE_eval(interp, inp, thisobj, variable, scope, res)
+	struct SEE_interpreter *interp;
+	struct SEE_input *inp;
+	struct SEE_object *thisobj;
+	struct SEE_object *variable;
+	struct SEE_scope *scope;
+	struct SEE_value *res;
+{
 	struct function *f;
 	struct SEE_context context;
-	struct SEE_value cres, *v;
+	struct SEE_value cres;
 	struct SEE_traceback *old_traceback;
 
 	old_traceback = interp->traceback;
@@ -942,10 +958,10 @@ SEE_Global_eval(interp, inp, res)
 
 	context.interpreter = interp;
 	context.activation = SEE_Object_new(interp);
-	context.scope = interp->Global_scope;
-	context.variable = interp->Global;
+	context.scope = scope;
+	context.variable = variable;
 	context.varattr = SEE_ATTR_DONTDELETE;
-	context.thisobj = interp->Global;
+	context.thisobj = thisobj;
 
 	SEE_eval_functionbody(f, &context, res ? res : &cres);
 

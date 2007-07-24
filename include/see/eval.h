@@ -9,9 +9,20 @@ struct SEE_value;
 struct SEE_interpreter;
 struct SEE_input;
 
-/* Parses and evaluates the program text from input */
+/* Execution scope chain */
+struct SEE_scope {
+	struct SEE_scope *next;
+	struct SEE_object *obj;
+};
+
+/* Parses and evaluates the program text from input in the Global scope */
 void SEE_Global_eval(struct SEE_interpreter *i, struct SEE_input *input, 
 	struct SEE_value *res);
+
+/* Parses and evaluates the program text from input */
+void SEE_eval(struct SEE_interpreter *i, struct SEE_input *input,
+	struct SEE_object *thisobj, struct SEE_object *variable, 
+	struct SEE_scope *scope, struct SEE_value *res);
 
 /* Constructs a new function object from inputs */
 struct SEE_object *SEE_Function_new(struct SEE_interpreter *i, 

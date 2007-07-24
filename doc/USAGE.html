@@ -789,12 +789,42 @@ safely given as <code>NULL</code>.
                 struct SEE_value *res);</pre>
 
 <p>
-The program text is first parsed and then immediately executed with this
-function. If the evaluated text contains function definitions, the
-function-objects created inside the interpreter will contain a
-'precompiled' copy of the function text. This means it is safe
+The input program text is first parsed and then immediately executed,
+storing the output result.
+If the executed program text contains function definitions, the
+function objects created will contain
+a compiled equivalent. This means it is safe
 to destroy the input immediately after it has been passed to 
 <code>SEE_Global_eval()</code>.
+</p>
+
+<p>
+A more versatile execution function is <code>SEE_eval()</code>.
+
+<pre>void <dfn id="SEE_eval">SEE_eval</dfn>(struct SEE_interpreter *interp, 
+                struct SEE_input *input, struct SEE_object *thisobj,
+                struct SEE_object *variable, struct SEE_scope *scope,
+                struct SEE_value *res);</pre>
+
+<p>
+The program text executed by <code>SEE_eval()</code> is run in an
+execution context with the specified <code class="js">this</code> 
+object, variables object (where <code class="js">var</code> statements
+create properties) and scope chain.
+This is useful for host applications that need fine control over
+the evaluation context of user scripts.
+</p>
+
+<p>
+<code>SEE_Global_eval()</code> calls 
+<code>SEE_eval()</code> with the [[Global]]
+object as both <code class="js">this</code> and the variables object, and 
+with a scope chain consisting of just the [[Global]] object.
+</p>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_eval()</code> function appeared in API 2.1
 </p>
 
 <h3 id="runxmp">4.1 Example</h3>
@@ -2614,6 +2644,16 @@ The returned function object may be called with the
 <code>SEE_OBJECT_CALL()</code> macro.
 </p>
 
+<p class="note">
+&#9888; Note:
+Although the example above uses <code>SEE_Function_new()</code>, if you 
+really are using SEE to build a web browser, this is probably
+not the best way to approach it. For implementing event handlers such 
+as "onclick", you should instead look at using <code>SEE_eval()</code>
+on a string-valued attribute, and/or <code>SEE_OBJECT_CALL()</code> for
+when the attribute is exposed through a DOM.
+</p>
+
 <h3 id="error">6.7 Errors and Error objects</h3>
 
 <p>
@@ -3555,6 +3595,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_error_throw">SEE_error_throw</a><br>
 <a href="#SEE_error_throw_string">SEE_error_throw_string</a><br>
 <a href="#SEE_error_throw_sys">SEE_error_throw_sys</a><br>
+<a href="#SEE_eval">SEE_eval</a> (2.1)<br>
 <a href="#SEE_Function_new">SEE_Function_new</a><br>
 <a href="#SEE_gcollect">SEE_gcollect</a> (2.0)<br>
 <a href="#SEE_Global_eval">SEE_Global_eval</a><br>
@@ -3567,10 +3608,10 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_INPUT_CLOSE">SEE_INPUT_CLOSE</a><br>
 <a href="#SEE_input_file">SEE_input_file</a><br>
 <a href="#SEE_INPUT_NEXT">SEE_INPUT_NEXT</a><br>
-<td>
 <a href="#SEE_input_string">SEE_input_string</a><br>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
+<td>
 <a href="#SEE_intern_ascii">SEE_intern_ascii</a> (2.0)<br>
 <a href="#SEE_intern_global">SEE_intern_global</a> (2.0*)<br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
@@ -3593,7 +3634,6 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_NEW_ARRAY">SEE_NEW_ARRAY</a><br>
 <a href="#SEE_NEW_FINALIZE">SEE_NEW_FINALIZE</a> (2.0)<br>
 <a href="#SEE_NEW_STRING_ARRAY">SEE_NEW_STRING_ARRAY</a><br>
-<td>
 <a href="#SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</a><br>
 <a href="#SEE_NUMBER_ISNAN">SEE_NUMBER_ISNAN</a><br>
 <a href="#SEE_NUMBER_ISNINF">SEE_NUMBER_ISNINF</a><br>
@@ -3601,6 +3641,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
+<td>
 <a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
 <a href="#SEE_OBJECT_CANPUTA">SEE_OBJECT_CANPUTA</a> (2.0)<br>
 <a href="#SEE_OBJECT_CONSTRUCT">SEE_OBJECT_CONSTRUCT</a><br>
@@ -3618,7 +3659,6 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_OBJECT_HAS_CONSTRUCT">SEE_OBJECT_HAS_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_HAS_ENUMERATOR">SEE_OBJECT_HAS_ENUMERATOR</a><br>
 <a href="#SEE_OBJECT_HAS_GET_SEC_DOMAIN">SEE_OBJECT_HAS_GET_SEC_DOMAIN</a> (2.0)<br>
-<td>
 <a href="#SEE_OBJECT_HAS_HASINSTANCE">SEE_OBJECT_HAS_HASINSTANCE</a><br>
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
@@ -3631,6 +3671,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
+<td>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
 <a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
@@ -3644,7 +3685,6 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
 <a href="#SEE_string_dup">SEE_string_dup</a><br>
-<td>
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
@@ -3661,6 +3701,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ToObject">SEE_ToObject</a><br>
 <a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <a href="#SEE_ToString">SEE_ToString</a><br>
+<td>
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
 <a href="#SEE_TRY">SEE_TRY</a><br>

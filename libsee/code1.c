@@ -46,6 +46,7 @@
 #include <see/context.h>
 #include <see/system.h>
 #include <see/intern.h>
+#include <see/eval.h>
 
 #include "dprint.h"
 #include "code.h"

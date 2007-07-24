@@ -37,6 +37,7 @@
 #include <see/native.h>
 #include <see/debug.h>
 #include <see/string.h>
+#include <see/eval.h>
 
 #include "scope.h"
 #include "dprint.h"
