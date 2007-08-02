@@ -75,3 +75,6 @@ stringdefs.h: string.defs string.pl
 #
 
 libsee_version_info=	1:0:0
+
+SUBDIRS=		. test
+

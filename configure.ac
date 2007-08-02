@@ -11,6 +11,7 @@ AC_CONFIG_FILES([Makefile
 		 include/Makefile
 		 include/see/Makefile
 		 libsee/Makefile 
+		 libsee/test/Makefile 
 		 libsee/libsee-config
 		 doc/Makefile 
 		 shell/Makefile
