@@ -330,20 +330,6 @@ SEE_parse_args(interp, argc, argv, fmt)
 	const char *fmt;
 {
 	va_list ap;
-
-	va_start(ap, fmt);
-	SEE_parse_args_va(interp, argc, argv, fmt, ap);
-	va_end(ap);
-}
-
-void
-SEE_parse_args_va(interp, argc, argv, fmt, ap)
-	struct SEE_interpreter *interp;
-	int argc;
-	struct SEE_value **argv;
-	const char *fmt;
-	va_list ap;
-{
 	int i, init = 1, isundef;
 	const char *f;
 	struct SEE_value val, undef, *arg;
@@ -359,6 +345,7 @@ SEE_parse_args_va(interp, argc, argv, fmt, ap)
 
 	SEE_SET_UNDEFINED(&undef);
 
+	va_start(ap, fmt);
 	for (i = 0, f = fmt; *f; f++) {
 	    if (!init && i >= argc)
 	    	break;
@@ -492,6 +479,9 @@ SEE_parse_args_va(interp, argc, argv, fmt, ap)
 	    	SEE_ABORT(interp, "SEE_parse_args: bad format");
 	    }
 	}
+
+
+	va_end(ap);
 }
 
 void
@@ -502,20 +492,6 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 	const char *fmt;
 {
 	va_list ap;
-
-	va_start(ap, fmt);
-	SEE_call_args(interp, func, thisobj, ret, fmt, ap);
-	va_end(ap);
-}
-
-void
-SEE_call_args_va(interp, func, thisobj, ret, fmt, ap)
-	struct SEE_interpreter *interp;
-	struct SEE_object *func, *thisobj;
-        struct SEE_value *ret;
-	const char *fmt;
-	va_list ap;
-{
 	int i, argc;
 	const char *f;
 	struct SEE_value *arg, **argv;
@@ -563,6 +539,7 @@ SEE_call_args_va(interp, func, thisobj, ret, fmt, ap)
 	for (i = 0; i < argc; i++)
 	    argv[i] = &arg[i];
 
+	va_start(ap, fmt);
 	for (i = 0, f = fmt; *f; f++)
 	    switch (*f) {
 	    case ' ':
@@ -670,6 +647,7 @@ SEE_call_args_va(interp, func, thisobj, ret, fmt, ap)
 		i++;
 		break;
 	    }
+	va_end(ap);
 	SEE_ASSERT(interp, i == argc);
 
 	SEE_OBJECT_CALL(interp, func, thisobj, argc, argv, ret);
