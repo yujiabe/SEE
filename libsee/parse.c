@@ -761,6 +761,7 @@ static void eval(struct SEE_context *context, struct SEE_object *thisobj,
 
 #if WITH_PARSER_PRINT
 static void Literal_print(struct node *na, struct printer *printer);
+static void NumericLiteral_print(struct Literal_node *, struct printer *);
 static void StringLiteral_print(struct node *na, struct printer *printer);
 static void RegularExpressionLiteral_print(struct node *na, 
         struct printer *printer);
@@ -2231,6 +2232,9 @@ Literal_print(na, printer)
 	case SEE_NULL:
 		PRINT_STRING(STR(null));
 		break;
+	case SEE_NUMBER:
+		NumericLiteral_print(n, printer);
+		break;
 	default:
 		PRINT_CHAR('?');
 	}
@@ -2288,6 +2292,22 @@ Literal_parse(parser)
  *	NumericLiteral:
  *		tNUMBER				-- 7.8.3
  */
+
+#if WITH_PARSER_PRINT
+static void
+NumericLiteral_print(n, printer)
+	struct Literal_node *n;
+	struct printer *printer;
+{
+	struct SEE_value numstr;
+
+	SEE_ASSERT(printer->interpreter, 
+	    SEE_VALUE_GET_TYPE(&n->value) == SEE_NUMBER);
+	SEE_ToString(printer->interpreter, &n->value, &numstr);
+	PRINT_STRING(numstr.u.string);
+}
+#endif
+
 static struct node *
 NumericLiteral_parse(parser)
 	struct parser *parser;
