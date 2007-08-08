@@ -330,7 +330,21 @@ SEE_parse_args(interp, argc, argv, fmt)
 	const char *fmt;
 {
 	va_list ap;
-	int i, init = 1, isundef;
+
+	va_start(ap, fmt);
+	SEE_parse_args_va(interp, argc, argv, fmt, ap);
+	va_end(ap);
+}
+
+void
+SEE_parse_args_va(interp, argc, argv, fmt, ap)
+	struct SEE_interpreter *interp;
+	int argc;
+	struct SEE_value **argv;
+	const char *fmt;
+	va_list ap;
+{
+	int argi, init = 1, isundef, ignore;
 	const char *f;
 	struct SEE_value val, undef, *arg;
 	struct SEE_string **stringp;
@@ -345,133 +359,129 @@ SEE_parse_args(interp, argc, argv, fmt)
 
 	SEE_SET_UNDEFINED(&undef);
 
-	va_start(ap, fmt);
-	for (i = 0, f = fmt; *f; f++) {
-	    if (!init && i >= argc)
+	for (argi = 0, f = fmt; *f; f++) {
+
+	    /* Stop if we passed the '|' barrier and have exhausted args */
+	    if (!init && argi >= argc)
 	    	break;
-	    arg = i < argc ? argv[i] : &undef;
-	    isundef = SEE_VALUE_GET_TYPE(arg) == SEE_UNDEFINED;
+
+	    /* If we have exhausted args, then use the undefined value */
+	    if (argi < argc) {
+		arg = argv[argi];
+		isundef = (SEE_VALUE_GET_TYPE(arg) == SEE_UNDEFINED);
+	    } else {
+		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&undef) == SEE_UNDEFINED);
+		arg = &undef;
+		isundef = 1;
+	    }
+
+	    /* If we passed the barrier and the value is undefined, then
+	     * we make no change to the storage passed in */
+	    ignore = (isundef && !init);
+
+	    /* Process argv[argi] depending on the current format */
 	    switch (*f) {
 	    case ' ':
 		break;
 	    case 's':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToString(interp, arg, &val);
-		stringp = va_arg(ap, struct SEE_string **);
-		*stringp = val.u.string;
+		stringp = va_arg(ap, struct SEE_string **); argi++;
+	        if (!ignore) {
+		    SEE_ToString(interp, arg, &val);
+		    *stringp = val.u.string;
+		}
 		break;
 	    case 'A':
 	    	if (isundef) {
-		    i++;
-		    if (!init) continue;
-		    charpp = va_arg(ap, char **);
-		    *charpp = NULL;
+		    charpp = va_arg(ap, char **); argi++;
+		    if (!ignore)
+			*charpp = NULL;
 		    break;
 		}
 		/* else fallthrough */
 	    case 'a':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToString(interp, arg, &val); 
-		charpp = va_arg(ap, char **);
-		*charpp = to_ascii_string(interp, val.u.string);
+		charpp = va_arg(ap, char **); argi++;
+	        if (!ignore) {
+		    SEE_ToString(interp, arg, &val); 
+		    *charpp = to_ascii_string(interp, val.u.string);
+		}
 		break;
 	    case 'Z':
 	    	if (isundef) {
-		    i++;
-		    if (!init) continue;
-		    charpp = va_arg(ap, char **);
-		    *charpp = NULL;
+		    charpp = va_arg(ap, char **); argi++;
+		    if (!ignore)
+			*charpp = NULL;
 		    break;
 		}
 		/* else fallthrough */
 	    case 'z':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToString(interp, arg, &val);
-		charpp = va_arg(ap, char **);
-		*charpp = to_utf8_string(interp, val.u.string);
+		charpp = va_arg(ap, char **); argi++;
+	        if (!ignore) {
+		    SEE_ToString(interp, arg, &val);
+		    *charpp = to_utf8_string(interp, val.u.string);
+		}
 		break;
 	    case 'b':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToBoolean(interp, arg, &val);
-		intp = va_arg(ap, int *);
-		*intp = val.u.boolean;
+		intp = va_arg(ap, int *); argi++;
+	        if (!ignore) {
+		    SEE_ToBoolean(interp, arg, &val);
+		    *intp = val.u.boolean ? 1 : 0;
+		}
 		break;
 	    case 'i':
-		i++;
-	        if (isundef && !init)
-		    break;
-		int32p = va_arg(ap, SEE_int32_t *);
-	    	*int32p = SEE_ToInt32(interp, arg);
+		int32p = va_arg(ap, SEE_int32_t *); argi++;
+	        if (!ignore)
+		    *int32p = SEE_ToInt32(interp, arg);
 		break;
 	    case 'u':
-		i++;
-	        if (isundef && !init)
-		    break;
-		uint32p = va_arg(ap, SEE_uint32_t *);
-	    	*uint32p = SEE_ToUint32(interp, arg);
+		uint32p = va_arg(ap, SEE_uint32_t *); argi++;
+	        if (!ignore)
+		    *uint32p = SEE_ToUint32(interp, arg);
 		break;
 	    case 'h':
-		i++;
-	        if (isundef && !init)
-		    break;
-		uint16p = va_arg(ap, SEE_uint16_t *);
-	    	*uint16p = SEE_ToUint16(interp, arg);
+		uint16p = va_arg(ap, SEE_uint16_t *); argi++;
+	        if (!ignore)
+		    *uint16p = SEE_ToUint16(interp, arg);
 		break;
 	    case 'n':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToNumber(interp, arg, &val);
-		numberp = va_arg(ap, SEE_number_t *);
-		*numberp = val.u.number;
+		numberp = va_arg(ap, SEE_number_t *); argi++;
+	        if (!ignore) {
+		    SEE_ToNumber(interp, arg, &val);
+		    *numberp = val.u.number;
+		}
 		break;
 	    case 'O':
 	    	if (isundef || SEE_VALUE_GET_TYPE(arg) == SEE_NULL) {
-		    i++;
-		    if (!init && isundef) continue;
-		    objectpp = va_arg(ap, struct SEE_object **);
-		    *objectpp = NULL;
+		    objectpp = va_arg(ap, struct SEE_object **); argi++;
+		    if (!ignore)
+			*objectpp = NULL;
 		    break;
 		}
 		/* else fallthrough */ 
 	    case 'o':
-		i++;
-	        if (isundef && !init)
-		    break;
-	    	SEE_ToObject(interp, arg, &val); i++;
-		objectpp = va_arg(ap, struct SEE_object **);
-		*objectpp = val.u.object;
+		objectpp = va_arg(ap, struct SEE_object **); argi++;
+	        if (!ignore) {
+		    SEE_ToObject(interp, arg, &val);
+		    *objectpp = val.u.object;
+		}
 		break;
 	    case 'p':
-		i++;
-	        if (isundef && !init)
-		    break;
-		valuep = va_arg(ap, struct SEE_value *);
-	    	SEE_ToPrimitive(interp, arg, NULL, valuep);
+		valuep = va_arg(ap, struct SEE_value *); argi++;
+	        if (!ignore)
+		    SEE_ToPrimitive(interp, arg, NULL, valuep);
 		break;
 	    case 'v':
-		i++;
-	        if (isundef && !init)
-		    break;
-		valuep = va_arg(ap, struct SEE_value *);
-		SEE_VALUE_COPY(valuep, arg);
+		valuep = va_arg(ap, struct SEE_value *); argi++;
+	        if (!ignore)
+		    SEE_VALUE_COPY(valuep, arg);
 		break;
 	    case '|':
 	    	init = 0;
 		break;
 	    case 'x':
-	    	i++;
+	    	argi++;
 		break;
 	    case '.':
-	    	if (i < argc)
+	    	if (argi < argc)
 			SEE_error_throw_string(interp, interp->TypeError,
 				STR(too_many_args));
 		break;
@@ -479,9 +489,6 @@ SEE_parse_args(interp, argc, argv, fmt)
 	    	SEE_ABORT(interp, "SEE_parse_args: bad format");
 	    }
 	}
-
-
-	va_end(ap);
 }
 
 void
@@ -492,6 +499,20 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 	const char *fmt;
 {
 	va_list ap;
+
+	va_start(ap, fmt);
+	SEE_call_args_va(interp, func, thisobj, ret, fmt, ap);
+	va_end(ap);
+}
+
+void
+SEE_call_args_va(interp, func, thisobj, ret, fmt, ap)
+	struct SEE_interpreter *interp;
+	struct SEE_object *func, *thisobj;
+        struct SEE_value *ret;
+	const char *fmt;
+	va_list ap;
+{
 	int i, argc;
 	const char *f;
 	struct SEE_value *arg, **argv;
@@ -513,23 +534,25 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 	    switch (*f) {
 	    case ' ':
 	    	break;
-	    case 's':
-	    case 'A':
 	    case 'a':
-	    case 'Z':
-	    case 'z':
+	    case 'A':
 	    case 'b':
-	    case 'i':
-	    case 'u':
 	    case 'h':
+	    case 'i':
+	    case 'l':
 	    case 'n':
-	    case 'O':
 	    case 'o':
+	    case 'O':
 	    case 'p':
+	    case 's':
+	    case 'u':
 	    case 'v':
 	    case 'x':
+	    case 'z':
+	    case 'Z':
 	    case '*':
 	    	argc++;
+		break;
 	    default:
 	    	SEE_ABORT(interp, "SEE_call_args: bad format");
 	    }
@@ -539,7 +562,6 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 	for (i = 0; i < argc; i++)
 	    argv[i] = &arg[i];
 
-	va_start(ap, fmt);
 	for (i = 0, f = fmt; *f; f++)
 	    switch (*f) {
 	    case ' ':
@@ -613,6 +635,7 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 	    case 'l':
 		SEE_SET_NULL(argv[i]);
 		i++;
+		break;
 	    case 'n':
 	    	numberv = va_arg(ap, SEE_number_t);
 		SEE_SET_NUMBER(argv[i], numberv);
@@ -647,7 +670,6 @@ SEE_call_args(interp, func, thisobj, ret, fmt)
 		i++;
 		break;
 	    }
-	va_end(ap);
 	SEE_ASSERT(interp, i == argc);
 
 	SEE_OBJECT_CALL(interp, func, thisobj, argc, argv, ret);

@@ -4,6 +4,7 @@
 #ifndef _SEE_h_cfunction_
 #define _SEE_h_cfunction_
 
+#include <stdarg.h>
 #include <see/object.h>
 
 struct SEE_interpeter;
@@ -31,5 +32,11 @@ void SEE_parse_args(struct SEE_interpreter *i, int argc,
 void SEE_call_args(struct SEE_interpreter *i, struct SEE_object *func,
 	struct SEE_object *thisobj, struct SEE_value *ret, 
 	const char *fmt, ...);
+
+void SEE_parse_args_va(struct SEE_interpreter *i, int argc, 
+	struct SEE_value **argv, const char *fmt, va_list va);
+void SEE_call_args_va(struct SEE_interpreter *i, struct SEE_object *func,
+	struct SEE_object *thisobj, struct SEE_value *ret, 
+	const char *fmt, va_list va);
 
 #endif /* _SEE_h_cfunction_ */

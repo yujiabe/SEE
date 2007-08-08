@@ -1,6 +1,9 @@
 $Id$
 
 2.1 [unreleased]
+  bug 83: Function.toString() wrongly displayed numeric literals as '?'
+  Feature: SEE_call_args() counterpart to SEE_parse_args()
+  Bug 81: varargs SEE_call_args_va() and SEE_parse_args_va()
   bug 73: new function SEE_eval() provides more control for host developers
   bug 79: '-->' at start of line treated like '//' in SGMLCOM compat mode
   bug 78: fix crash when pretty-printing a switch with adjacent case clauses
@@ -28,7 +31,6 @@ $Id$
   Bug 52: attach tracebacks to try contexts when exceptions are thrown
   Bug 49: detect alloca on FreeBSD; correct readline; fix daylight savings
   Bug 50: use finite() instead of isinf() for libm portability
-  Feature: SEE_call_args() counterpart to SEE_parse_args()
   Improved: thisobj field of constructors deprecated (it was never used)
   Experimental: code generator
 

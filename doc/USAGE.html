@@ -2382,7 +2382,15 @@ It can throw a <code class="js">TypeError</code> exception if a
 conversion error occurs.
 
 <pre>void <dfn id="SEE_parse_args">SEE_parse_args</dfn>(struct SEE_interpreter *interp,
-        int argc, struct SEE_value **argv, const char *fmt, ...);</pre>
+        int argc, struct SEE_value **argv, const char *fmt, ...);
+void <dfn id="SEE_parse_args_va">SEE_parse_args_va</dfn>(struct SEE_interpreter *interp,
+        int argc, struct SEE_value **argv, const char *fmt, va_list ap);</pre>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_parse_args()</code> function first appeared in API 2.0,
+and <code>SEE_parse_args_va()</code> in 2.1.
+</p>
 
 <table>
 <thead>
@@ -2404,7 +2412,8 @@ conversion error occurs.
     <td><code>NULL</code></td>
 <tr><td><code>b</code></td>
     <td><code>int *</code>
-    <td><code><a href="#SEE_ToBoolean">SEE_ToBoolean</a>()</code></td>
+    <td><code><a href="#SEE_ToBoolean">SEE_ToBoolean</a>()</code>,
+	then to <code>0</code> or <code>1</code></td>
     <td><code>0</code></td>
 <tr><td><code>h</code></td>
     <td><code>SEE_uint16_t *</code>
@@ -2508,11 +2517,15 @@ SEE function objects.
 
 <pre>void <dfn id="SEE_call_args">SEE_call_args</dfn>(struct SEE_interpreter *interp,
         struct SEE_object *func, struct SEE_object *thisobj, 
-	struct SEE_value *ret, const char *format, ...);</pre>
+	struct SEE_value *ret, const char *format, ...);
+void <dfn id="SEE_call_args_va">SEE_call_args_va</dfn>(struct SEE_interpreter *interp,
+        struct SEE_object *func, struct SEE_object *thisobj, 
+	struct SEE_value *ret, const char *format, va_list ap);</pre>
 
 <p class="note">
 &#9888; Note:
-The <code>SEE_call_args()</code> function first appeared in API 2.1.
+The <code>SEE_call_args()</code> 
+and <code>SEE_call_args_va()</code> functions first appeared in API 2.1.
 
 <p>
 The <code>SEE_call_args()</code> function
@@ -3587,6 +3600,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_CFUNCTION_PUTA">SEE_CFUNCTION_PUTA</a> (2.0)<br>
 <a href="#SEE_CAUGHT">SEE_CAUGHT</a><br>
 <a href="#SEE_call_args">SEE_call_args</a> (2.1)<br>
+<a href="#SEE_call_args_va">SEE_call_args_va</a> (2.1)<br>
 <a href="#SEE_cfunction_make">SEE_cfunction_make</a><br>
 <a href="#SEE_context_eval">SEE_context_eval</a><br>
 <a href="#SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</a><br>
@@ -3664,6 +3678,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
+<a href="#SEE_parse_args_va">SEE_parse_args_va</a> (2.1)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
 <a href="#SEE_PrintContextTraceback">SEE_PrintContextTraceback</a> (2.1)<br>
