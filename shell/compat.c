@@ -22,6 +22,8 @@ static struct { const char *name; int mask, flag; } names[] = {
 	{ "js13",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS13 },
 	{ "js14",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS14 },
 	{ "js15",	SEE_COMPAT_JS_MASK,	SEE_COMPAT_JS15 },
+	{ "errata",	SEE_COMPAT_ERRATA,	SEE_COMPAT_ERRATA },
+	{ NULL }
 };
 
 /*
@@ -51,7 +53,7 @@ compat_tovalue(name, compatibility)
 		name += 3;
 		no = 1;
 	}
-	for (i = 0; i < sizeof names / sizeof names[0]; i++) 
+	for (i = 0; names[i].name; i++) 
 		if (strcmp(name, names[i].name) == 0) {
 			bit = names[i].flag;
 			mask = names[i].mask;
@@ -118,7 +120,7 @@ compat_tostring(interp, compatibility)
 	int i;
 
         SEE_string_addch(s, '=');
-	for (i = 0; i < sizeof names / sizeof names[0]; i++)  {
+	for (i = 0; names[i].name; i++)  {
 	    if ((compatibility & names[i].mask) == names[i].flag) {
 		    SEE_string_addch(s, ' ');
 		    SEE_string_append_ascii(s, names[i].name);

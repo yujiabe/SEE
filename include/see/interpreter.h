@@ -89,6 +89,7 @@ struct SEE_interpreter {
 #define SEE_COMPAT_JS13           (3<< 5) /* JavaScript1.3 */
 #define SEE_COMPAT_JS14           (4<< 5) /* JavaScript1.4 */
 #define SEE_COMPAT_JS15           (5<< 5) /* JavaScript1.5 */
+#define SEE_COMPAT_ERRATA	(1<< 8)	/* ECMA-262 3rd ed errata */
 
 /* This macro is used to see if an ECMA deviation is required */
 #define SEE_COMPAT_JS(i,cmp,jsnn) \

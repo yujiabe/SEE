@@ -90,4 +90,10 @@ test('1 \n --> bar', 1);
 test(' /* ... */ --> bar', undefined);
 compat('')
 
+/* bug 84 */
+test('("foo".match(/x/g)).length', 0);
+compat('errata')
+test('"foo".match(/x/g)', null)
+compat('')
+
 finish()
