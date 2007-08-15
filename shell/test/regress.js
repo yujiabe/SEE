@@ -98,6 +98,8 @@ test('(function(){}) instanceof Function', true);
 test('(function(){}) instanceof Object', true);
 test('isNaN instanceof Function', true);
 test('({}) instanceof Object', true);
+test('Function.__proto__ === Function.prototype', true);    /* assumption */
+test('Function.__proto__ instanceof Function', false);
 compat('');
 
 /* bug 84 */
