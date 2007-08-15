@@ -2294,7 +2294,7 @@ math_sqrt(interp, self, thisobj, argc, argv, res)
         struct SEE_value v;
 
         if (argc == 0)
-                SEE_SET_UNDEFINED(res);
+                SEE_SET_NUMBER(res, SEE_NaN);
         else {
                 SEE_ToNumber(interp, argv[0], &amp;v);
                 SEE_SET_NUMBER(res, sqrt(v.u.number));
