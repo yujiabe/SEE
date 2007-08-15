@@ -4,6 +4,7 @@ $Id$
   Bug 85: add SEE_system.object_construct hook for host objects
   Bug 84: add compatibility with ECMA262-3 errata document
   Bug 83: Function.toString() wrongly displayed numeric literals as '?'
+  Bug 82: improve compatibility of instanceof operator
   Feature: SEE_call_args() counterpart to SEE_parse_args()
   Bug 81: varargs SEE_call_args_va() and SEE_parse_args_va()
   Bug 73: new function SEE_eval() provides more control for host developers

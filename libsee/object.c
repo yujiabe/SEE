@@ -129,3 +129,34 @@ SEE_object_construct(interp, obj, thisobj, argc, argv, res)
 	interp->recursion_limit = saved_recursion_limit;
 	SEE_DEFAULT_CATCH(interp, c);
 }
+
+/*
+ * Computes val instanceof obj
+ */
+int
+SEE_object_instanceof(interp, val, obj)
+	struct SEE_interpreter *interp;
+	struct SEE_value *val;
+	struct SEE_object *obj;
+{
+	struct SEE_object *lhs;
+	struct SEE_value protov;
+
+        if (SEE_OBJECT_HAS_HASINSTANCE(obj))
+	    return SEE_OBJECT_HASINSTANCE(interp, obj, val);
+
+	if (SEE_COMPAT_JS(interp, >=, JS14)) {
+	    /* JS1.4: Search val's proto chain for obj.prototype */
+	    if (SEE_VALUE_GET_TYPE(val) != SEE_OBJECT)
+		return 0;
+	    SEE_OBJECT_GET(interp, obj, STR(prototype), &protov);
+	    if (SEE_VALUE_GET_TYPE(&protov) != SEE_OBJECT)
+		return 0;
+	    for (lhs = val->u.object; lhs; lhs = lhs->Prototype)
+		if (lhs->Prototype == protov.u.object)
+		    return 1;
+	    return 0;
+	} else
+	    SEE_error_throw_string(interp, interp->TypeError,
+		STR(no_hasinstance));
+}

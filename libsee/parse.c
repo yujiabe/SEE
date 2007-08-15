@@ -2550,6 +2550,7 @@ PrimaryExpression_this_eval(n, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
+	SEE_ASSERT(context->interpreter, context->thisobj != NULL);
 	SEE_SET_OBJECT(res, context->thisobj);
 }
 
@@ -5841,10 +5842,7 @@ RelationalExpression_instanceof_eval(na, context, res)
 	if (SEE_VALUE_GET_TYPE(&r4) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(instanceof_not_object));
-	if (!SEE_OBJECT_HAS_HASINSTANCE(r4.u.object))
-		SEE_error_throw_string(interp, interp->TypeError,
-		    STR(no_hasinstance));
-	r7 = SEE_OBJECT_HASINSTANCE(interp, r4.u.object, &r2);
+	r7 = SEE_object_instanceof(interp, &r2, r4.u.object);
 	SEE_SET_BOOLEAN(res, r7);
 }
 

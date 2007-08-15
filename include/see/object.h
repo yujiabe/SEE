@@ -167,4 +167,8 @@ void SEE_object_call(struct SEE_interpreter *, struct SEE_object *,
 void SEE_object_construct(struct SEE_interpreter *, struct SEE_object *,
 	struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 
+/* val instanceof obj */
+int SEE_object_instanceof(struct SEE_interpreter *interp,
+	        struct SEE_value *val, struct SEE_object *obj);
+
 #endif /* _SEE_h_object_ */

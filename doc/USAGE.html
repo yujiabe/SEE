@@ -3189,6 +3189,12 @@ Enables compatibility with Mozilla's
         Enables JavaScript 1.4 compatibility:
 <ul>
 <li>    Includes JavaScript 1.1&mdash;1.3 compatibility behaviour.
+<li>	The expression <code class="js">v instanceof o</code> 
+	behaves differently when <code class="js">o</code> has no
+	[[HasInstance]] method. Instead of throwing an error, the
+	[[Prototype]] chain of <code class="js">v</code> is searched
+	for <code class="js">o.prototype</code>. If found, the expression
+	results in true, otherwise false.
 <ul>
 </ul>
 

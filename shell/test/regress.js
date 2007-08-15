@@ -88,12 +88,22 @@ test('1 --> bar', 'exception');
 test(' --> bar', undefined);
 test('1 \n --> bar', 1);
 test(' /* ... */ --> bar', undefined);
-compat('')
+compat('');
+
+/* bug 82 */
+test('function b() { return (function () { this.foo = "bar"; }); } '+
+     'new (b())() instanceof b()', true);
+compat('js14');
+test('(function(){}) instanceof Function', true);
+test('(function(){}) instanceof Object', true);
+test('isNaN instanceof Function', true);
+test('({}) instanceof Object', true);
+compat('');
 
 /* bug 84 */
 test('("foo".match(/x/g)).length', 0);
-compat('errata')
-test('"foo".match(/x/g)', null)
-compat('')
+compat('errata');
+test('"foo".match(/x/g)', null);
+compat('');
 
 finish()
