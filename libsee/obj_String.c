@@ -594,7 +594,7 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 	struct SEE_value v, *vp, *vpv[1];
 	struct SEE_string *s, *nstr;
 	SEE_boolean_t global;
-	int n;
+	int n, matches = 0;
 	
 	regexp = regexp_arg(interp, argc < 1 ? NULL : argv[0]);
 
@@ -645,6 +645,7 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    nstr->length = 0;
 		    SEE_string_append_int(nstr, n);	/* nstr = String(n) */
 		    SEE_OBJECT_PUT(interp, a, nstr, &v, 0);
+		    matches++;
 
 		    if (v.u.string->length == 0) {
 			/* Increment the index by one if it matched empty */
@@ -655,7 +656,12 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 			SEE_OBJECT_PUT(interp, regexp, STR(lastIndex), &v, 0);
 		    }
 		}
-		SEE_SET_OBJECT(res, a);
+
+		if (!matches && 
+		    (interp->compatibility & SEE_COMPAT_ERRATA))
+		    SEE_SET_NULL(res);
+		else
+		    SEE_SET_OBJECT(res, a);
 	}
 }
 
