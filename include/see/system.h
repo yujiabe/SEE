@@ -8,6 +8,7 @@ struct SEE_interpreter;
 struct SEE_throw_location;
 struct SEE_context;
 struct SEE_code;
+struct SEE_value;
 
 #include <see/interpreter.h>		/* for enum SEE_trace_event */
 #include <see/type.h>
