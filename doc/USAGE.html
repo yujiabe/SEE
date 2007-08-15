@@ -2913,12 +2913,13 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 <li>defines <code class="js">String.prototype.substr()</code>
 </ul>
 
-<tr><td><code>SEE_COMPAT_262_3_ERRATA</code>
+<tr><td><code>SEE_COMPAT_ERRATA</code>
 <td>
 Enables compatibility with Mozilla's 
 <a href="http://www.mozilla.org/js/language/E262-3-errata.html">ECMAScript Edition 3 Errata</a>.
+(Added in API 2.1)
 <ul>
-<li><code class="js">String.prototype.match(/</code><i>regex</i><code class="js">/g)</code> will return <code class="js">null</code> instead of an empty array.
+<li><code class="js">String.prototype.match()</code> returns <code class="js">null</code> instead of an empty array when there are no matches.
 </ul>
 
 <tr><td><code>SEE_COMPAT_SGMLCOM</code>
