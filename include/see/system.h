@@ -47,6 +47,11 @@ struct SEE_system {
 
 	/* Bytecode backend */
 	struct SEE_code *(*code_alloc)(struct SEE_interpreter *);
+
+	/* Host object constructor hook. Called for 'new Object(o)'. */
+	void (*object_construct)(struct SEE_interpreter *interp,
+		struct SEE_object *self, struct SEE_object *thisobj,
+		int argc, struct SEE_value **argv, struct SEE_value *res);
 };
 
 extern struct SEE_system SEE_system;

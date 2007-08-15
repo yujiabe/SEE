@@ -122,7 +122,8 @@ struct SEE_system SEE_system = {
 	NULL,				/* gcollect */
 #endif
 	NULL,				/* transit_sec_domain */
-	_SEE_code1_alloc		/* code_alloc */
+	_SEE_code1_alloc,		/* code_alloc */
+	NULL				/* object_construct */
 };
 
 /*

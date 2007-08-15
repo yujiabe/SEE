@@ -43,6 +43,7 @@
 #include <see/cfunction.h>
 #include <see/interpreter.h>
 #include <see/error.h>
+#include <see/system.h>
 
 #include "stringdefs.h"
 #include "init.h"
@@ -202,12 +203,19 @@ object_construct(interp, self, thisobj, argc, argv, res)
 	if (argc) {
 		if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_OBJECT) {
 			/*
-			 * TODO optional step 4 - handling host objects.
-			 * Should we add a hook into the objectclass structure
-			 * to allow hosts to trap this new Object(hostobj)
-			 * situation? Is it really that important?? Hmm.
+			 * Step 4 - handling host objects.
+			 * This allows hosts to trap 'new Object(hostobj)'.
 			 */
-			SEE_SET_OBJECT(res, argv[0]->u.object);
+			if (SEE_system.object_construct) {
+			    (*SEE_system.object_construct)(interp, self, 
+			        thisobj, argc, argv, res);
+			    /* Must return a valid object. */
+			    SEE_ASSERT(interp, 
+				SEE_VALUE_GET_TYPE(res) == SEE_OBJECT);
+			    SEE_ASSERT(interp, res->u.object != NULL);
+			} else
+			    /* Defaults to returning the same object */
+			    SEE_SET_OBJECT(res, argv[0]->u.object);
 			return;
 		}
 		if (SEE_VALUE_GET_TYPE(argv[0]) == SEE_STRING ||
