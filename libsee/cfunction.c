@@ -64,8 +64,7 @@
  * They have a [[Call]] property which invokes the appropriate 
  * C function, and also has a "length" property which 
  * gives the typical number of arguments to the [[Call]] method.
- * Their prototype is the anonymous CFunction prototype object (whose 
- * own prototype is Function.prototype).
+ * Their prototype is Function.prototype.
  *
  * The length property is implemented in a way equivalent to the
  * requirement that it "has the attributes { ReadOnly, DontDelete,
