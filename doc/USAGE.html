@@ -2687,12 +2687,18 @@ the following macros:
 <pre>void <dfn id="SEE_error_throw">SEE_error_throw</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *error_constructor,
                 const char *fmt, ...);
+void <dfn id="SEE_error_throw_va">SEE_error_throw_va</dfn>(struct SEE_interpreter *interp,
+                struct SEE_object *error_constructor,
+                const char *fmt, va_list ap);
 void <dfn id="SEE_error_throw_string">SEE_error_throw_string</dfn>(struct SEE_interpreter *interp, 
                 struct SEE_object *error_constructor,
                 struct SEE_string *string);
 void <dfn id="SEE_error_throw_sys">SEE_error_throw_sys</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *error_constructor,
-                const char *fmt, ...);</pre>
+                const char *fmt, ...);
+void <dfn id="SEE_error_throw_sys_va">SEE_error_throw_sys_va</dfn>(struct SEE_interpreter *interp,
+                struct SEE_object *error_constructor,
+                const char *fmt, va_list ap);</pre>
 
 <p>
 These convenience macros construct a new error object, and throw it as an 
@@ -3622,8 +3628,10 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ENUM_NEXT">SEE_ENUM_NEXT</a><br>
 <a href="#SEE_Error_make">SEE_Error_make</a><br>
 <a href="#SEE_error_throw">SEE_error_throw</a><br>
+<a href="#SEE_error_throw_va">SEE_error_throw_va</a> (2.1)<br>
 <a href="#SEE_error_throw_string">SEE_error_throw_string</a><br>
 <a href="#SEE_error_throw_sys">SEE_error_throw_sys</a><br>
+<a href="#SEE_error_throw_sys_va">SEE_error_throw_sys_va</a> (2.1)<br>
 <a href="#SEE_eval">SEE_eval</a> (2.1)<br>
 <a href="#SEE_Function_new">SEE_Function_new</a><br>
 <a href="#SEE_gcollect">SEE_gcollect</a> (2.0)<br>

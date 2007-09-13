@@ -41,6 +41,16 @@ struct SEE_object * SEE_Error_make(struct SEE_interpreter *i,
 	 SEE_error__throw_string(i, o, 0, 0, s)
 #endif
 
+#if @STDC_HEADERS@
+# include <stdarg.h>
+void SEE_error_throw_va(struct SEE_interpreter *i,
+                        struct SEE_object *errorobj,
+                        const char *fmt, va_list ap) SEE_dead;
+void SEE_error_throw_sys_va(struct SEE_interpreter *i,
+                        struct SEE_object *errorobj,
+                        const char *fmt, va_list ap) SEE_dead;
+#endif /* STDC_HEADERS */
+
 /* Determine how variadic macros are available */
 
 #if __STDC_VERSION__ >= 199901L

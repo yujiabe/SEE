@@ -6,6 +6,7 @@ $Id$
   Bug 83: Function.toString() wrongly displayed numeric literals as '?'
   Bug 82: improve compatibility of instanceof operator
   Feature: SEE_call_args() counterpart to SEE_parse_args()
+  Bug 87: varargs SEE_error_throw_va() and SEE_error_throw_sys_va()
   Bug 81: varargs SEE_call_args_va() and SEE_parse_args_va()
   Bug 73: new function SEE_eval() provides more control for host developers
   Bug 79: '-->' at start of line treated like '//' in SGMLCOM compat mode

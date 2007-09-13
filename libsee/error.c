@@ -222,3 +222,20 @@ SEE_error__throw_sys0(struct SEE_interpreter *interp, struct SEE_object *obj,
 	va_end(ap);
 }
 #endif
+
+#if STDC_HEADERS
+void
+SEE_error_throw_va(struct SEE_interpreter *i, struct SEE_object *errorobj,
+    const char *fmt, va_list ap)
+{
+	error_throw(i, errorobj, -1, NULL, 0, fmt, ap);
+}
+
+void
+SEE_error_throw_sys_va(struct SEE_interpreter *i, struct SEE_object *errorobj,
+    const char *fmt, va_list ap)
+{
+	error_throw(i, errorobj, errno, NULL, 0, fmt, ap);
+}
+#endif /* STDC_HEADERS */
+
