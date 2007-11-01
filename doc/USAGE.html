@@ -453,6 +453,18 @@ Otherwise, the initial functions print a warning message and
 use the system <code>malloc()</code> without releasing any memory.
 </p>
 
+
+<p class="note">
+&#9888; Note:
+If you are using Boehm-gc support (and therefore <code>GC_malloc()</code>), 
+then you <em>must</em> call <code>GC_INIT()</code> early (usually 
+from <code>main()</code>). 
+Otherwise, your application may crash.
+The SEE library does not initialise the Boehm garbage collector (because
+on some systems, and when SEE is a shared library, the Boehm GC must be
+initialised from a non-static code segment.)
+</p>
+
 <p>
 If you intend to hook in your own memory allocator, be aware that any of
 these hooks may be called with a <code>NULL</code> interpreter argument

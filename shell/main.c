@@ -34,6 +34,11 @@ extern char *optarg;
 extern int optind;
 #endif
 
+#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+/* Required for calling GC_INIT() */
+#include <gc.h>
+#endif
+
 #include <see/see.h>
 #include "shell.h"
 #include "compat.h"
@@ -424,6 +429,10 @@ main(argc, argv)
 	int ch, error = 0;
 	int ran_something = 0;
 	char *s;
+
+#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+	GC_INIT();
+#endif
 
 	/* Initialise the shell's global strings */
 	shell_strings();

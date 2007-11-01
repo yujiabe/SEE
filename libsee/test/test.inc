@@ -5,6 +5,11 @@
 #include <see/string.h>
 #include <see/value.h>
 
+#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+/* Required for calling GC_INIT() */
+#include <gc.h>
+#endif
+
 /*
  * This is a simple, generic test framework.
  * The main program should provide a void function called test(), 
@@ -139,6 +144,10 @@ int
 main(int argc, char **argv)
 {
 	int optind;
+
+#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+	GC_INIT();
+#endif
 
 	_test_program = _test_basename(argv[0]);
 
