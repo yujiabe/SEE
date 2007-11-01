@@ -311,3 +311,9 @@ simple_free(interp, ptr)
 
 #endif /* !HAVE_GC_MALLOC */
 
+
+/* Reserved for future use */
+void
+SEE_init()
+{
+}

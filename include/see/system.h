@@ -57,6 +57,8 @@ struct SEE_system {
 
 extern struct SEE_system SEE_system;
 
+void SEE_init(void);	    /* no-op; reserved for API 3.0 */
+
 #define SEE_ABORT(interp, msg) (*SEE_system.abort)(interp, msg)
 
 #endif /* _SEE_h_interpreter_ */
