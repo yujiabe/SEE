@@ -110,12 +110,11 @@ compat('');
 
 /* bug 91 */
 compat('js15')
-delete a;
-test("if(true){function a(){}\n}\n typeof a", "function");
-delete a;
-delete b;
-test("if(true){function a(){}\n function b(){}\n}\n typeof a + typeof b", 
-    "functionfunction");
+test("if(true){function a91(){}\n}\n typeof a91", "function");
+test("if(true){function b91(){}\n function c91(){}\n}\n typeof b91 + typeof c91", "functionfunction");
+test("var x = typeof d91 + typeof e91; function d91(){}\n function e91(){}\nx", "functionfunction")
+test("var x = typeof f91; if (true){function f91() {};} x", "undefined")
 compat('');
+test("var x = typeof g91 + typeof h91; function g91(){}\n function h91(){}\nx", "functionfunction")
 
 finish()
