@@ -108,4 +108,14 @@ compat('errata');
 test('"foo".match(/x/g)', null);
 compat('');
 
+/* bug 91 */
+compat('js15')
+delete a;
+test("if(true){function a(){}\n}\n typeof a", "function");
+delete a;
+delete b;
+test("if(true){function a(){}\n function b(){}\n}\n typeof a + typeof b", 
+    "functionfunction");
+compat('');
+
 finish()

@@ -8352,9 +8352,12 @@ StatementList_parse(parser)
 
 	n = PARSE(Statement);
 	switch (NEXT) {
+	case tFUNCTION:
+	    if (SEE_COMPAT_JS(parser->interpreter, >=, JS15))
+		break;
+	    /* else fallthrough */
 	case '}':
 	case tEND:
-	case tFUNCTION:
 	case tCASE:
 	case tDEFAULT:
 		return n;

@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 91: multiple function declarations inside a conditional
   Bug 85: add SEE_system.object_construct hook for host objects
   Bug 84: add compatibility with ECMA262-3 errata document
   Bug 83: Function.toString() wrongly displayed numeric literals as '?'
