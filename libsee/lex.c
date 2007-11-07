@@ -109,7 +109,6 @@ int SEE_lex_debug = 0;
 
 /* Prototypes */
 static struct SEE_string *prefix_msg(struct SEE_string *s, struct lex *lex);
-static void string_adducs32(struct SEE_string *s, SEE_unicode_t c);
 static int is_FormatControl(SEE_unicode_t c);
 static int is_WhiteSpace(SEE_unicode_t c);
 static int is_LineTerminator(SEE_unicode_t c);
@@ -146,23 +145,6 @@ prefix_msg(s, lex)
 	t = SEE_string_sprintf(interp, "line %d: ", lex->next_lineno);
 	SEE_string_append(t, s);
 	return t;
-}
-
-/* Adds unicode character c to the string s, using UTF-16 encoding */
-static void
-string_adducs32(s, c)
-	struct SEE_string *s;
-	SEE_unicode_t c;
-{
-	if (c < 0x10000)
-		SEE_string_addch(s, (SEE_char_t)(c & 0xffff));
-	else {
-		/* RFC2781: UTF-16 encoding */
-		c -= 0x10000;
-		SEE_string_addch(s, (SEE_char_t)(0xd800 | (c >> 10 & 0x3ff)));
-		SEE_string_addch(s, (SEE_char_t)(0xdc00 | (c       & 0x3ff)));
-	}
-		
 }
 
 static int
@@ -477,7 +459,7 @@ StringLiteral(lex)
 			c = NEXT;
 			SKIP;
 		}
-		string_adducs32(s, c);
+		SEE_string_append_unicode(s, c);
 	}
 	CONSUME(quote);
 	SEE_SET_STRING(&lex->value, s);
@@ -518,7 +500,7 @@ RegularExpressionLiteral(lex, prev)
 		}
 		if (is_LineTerminator(NEXT))
 			SYNTAX_ERROR(STR(broken_regex));
-		string_adducs32(s, NEXT);
+		SEE_string_append_unicode(s, NEXT);
 		SKIP;
 	}
 	if (ATEOF)
@@ -527,7 +509,7 @@ RegularExpressionLiteral(lex, prev)
 
 	SEE_string_addch(s, '/');
 	while (!ATEOF && is_IdentifierPart(lex)) {
-		string_adducs32(s, NEXT);
+		SEE_string_append_unicode(s, NEXT);
 		SKIP;
 	}
 
@@ -719,7 +701,7 @@ Token(lex)
 				c = NEXT;
 				SKIP;
 			}
-			string_adducs32(s, c);
+			SEE_string_append_unicode(s, c);
 		} while (is_IdentifierPart(lex));
 
 		/* match keywords */

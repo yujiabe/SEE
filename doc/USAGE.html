@@ -1522,12 +1522,14 @@ characters to it using the following:
   <li><code>SEE_string_append_ascii()</code> - convert 7bit ASCII to Unicode and append to another string
   <li><code>SEE_string_append_int()</code> - append a signed integer's
                                                 representation in base 10
+  <li><code>SEE_string_append_unicode()</code> - append an unencoded Unicode character
 </ul>
 
 <pre>void <dfn id="SEE_string_addch">SEE_string_addch</dfn>(struct SEE_string *s, SEE_char_t ch);
 void <dfn id="SEE_string_append">SEE_string_append</dfn>(struct SEE_string *s, const struct SEE_string *sffx);
 void <dfn id="SEE_string_append_ascii">SEE_string_append</dfn>(struct SEE_string *s, const char *);
-void <dfn id="SEE_string_append_int">SEE_string_append_int</dfn>(struct SEE_string *s, int i);</pre>
+void <dfn id="SEE_string_append_int">SEE_string_append_int</dfn>(struct SEE_string *s, int i);
+void <dfn id="SEE_string_append_unicode">SEE_string_append_unicode</dfn>(struct SEE_string *s, SEE_unicode_t c);</pre>
 
 <p>
 Once a new string has been passed to any other SEE function, it should not
@@ -3732,6 +3734,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_append">SEE_string_append</a><br>
 <a href="#SEE_string_append_ascii">SEE_string_append_ascii</a> (2.0)<br>
 <a href="#SEE_string_append_int">SEE_string_append_int</a><br>
+<a href="#SEE_string_append_unicode">SEE_string_append_unicode</a> (2.1)<br>
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
 <a href="#SEE_string_dup">SEE_string_dup</a><br>

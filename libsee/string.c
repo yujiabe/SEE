@@ -183,6 +183,24 @@ SEE_string_addch(s, c)
 }
 
 /*
+ * Appends a unicode codepoint to the end of strings s.
+ */
+void
+SEE_string_append_unicode(s, c)
+	struct SEE_string *s;
+	SEE_unicode_t c;
+{
+	if (c < 0x10000)
+	    SEE_string_addch(s, (SEE_char_t)(c & 0xffff));
+	else {
+	    /* RFC2781: UTF-16 encoding */
+	    c -= 0x10000;
+	    SEE_string_addch(s, (SEE_char_t)(0xd800 | (c >> 10 & 0x3ff)));
+	    SEE_string_addch(s, (SEE_char_t)(0xdc00 | (c       & 0x3ff)));
+	}
+}
+
+/*
  * Appends string t to the end of string s.
  */
 void
