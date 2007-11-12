@@ -117,4 +117,8 @@ test("var x = typeof f91; if (true){function f91() {};} x", "undefined")
 compat('');
 test("var x = typeof g91 + typeof h91; function g91(){}\n function h91(){}\nx", "functionfunction")
 
+/* bug 93 */
+test("'abc'.charAt()", 'a')
+test("'abc'.charCodeAt()", 'a'.charCodeAt(0))
+
 finish()

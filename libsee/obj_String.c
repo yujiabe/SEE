@@ -389,7 +389,12 @@ string_proto_charAt(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s;
 
 	s = object_to_string(interp, thisobj);
-	SEE_ToInteger(interp, argv[0], &vi);
+
+	if (argc > 0)
+		SEE_ToInteger(interp, argv[0], &vi);
+	else
+		SEE_SET_NUMBER(&vi, 0);
+
 	if (SEE_NUMBER_ISFINITE(&vi) && vi.u.number >= 0 &&
 		vi.u.number < s->length)
 	    SEE_SET_STRING(res, SEE_string_substr(interp, s, 
@@ -410,7 +415,11 @@ string_proto_charCodeAt(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s;
 
 	s = object_to_string(interp, thisobj);
-	SEE_ToInteger(interp, argv[0], &vi);
+	if (argc > 0)
+		SEE_ToInteger(interp, argv[0], &vi);
+	else
+		SEE_SET_NUMBER(&vi, 0);
+
 	if (SEE_NUMBER_ISFINITE(&vi) && vi.u.number >= 0 &&
 		vi.u.number < s->length)
 	{

@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 93: seg fault in String.prototype.charAt() and charCodeAt()
   Bug 92: add SEE_string_append_unicode() that encodes to UTF-16
   Bug 91: multiple function declarations inside a conditional
   Bug 90: document that applications must call GC_INIT() when using Boehm GC
