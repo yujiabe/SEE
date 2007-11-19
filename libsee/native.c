@@ -334,6 +334,8 @@ SEE_native_defaultvalue(interp, o, hint, res)
 
 	if (!hint)
 		effective_hint = interp->Number;
+		/* Note that Date instances' [[DefaultValue]] is 
+		 * provided by date_defaultvalue() */
 	else if (SEE_VALUE_GET_TYPE(hint) == SEE_OBJECT && 
 	    hint->u.object == interp->String)
 		effective_hint = interp->String;
