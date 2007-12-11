@@ -121,4 +121,8 @@ test("var x = typeof g91 + typeof h91; function g91(){}\n function h91(){}\nx", 
 test("'abc'.charAt()", 'a')
 test("'abc'.charCodeAt()", 'a'.charCodeAt(0))
 
+/* bug 94 */
+test("var s=''; for(var i=0;i<35;i++)s+='abcdefghijklmno';s.charCodeAt(0x200)",
+    "c".charCodeAt(0));
+
 finish()
