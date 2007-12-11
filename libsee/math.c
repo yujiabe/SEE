@@ -101,7 +101,7 @@ _SEE_ispinf(n)
 #elif HAVE__ISINF
 	return n > 0 && _isinf(n);
 #else
-	return n > 0 && !_SEE_finite(n) && !_SEE_isnan(n);
+	return n > 0 && !_SEE_isfinite(n) && !_SEE_isnan(n);
 #endif
 }
 
@@ -117,7 +117,7 @@ _SEE_isninf(n)
 #elif HAVE__ISINF
 	return n < 0 && _isinf(n);
 #else
-	return n < 0 && !_SEE_finite(n) && !_SEE_isnan(n);
+	return n < 0 && !_SEE_isfinite(n) && !_SEE_isnan(n);
 #endif
 }
 
