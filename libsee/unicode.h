@@ -51,8 +51,8 @@ SEE_char_t SEE_unicase_toupper(unsigned int ch);
 #else /* !WITH_UNICODE_TABLES */
 
 # include <ctype.h>
-# define UNICODE_IS_Cf(c)	((c) <= 0x7f && iscntrl((int)(c)))
-# define UNICODE_IS_Zs(c)	((c) <= 0x7f && isspace((int)(c)))
+# define UNICODE_IS_Cf(c)	0
+# define UNICODE_IS_Zs(c)	((c) == 0x20)
 # define UNICODE_IS_IS(c)	((c) <= 0x7f && \
 				 (isalpha((int)(c)) || (c)=='$' || (c)=='_'))
 # define UNICODE_IS_IP(c)	((c) <= 0x7f && \

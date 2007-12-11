@@ -847,6 +847,11 @@ SEE_lex_next(lex)
 
 	token = lex0(lex);
 	while (token == tLINETERMINATOR) {
+#ifndef NDEBUG
+		if (SEE_lex_debug && !lex->next_follows_nl)
+		    dprintf("lex: [LINETERMINATOR]\n");
+	    
+#endif
 		lex->next_follows_nl = 1;
 		lex->next_at_bol = 1;
 		token = lex0(lex);
