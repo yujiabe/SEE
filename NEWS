@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 97: recognise CRLF line endings for line number reporting
   Bug 96: newlines were not properly recognised with --disable-full-unicode
   Bug 94: string concatenation can end up with nuls
   Bug 93: seg fault in String.prototype.charAt() and charCodeAt()

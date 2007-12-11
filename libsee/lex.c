@@ -303,9 +303,18 @@ static int
 LineTerminator(lex)
 	struct lex *lex;			/* line terminator */
 {
-	SEE_ASSERT(lex->input->interpreter, is_LineTerminator(NEXT));
+	SEE_unicode_t lookahead[2];
+	int lookahead_len;
+
+	lookahead_len = LOOKAHEAD(lookahead, 2);
+	SEE_ASSERT(lex->input->interpreter, is_LineTerminator(lookahead[0]));
 	SKIP;
-	lex->next_lineno++;
+	if (lookahead_len == 2 && 
+	    lookahead[0] == '\r' && 
+	    lookahead[1] == '\n')
+	    {} /* Don't count the \r in a CRLF pair */
+	else
+	    lex->next_lineno++;
 	return tLINETERMINATOR;
 }
 

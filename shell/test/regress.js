@@ -125,4 +125,7 @@ test("'abc'.charCodeAt()", 'a'.charCodeAt(0))
 test("var s=''; for(var i=0;i<35;i++)s+='abcdefghijklmno';s.charCodeAt(0x200)",
     "c".charCodeAt(0));
 
+/* bug 97 */
+test('error_lineno("\\r\\nan error")', 2)
+
 finish()
