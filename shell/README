@@ -41,7 +41,7 @@ The options are as follows:
 		js14        - enable JavaScript 1.4 compatibility
 		js15        - enable JavaScript 1.5 compatibility
 
-	    The effect of these identifiers are documented in doc/USAGE.html.
+	    The effects of these identifiers are documented in doc/USAGE.html.
 
     -d <debugflags>
 	    Enables debugging in the SEE library. This results in 
@@ -205,7 +205,7 @@ structure must be a 'struct SEE_module' as defined in <see/module.h>:
 	};
 
 See doc/USAGE.html for details on how module initialisation is performed,
-or read lib_File.c for an example loadable module.
+or read mod_File.c for an example loadable module.
 
 David Leonard
 
