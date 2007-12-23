@@ -429,8 +429,16 @@ StringLiteral(lex)
 			c = HexEscape(lex);
 		else if (NEXT == '\\') {
 			SKIP;
-			if (ATEOF || is_LineTerminator(NEXT))
-				SYNTAX_ERROR(STR(escaped_lit_nl));
+			if (is_LineTerminator(NEXT)) {
+			    if (SEE_GET_JS_COMPAT(interp)) {
+				/* Ignore escaped LineTerminator */
+				SKIP;
+				continue;
+			    }
+			    SYNTAX_ERROR(STR(escaped_lit_nl));
+			}
+			else if (ATEOF)
+			    SYNTAX_ERROR(STR(escaped_lit_nl));
 			switch (NEXT) {
 			case 'b':	c = 0x0008; SKIP; break;
 			case 't':	c = 0x0009; SKIP; break;

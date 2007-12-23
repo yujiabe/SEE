@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 101: allow escaped LineTerminators in string literals for compat
   Bug 97: recognise CRLF line endings for line number reporting
   Bug 96: newlines were not properly recognised with --disable-full-unicode
   Bug 94: string concatenation can end up with nuls

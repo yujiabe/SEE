@@ -128,4 +128,10 @@ test("var s=''; for(var i=0;i<35;i++)s+='abcdefghijklmno';s.charCodeAt(0x200)",
 /* bug 97 */
 test('error_lineno("\\r\\nan error")', 2)
 
+/* bug 101 */
+test("\"xxx\\\nyyy\"", 'exception')
+compat('js11')
+test("\"xxx\\\nyyy\"", 'xxxyyy')
+compat('')
+
 finish()
