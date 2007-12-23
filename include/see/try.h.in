@@ -76,7 +76,8 @@
 	 (interp)->try_context = &(c),				\
 	 (c).interpreter = (interp),				\
 	 SEE_SET_NULL(&(c).thrown),				\
-	 (c).saved_traceback = (c).interpreter->traceback 	\
+	 (c).traceback = 0,					\
+	 (c).saved_traceback = (c).interpreter->traceback
 
 /* A setjmp-like function that calls FINI and returns true on catch */
 #define _SEE_TRY_SETJMP(interp, c)				\
@@ -89,7 +90,7 @@
 	   : /* longjmp not caught */				\
 	      0)
 
-/* Called when the try block conpletes normally */
+/* Called when the try block completes normally */
 #define _SEE_TRY_FINI(interp, c)				\
 	 (c).interpreter->try_context = (c).previous,		\
          (c).interpreter->traceback = (c).saved_traceback

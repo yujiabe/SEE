@@ -10872,6 +10872,8 @@ ThrowStatement_eval(na, context, res)
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, &r2);
 
+	traceback_enter(context->interpreter, 0, &n->node.location, 
+	    SEE_CALLTYPE_THROW);
 	TRACE(&na->location, context, SEE_TRACE_THROW);
 	SEE_THROW(context->interpreter, &r2);
 

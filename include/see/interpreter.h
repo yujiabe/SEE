@@ -108,6 +108,7 @@ struct SEE_traceback {
 };
 #define SEE_CALLTYPE_CALL	1
 #define SEE_CALLTYPE_CONSTRUCT	2
+#define SEE_CALLTYPE_THROW	3
 
 /* Initialises an interpreter with default behaviour */
 void SEE_interpreter_init(struct SEE_interpreter *i);

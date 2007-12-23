@@ -57,6 +57,7 @@ SEE_PrintValue(interp, v, f)
 	const struct SEE_value *v;
 	FILE *f;
 {
+	if (!f) f=stderr;
 	if (v == NULL) {
 	    fprintf(f, "NULL");
 	    return;
@@ -141,6 +142,7 @@ SEE_PrintObject(interp, o, f)
 {
 	const char *known;
 
+	if (!f) f=stderr;
 	if (o == NULL)				known = "NULL";
 	else if (interp == NULL)		known = NULL;
 	else if (o == interp->Global)		known = "Global";
@@ -190,6 +192,7 @@ SEE_PrintString(interp, s, f)
 {
 	unsigned int i;
 
+	if (!f) f=stderr;
 	if (s == NULL) 
 	    fprintf(f, "<NULL>");
 	else {
@@ -229,6 +232,7 @@ print_traceback(interp, traceback, f)
 	struct SEE_string *locstr, *fname;
 	struct SEE_object *fo;
 
+	if (!f) f=stderr;
 	if (!traceback)
 		return;
 	fprintf(f, "traceback:\n");
@@ -237,7 +241,9 @@ print_traceback(interp, traceback, f)
 		fprintf(f, "\t");
 		SEE_string_fputs(locstr, f);
 		fo = tb->callee;
-		if (fo == NULL)
+		if (tb->call_type == SEE_CALLTYPE_THROW)
+		    fprintf(f, "<throw>");
+		else if (fo == NULL)
 		    fprintf(f, "?");
 		else if (tb->call_type == SEE_CALLTYPE_CONSTRUCT)
 		    fprintf(f, "new %s", fo->objectclass->Class 
@@ -267,10 +273,10 @@ SEE_PrintTraceback(interp, f)
 }
 
 void
-SEE_PrintContextTraceback(interp, context, f)
+SEE_PrintContextTraceback(interp, ctxt, f)
 	struct SEE_interpreter *interp;
-	volatile struct SEE_try_context *context;
+	volatile struct SEE_try_context *ctxt;
 	FILE *f;
 {
-	print_traceback(interp, context->traceback, f);
+	print_traceback(interp, ctxt->traceback, f);
 }
