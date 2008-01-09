@@ -134,6 +134,7 @@ SEE_throw()
 }
 #endif
 
+#if WITH_LONGJMPERROR
 /**
  * Handles a longjmp failure by calling the interpreter abort hook.
  * This function is provided by ANSI for catching problems with
@@ -145,3 +146,4 @@ longjmperror()
 {
 	SEE_ABORT(NULL, "longjmp error");
 }
+#endif

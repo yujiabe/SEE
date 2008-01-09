@@ -124,11 +124,10 @@ AC_DEFUN([_SEE_ARG_ENABLE],[
     $7=$2
     ;; esac],
   [$7=$2])
-  AS_IF(test x"[$]$7" = x"auto",
-   [$4
-    AC_MSG_CHECKING([whether to enable $1])
-    AC_MSG_RESULT([$]$7) 
-    AS_IF(test x"[$]$7" = x"auto",[AC_MSG_ERROR([bad value for enable-$1])])])
+  AS_IF(test x"[$]$7" = x"auto",[$4])
+  AC_MSG_CHECKING([whether to enable $3])
+  AS_IF(test x"[$]$7" = x"auto",[AC_MSG_ERROR([bad value for $7])])
+  AC_MSG_RESULT([$]$7) 
   AS_IF([ifelse($2,yes,test x"[$]$7" != x"no",$2,no,test x"[$]$7" = x"yes")],
    [$5],[$6])
 ])
@@ -161,13 +160,13 @@ SEE_ARG_ENABLE(diagnostic,[yes],
 ])
 
 SEE_ARG_ENABLE(full-unicode,[yes],
-   [chooses Unicode over ASCII tables],,
+   [full Unicode instead of ASCII tables],,
    [AC_DEFINE(WITH_UNICODE_TABLES, [1],
     	[Define to 1 if you want the Unicode tables for ECMA262 compliance])
 ])
 
 SEE_ARG_ENABLE(parser-print,[yes],
-   [include function printing code],,
+   [function printing code],,
    [AC_DEFINE(WITH_PARSER_PRINT, [1],
         [Define if you want to be able to print function bodies])
 ])
@@ -187,13 +186,19 @@ SEE_ARG_ENABLE(bytecode,[no],
 
 dnl XXX need to find a better way to get pthreads flags in
 SEE_ARG_ENABLE(ssp-example,[no],
-   [build SEE Servlet Pages example],,
+   [SEE Servlet Pages (SSP) example],,
    [PTHREADS_CFLAGS=-pthreads
     PTHREADS_LDFLAGS=-lpthread
     AC_SUBST(PTHREADS_CFLAGS)
     AC_SUBST(PTHREADS_LDFLAGS)
 ])
 AM_CONDITIONAL(SSP, test x"$enable_ssp_example" = x"yes")
+
+SEE_ARG_ENABLE(longjmperror,[yes],
+   [catching longjmp corruption within SEE],,
+   [AC_DEFINE(WITH_LONGJMPERROR, [1],
+        [Define if you want SEE to catch longjmp corruption])
+])
 
 
 dnl ------------------------------------------------------------
@@ -258,12 +263,10 @@ dnl --- things to add later?
 dnl  AC_CHECK_FUNCS([srand srandom vsprintf funopen])
 dnl  AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
 
-SEE_ARG_ENABLE(native-dtoa,[auto],
-    [use dtoa() from libc],
+SEE_ARG_ENABLE(native-dtoa,[auto], [dtoa() from libc],
     [enable_native_dtoa=yes
      AC_CHECK_FUNCS([strtod dtoa freedtoa],,[enable_native_dtoa=no])])
-AM_CONDITIONAL(NATIVE_DTOA, 
-    test x"$enable_native_dtoa" = x"yes" -a x"$have_native_dtoa" = x"yes")
+AM_CONDITIONAL(NATIVE_DTOA, test x"$enable_native_dtoa" = x"yes")
 
 AC_CHECK_FUNC(rand_r)
 
