@@ -119,8 +119,8 @@ Besides the standard environment required by ECMA-262, the shell will
 include some extra objects into the Global environment when the -e, -f or -i
 options are used:
 
- print([string]) 
-	     - This function prints its argument string followed
+ print([string[, ...]]) 
+	     - This function prints its argument strings followed
                by a newline. Without arguments, it prints a single newline.
 
  compat([string]) -> string

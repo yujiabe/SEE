@@ -76,7 +76,7 @@ shell_strings()
 }
 
 /*
- * A print function that prints a string argument to stdout.
+ * A print function that prints all its string arguments to stdout.
  * A newline is printed at the end.
  */
 static void
@@ -87,9 +87,10 @@ print_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_value **argv, *res;
 {
         struct SEE_value v;
+	int i;
 
-        if (argc) {
-                SEE_ToString(interp, argv[0], &v);
+	for (i = 0; i < argc; i++) {
+                SEE_ToString(interp, argv[i], &v);
                 SEE_string_fputs(v.u.string, stdout);
         }
 	printf("\n");
