@@ -149,13 +149,16 @@ options are used:
 	       if no compatible(!) If called with a numeric argument,
 	       then sets the JS compatibility to that number.
 
- SEE.exit([int])
+ Shell.exit([int])
 	     - Causes the interpreter to immediately exit with the given
 	       exit code. If no argument is given, 0 is used.
 
- SEE.gcdump()
+ Shell.gcdump()
 	     - Causes the garbage collector to dump information or
 	       statistics, if supported.
+
+ Shell.abort(msg)
+	     - This function forces a library-level abort (SEE_ABORT)
 
 
 HTML document objects and functions

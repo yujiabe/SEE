@@ -11,8 +11,9 @@
  *  version	- a function that changes compatibility flags
  *		  based on an integer argument
  *
- *  Shell.exit  - function to force immediate exit
- *  Shell.gcdump - calls GC_dump(), if it was detected
+ *  Shell.exit   - function to force immediate exit of shell
+ *  Shell.abort  - force an interpreter abort
+ *  Shell.gcdump - calls GC_dump(), if available
  *
  * In HTML mode the following objects are provided:
  *
@@ -47,6 +48,8 @@ static void version_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void gc_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void shell_abort_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_gcdump_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_exit_fn(struct SEE_interpreter *, struct SEE_object *,
@@ -73,6 +76,7 @@ shell_strings()
 	SEE_intern_global("exit");
 	SEE_intern_global("args");
 	SEE_intern_global("Shell");
+	SEE_intern_global("abort");
 }
 
 /*
@@ -226,6 +230,23 @@ shell_exit_fn(interp, self, thisobj, argc, argv, res)
 }
 
 /*
+ * Force an abort
+ */
+static void
+shell_abort_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+	char *msg;
+
+	SEE_parse_args(interp, argc, argv, "a", &msg);
+	SEE_ABORT(interp, msg);
+        SEE_SET_UNDEFINED(res);
+}
+
+/*
  * Force a complete garbage collection
  */
 static void
@@ -273,7 +294,10 @@ shell_add_globals(interp)
 		"gcdump", shell_gcdump_fn, 0, 0);
 
 	SEE_CFUNCTION_PUTA(interp, Shell,
-		"exit", shell_exit_fn, 0, 0);
+		"exit", shell_exit_fn, 1, 0);
+
+	SEE_CFUNCTION_PUTA(interp, Shell,
+		"abort", shell_abort_fn, 1, 0);
 
 	/* TODO: args */
 }
