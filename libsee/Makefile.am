@@ -12,10 +12,16 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dprint.c enumerate.c \
                    lex.c mem.c native.c no.c obj_Array.c obj_Boolean.c	\
                    obj_Date.c obj_Error.c obj_Function.c obj_Global.c	\
                    obj_Math.c obj_Number.c obj_Object.c obj_RegExp.c	\
-                   obj_String.c object.c parse.c printf.c regex.c 	\
+                   obj_String.c object.c parse.c printf.c         	\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
 		   module.c code1.c math.c
+
+if WITH_PCRE
+libsee_la_SOURCES+= regex_pcre.c
+else
+libsee_la_SOURCES+= regex.c
+endif
 
 libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
 		     dprint.h enumerate.h function.h init.h code1.h	\
@@ -51,6 +57,18 @@ stringdefs.inc: string.defs string.pl
 stringdefs.h: string.defs string.pl
 	$(PERL) $(srcdir)/string.pl h $(srcdir)/string.defs >$@
 
+pkgconfigdir=	    $(libdir)/pkgconfig
+pkgconfig_DATA=	    see.pc
+see.pc: see.pc.in
+	$(SED) \
+	    -e 's,[@]libdir[@],$(libdir),g' \
+	    -e 's,[@]includedir[@],$(includedir),g' \
+	    -e 's,[@]LIBSEE_LIBS[@],$(LIBSEE_LIBS),g' \
+	    -e 's,[@]LIBSEE_REQS[@],$(LIBSEE_REQS),g' \
+	    -e 's,[@]PACKAGE_NAME[@],$(PACKAGE_NAME),g' \
+	    -e 's,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g' \
+	    < $(srcdir)/see.pc.in >$@
+
 #
 # (From the libtool documentation:)
 #
@@ -62,16 +80,16 @@ stringdefs.h: string.defs string.pl
 #    faster.
 # 
 # 3. If the library source code has changed at all since the last
-#    update, then increment REVISION (`C:R:A' becomes `C:r+1:A').
+#    update, then increment REVISION (`c:r:a' becomes `c:r+1:a').
 # 
 # 4. If any interfaces have been added, removed, or changed since the
-#    last update, increment CURRENT, and set REVISION to 0.
+#    last update, increment CURRENT, and set REVISION to 0. (`c+1:0:a')
 # 
 # 5. If any interfaces have been added since the last public release,
-#    then increment AGE.
+#    then increment AGE (`c+1:0:a+1').
 # 
 # 6. If any interfaces have been removed since the last public release,
-#    then set AGE to 0.
+#    then set AGE to 0. (`c+1:0:0`)
 #
 
 libsee_version_info=	1:0:0

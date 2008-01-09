@@ -13,6 +13,8 @@ see_shell_CPPFLAGS=		-DPATH_PKGLIB='"$(pkglib)"'
 see_shell_LDADD+=		$(LIBLTDL)
 see_shell_CPPFLAGS+=		$(LTDLINCL)
 
+see_shell_LDADD+=		$(LIBSEE_LDADD)
+
 ## A statically linked version for running 'make check'
 noinst_PROGRAMS=		see-shell.static
 see_shell_static_SOURCES=	$(see_shell_SOURCES)

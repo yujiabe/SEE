@@ -29,6 +29,7 @@ dnl programs required
 dnl
 
 AC_PROG_CC
+AC_PROG_SED
 
 AC_LIBLTDL_CONVENIENCE([libltdl])
 AC_LIBTOOL_DLOPEN
@@ -37,6 +38,8 @@ dnl AC_LIB_LTDL
 AC_CONFIG_SUBDIRS([libltdl])
 AC_SUBST([LIBLTDL])
 AC_SUBST([LTDLINCL])
+AC_SUBST([LIBSEE_LIBS])
+AC_SUBST([LIBSEE_REQS])
 
 AC_ARG_VAR(PERL, [Practical Extraction and Report Language interpreter])
 AC_PATH_PROG(PERL, perl)
@@ -211,14 +214,19 @@ AC_ARG_WITH(boehm-gc,
 	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
 if test x"$ac_cv_use_boehmgc" != x"no"; then
     case "$ac_cv_use_boehmgc" in 
-     yes|no) : ;;
-     *) LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc}/lib"
+     yes) 
+        LIBSEE_LIBS="$LIBSEE_LIBS -lgc"
+        LDFLAGS="$LDFLAGS -lgc"
+        ;;
+     *) LIBSEE_LIBS="$LIBSEE_LIBS -L${ac_cv_use_boehmgc}/lib -lgc"
+        LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc}/lib -lgc"
         CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc}/include"
 	;;
     esac
+    AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you want to use Boehm GC])
     AC_CHECK_HEADERS([gc.h],,,[;])
-    AC_SEARCH_LIBS(GC_malloc, [gc])
 fi
+AM_CONDITIONAL(WITH_BOEHM_GC, test x"$with_boehm_gc" = x"yes")
 
 AC_ARG_WITH(readline, 
     AC_HELP_STRING([--with-readline],
@@ -229,6 +237,30 @@ if test x"$ac_cv_use_readline" != x"no"; then
     AC_SEARCH_LIBS(tgoto, [termcap termlib curses ncurses])
     AC_SEARCH_LIBS(readline, [readline edit])
     AC_CHECK_FUNC(readline)
+fi
+
+AC_ARG_WITH(pcre, 
+    AC_HELP_STRING([--with-pcre],
+	[use the PCRE regex library, default=no]),
+	[ac_cv_use_pcre=$withval], [ac_cv_use_pcre=no])
+if test x"$ac_cv_use_pcre" != x"no"; then
+    PKG_CHECK_MODULES([PCRE], [pcre], 
+	[have_pcre=yes
+	 LIBSEE_REQS="$LIBSEE_REQS,pcre"
+	 LDFLAGS="$LIBS $PCRE_LIBS"
+	 CFLAGS="$CFLAGS $PCRE_CFLAGS"],
+	[have_pcre=yes
+	 AC_CHECK_HEADER([pcre.h],,[have_pcre=no])
+	 AC_SEARCH_LIBS(pcre_compile, [pcre])
+	 LIBSEE_LIBS="$LIBSEE_LIBS -lpcre"
+	 AC_CHECK_FUNCS([pcre_compile pcre_exec],, [have_pcre=no])])
+    AC_MSG_CHECKING([if we can use PCRE])
+    if test x"$have_pcre" = x"yes"; then
+       AC_DEFINE(WITH_PCRE, [1],
+	    [Define if you want to use the PCRE regex library])
+    fi
+    AM_CONDITIONAL(WITH_PCRE, test x"$have_pcre" = x"yes")
+    AC_MSG_RESULT([$have_pcre])
 fi
 
 
@@ -524,4 +556,5 @@ dnl ------------------------------------------------------------
 dnl finalisation
 dnl
 
+LIBSEE_REQS=`echo "$LIBSEE_REQS" | $SED -e 's/^,//'` #remove leading commas
 AC_OUTPUT
