@@ -183,6 +183,8 @@ _SEE_platform_abort(interp, msg)
 #if STDC_HEADERS
 	if (msg)
 		fprintf(stderr, "fatal error: %s\n", msg);
+	if (interp)
+		SEE_PrintTraceback(interp, stderr);
 	fflush(stderr);
 	fflush(stdout);
 #endif
