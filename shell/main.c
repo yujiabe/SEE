@@ -44,11 +44,11 @@ extern int optind;
 #include "compat.h"
 #include "debug.h"
 #include "module.h"
+#include "gtrace.h"
 
 /* Prototypes */
 static void debug(int);
-static void trace(struct SEE_interpreter *, struct SEE_throw_location *, 
-        struct SEE_context *, enum SEE_trace_event);
+static void trace_enable(void);
 static int run_input(struct SEE_interpreter *, struct SEE_input *, 
         struct SEE_value *);
 static void run_file(struct SEE_interpreter *, char *);
@@ -76,7 +76,7 @@ debug(c)
 
 	switch (c) {
 	case 'E': SEE_Error_debug++; break;
-	case 'T': SEE_system.default_trace = trace; break;
+	case 'T': trace_enable(); break;
 	case 'c':
 #if WITH_PARSER_CODEGEN
 	{	extern int SEE_code_debug; SEE_code_debug++; }
@@ -85,6 +85,7 @@ debug(c)
 #endif
 		break;
 	case 'e': SEE_error_debug++; break;
+	case 'g': gtrace_enable(); break;
 	case 'l': SEE_lex_debug++; break;
 	case 'm': SEE_mem_debug++; break;
 	case 'n': SEE_native_debug++; break;
@@ -97,6 +98,7 @@ debug(c)
 	}
 #endif
 }
+
 
 /*
  * Trace function callback: prints current location to stderr.
@@ -123,6 +125,18 @@ trace(interp, loc, context, event)
 		fprintf(stderr, ", ");
 	    }
 	    fprintf(stderr, "line %d\n", loc->lineno);
+	}
+}
+
+/* Enables verbose tracing */
+static void
+trace_enable()
+{
+	static int trace_enabled = 0;
+
+	if (!trace_enabled) {
+	    trace_enabled = 1;
+	    shell_add_trace(trace);
 	}
 }
 
@@ -439,19 +453,19 @@ main(argc, argv)
 
 	/* Helpful macro to initialise the interpreter just once */
 #define INIT_INTERP_ONCE do {				\
-    if (!interp_initialised) {				\
-	SEE_interpreter_init(&interp);			\
-	interp_initialised = 1;				\
-    }							\
+	if (!interp_initialised) {			\
+	    SEE_interpreter_init(&interp);		\
+	    interp_initialised = 1;			\
+	}						\
   } while (0)
 
 	/* Helpful macro to check that flags come in the right order */
-#define INTERP_NOT_INITTED do {				\
-    if (interp_initialised) {				\
-	fprintf(stderr, "option -%c must come before -e/-f/-h/-i\n", ch);\
-	error = 1;					\
-	break;						\
-    }							\
+#define INTERP_NOT_INITTED(ch) do {				\
+	if (interp_initialised) {			\
+	    fprintf(stderr, "option -%c must come before -e/-f/-h/-i\n", ch);\
+	    error = 1;					\
+	    break;					\
+	}						\
   } while (0)
 
 	while (!error && (ch = getopt(argc, argv, "c:d:e:f:gh:il:r:V")) != -1)
@@ -509,7 +523,7 @@ main(argc, argv)
 		break;
 
 	    case 'l':
-		INTERP_NOT_INITTED;
+		INTERP_NOT_INITTED(ch);
 	    	if (!load_module(optarg))
 			exit(1);
 		break;
@@ -537,15 +551,14 @@ main(argc, argv)
 	    error = 1;
 
 	if (error) {
-	    fprintf(stderr, 
-	        "usage: %s [-l library] [-Vg] [-c flag] %s[-r maxrecurs] [-f file.js | -h file.html | -e program | -i]...\n",
-		argv[0],
+	    fprintf(stderr, "usage: %s\n", argv[0]);
+	    fprintf(stderr, "       [-Vg] [-c flag]\n");
+	    fprintf(stderr, "       [-r maxrecurs]\n");
 #ifndef NDEBUG
-	        "[-d[ETcelmnprsv]] "
-#else
-		""
+	    fprintf(stderr, "       [-d[ETcelmnprsv]]\n");
 #endif
-	    );
+	    fprintf(stderr, "       [-l library]...\n");
+	    fprintf(stderr, "       [-f file.js | -h file.html | -e program | -i]...\n");
 	    exit(2); /* Invalid argument on command line */
 	}
 

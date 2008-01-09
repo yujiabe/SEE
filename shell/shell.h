@@ -16,3 +16,8 @@ char *readline(const char *);
 #endif
 
 extern struct SEE_string *s_interactive;
+
+void shell_add_trace(void (*trace)(struct SEE_interpreter *interp,
+        struct SEE_throw_location *loc, struct SEE_context *context,
+	        enum SEE_trace_event event));
+

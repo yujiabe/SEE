@@ -54,6 +54,7 @@ The options are as follows:
 		-dT         - execution call tracing
 		-dc         - code generator
 		-de         - exception try/catch
+		-dg         - enable gtrace (see below)
 		-dl         - lexical analysis
 		-dm         - trace memory allocation
 		-dn         - native object interface
@@ -110,6 +111,15 @@ if the command line arguments ended with "-i".
 
 NOTE: The command line options have been chosen to be mostly compatible with
 the perl script used in Mozilla/spidermonkey's test suite.
+
+
+gtrace
+------
+
+On some systems, when -dg is specified, a trap will be installed that
+prints the current traceback and garbage collector status whenever a
+SIGINFO signal is sent to the process. This can be useful when a script
+is taking a long time to complete.
 
 
 Shell-provided objects and functions

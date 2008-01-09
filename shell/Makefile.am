@@ -4,6 +4,7 @@
 bin_PROGRAMS=			see-shell
 see_shell_SOURCES=		main.c shell.c getopt.c readline.c 	\
 				debug.c module.c compat.c		\
+				trace.c gtrace.c gtrace.h		\
 				shell.h debug.h compat.h module.h
 see_shell_LDADD=		$(top_builddir)/libsee/libsee.la
 see_shell_DEPENDENCIES=		$(top_builddir)/libsee/libsee.la

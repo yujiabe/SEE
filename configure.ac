@@ -63,7 +63,7 @@ dnl (This is for some windows compat)
 AC_CHECK_HEADERS([windows.h getopt.h],,,[;])
 
 dnl (And others)
-AC_CHECK_HEADERS([float.h limits.h],,,[;])
+AC_CHECK_HEADERS([float.h limits.h signal.h],,,[;])
 
 dnl ------------------------------------------------------------
 dnl C compiler features
@@ -88,6 +88,7 @@ AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
 
 AC_TYPE_SIZE_T
+AC_TYPE_SIGNAL
 
 AC_DEFUN([SEE_CHECK___FUNCTION__],
   [AC_CACHE_CHECK([for __FUNCTION__], [ac_cv_have___FUNCTION__],
