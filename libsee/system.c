@@ -180,7 +180,8 @@ static void
 simple_finalizer(p, cd)
 	GC_PTR p, cd;
 {
-	struct finalize_info *info = (struct finalize_info *)cd;
+	struct finalize_info *info = 
+	    (struct finalize_info *)((char *)p + (SEE_size_t)cd);
 	
 	(*info->finalizefn)(info->interp, (void *)p, info->closure);
 }
@@ -211,7 +212,7 @@ simple_gc_malloc_finalize(interp, size, finalizefn, closure)
 	info->closure = closure;
 
 	/* Ask the GC to call the finalizer when data is unreachable */
-	GC_register_finalizer(data, simple_finalizer, info, NULL, NULL);
+	GC_register_finalizer(data, simple_finalizer, (GC_PTR)padsz, NULL, NULL);
 
 	return data;
 }
