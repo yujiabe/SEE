@@ -68,6 +68,8 @@ see.pc: see.pc.in
 	    -e 's,[@]PACKAGE_NAME[@],$(PACKAGE_NAME),g' \
 	    -e 's,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g' \
 	    < $(srcdir)/see.pc.in >$@
+EXTRA_DIST+=	   see.pc.in
+CLEANFILES+=	   see.pc
 
 #
 # (From the libtool documentation:)

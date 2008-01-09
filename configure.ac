@@ -211,22 +211,37 @@ dnl
 AC_ARG_WITH(boehm-gc, 
     AC_HELP_STRING([--with-boehm-gc],
 	[use Boehm-Weiser garbage collector, default=yes]),
-	[ac_cv_use_boehmgc=$withval], [ac_cv_use_boehmgc=yes])
-if test x"$ac_cv_use_boehmgc" != x"no"; then
-    case "$ac_cv_use_boehmgc" in 
+	[with_boehmgc=$withval], [with_boehmgc=yes])
+if test x"$with_boehmgc" != x"no"; then
+    save_LIBSEE_LIBS="$LIBSEE_LIBS"
+    save_LDFLAGS="$LDFLAGS"
+    save_CPPFLAGS="$CPPFLAGS"
+    case "$with_boehmgc" in 
      yes) 
         LIBSEE_LIBS="$LIBSEE_LIBS -lgc"
         LDFLAGS="$LDFLAGS -lgc"
         ;;
-     *) LIBSEE_LIBS="$LIBSEE_LIBS -L${ac_cv_use_boehmgc}/lib -lgc"
-        LDFLAGS="$LDFLAGS -L${ac_cv_use_boehmgc}/lib -lgc"
-        CPPFLAGS="$CPPFLAGS -I${ac_cv_use_boehmgc}/include"
+     *) LIBSEE_LIBS="$LIBSEE_LIBS -L${with_boehmgc}/lib -lgc"
+        LDFLAGS="$LDFLAGS -L${with_boehmgc}/lib -lgc"
+        CPPFLAGS="$CPPFLAGS -I${with_boehmgc}/include"
 	;;
     esac
-    AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you want to use Boehm GC])
-    AC_CHECK_HEADERS([gc.h],,,[;])
+    have_boehm_gc=yes
+    AC_CHECK_HEADERS([gc.h],,[have_boehm_gc=no])
+    AC_CHECK_FUNC([GC_malloc],,[have_boehm_gc=no])
+    if test x"$have_boehm_gc" = x"yes"; then
+	AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you want to use Boehm GC])
+    else
+	LIBSEE_LIBS="$save_LIBSEE_LIBS"
+	LDFLAGS="$save_LDFLAGS"
+	CPPFLAGS="$save_CPPFLAGS"
+    fi
+else
+    have_boehm_gc=no
 fi
-AM_CONDITIONAL(WITH_BOEHM_GC, test x"$with_boehm_gc" = x"yes")
+AC_MSG_CHECKING([if we can use Boehm GC])
+AM_CONDITIONAL(WITH_BOEHM_GC, test x"$have_boehm_gc" = x"yes")
+AC_MSG_RESULT([$have_boehm_gc])
 
 AC_ARG_WITH(readline, 
     AC_HELP_STRING([--with-readline],
@@ -259,9 +274,11 @@ if test x"$ac_cv_use_pcre" != x"no"; then
        AC_DEFINE(WITH_PCRE, [1],
 	    [Define if you want to use the PCRE regex library])
     fi
-    AM_CONDITIONAL(WITH_PCRE, test x"$have_pcre" = x"yes")
     AC_MSG_RESULT([$have_pcre])
+else
+    have_pcre=no
 fi
+AM_CONDITIONAL(WITH_PCRE, test x"$have_pcre" = x"yes")
 
 
 dnl ------------------------------------------------------------
