@@ -1,6 +1,9 @@
 $Id$
 
 2.1 [unreleased]
+  Feature: see-shell now has a -dg option for tracebacks on SIGINFO
+  Feature: SEE_string_cmp_ascii() for those who won't intern
+  Bug 105: make SEE_intern() work right with strings from other interps
   Bug 106: fix prematurely reclaimed objects
   Bug 104: fix leaked finalized objects
   Bug 101: allow escaped LineTerminators in string literals for compat

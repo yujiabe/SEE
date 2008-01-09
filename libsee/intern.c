@@ -227,22 +227,13 @@ _SEE_intern_init(interp)
 	interp->intern_tab = intern_tab;
 }
 
-static int
-is_uninternable(s)
-	struct SEE_string *s;
-{
-	return s == NULL || 
-	    (s->flags & SEE_STRING_FLAG_INTERNED) ||
-	    (s >= STRn(0) && s < STRn(SEE_nstringtab));
-}
-
 /**
  * Intern a string relative to an interpreter. Also reads the global table
  * Note that a different pointer to s is *ALWAYS* returned unless s was
  * originally returned by SEE_intern. In other words, on the first occurrence
- * of a string, it is duplicated. This makes it save to intern strings that
- * are later changed. However, you MUST not alter strings returned from
- * this function.
+ * of a string, it is duplicated. This makes it safe to intern strings that
+ * will be later grown. However, you MUST not alter content of strings 
+ * returned from this function.
  */
 struct SEE_string *
 SEE_intern(interp, s)
@@ -258,7 +249,19 @@ SEE_intern(interp, s)
 # define WHERE(f) /* nothing */
 #endif
 
-	if (is_uninternable(s)) {
+	/* Allow interning NULL to lessen the number of error checks */
+	if (!s)
+	    return NULL;
+
+	/*
+	 * Do not internalize a string if it
+	 *  - is already internalized in this interpreter or the global hash
+	 *  - is one of the static resource strings
+	 */
+	if (((!s->interpreter || s->interpreter == interp) &&
+	     (s->flags & SEE_STRING_FLAG_INTERNED)) ||
+	    (s >= STRn(0) && s < STRn(SEE_nstringtab)))
+	{
 #ifndef NDEBUG
 		if (SEE_debug_intern) {
 		    dprintf("INTERN ");
@@ -269,7 +272,11 @@ SEE_intern(interp, s)
 		return s;
 	}
 
-	SEE_ASSERT(interp, s->interpreter == interp);
+	/* If the string is from another interpreter, then it must
+	 * have been intern'd already. This is to prevent race conditions
+	 * with string whose content is changing. */
+	SEE_ASSERT(interp, !s->interpreter || s->interpreter == interp ||
+		(s->flags & SEE_STRING_FLAG_INTERNED));
 
 	/* Look in system-wide intern table first */
 	h = hash(s);
@@ -294,7 +301,7 @@ SEE_intern(interp, s)
 
 }
 
-/** Efficiently convert an ASCII C string into a SEE string and internalise */
+/** Efficiently converts an ASCII C string into an internalised SEE string */
 struct SEE_string *
 SEE_intern_ascii(interp, s)
 	struct SEE_interpreter *interp;
@@ -350,17 +357,15 @@ SEE_intern_and_free(interp, sp)
 {
 	struct SEE_string *is;
 
-	if (is_uninternable(*sp)) {
-#ifndef NDEBUG
-		if (SEE_debug_intern) {
-		    dprintf("INTERN ");
-		    dprints(*sp);
-		    dprintf(" -> %p [hit & free]\n", *sp);
-		}
-#endif
-		return;
-	}
 	is = SEE_intern(interp, *sp);
+	SEE_ASSERT(interp, is != *sp);
+#ifndef NDEBUG
+	if (SEE_debug_intern) {
+	    dprintf("INTERN ");
+	    dprints(*sp);
+	    dprintf(" -> %p [hit & free]\n", is);
+	}
+#endif
 	SEE_string_free(interp, sp);
 	*sp = is;
 }

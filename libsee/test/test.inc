@@ -34,6 +34,9 @@
 /* Tests two generic pointers for equality */
 #define TEST_EQ_PTR(a,b)    _TEST((void *)(a)==(void *)(b), \
 				#a " == " #b, (0, "0x%p == 0x%p", (a), (b)))
+/* Tests two generic pointers for inequality */
+#define TEST_NOT_EQ_PTR(a,b) _TEST((void *)(a)!=(void *)(b), \
+				#a " != " #b, (0, "0x%p != 0x%p", (a), (b)))
 /* Tests two SEE_types for equality */
 #define TEST_EQ_TYPE(a, b)  _TEST((a) == (b), \
 				#a " == " #b, (0, "%s == %s", \
