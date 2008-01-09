@@ -34,4 +34,8 @@ int SEE_RegExp_match(struct SEE_interpreter *interp,
 int SEE_RegExp_count_captures(struct SEE_interpreter *interp,
 	struct SEE_object *regexp);
 
+#if WITH_PCRE
+void SEE_regex_pcre_init(void);
+#endif
+
 #endif /* _SEE_h_regex_ */

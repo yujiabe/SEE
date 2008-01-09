@@ -72,6 +72,7 @@ typedef void *GC_PTR;
 #include "dprint.h"
 #include "platform.h"
 #include "code.h"
+#include "regex.h"
 
 /* Prototypes */
 static unsigned int simple_random_seed(void);
@@ -317,4 +318,7 @@ simple_free(interp, ptr)
 void
 SEE_init()
 {
+#if WITH_PCRE
+	SEE_regex_pcre_init();
+#endif
 }
