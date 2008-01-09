@@ -170,6 +170,27 @@ SEE_string_cmp(a, b)
 }
 
 /*
+ * Compares a SEE string with an ASCII string.
+ * Returns -1,0,+1 just like SEE_string_cmp().
+ */
+int
+SEE_string_cmp_ascii(a, b)
+	const struct SEE_string *a;
+	const char *b;
+{
+	unsigned int i;
+
+	for (i = 0; i < a->length && b[i]; i++) {
+	    SEE_ASSERT(a->interpreter, (b[i] & 0x80) == 0);/* b must be ASCII */
+	    if (a->data[i] != b[i])
+		return a->data[i] < b[i] ? -1 : 1;
+	}
+	if (i == a->length)
+	    return b[i] == 0 ? 0 : -1;
+	return 1;
+}
+
+/*
  * Appends character c to the end of string s.
  */
 void

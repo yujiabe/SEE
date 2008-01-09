@@ -56,6 +56,8 @@ void	SEE_string_append_unicode(struct SEE_string *s, SEE_unicode_t uch);
 int	SEE_string_fputs(const struct SEE_string *s, FILE *file);
 int	SEE_string_cmp(const struct SEE_string *s1,
 			  const struct SEE_string *s2);
+int	SEE_string_cmp_ascii(const struct SEE_string *s1,
+			  const char *s2);
 
 struct SEE_string *SEE_string_new(struct SEE_interpreter *i,
 				unsigned int space);
