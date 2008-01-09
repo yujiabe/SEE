@@ -85,7 +85,7 @@ static int cmd_info(struct SEE_interpreter *, struct debug *,
         struct SEE_throw_location *, struct SEE_context *, char *);
 static int user_command(struct SEE_interpreter *, struct debug *, 
         struct SEE_throw_location *, struct SEE_context *);
-static void loc_print_line(struct SEE_interpreter *, struct debug *, 
+static int loc_print_line(struct SEE_interpreter *, struct debug *, 
 	FILE *, struct SEE_throw_location *);
 
 static struct cmd cmdtab[] = {
@@ -419,12 +419,16 @@ cmd_list(interp, debug, loc, context, arg)
 {
 	struct SEE_throw_location rloc;
 	int offset;
+	int printed_something = 0;
 
 	memcpy(&rloc, loc, sizeof rloc);
 	for (offset = -3; offset <= 3; offset++) {
 	    rloc.lineno = loc->lineno + offset;
-	    loc_print_line(interp, debug, stderr, &rloc);
+	    if (loc_print_line(interp, debug, stderr, &rloc))
+		printed_something = 1;;
 	}
+	if (!printed_something)
+	    fprintf(stderr, "debugger: unable to list source file\n");
 	return 0;
 }
 
@@ -709,8 +713,9 @@ user_command(interp, debug, loc, context)
 	return result;
 }
 
-/* Prints the line from a source file, or nothing if it is not found */
-static void
+/* Prints the line from a source file, or nothing if it is not found.
+ * Returns true only if a line is printed. */
+static int
 loc_print_line(interp, debug, out, loc)
 	struct SEE_interpreter *interp;
 	struct debug *debug;
@@ -724,25 +729,25 @@ loc_print_line(interp, debug, out, loc)
 	char clchar, bpchar;
 
 	if (!loc->filename)
-	    return;
+	    return 0;
 	if (loc->filename->length >= sizeof path - 1)
-	    return;
+	    return 0;
 	for (i = 0; i < loc->filename->length; i++) {
 	    if (loc->filename->data[i] > 0x7f)
-	    	return;
+	    	return 0;
 	    path[i] = loc->filename->data[i] & 0x7f;
 	}
 	path[i] = 0;
 
 	f = fopen(path, "r");
 	if (!f)
-	    return;
+	    return 0;
 
 	lineno = 1;
 	while (lineno != loc->lineno)  {
 	    ch = fgetc(f);
 	    if (ch == EOF)
-	       return;
+	       return 0;
 	    if (ch == '\n')
 	        lineno++;
 	}
@@ -765,4 +770,5 @@ loc_print_line(interp, debug, out, loc)
 	}
 	fputc('\n', out);
 	fclose(f);
+	return 1;
 }
