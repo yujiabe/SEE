@@ -266,11 +266,11 @@ SEE_grow_to(interp, grow, new_len)
 	SEE_size_t new_alloc;
 	void *new_ptr;
 
-	if (new_len > GROW_MAXIMUM_SIZE / grow->element_size)
+	if (new_len >= GROW_MAXIMUM_SIZE / grow->element_size)
 	    SEE_error_throw_string(interp, interp->Error,
 		STR(string_limit_reached));
 	new_alloc = grow->allocated;
-	while (new_len > new_alloc / grow->element_size)
+	while (new_len * grow->element_size > new_alloc)
 	    if (new_alloc == 0)
 		new_alloc = GROW_INITIAL_SIZE;
 	    else if (new_alloc >= GROW_MAXIMUM_SIZE / 2)
@@ -278,11 +278,11 @@ SEE_grow_to(interp, grow, new_len)
 	    else
 		new_alloc *= 2;
 
-	if (new_alloc != grow->allocated) {
+	if (new_alloc > grow->allocated) {
 	    if (grow->is_string)
-		new_ptr = SEE_malloc(interp, new_alloc);
-	    else
 		new_ptr = SEE_malloc_string(interp, new_alloc);
+	    else
+		new_ptr = SEE_malloc(interp, new_alloc);
 	    if (*grow->length_ptr)
 		memcpy(new_ptr, *grow->data_ptr, 
 		    *grow->length_ptr * grow->element_size);
