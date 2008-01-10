@@ -12,6 +12,7 @@ struct SEE_throw_location;
 struct SEE_context;
 struct SEE_scope;
 struct SEE_traceback;
+struct SEE_regex_engine;
 
 enum SEE_trace_event {
 	SEE_TRACE_CALL,
@@ -74,6 +75,9 @@ struct SEE_interpreter {
 	/* Trace hook, called by interpreter at each step if not NULL */
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,
 			struct SEE_context *, enum SEE_trace_event);
+
+	/* Regex implementation used by Regex object */
+	struct SEE_regex_engine *regex_engine;
 };
 
 /* Compatibility flags */
@@ -82,6 +86,7 @@ struct SEE_interpreter {
 #define SEE_COMPAT_UTF_UNSAFE   (1<< 2) /* accept 'valid but insecure' UTF */
 #define SEE_COMPAT_SGMLCOM      (1<< 3) /* treat '<!--' as a '//' comment */
 /* SEE_COMPAT_EXT1 deprecated; use SEE_COMPAT_JS11 instead */
+#define SEE_COMPAT_SEE          (1<< 4) /* SEE-specific extensions */
 #define SEE_COMPAT_JS_MASK      (7<< 5) /* mask for JS compat values  */
 #define SEE_COMPAT_JS_NONE         0      /* no JS compat */
 #define SEE_COMPAT_JS11           (1<< 5) /* JavaScript1.1 */
@@ -89,7 +94,7 @@ struct SEE_interpreter {
 #define SEE_COMPAT_JS13           (3<< 5) /* JavaScript1.3 */
 #define SEE_COMPAT_JS14           (4<< 5) /* JavaScript1.4 */
 #define SEE_COMPAT_JS15           (5<< 5) /* JavaScript1.5 */
-#define SEE_COMPAT_ERRATA	(1<< 8)	/* ECMA-262 3rd ed errata */
+#define SEE_COMPAT_ERRATA       (1<< 8) /* ECMA-262 3rd ed errata */
 
 /* This macro is used to see if an ECMA deviation is required */
 #define SEE_COMPAT_JS(i,cmp,jsnn) \

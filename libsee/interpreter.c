@@ -83,6 +83,7 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	interp->locale = SEE_system.default_locale;
 	interp->recursion_limit = SEE_system.default_recursion_limit;
 	interp->sec_domain = NULL;
+	interp->regex_engine = SEE_system.default_regex_engine;
 
 	/* Allocate object storage first, since dependencies are complex */
 	SEE_Array_alloc(interp);

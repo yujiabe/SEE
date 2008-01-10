@@ -125,7 +125,8 @@ struct SEE_system SEE_system = {
 #endif
 	NULL,				/* transit_sec_domain */
 	_SEE_code1_alloc,		/* code_alloc */
-	NULL				/* object_construct */
+	NULL,				/* object_construct */
+	&_SEE_ecma_regex_engine		/* default_regex_engine */
 };
 
 /*
@@ -318,7 +319,5 @@ simple_free(interp, ptr)
 void
 SEE_init()
 {
-#if WITH_PCRE
-	SEE_regex_pcre_init();
-#endif
+	SEE_regex_init();
 }

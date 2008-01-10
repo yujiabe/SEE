@@ -14,6 +14,8 @@
  *  Shell.exit   - function to force immediate exit of shell
  *  Shell.abort  - force an interpreter abort
  *  Shell.gcdump - calls GC_dump(), if available
+ *  Shell.regex_engines - returns array of regex engines
+ *  Shell.regex_engine  - sets/gets the current interp's regex engine
  *
  * In HTML mode the following objects are provided:
  *
@@ -37,7 +39,17 @@
 #include "shell.h"
 #include "compat.h"
 
+struct method {
+	const char *name;
+	void (*fn)(struct SEE_interpreter *, struct SEE_object *, 
+		struct SEE_object *, int, struct SEE_value **, 
+		struct SEE_value *);
+	int expected_args;
+};
+
 /* Prototypes */
+static void add_methods(struct SEE_interpreter *, struct SEE_object *,
+	const struct method *);
 static void print_fn(struct SEE_interpreter *, struct SEE_object *, 
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void document_write_fn(struct SEE_interpreter *, struct SEE_object *, 
@@ -54,6 +66,12 @@ static void shell_gcdump_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_exit_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void shell_regex_engines_fn(struct SEE_interpreter *, 
+	struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+	struct SEE_value *);
+static void shell_regex_engine_fn(struct SEE_interpreter *, 
+	struct SEE_object *, struct SEE_object *, int, struct SEE_value **, 
+	struct SEE_value *);
 
 /*
  * Adds useful symbols into the interpreter's internal symbol table. 
@@ -77,6 +95,8 @@ shell_strings()
 	SEE_intern_global("args");
 	SEE_intern_global("Shell");
 	SEE_intern_global("abort");
+	SEE_intern_global("regex_engines");
+	SEE_intern_global("regex_engine");
 }
 
 /*
@@ -261,6 +281,79 @@ gc_fn(interp, self, thisobj, argc, argv, res)
 }
 
 /*
+ * Return list of regex engines
+ */
+static void
+shell_regex_engines_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+	const char **names;
+	struct SEE_value v;
+	struct SEE_object *push;
+
+	SEE_OBJECT_CONSTRUCT(interp, interp->Array, 0, 0, 0, res);
+	SEE_OBJECT_GETA(interp, res->u.object, "push", &v);
+	if (SEE_VALUE_GET_TYPE(&v) != SEE_OBJECT)
+		SEE_error_throw(interp, interp->Error, 
+		   "Array.push method not found");
+	push = v.u.object;
+
+	for (names = SEE_regex_engine_list(); *names; names++)
+		SEE_call_args(interp, push, res->u.object, &v, "z", *names);
+}
+
+/*
+ * Set regex engine, and return the name of the previous one
+ */
+static void
+shell_regex_engine_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+	char *name;
+	const char **names;
+	const struct SEE_regex_engine *old_engine, *new_engine;
+
+	SEE_parse_args(interp, argc, argv, "Z", &name);
+
+	old_engine = interp->regex_engine;
+
+	if (name) {
+		new_engine = SEE_regex_engine(name);
+		if (!new_engine)
+		    SEE_error_throw(interp, interp->Error, 
+		       "unknown engine '%.40s'", name);
+		interp->regex_engine = new_engine;
+	}
+
+	/* Return the name for the old engine */
+	for (names = SEE_regex_engine_list(); *names; names++)
+	    if (SEE_regex_engine(*names) == old_engine)
+		break;
+	SEE_SET_STRING(res, SEE_string_sprintf(interp, "%s", 
+	    *names ? *names : "?"));
+}
+
+static void
+add_methods(interp, object, methods)
+	struct SEE_interpreter *interp;
+	struct SEE_object *object;
+	const struct method *methods;
+{
+	unsigned int i;
+
+	for (i = 0; methods[i].name; i++)
+		SEE_CFUNCTION_PUTA(interp, object, 
+		    methods[i].name, methods[i].fn,
+		    methods[i].expected_args, 0);
+}
+
+/*
  * Adds global symbols 'print' and 'version' to the interpreter.
  * 'print' is a function and 'version' will be the undefined value.
  */
@@ -271,35 +364,29 @@ shell_add_globals(interp)
 	struct SEE_value v;
 	struct SEE_object *Shell;
 
+	static const struct method global_methods[] = {
+		{ "print",		print_fn,		1 },
+		{ "compat",		compat_fn,		1 },
+		{ "gc",			gc_fn,			0 },
+		{ "version",		version_fn,		1 },
+		{0}
+	}, shell_methods[] = {
+		{ "gcdump",		shell_gcdump_fn,	0 },
+		{ "exit",		shell_exit_fn,		1 },
+		{ "abort",		shell_abort_fn,		1 },
+		{ "regex_engines",	shell_regex_engines_fn,	0 },
+		{ "regex_engine",	shell_regex_engine_fn,	1 },
+		{0}
+	};
+
 	/* Create the print function, and attch to the Globals */
-	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"print", print_fn, 1, 0);
-
-	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"compat", compat_fn, 1, 0);
-
-	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"gc", gc_fn, 0, 0);
-
-	SEE_CFUNCTION_PUTA(interp, interp->Global, 
-		"version", version_fn, 1, 0);
+	add_methods(interp, interp->Global, global_methods);
 
 	/* Create the Shell object */
 	Shell = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, Shell);
-	SEE_OBJECT_PUTA(interp, interp->Global, 
-		"Shell", &v, SEE_ATTR_DEFAULT);
-
-	SEE_CFUNCTION_PUTA(interp, Shell,
-		"gcdump", shell_gcdump_fn, 0, 0);
-
-	SEE_CFUNCTION_PUTA(interp, Shell,
-		"exit", shell_exit_fn, 1, 0);
-
-	SEE_CFUNCTION_PUTA(interp, Shell,
-		"abort", shell_abort_fn, 1, 0);
-
-	/* TODO: args */
+	SEE_OBJECT_PUTA(interp, interp->Global, "Shell", &v, SEE_ATTR_DEFAULT);
+	add_methods(interp, Shell, shell_methods);
 }
 
 /*
@@ -337,13 +424,17 @@ shell_add_document(interp)
 	struct SEE_object *document, *navigator;
 	struct SEE_value v;
 
+	static const struct method document_methods[] = {
+		{ "write",		document_write_fn,	1 },
+		{0}
+	};
+
 	/* Create a dummy 'document' object. Add it to the global space */
 	document = SEE_Object_new(interp);
 	SEE_SET_OBJECT(&v, document);
 	SEE_OBJECT_PUTA(interp, interp->Global, "document", &v, 0);
 
-	/* Create a 'write' method and attach to 'document'. */
-	SEE_CFUNCTION_PUTA(interp, document, "write", document_write_fn, 1, 0);
+	add_methods(interp, document, document_methods);
 
 	/* Create a 'navigator' object and attach to the global space */
 	navigator = SEE_Object_new(interp);

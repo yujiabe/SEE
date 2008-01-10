@@ -9,6 +9,7 @@ struct SEE_throw_location;
 struct SEE_context;
 struct SEE_code;
 struct SEE_value;
+struct SEE_regex_engine;
 
 #include <see/interpreter.h>		/* for enum SEE_trace_event */
 #include <see/type.h>
@@ -53,6 +54,9 @@ struct SEE_system {
 	void (*object_construct)(struct SEE_interpreter *interp,
 		struct SEE_object *self, struct SEE_object *thisobj,
 		int argc, struct SEE_value **argv, struct SEE_value *res);
+
+	/* Default regex engine to use */
+	const struct SEE_regex_engine *default_regex_engine;
 };
 
 extern struct SEE_system SEE_system;
@@ -60,5 +64,8 @@ extern struct SEE_system SEE_system;
 void SEE_init(void);	    /* no-op; reserved for API 3.0 */
 
 #define SEE_ABORT(interp, msg) (*SEE_system.abort)(interp, msg)
+
+const char **SEE_regex_engine_list(void);
+const struct SEE_regex_engine *SEE_regex_engine(const char *name);
 
 #endif /* _SEE_h_interpreter_ */

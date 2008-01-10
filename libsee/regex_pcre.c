@@ -60,18 +60,37 @@
 int SEE_regex_debug;
 #endif
 
-struct regex {
-	struct SEE_interpreter *interp;
-	int flags;
-	pcre *pcre;
-	pcre_extra *pcre_extra;
-	int ncaptures;
-	int utf8;
-
-	/* Cache of last text searched */
+struct regex_pcre {
+	struct regex	regex;
+	int		flags;
+	pcre *		pcre;
+	pcre_extra *	pcre_extra;
+	int		ncaptures;
+	int		utf8;
+	/* Cache of last text searched, converted to a C-string: */
 	struct SEE_string *text_string;
-	int text_len;
-	char *text_data;
+	int		text_len;
+	char *		text_data;
+};
+
+/* Cast from struct regex to struct regex_pcre */
+#define REGEX_CAST(r) ((struct regex_pcre *)(r))
+
+/* Prototypes */
+static void regex_pcre_init(void);
+static struct regex *regex_pcre_parse(struct SEE_interpreter *, 
+	struct SEE_string *, int);
+static int regex_pcre_count_captures(struct regex *);
+static int regex_pcre_get_flags(struct regex *);
+static int regex_pcre_match(struct SEE_interpreter *, struct regex *,
+	struct SEE_string *, unsigned int, struct capture *);
+
+const struct SEE_regex_engine _SEE_pcre_regex_engine = {
+	regex_pcre_init,
+	regex_pcre_parse,
+	regex_pcre_count_captures,
+	regex_pcre_get_flags,
+	regex_pcre_match
 };
 
 /* Called by PCRE to allocate memory */
@@ -95,16 +114,16 @@ static int
 regex_pcre_callout(block)
 	pcre_callout_block *block;
 {
-	struct regex *regex = (struct regex *)block->callout_data;
+	struct regex_pcre *regex = (struct regex_pcre *)block->callout_data;
 
 	if (SEE_system.periodic)
-		(*SEE_system.periodic)(regex->interp);
+		(*SEE_system.periodic)(regex->regex.interp);
 	return 0;
 }
 
 /* Initializes PCRE to use SEE's memory allocator and callout function */
-void
-SEE_regex_pcre_init()
+static void
+regex_pcre_init()
 {
 	int val;
 
@@ -118,11 +137,11 @@ SEE_regex_pcre_init()
 }
 
 static void 
-regex_finalize(interp, p, closure)
+regex_pcre_finalize(interp, p, closure)
 	struct SEE_interpreter *interp;
 	void *p, *closure;
 {
-	struct regex *regex = (struct regex *)p;
+	struct regex_pcre *regex = (struct regex_pcre *)p;
 
 	if (regex->pcre) {
 	    (*pcre_free)(regex->pcre);
@@ -137,13 +156,13 @@ regex_finalize(interp, p, closure)
 
 
 /* Parses a source pattern and returns a regex state for later use */
-struct regex *
-SEE_regex_parse(interp, pattern, flags)
+static struct regex *
+regex_pcre_parse(interp, pattern, flags)
 	struct SEE_interpreter *interp; 
 	struct SEE_string *pattern;
 	int flags;
 {
-	struct regex *regex;
+	struct regex_pcre *regex;
 	char *utf8_pat;
 	SEE_size_t utf8_len;
 	const char *errptr;
@@ -218,8 +237,10 @@ SEE_regex_parse(interp, pattern, flags)
 	}
 
 	/* Allocate a module-private regex structure */
-	regex = SEE_NEW_FINALIZE(interp, struct regex, regex_finalize, 0);
-	regex->interp = interp;
+	regex = SEE_NEW_FINALIZE(interp, struct regex_pcre, 
+		regex_pcre_finalize, 0);
+	regex->regex.engine = &_SEE_pcre_regex_engine;
+	regex->regex.interp = interp;
 	regex->flags = flags;
 	regex->pcre = pcre;
 	regex->pcre_extra = pcre_extra;
@@ -231,22 +252,26 @@ SEE_regex_parse(interp, pattern, flags)
 	pcre_extra->callout_data = regex;
 	pcre_extra->flags |= PCRE_EXTRA_CALLOUT_DATA;
 
-	return regex;
+	return &regex->regex;
 }
 
 /* Returns the number of capture parentheses in the compiled regex */
-int
-SEE_regex_count_captures(regex)
-	struct regex *regex;
+static int
+regex_pcre_count_captures(aregex)
+	struct regex *aregex;
 {
+	struct regex_pcre *regex = REGEX_CAST(aregex);
+
 	return regex->ncaptures;
 }
 
 /* Returns the flags of the regex object */
-int
-SEE_regex_get_flags(regex)
-	struct regex *regex;
+static int
+regex_pcre_get_flags(aregex)
+	struct regex *aregex;
 {
+	struct regex_pcre *regex = REGEX_CAST(aregex);
+
 	return regex->flags;
 }
 
@@ -254,14 +279,15 @@ SEE_regex_get_flags(regex)
  * Executes the regex on the text beginning at index.
  * Returns true of a match was successful.
  */
-int
-SEE_regex_match(interp, regex, text, start, captures)
+static int
+regex_pcre_match(interp, aregex, text, start, captures)
 	struct SEE_interpreter *interp;
-	struct regex *regex;
+	struct regex *aregex;
 	struct SEE_string *text;
 	unsigned int start;
 	struct capture *captures;
 {
+	struct regex_pcre *regex = REGEX_CAST(aregex);
 	int text_start;
 	struct SEE_string *substr;
 	int *ovector;

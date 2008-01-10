@@ -160,6 +160,13 @@ options are used:
  Shell.abort(msg)
 	     - This function forces a library-level abort (SEE_ABORT)
 
+ Shell.regex_engines() -> Array
+	     - Returns strings indicating Regex engines available to SEE
+
+ Shell.regex_engine([string]) -> string
+	     - Without arguments, returns the current regex engine name.
+	       With a string argument, changes the engine and returns the
+	       name of the old one.
 
 HTML document objects and functions
 -----------------------------------

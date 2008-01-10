@@ -17,10 +17,9 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dprint.c enumerate.c \
 		   unicase.c unicode.c value.c version.c		\
 		   module.c code1.c math.c
 
+libsee_la_SOURCES+= regex.c regex_ecma.c
 if WITH_PCRE
 libsee_la_SOURCES+= regex_pcre.c
-else
-libsee_la_SOURCES+= regex.c
 endif
 
 libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
