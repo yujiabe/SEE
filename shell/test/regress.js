@@ -134,4 +134,7 @@ compat('js11')
 test("\"xxx\\\nyyy\"", 'xxxyyy')
 compat('')
 
+/* bug 108 */
+test("(7e-4).toString(undefined)", "0.0007")
+
 finish()

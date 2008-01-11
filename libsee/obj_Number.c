@@ -283,7 +283,7 @@ number_proto_toString(interp, self, thisobj, argc, argv, res)
 
 	no = tonumber(interp, thisobj);
 
-	if (argc == 0)
+	if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) == SEE_UNDEFINED)
 		radix = 10;
 	else 
 		radix = SEE_ToInt32(interp, argv[0]);
