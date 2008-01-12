@@ -713,6 +713,12 @@ Token(lex)
 		do {
 			if (is_UnicodeEscape(lex)) {
 				c = UnicodeEscape(lex);
+				if (s->length == 0) {
+				    if (!UNICODE_IS_IS(c))
+					SYNTAX_ERROR(STR(bad_unicode_ident));
+				} else
+				    if (!UNICODE_IS_IP(c))
+					SYNTAX_ERROR(STR(bad_unicode_ident));
 				hasescape = 1;
 			} else  {
 				c = NEXT;

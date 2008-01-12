@@ -1,7 +1,8 @@
 $Id$
 
 2.1 [unreleased]
-  Bug 108: Number.toString(undefined)
+  Bug 109: detect illegal unicode escapes in identifiers
+  Bug 108: fix Number.toString(undefined)
   Experimental: support external regex library --with-pcre (pcre.org)
   Feature: see-shell -dg option for tracebacks on SIGINFO
   Feature: SEE_string_cmp_ascii()

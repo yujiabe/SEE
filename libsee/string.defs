@@ -310,6 +310,7 @@ dec_literal_detritus = "Unexpected characters after decimal literal"
 eof_in_c_comment = "Comment is missing its closing '*/'"
 eof_in_regex = "Regular expression missing final '/'"
 broken_regex = "Regular expression missing final '/'"
+bad_unicode_ident = "Invalid \\u escape in identifier"
 
 #
 # lexer tokens
