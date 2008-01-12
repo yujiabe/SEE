@@ -137,5 +137,11 @@ compat('')
 test("(7e-4).toString(undefined)", "0.0007")		/* bug 108 */
 test("var i=1, i\\u002b=2", 'exception')		/* bug 109 */
 test("/[]/.exec('')", null)				/* bug 110 */
+test("/)/", 'exception')				/* bug 112 */
+test("/}/", 'exception')
+test("/]/", 'exception')
+test("/.**./", 'exception')
+test("/+/", 'exception')
+test("/?/", 'exception')
 
 finish()

@@ -553,6 +553,9 @@ ecma_regex_parse(interp, source, flags)
 
 	regex->ncaptures = 1;
 	Disjunction_parse(recontext);
+	if (!ATEOF)
+	    SYNTAX_ERROR;
+
 	CODE_ADD(OP_SUCCEED);
 
 	/* Check that no backreferences were too big */
@@ -714,15 +717,15 @@ Term_parse(recontext)
 {
 	int min, max, greedy, pos;
 	int oparen, cparen;
+	int lookahead_len;
+	SEE_unicode_t lookahead[2];
 
 	/*
 	 * parse Assertion inline since it is a bit special
 	 * in terms of its lookahead
 	 */
-	if (NEXT == '\\') {
-	    int lookahead_len;
-	    SEE_unicode_t lookahead[2];
-
+	switch (NEXT) {
+	case '\\':
 	    lookahead_len = LOOKAHEAD(lookahead, 2);
 	    if (lookahead_len > 1 && lookahead[1] == 'b') {
 		SKIP; SKIP;
@@ -735,18 +738,24 @@ Term_parse(recontext)
 		return;
 	    }
 	    /* some other kind of escape */
-	}
-	else if (NEXT == '^') {
+	    break;
+
+	case '^':
 	    SKIP;
 	    CODE_ADD(OP_BOL);
 	    return;
-	}
-	else if (NEXT == '$') {
+
+	case '$':
 	    SKIP;
 	    CODE_ADD(OP_EOL);
 	    return;
+
+	/* Lookaheads forbidden by the Atom production */
+	case '*': case '+': case '?': case ')':
+	case ']': case '{': case '}': case '|':
+	    SYNTAX_ERROR;
 	}
-	
+
 	pos = CODE_POS;
 	oparen = recontext->regex->ncaptures;
 	Atom_parse(recontext);
@@ -946,7 +955,7 @@ Integer_parse(recontext)
 }
 
 /*
- * Atom::
+ * Atom::			la != ^ $     * + ?   )   ] { } |
  *	pattern character	la != ^ $ \ . * + ? ( ) [ ] { } |
  *	.
  *	\ AtomEscape
