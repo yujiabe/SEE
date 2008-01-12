@@ -1257,7 +1257,6 @@ CharacterClass_parse(recontext)
 out:	    CC_ADDCC(c, a);
 	    /* free(a) */
 	}
-	if (c->ranges == NULL) SYNTAX_ERROR;
 	EXPECT(']');
 
         if (recontext->regex->flags & FLAG_IGNORECASE) {
