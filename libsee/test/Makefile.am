@@ -6,4 +6,5 @@ noinst_PROGRAMS=    t-basic
 noinst_PROGRAMS+=   t-string
 noinst_PROGRAMS+=   t-bug81 
 noinst_PROGRAMS+=   t-bug90
+noinst_PROGRAMS+=   t-bug104
 noinst_PROGRAMS+=   t-bug105

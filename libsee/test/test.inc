@@ -23,6 +23,9 @@
 /* Tests two ints for equality */
 #define TEST_EQ_INT(a,b)    _TEST((a)==(b), \
 				#a " == " #b, (0,"%d == %d)",(a),(b)))
+/* Tests two ints for inequality */
+#define TEST_NOT_EQ_INT(a,b)    _TEST((a)!=(b), \
+				#a " != " #b, (0,"%d != %d)",(a),(b)))
 /* Tests two SEE_numbers for equality */
 #define TEST_EQ_FLOAT(a,b)  _TEST0((a)==(b), #a " == " #b) /* XXX */
 /* Tests two C strings for equality */
