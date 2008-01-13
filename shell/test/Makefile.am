@@ -12,8 +12,14 @@
 #	http://www.mozilla.org/js/tests/library.html
 #
 
-TESTS=		grammar.js regex.js function.js regress.js
-EXTRA_DIST=	grammar.js regex.js function.js regress.js common.js
-TESTS_ENVIRONMENT= ../see-shell.static $$TESTOPTS -f $(srcdir)/common.js -f
+TESTS=		grammar.js
+TESTS+=		regex.js
+TESTS+=		function.js
+TESTS+=		regress.js
+TESTS+=		throw.js 
+
+EXTRA_DIST=	common.js $(TESTS)
+TESTS_ENVIRONMENT=  $(LIBTOOL) --mode=execute ../see-shell \
+			$$TESTOPTS -f $(srcdir)/common.js -f
 SUBDIRS=
 DIST_SUBDIRS=	mozilla

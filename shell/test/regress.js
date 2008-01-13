@@ -62,7 +62,8 @@ compat('')
 test('var s = ""; for (i = 0; i < 8192; i++) s = s + " "; s.length', 8192)
 
 /* bug 69 (may segfault) */
-test('(function(){var v=String.prototype.toLocaleString;v();})()', 'exception')
+test('(function(){var v=String.prototype.toLocaleString;v();})()', 
+    Exception(TypeError))
 
 /* bug 77 */
 test('isFinite(0)', true)
@@ -84,7 +85,7 @@ test('void (function(a){switch(a){case 1:case 2:;}}).toString()', undefined);
 /* bug 79 */
 delete bar;
 compat('sgmlcom')
-test('1 --> bar', 'exception');
+test('1 --> bar', Exception(SyntaxError));
 test(' --> bar', undefined);
 test('1 \n --> bar', 1);
 test(' /* ... */ --> bar', undefined);
@@ -129,19 +130,19 @@ test("var s=''; for(var i=0;i<35;i++)s+='abcdefghijklmno';s.charCodeAt(0x200)",
 test('error_lineno("\\r\\nan error")', 2)
 
 /* bug 101 */
-test("\"xxx\\\nyyy\"", 'exception')
+test("\"xxx\\\nyyy\"", Exception(SyntaxError))
 compat('js11')
 test("\"xxx\\\nyyy\"", 'xxxyyy')
 compat('')
 
 test("(7e-4).toString(undefined)", "0.0007")		/* bug 108 */
-test("var i=1, i\\u002b=2", 'exception')		/* bug 109 */
+test("var i=1, i\\u002b=2", Exception(SyntaxError))	/* bug 109 */
 test("/[]/.exec('')", null)				/* bug 110 */
-test("/)/", 'exception')				/* bug 112 */
-test("/}/", 'exception')
-test("/]/", 'exception')
-test("/.**./", 'exception')
-test("/+/", 'exception')
-test("/?/", 'exception')
+test("/)/", Exception(SyntaxError))				/* bug 112 */
+test("/}/", Exception(SyntaxError))
+test("/]/", Exception(SyntaxError))
+test("/.**./", Exception(SyntaxError))
+test("/+/", Exception(SyntaxError))
+test("/?/", Exception(SyntaxError))
 
 finish()

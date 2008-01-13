@@ -728,9 +728,9 @@ static struct node *LabelledStatement_parse(struct parser *parser);
 static void ThrowStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *ThrowStatement_parse(struct parser *parser);
-static void TryStatement_catch(struct TryStatement_node *n, 
+static SEE_boolean_t TryStatement_catch(struct TryStatement_node *n, 
         struct SEE_context *context, struct SEE_value *C, 
-        struct SEE_value *res);
+        struct SEE_value *res, SEE_try_context_t *ctxt);
 static void TryStatement_catch_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void TryStatement_finally_eval(struct node *na, 
@@ -10970,18 +10970,17 @@ static struct nodeclass TryStatement_nodeclass
 
 /*
  * Helper function to evaluate the catch clause in a new scope.
- * Weill return a SEE_COMPLETION_THROW completion instead of directly throwing
- * an exception.
+ * Return true if an exception was caught while executing the
+ * catch clause.
  */
-static void
-TryStatement_catch(n, context, C, res)
+static SEE_boolean_t
+TryStatement_catch(n, context, C, res, ctxt)
 	struct TryStatement_node *n;
 	struct SEE_context *context;
 	struct SEE_value *C, *res;
+	SEE_try_context_t *ctxt;
 {
-	struct SEE_value *tcp;
 	struct SEE_object *r2;
-	SEE_try_context_t ctxt;
 	struct SEE_scope *s;
 	struct SEE_interpreter *interp = context->interpreter;
 
@@ -10991,14 +10990,10 @@ TryStatement_catch(n, context, C, res)
 	s->obj = r2;
 	s->next = context->scope;
 	context->scope = s;
-	SEE_TRY(interp, ctxt)
+	SEE_TRY(interp, *ctxt)
 	    EVAL(n->bcatch, context, res);
 	context->scope = context->scope->next;
-	if (SEE_CAUGHT(ctxt)) {
-	    tcp = SEE_NEW(interp, struct SEE_value);
-	    SEE_VALUE_COPY(tcp, SEE_CAUGHT(ctxt));
-	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_THROW, tcp, NULL);
-	}
+	return SEE_CAUGHT(*ctxt);
 }
 
 static void
@@ -11008,17 +11003,18 @@ TryStatement_catch_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	SEE_try_context_t ctxt;
+	SEE_try_context_t block_ctxt, catch_ctxt;
 
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
-	SEE_TRY(context->interpreter, ctxt)
-	    EVAL(n->block, context, res);
-	if (SEE_CAUGHT(ctxt))
-	    TryStatement_catch(n, context, SEE_CAUGHT(ctxt), res);
-	if (res->u.completion.type == SEE_COMPLETION_THROW) {
-	    TRACE(&na->location, context, SEE_TRACE_THROW);
-	    SEE_THROW(context->interpreter, res->u.completion.value);
-	}
+	SEE_TRY(context->interpreter, block_ctxt)
+		EVAL(n->block, context, res);
+	if (SEE_CAUGHT(block_ctxt))
+		if (TryStatement_catch(n, context, SEE_CAUGHT(block_ctxt),
+			res, &catch_ctxt)) 
+		{
+		    TRACE(&na->location, context, SEE_TRACE_THROW);
+		    SEE_RETHROW(context->interpreter, catch_ctxt);
+		} 
 }
 
 #if WITH_PARSER_CODEGEN
@@ -11113,15 +11109,13 @@ TryStatement_finally_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	SEE_TRY(context->interpreter, ctxt)
 	    EVAL(n->block, context, res);
-	if (SEE_CAUGHT(ctxt))
-	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_THROW, 
-	    	SEE_CAUGHT(ctxt), NULL);
 	EVAL(n->bfinally, context, &r2);
-	if (r2.u.completion.type != SEE_COMPLETION_NORMAL)
+	if (SEE_VALUE_GET_TYPE(&r2) == SEE_COMPLETION &&
+		r2.u.completion.type != SEE_COMPLETION_NORMAL)
 	    SEE_VALUE_COPY(res, &r2); 		/* break, return etc */
-	if (res->u.completion.type == SEE_COMPLETION_THROW) {
+	else if (SEE_CAUGHT(ctxt)) {
 	    TRACE(&na->location, context, SEE_TRACE_THROW);
-	    SEE_THROW(context->interpreter, res->u.completion.value);
+	    SEE_RETHROW(context->interpreter, ctxt);
 	}
 }
 
@@ -11204,44 +11198,34 @@ TryStatement_catchfinally_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	struct SEE_value r1, r4, r6, *C = NULL, *retv;
-	SEE_try_context_t ctxt, ctxt2;
+	struct SEE_value r6;
+	SEE_try_context_t block_ctxt, finally_ctxt, catch_ctxt, *C = NULL;
 	struct SEE_interpreter *interp = context->interpreter;
 
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
-	SEE_TRY(interp, ctxt)
-/*1*/	    EVAL(n->block, context, &r1);
-	if (SEE_CAUGHT(ctxt)) 
-	    _SEE_SET_COMPLETION(&r1, SEE_COMPLETION_THROW, 
-	        SEE_CAUGHT(ctxt), NULL);
-
-/*2*/	C = &r1;
-	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(C) == SEE_COMPLETION);
-
-/*3*/	if (C->u.completion.type == SEE_COMPLETION_THROW) {
-/*4*/	    TryStatement_catch(n, context, C->u.completion.value, &r4);
-/*5*/	    if (r4.u.completion.type != SEE_COMPLETION_NORMAL) {
-		C = &r4;
-	    }
+	SEE_TRY(interp, block_ctxt)
+/*1*/		EVAL(n->block, context, res);
+/*3*/	if (SEE_CAUGHT(block_ctxt))  {
+		C = &block_ctxt;
+/*4*/		if (TryStatement_catch(n, context, SEE_CAUGHT(block_ctxt),
+			res, &catch_ctxt))
+/*5*/		    C = &catch_ctxt;
+		else
+		    C = NULL;
 	}
 
-	SEE_TRY(interp, ctxt2)
-/*6*/	    EVAL(n->bfinally, context, &r6);
-	if (SEE_CAUGHT(ctxt2))
-	    _SEE_SET_COMPLETION(&r6, SEE_COMPLETION_THROW, 
-	    	SEE_CAUGHT(ctxt2), NULL);
+	SEE_TRY(interp, finally_ctxt)
+/*6*/		EVAL(n->bfinally, context, &r6);
+	if (SEE_CAUGHT(finally_ctxt))
+		C = &finally_ctxt;
+	else if (SEE_VALUE_GET_TYPE(&r6) == SEE_COMPLETION &&
+		    r6.u.completion.type != SEE_COMPLETION_NORMAL)
+		SEE_VALUE_COPY(res, &r6);	/* break, return etc */
 
-	if (r6.u.completion.type != SEE_COMPLETION_NORMAL)
-		retv = C;
-	else
-		retv = &r6;
-	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(retv) == SEE_COMPLETION);
-		
-	if (retv->u.completion.type == SEE_COMPLETION_THROW) {
-	    TRACE(&na->location, context, SEE_TRACE_THROW);
-	    SEE_THROW(interp, retv->u.completion.value);
-	} else 
-	    SEE_VALUE_COPY(res, retv);
+	if (C) {
+		TRACE(&na->location, context, SEE_TRACE_THROW);
+		SEE_RETHROW(interp, *C);
+	}
 }
 
 #if WITH_PARSER_CODEGEN

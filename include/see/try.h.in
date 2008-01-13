@@ -126,15 +126,20 @@
 		/* NOTREACHED */				\
 	    } while (0)
 
+#define SEE_RETHROW(interp, c)					\
+	    do {						\
+		/* SEE_ASSERT(!(c).done); */			\
+		(interp)->traceback = (c).traceback;		\
+		SEE__THROW(interp, 				\
+			(struct SEE_value *)&(c).thrown,	\
+			(c).throw_file, (c).throw_line);	\
+	    } while (0)
+
 /* convenience macro */
 #define SEE_DEFAULT_CATCH(interp, c)				\
 	    do {						\
-		if (!(c).done) {				\
-		    (interp)->traceback = (c).traceback;	\
-		    SEE__THROW(interp, 				\
-			    (struct SEE_value *)&(c).thrown,	\
-			    (c).throw_file, (c).throw_line);	\
-		}						\
+		if (SEE_CAUGHT(c))				\
+		    SEE_RETHROW(interp, c);			\
 	    } while (0)
 
 /*------------------------------------------------------------

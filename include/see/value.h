@@ -44,8 +44,8 @@ struct _SEE_reference {
 
 /* This structure is not part of the public API and may change */
 struct _SEE_completion {
-	struct SEE_value *value;
-	void *target;
+	struct SEE_value *value;	/* Return value */
+	void *target;			/* Throw context or break target */
 	enum { SEE_COMPLETION_NORMAL,
 	       SEE_COMPLETION_BREAK, 
 	       SEE_COMPLETION_CONTINUE, 

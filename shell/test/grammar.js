@@ -2,37 +2,37 @@
 describe("Exercises every production in the grammar");
 
 /* FutureReservedWord */
-test("var abstract", "exception");
-test("var boolean", "exception");
-test("var byte", "exception");
-test("var char", "exception");
-test("var class", "exception");
-test("var const", "exception");
-test("var debugger", "exception");
-test("var enum", "exception");
-test("var export", "exception");
-test("var extends", "exception");
-test("var final", "exception");
-test("var float", "exception");
-test("var goto", "exception");
-test("var implements", "exception");
-test("var int", "exception");
-test("var interface", "exception");
-test("var long", "exception");
-test("var native", "exception");
-test("var package", "exception");
-test("var private", "exception");
-test("var protected", "exception");
-test("var short", "exception");
-test("var static", "exception");
-test("var super", "exception");
-test("var synchronized", "exception");
-test("var throws", "exception");
-test("var transient", "exception");
-test("var volatile", "exception");
-test("var double", "exception");
-test("var import", "exception");
-test("var public", "exception");
+test("var abstract", Exception(SyntaxError));
+test("var boolean", Exception(SyntaxError));
+test("var byte", Exception(SyntaxError));
+test("var char", Exception(SyntaxError));
+test("var class", Exception(SyntaxError));
+test("var const", Exception(SyntaxError));
+test("var debugger", Exception(SyntaxError));
+test("var enum", Exception(SyntaxError));
+test("var export", Exception(SyntaxError));
+test("var extends", Exception(SyntaxError));
+test("var final", Exception(SyntaxError));
+test("var float", Exception(SyntaxError));
+test("var goto", Exception(SyntaxError));
+test("var implements", Exception(SyntaxError));
+test("var int", Exception(SyntaxError));
+test("var interface", Exception(SyntaxError));
+test("var long", Exception(SyntaxError));
+test("var native", Exception(SyntaxError));
+test("var package", Exception(SyntaxError));
+test("var private", Exception(SyntaxError));
+test("var protected", Exception(SyntaxError));
+test("var short", Exception(SyntaxError));
+test("var static", Exception(SyntaxError));
+test("var super", Exception(SyntaxError));
+test("var synchronized", Exception(SyntaxError));
+test("var throws", Exception(SyntaxError));
+test("var transient", Exception(SyntaxError));
+test("var volatile", Exception(SyntaxError));
+test("var double", Exception(SyntaxError));
+test("var import", Exception(SyntaxError));
+test("var public", Exception(SyntaxError));
 
 test("1 + +1", 2);
 test("1 - +1", 0);
@@ -61,14 +61,14 @@ test("i = 3; i++", 3); test("i", 4);
 test("i = 3; ++i", 4); test("i", 4);
 test("i = 3; i--", 3); test("i", 2);
 test("i = 3; --i", 2); test("i", 2);
-test("i = 3; i ++ ++", "exception");
-test("i = 3; --i++", "exception");	/* only inc/decrement lvalues */
-test("i = 3; ++i--", "exception");	/* only inc/decrement lvalues */
+test("i = 3; i ++ ++", Exception(SyntaxError));
+test("i = 3; --i++", Exception(ReferenceError));
+test("i = 3; ++i--", Exception(ReferenceError));
 
 test("!true", false);
 test("~0", -1);
 test("void 'hi'", undefined);
-test("i = 3; delete i", true); test("i", "exception");
+test("i = 3; delete i", true); test("i", Exception(ReferenceError));
 
 test("3 * 6 + 1", 19);
 test("1 + 3 * 6", 19);
@@ -80,12 +80,13 @@ test("1 - 1 - 1", -1);
 
 test("i=3;j=5; i*=j+=i", 24);
 
-/* instanceof only supports objects */
-test("1 instanceof 1", "exception");
-test("1 instanceof Number.prototype", "exception");
+/* instanceof's rhs must be an object */
+test("1 instanceof 1", Exception(TypeError));
+test("null instanceof null", Exception(TypeError));
 
 /* Only function objects should support HasInstance: */
-test("new Number(1) instanceof Number.prototype", "exception");	
+test("1 instanceof Number.prototype", Exception(TypeError));
+test("new Number(1) instanceof Number.prototype", Exception(TypeError));	
 
 
 /* Test the instanceof keyword and the new operator applied to functions. */
@@ -131,11 +132,11 @@ test("i=0; for (; i < 10; i++); i", 10);
 test("i=0; for (; i < 10; ) i++; i", 10);
 test("i=0; for (; ;i++) if (i==10) break; i", 10);
 test("a=[1,2,3,4]; c=0; for (var v in a) c+=a[v]; c", 10);
-test("delete t; t", "exception");
+test("delete t; t", Exception(ReferenceError));
 test("{var t;} t", undefined);
-test("continue", "exception");
-test("return", "exception");
-test("break", "exception");
+test("continue", Exception(SyntaxError));
+test("return", Exception(SyntaxError));
+test("break", Exception(SyntaxError));
 test("x = 0; outer: for (;;) { for (;;) break outer; x++; }; x", 0);
 test("x = 0; for (i = 0; i < 3; i++) { continue; x++; } x", 0);
 test("x = 0; it:for (i = 0; i < 3; i++) { for (;;) continue it; x++; } x", 0);
@@ -146,7 +147,8 @@ test("x = ''; for (i = 0; i < 8; i++) switch (i) {" +
      "case 4: x+='f'; break; case 5: x+='g'; case 6: x+='h';}; x",
      "abbcdeffghhef");
 test("foo:bar:baz:;", undefined);
-test("throw {}", "exception");
+var obj = {};
+test("throw obj", Exception(obj));
 test("x=0;try{throw {a:1}} catch(e){x=e.a};x", 1);
 test("x=y=0;try{" +
      " try { throw {a:1} } finally {x=2}; " +
