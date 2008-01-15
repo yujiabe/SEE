@@ -45,6 +45,7 @@
 #include <see/mem.h>
 #include <see/native.h>
 #include <see/system.h>
+#include <see/error.h>
 
 #include "init.h"
 
@@ -115,4 +116,43 @@ SEE_interpreter_init_compat(interp, compat_flags)
 	SEE_String_init(interp);
 	SEE_Function_init(interp);	/* Call late because of parser use */
 	_SEE_module_init(interp);
+}
+
+struct SEE_interpreter_state {
+	struct SEE_interpreter *interp;
+	volatile struct SEE_try_context * try_context;
+	struct SEE_throw_location * try_location;
+	struct SEE_traceback *traceback;
+};
+
+/**
+ * Saves sufficient interpreter state that allows another thread to
+ * make a call into it.
+ */
+struct SEE_interpreter_state *
+SEE_interpreter_save_state(interp)
+	struct SEE_interpreter *interp;
+{
+	struct SEE_interpreter_state *state;
+	
+	state = SEE_NEW(interp, struct SEE_interpreter_state);
+	state->interp = interp;
+	state->try_context = interp->try_context;
+	state->try_location = interp->try_location;
+	state->traceback = interp->traceback;
+	return state;
+}
+
+/**
+ * Restores saved interpreter state
+ */
+void
+SEE_interpreter_restore_state(interp, state)
+	struct SEE_interpreter *interp;
+	struct SEE_interpreter_state *state;
+{
+	SEE_ASSERT(interp, state->interp == interp);
+	interp->try_context = state->try_context;
+	interp->try_location = state->try_location;
+	interp->traceback = state->traceback;
 }

@@ -13,6 +13,7 @@ struct SEE_context;
 struct SEE_scope;
 struct SEE_traceback;
 struct SEE_regex_engine;
+struct SEE_interpreter_state;
 
 enum SEE_trace_event {
 	SEE_TRACE_CALL,
@@ -77,7 +78,7 @@ struct SEE_interpreter {
 			struct SEE_context *, enum SEE_trace_event);
 
 	/* Regex implementation used by Regex object */
-	struct SEE_regex_engine *regex_engine;
+	const struct SEE_regex_engine *regex_engine;
 };
 
 /* Compatibility flags */
@@ -120,5 +121,12 @@ void SEE_interpreter_init(struct SEE_interpreter *i);
 
 /* Initialises an interpreter with specific behaviour */
 void SEE_interpreter_init_compat(struct SEE_interpreter *i, int compat_flags);
+
+/* Saves interpreter state for concurrent access */
+struct SEE_interpreter_state *SEE_interpreter_save_state(
+	struct SEE_interpreter *i);
+/* Restores interpreter state; destroys state */
+void SEE_interpreter_restore_state(struct SEE_interpreter *i, 
+	struct SEE_interpreter_state *state);
 
 #endif /* _SEE_h_interpreter_ */
