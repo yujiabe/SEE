@@ -28,7 +28,7 @@ obj_finalize(i, p, closure)
 	finalized++;
 }
 
-void 
+static void 
 setup(interp, cascade, store)
 	struct SEE_interpreter *interp;
 	unsigned int cascade;
@@ -49,7 +49,7 @@ setup(interp, cascade, store)
 	*store = (void *)ret;
 }
 
-void 
+static void 
 setup2(interp, store)
 	struct SEE_interpreter *interp;
 	void **store;
