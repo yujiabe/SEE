@@ -32,6 +32,7 @@ load_module(name)
 	lt_dlhandle handle = NULL;
 	struct SEE_module *module;
 	char symname[256];
+	char libname[FILENAME_MAX + 1];
 
 	if (lt_dlinit()) {
 	    fprintf(stderr, "Cannot load modules: %s\n", lt_dlerror());
@@ -44,7 +45,7 @@ load_module(name)
 	if (!handle && strchr(name, '/') == 0 && 
 		strlen(name) + 3 < FILENAME_MAX)
 	{
-	    char libname[FILENAME_MAX + 1] = "lib";
+	    memcpy(libname, "lib", 3);
 	    strcpy(libname + 3, name);
 	    handle = lt_dlopenext(libname);
 	}
