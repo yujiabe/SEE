@@ -10,12 +10,15 @@
 
 var failures = 0;
 var total = 0;
+var saved_desc;
 
+/** Describes the current test. Should be the first function called! */
 function describe(desc) {
 	print()
 	print("===============================")
 	print("Test: " + desc)
 	print()
+	saved_desc = desc;
 }
 
 /* Literalise a string for printing purposes */
@@ -25,7 +28,21 @@ function literal(v) {
     try {
 	switch (typeof v) {
 	case "string":
-		return '"' + v.replace(/[\\'"]/g, "\\$&") + '"';
+		var t = '"' + v.replace(/[\\'"]/g, "\\$&") + '"';
+		var s = "";
+		for (var i = 0; i < t.length; i++) {
+		    var c = t.charCodeAt(i);
+		    if (c == '\n'.charCodeAt(0)) s = s + "\\n";
+		    else if (c == '\t'.charCodeAt(0)) s = s + "\\t";
+		    else if (c == '\r'.charCodeAt(0)) s = s + "\\r";
+		    else if (c < 16) s = s + "\\x0" + c.toString(16);
+		    else if (c < 32) s = s + "\\x" + c.toString(16);
+		    else if (c < 127) s = s + t.charAt(i);
+		    else if (c < 0x100) s = s + "\\x" + c.toString(16);
+		    else if (c < 0x1000) s = s + "\\u0" + c.toString(16);
+		    else s = s + "\\u" + c.toString(16);
+		}
+		return s;
 	default:
 		return String(v);
 	}
@@ -81,20 +98,30 @@ var NO_EXCEPTION = {}
 var ANY_EXCEPTION = {}
 
 
+/* Indicates the successful conculsion of a test */
 function pass(msg) {
-	print(msg + " - [32mPASS[m");
+	if (Shell.isatty())
+	    print(msg + " - [32mPASS[m");
+	else
+	    print(msg + " - PASS");
 	total++;
 }
 
+/* Indicates the unsuccessful conclusion of a test */
 function fail(msg, extra) {
-	var s = msg + " - [31;7mFAIL[m";
+	var s;
+	if (Shell.isatty())
+	    s = msg + " - [31;7mFAIL[m";
+	else
+	    s = msg + " - FAIL";
 	if (extra) s += "\n\t\t(" + extra + ")";
 	print(s);
 	failures++;
 	total++;
 }
 
-/* Run a test, and check that the result is that expected */
+/* Evaluates a JS expression, checks that the result is that expected
+ * and calls either pass() or fail(). */
 function test(expr, expected) {
 
 	var result, msg, ok, result_str;
@@ -103,8 +130,12 @@ function test(expr, expected) {
 		result = eval(expr);
 		if (expected instanceof ExceptionBase)
 		    ok = false;
+		else if (expected === NO_EXCEPTION)
+		    ok = true;
+		else if (typeof expected == "number" && isNaN(expected))
+		    ok = typeof result == "number" && isNaN(result);
 		else
-		    ok = (result === expected || expected === NO_EXCEPTION);
+		    ok = (result === expected);
 		result_str = literal(result);
 	} catch (e) {
 		if (expected === ANY_EXCEPTION)
@@ -124,10 +155,14 @@ function test(expr, expected) {
 	}
 }
 
+/* Displays a summary of the test passes and failures, and throws a
+ * final Error if there were any failures. */
 function finish() {
-
 	print();
-	print((total - failures) + " out of " + total + " sub-tests passed.");
+	print("End: " + saved_desc);
+	print("     " + (total - failures) + " of " + 
+		      total + " sub-tests passed");
+	print("===============================")
 
 	/* Throw an error on failure */
 	if (failures > 0)
