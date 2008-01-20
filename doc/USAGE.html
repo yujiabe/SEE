@@ -1863,17 +1863,17 @@ the following <q>internal method</q> macros:
 </ul>
 
 <pre>void <dfn id="SEE_OBJECT_GET">SEE_OBJECT_GET</dfn>(struct SEE_interpreter *interp,
-                struct SEE_object *obj, struct SEE_string *prop,
+                struct SEE_object *obj, const struct SEE_string *prop,
                 struct SEE_value *res);
 void <dfn id="SEE_OBJECT_PUT">SEE_OBJECT_PUT</dfn>(struct SEE_interpreter *interp,
-                struct SEE_object *obj, struct SEE_string *prop,
+                struct SEE_object *obj, const struct SEE_string *prop,
                 struct SEE_value *res, int flags);
 int <dfn id="SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</dfn>(struct SEE_interpreter *interp,
-                struct SEE_object *obj, struct SEE_string *prop);
+                struct SEE_object *obj, const struct SEE_string *prop);
 int <dfn id="SEE_OBJECT_HASPROPERTY">SEE_OBJECT_HASPROPERTY</dfn>(struct SEE_interpreter *interp,
-                struct SEE_object *obj, struct SEE_string *prop);
+                struct SEE_object *obj, const struct SEE_string *prop);
 int <dfn id="SEE_OBJECT_DELETE">SEE_OBJECT_DELETE</dfn>(struct SEE_interpreter *interp,
-                struct SEE_object *obj, struct SEE_string *prop);
+                struct SEE_object *obj, const struct SEE_string *prop);
 void <dfn id="SEE_OBJECT_DEFAULTVALUE">SEE_OBJECT_DEFAULTVALUE</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *obj, struct SEE_value *hint,
                 struct SEE_value *res);
@@ -2008,12 +2008,21 @@ Once obtained, the following macros can be used to access the enumerator:
 
 <ul>
  <li><code>SEE_ENUM_NEXT()</code>
-        - return a pointer to a property name string, or <code>NULL</code>
-          when the properties have been exhausted.
+        - return a pointer to an internalized property name string, 
+	  or <code>NULL</code> when the properties have been exhausted.
 </ul>
 
-<pre>struct SEE_string *<dfn id="SEE_ENUM_NEXT">SEE_ENUM_NEXT</dfn>(struct SEE_interpreter *interp,
+<pre>const struct SEE_string *<dfn id="SEE_ENUM_NEXT">SEE_ENUM_NEXT</dfn>(struct SEE_interpreter *interp,
                 struct SEE_enum *e, int *flags_return);</pre>
+
+<p class="note">
+&#9888; Note:
+The return type of <code>SEE_ENUM_NEXT()</code> changed from
+<code>struct SEE_string *</code> to
+<code>const struct SEE_string *</code> in API 2.1.
+Strings returned from <code>SEE_ENUM_NEXT()</code> may be assumed
+to have already been internalised with <code>SEE_intern()</code>.
+</p>
 
 <p>
 Enumerators can assume that the underlying object does not change during

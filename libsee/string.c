@@ -113,7 +113,7 @@ SEE_string_dup(interp, s)
  */
 struct SEE_string *
 SEE_string_fix(s)
-	const struct SEE_string *s;
+	struct SEE_string *s;
 {
 	struct SEE_string *cp;
 

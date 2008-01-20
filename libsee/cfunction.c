@@ -165,13 +165,9 @@ cfunction_get(interp, o, p, res)
 {
 	struct cfunction *f = (struct cfunction *)o;
 
-	if ((SEE_COMPAT_JS(interp, >=, JS11)) &&
-		SEE_string_cmp(p, STR(__proto__)) == 0)
-	{
+	if (p == STR(__proto__) && (SEE_COMPAT_JS(interp, >=, JS11)))
 		SEE_SET_OBJECT(res, o->Prototype);
-		return;
-	}
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	else if (p == STR(length))
 		SEE_SET_NUMBER(res, f->length);
 	else
 		SEE_OBJECT_GET(interp, o->Prototype, p, res);
@@ -183,7 +179,7 @@ cfunction_hasproperty(interp, o, p)
         struct SEE_object *o;
         struct SEE_string *p;
 {
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	if (p == STR(length))
 		return 1;
 	return SEE_OBJECT_HASPROPERTY(interp, o->Prototype, p);
 }

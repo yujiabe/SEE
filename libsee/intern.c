@@ -45,6 +45,7 @@
 #include <see/error.h>
 #include <see/interpreter.h>
 #include <see/system.h>
+#include <see/object.h>
 
 #include "stringdefs.h"
 #include "dprint.h"
@@ -84,6 +85,8 @@ static struct intern *  make(struct SEE_interpreter *, struct SEE_string *);
 static unsigned int     hash(const struct SEE_string *);
 static struct intern ** find(intern_tab_t *, struct SEE_string *,
 			     unsigned int);
+static int internalized(struct SEE_interpreter *interp,
+			const struct SEE_string *s);
 static void global_init(void);
 
 /** System-wide intern table */
@@ -227,6 +230,23 @@ _SEE_intern_init(interp)
 	interp->intern_tab = intern_tab;
 }
 
+/* Returns true if the string is already internalized */
+static int
+internalized(interp, s)
+	struct SEE_interpreter *interp;
+	const struct SEE_string *s;
+{
+	/*
+	 * A string is internalized if
+	 *  - is already internalized in this interpreter or the global hash
+	 *  - is one of the static resource strings
+	 */
+	return 
+	    ((!s->interpreter || s->interpreter == interp) &&
+	     (s->flags & SEE_STRING_FLAG_INTERNED)) ||
+	    (s >= STRn(0) && s < STRn(SEE_nstringtab));
+}
+
 /**
  * Intern a string relative to an interpreter. Also reads the global table
  * Note that a different pointer to s is *ALWAYS* returned unless s was
@@ -253,15 +273,7 @@ SEE_intern(interp, s)
 	if (!s)
 	    return NULL;
 
-	/*
-	 * Do not internalize a string if it
-	 *  - is already internalized in this interpreter or the global hash
-	 *  - is one of the static resource strings
-	 */
-	if (((!s->interpreter || s->interpreter == interp) &&
-	     (s->flags & SEE_STRING_FLAG_INTERNED)) ||
-	    (s >= STRn(0) && s < STRn(SEE_nstringtab)))
-	{
+	if (internalized(interp, s)) {
 #ifndef NDEBUG
 		if (SEE_debug_intern) {
 		    dprintf("INTERN ");
@@ -425,3 +437,19 @@ SEE_intern_global(s)
 	*x = make(NULL, str);
 	return (*x)->string;
 }
+
+#ifndef NDEBUG
+/**
+ * Raises an assertion failure if the passed string is not internalised.
+ * This function used by the SEE_OBJECT_*() macros.
+ */
+struct SEE_string *
+_SEE_intern_assert(interp, s)
+	struct SEE_interpreter *interp;
+        struct SEE_string *s;
+{
+	if (s)
+	    SEE_ASSERT(interp, internalized(interp, s));
+	return s;
+}
+#endif

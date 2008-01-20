@@ -47,6 +47,7 @@
 #include <see/system.h>
 #include <see/error.h>
 #include <see/interpreter.h>
+#include <see/intern.h>
 #include <see/debug.h>
 
 #include "stringdefs.h"
@@ -654,7 +655,7 @@ string_proto_match(interp, self, thisobj, argc, argv, res)
 		    /* a[n] = result string */
 		    nstr->length = 0;
 		    SEE_string_append_int(nstr, n);	/* nstr = String(n) */
-		    SEE_OBJECT_PUT(interp, a, nstr, &v, 0);
+		    SEE_OBJECT_PUT(interp, a, SEE_intern(interp, nstr), &v, 0);
 		    matches++;
 
 		    if (v.u.string->length == 0) {
@@ -717,7 +718,7 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 		if (ns == NULL) ns = SEE_string_new(interp, 0);
 		ns->length = 0;
 		SEE_string_append_int(ns, i);
-		SEE_OBJECT_GET(interp, a, ns, &vp[i]);
+		SEE_OBJECT_GET(interp, a, SEE_intern(interp, ns), &vp[i]);
 	    }
 	    SEE_SET_NUMBER(&vp[ncaps], index);
 	    SEE_SET_STRING(&vp[ncaps + 1], source);
@@ -773,7 +774,7 @@ replace_helper(interp, previndexp, out, a, source, replacev, ncaps)
 		SEE_string_append_int(ns, n);
 
 		/* fetch the captured substring */
-		SEE_OBJECT_GET(interp, a, ns, &v);
+		SEE_OBJECT_GET(interp, a, SEE_intern(interp, ns), &v);
 		if (SEE_VALUE_GET_TYPE(&v) != SEE_UNDEFINED) {
 		    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&v) == SEE_STRING);
 		    SEE_string_append(out, v.u.string);

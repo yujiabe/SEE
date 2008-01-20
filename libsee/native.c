@@ -100,9 +100,7 @@ find(interp, o, ip)
 	struct SEE_native *n = (struct SEE_native *)o;
 	struct SEE_property **x;
 
-	SEE_ASSERT(interp, ip != NULL);
-	SEE_ASSERT(interp, ip->flags & SEE_STRING_FLAG_INTERNED);
-	x = &n->properties[hashfn(ip)];
+	x = &n->properties[hashfn(_SEE_INTERN_ASSERT(interp, ip))];
 	while (*x && (*x)->name != ip)
 		x = &((*x)->next);
 	return x;
@@ -110,16 +108,14 @@ find(interp, o, ip)
 
 /* [[Get]] 8.6.2.1 */
 void
-SEE_native_get(interp, o, p, res)
+SEE_native_get(interp, o, ip, res)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 	struct SEE_value *res;
 {
-	struct SEE_string *ip;
 	struct SEE_property **x;
 
-	ip = SEE_intern(interp, p);
 	x = find(interp, o, ip);
 
 #ifndef NDEBUG
@@ -165,15 +161,14 @@ SEE_native_get(interp, o, p, res)
 
 /* [[Put]] 8.6.2.2 */
 void
-SEE_native_put(interp, o, p, val, attr)
+SEE_native_put(interp, o, ip, val, attr)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 	struct SEE_value *val;
 	int attr;
 {
 	struct SEE_property **x;
-	struct SEE_string *ip = SEE_intern(interp, p);
 
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
 
@@ -241,19 +236,19 @@ SEE_native_put(interp, o, p, val, attr)
 
 /* [[CanPut]] 8.6.2.3 */
 int
-SEE_native_canput(interp, o, p)
+SEE_native_canput(interp, o, ip)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 {
 	struct SEE_property **x;
 
-	x = find(interp, o, p);
+	x = find(interp, o, ip);
 	if (*x)
 		return ((*x)->attr & SEE_ATTR_READONLY) ? 0 : 1;
 	if (!o->Prototype)
 		return 1;
-	return SEE_OBJECT_CANPUT(interp, o->Prototype, p);
+	return SEE_OBJECT_CANPUT(interp, o->Prototype, ip);
 }
 
 /* [[HasProperty]] 8.6.2.4 */
@@ -272,18 +267,18 @@ SEE_native_hasproperty(interp, o, p)
 
 /* Test if a property is 'local' (ie not belonging to prototype) */
 int
-SEE_native_hasownproperty(interp, o, p)
+SEE_native_hasownproperty(interp, o, ip)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 {
 	struct SEE_property **x;
 
-	x = find(interp, o, p);
+	x = find(interp, o, ip);
 #ifndef NDEBUG
 	if (SEE_native_debug) {
 	    dprintf("hasownprop: p=");
-	    dprints(p);
+	    dprints(ip);
 	    dprintf(" -> %p\n", *x);
 	}
 #endif
@@ -292,27 +287,27 @@ SEE_native_hasownproperty(interp, o, p)
 
 /* Return the attribute of a local property, or 0 */
 int
-SEE_native_getownattr(interp, o, p)
+SEE_native_getownattr(interp, o, ip)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 {
 	struct SEE_property **x;
 
-	x = find(interp, o, p);
+	x = find(interp, o, ip);
 	return *x ? (*x)->attr : 0;
 }
 
 /* [[Delete]] 8.6.2.5 */
 int
-SEE_native_delete(interp, o, p)
+SEE_native_delete(interp, o, ip)
 	struct SEE_interpreter *interp;
 	struct SEE_object *o;
-	struct SEE_string *p;
+	struct SEE_string *ip;
 {
 	struct SEE_property **x;
 
-	x = find(interp, o, p);
+	x = find(interp, o, ip);
 	if (!*x)
 		return 1;
 	if ((*x)->attr & SEE_ATTR_DONTDELETE)

@@ -3017,6 +3017,7 @@ ObjectLiteral_parse(parser)
 	struct ObjectLiteral_node *n;
 	struct ObjectLiteral_pair **pairp;
 	struct SEE_value sv;
+	struct SEE_interpreter *interp = parser->interpreter;
 
 	n = NEW_NODE(struct ObjectLiteral_node,
 			&ObjectLiteral_nodeclass);
@@ -3024,16 +3025,16 @@ ObjectLiteral_parse(parser)
 
 	EXPECT('{');
 	while (NEXT != '}') {
-	    *pairp = SEE_NEW(parser->interpreter, struct ObjectLiteral_pair);
+	    *pairp = SEE_NEW(interp, struct ObjectLiteral_pair);
 	    switch (NEXT) {
 	    case tIDENT:
 	    case tSTRING:
-		(*pairp)->name = NEXT_VALUE->u.string;
+		(*pairp)->name = SEE_intern(interp, NEXT_VALUE->u.string);
 		SKIP;
 		break;
 	    case tNUMBER:
 		SEE_ToString(parser->interpreter, NEXT_VALUE, &sv);
-		(*pairp)->name = sv.u.string;
+		(*pairp)->name = SEE_intern(interp, sv.u.string);
 		SKIP;
 		break;
 	    default:
@@ -3478,7 +3479,7 @@ MemberExpression_bracket_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	SEE_ToObject(interp, &r2, &r5);
 	SEE_ToString(interp, &r4, &r6);
-	_SEE_SET_REFERENCE(res, r5.u.object, r6.u.string);
+	_SEE_SET_REFERENCE(res, r5.u.object, SEE_intern(interp, r6.u.string));
 }
 
 #if WITH_PARSER_CODEGEN
@@ -4108,7 +4109,7 @@ UnaryExpression_delete_eval_common(context, r1, res)
 	 */
 	if (!r1->u.reference.base || 
 	    SEE_OBJECT_DELETE(interp, r1->u.reference.base, 
-	    		      SEE_intern(interp, r1->u.reference.property)))
+	    		      r1->u.reference.property))
 		SEE_SET_BOOLEAN(res, 1);
 	else
 		SEE_SET_BOOLEAN(res, 0);

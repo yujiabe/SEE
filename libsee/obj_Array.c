@@ -1147,7 +1147,7 @@ array_get(interp, o, p, res)
 {
 	struct array_object *ao = (struct array_object *)o;
 
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	if (p == STR(length))
 	    SEE_SET_NUMBER(res, ao->length);
 	else
 	    SEE_native_get(interp, o, p, res);
@@ -1164,7 +1164,7 @@ array_put(interp, o, p, val, attr)
 	struct array_object *ao = (struct array_object *)o;
 	SEE_uint32_t i;
 
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	if (p == STR(length))
 	    array_setlength(interp, ao, val);
 	else {
 	    SEE_native_put(interp, o, p, val, attr);
@@ -1180,7 +1180,7 @@ array_hasproperty(interp, o, p)
 	struct SEE_object *o;
 	struct SEE_string *p;
 {
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	if (p == STR(length))
 	    return 1;
 	else
 	    return SEE_native_hasproperty(interp, o, p);
@@ -1192,7 +1192,7 @@ array_delete(interp, o, p)
 	struct SEE_object *o;
 	struct SEE_string *p;
 {
-	if (SEE_string_cmp(p, STR(length)) == 0)
+	if (p == STR(length))
 	    return 0;
 	else
 	    return SEE_native_delete(interp, o, p);

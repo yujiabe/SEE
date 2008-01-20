@@ -265,7 +265,7 @@ File_init(interp)
         /* Convenience macro for adding properties to File */
 #define PUTOBJ(parent, name, obj)                                       \
         SEE_SET_OBJECT(&v, obj);                                        \
-        SEE_OBJECT_PUT(interp, parent, name, &v, SEE_ATTR_DEFAULT);
+        SEE_OBJECT_PUT(interp, parent, STR(name), &v, SEE_ATTR_DEFAULT);
 
         /* Convenience macro for adding functions to File.prototype */
 #define PUTFUNC(obj, name, len)                                         \
@@ -290,12 +290,12 @@ File_init(interp)
         File = (struct SEE_object *)SEE_NEW(interp, struct SEE_native);
         SEE_native_init((struct SEE_native *)File, interp,
                 &file_constructor_class, interp->Object_prototype);
-        PUTOBJ(interp->Global, STR(File), File);
-        PUTOBJ(File, STR(prototype), File_prototype)
+        PUTOBJ(interp->Global, File, File);
+        PUTOBJ(File, prototype, File_prototype)
 
         /* Create the File.FileError error object for I/O exceptions */
         FileError = SEE_Error_make(interp, STR(FileError));
-        PUTOBJ(File, STR(FileError), FileError);
+        PUTOBJ(File, FileError, FileError);
 
         /* Keep pointers to our 'original' objects */
         PRIVATE(interp)->File_prototype = File_prototype;
@@ -303,9 +303,9 @@ File_init(interp)
         PRIVATE(interp)->File = File;
 
 	/* Now we can build our well-known files */
-        PUTOBJ(File, STR(In), newfile(interp, stdin))
-        PUTOBJ(File, STR(Out), newfile(interp, stdout))
-        PUTOBJ(File, STR(Err), newfile(interp, stderr))
+        PUTOBJ(File, In, newfile(interp, stdin))
+        PUTOBJ(File, Out, newfile(interp, stdout))
+        PUTOBJ(File, Err, newfile(interp, stderr))
 }
 #undef PUTFUNC
 #undef PUTOBJ

@@ -1,6 +1,7 @@
 $Id$
 
 2.1 [unreleased]
+  Changed: Get, Put, CanPut, HasProperty, Delete APIs assume interned property
   Bug 115: Object.prototype.isPrototypeOf() didn't follow prototype chain
   Feature: SEE_string_fix() for passing string values between interpreters
   Bug 112: /)/ is strictly an illegal regex 

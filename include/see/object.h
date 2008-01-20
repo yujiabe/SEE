@@ -74,16 +74,30 @@ struct SEE_object {
 	struct SEE_object *	Prototype;		/* [[Prototype]] */
 };
 
+#if !defined(NDEBUG)
+# define _SEE_INTERN_ASSERT(i,s)	_SEE_intern_assert(i, s)
+struct SEE_string *_SEE_intern_assert(struct SEE_interpreter *i, 
+	struct SEE_string *s);
+#else
+# define _SEE_INTERN_ASSERT(i,s)	(s)
+#endif
+
+
 #define SEE_OBJECT_GET(interp, obj, name, res)				\
-	(*(obj)->objectclass->Get)(interp, obj, name, res)
+	(*(obj)->objectclass->Get)(interp, obj,				\
+	    _SEE_INTERN_ASSERT(interp, name), res)
 #define SEE_OBJECT_PUT(interp, obj, name, val, attrs)			\
-	(*(obj)->objectclass->Put)(interp, obj, name, val, attrs)
+	(*(obj)->objectclass->Put)(interp, obj,				\
+	    _SEE_INTERN_ASSERT(interp, name), val, attrs)
 #define SEE_OBJECT_CANPUT(interp, obj, name)				\
-	(*(obj)->objectclass->CanPut)(interp, obj, name)
+	(*(obj)->objectclass->CanPut)(interp, obj,			\
+	    _SEE_INTERN_ASSERT(interp, name))
 #define SEE_OBJECT_HASPROPERTY(interp, obj, name)			\
-	(*(obj)->objectclass->HasProperty)(interp, obj, name)
+	(*(obj)->objectclass->HasProperty)(interp, obj,			\
+	    _SEE_INTERN_ASSERT(interp, name))
 #define SEE_OBJECT_DELETE(interp, obj, name)				\
-	(*(obj)->objectclass->Delete)(interp, obj, name)
+	(*(obj)->objectclass->Delete)(interp, obj,			\
+	    _SEE_INTERN_ASSERT(interp, name))
 #define SEE_OBJECT_DEFAULTVALUE(interp, obj, hint, res)			\
 	(*(obj)->objectclass->DefaultValue)(interp, obj, hint, res)
 #define SEE_OBJECT_CONSTRUCT(interp, obj, thisobj, argc, argv, res)	\
@@ -128,7 +142,7 @@ struct SEE_string *SEE_intern_ascii(struct SEE_interpreter *, const char *);
 
 /* Enumerator class. */
 struct SEE_enumclass {
-	void *unused; 		/* XXX leftover from deprecated reset method */
+	void *unused; 		/* deprecated */
 	struct SEE_string *(*next)(struct SEE_interpreter *i,
 			struct SEE_enum *e, int *flags_return);
 };
@@ -141,7 +155,8 @@ struct SEE_enum {
 	struct SEE_enumclass *enumclass;
 };
 
-#define SEE_ENUM_NEXT(i,e,dep) ((e)->enumclass->next)(i,e,dep)
+#define SEE_ENUM_NEXT(i,e,dep) \
+	_SEE_INTERN_ASSERT(i, ((e)->enumclass->next)(i,e,dep))
 
 /*
  * This macro tests to see if two objects are "joined", i.e. a change to one

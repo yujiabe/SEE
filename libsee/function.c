@@ -95,10 +95,10 @@ SEE_function_make(interp, name, params, body)
 	if (f->nparams) {
 	    f->params = SEE_NEW_ARRAY(interp, struct SEE_string *, f->nparams);
 	    for (i = 0, v = params; v; v = v->next, i++)
-	        f->params[i] = v->name;
+	        f->params[i] = _SEE_INTERN_ASSERT(interp, v->name);
 	} else
 	    f->params = NULL;
-	f->name = name;
+	f->name = _SEE_INTERN_ASSERT(interp, name);
 
 	f->next = NULL;
 	f->cache = NULL;

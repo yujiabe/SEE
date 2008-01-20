@@ -671,6 +671,37 @@ function_proto_toString(interp, self, thisobj, argc, argv, res)
 	SEE_SET_STRING(res, s);
 }
 
+/*
+ * Returns an interned string for integer i. 
+ * When i reaches 10, string storage in *sp is re-used.
+ * Assumes that the caller starts at 0 or 1 and increases i by one each time
+ * with the same sp.
+ */
+static struct SEE_string *
+intstr(interp, i, sp)
+	struct SEE_interpreter *interp;
+	int i;
+	struct SEE_string **sp;
+{
+	switch (i) {
+	case 0: return STR(zero_digit);
+	case 1: return STR(1);
+	case 2: return STR(2);
+	case 3: return STR(3);
+	case 4: return STR(4);
+	case 5: return STR(5);
+	case 6: return STR(6);
+	case 7: return STR(7);
+	case 8: return STR(8);
+	case 9: return STR(9);
+	case 10: 
+	    *sp = SEE_string_new(interp, 5);
+	}
+	(*sp)->length = 0;
+	SEE_string_append_int(*sp, i);
+	return SEE_intern(interp, *sp);
+}
+    
 /* Function.prototype.apply (15.3.4.3) */
 static void
 function_proto_apply(interp, self, thisobj, argc, argv, res)
@@ -715,13 +746,9 @@ function_proto_apply(interp, self, thisobj, argc, argv, res)
 	    the_argc = SEE_ToUint32(interp, &v);
 	    the_args = SEE_ALLOCA(interp, struct SEE_value, the_argc);
 
-	    for (i = 0; i < the_argc; i++) {
-		if (i == 0) s = SEE_string_new(interp, 0);
-		s->length = 0;
-		SEE_string_append_int(s, i);
-		SEE_OBJECT_GET(interp, (struct SEE_object *)a, s, 
-			&the_args[i]);
-	    }
+	    for (i = 0; i < the_argc; i++)
+		SEE_OBJECT_GET(interp, (struct SEE_object *)a, 
+			intstr(interp, i, &s), &the_args[i]);
 	} else
 		SEE_error_throw_string(interp, interp->TypeError, 
 		   STR(apply_not_array));
@@ -989,7 +1016,7 @@ arguments_create(interp, activation, callee)
 {
 	struct arguments *arguments;
 	struct SEE_value v, undef;
-	struct SEE_string *s;
+	struct SEE_string *s = NULL;
 	int i;
 
 	arguments = SEE_NEW(interp, struct arguments);
@@ -1010,14 +1037,11 @@ arguments_create(interp, activation, callee)
 		activation->argc);
 
 	if (activation->argc) {
-	    s = SEE_string_new(interp, 4);
 	    SEE_SET_UNDEFINED(&undef);
 	    for (i = 0; i < activation->argc; i++) {
 		arguments->deleted[i] = 0;
-		s->length = 0;
-		SEE_string_append_int(s, i);
 		SEE_native_put(interp, (struct SEE_object *)&arguments->native,
-			s, &v, SEE_ATTR_DONTENUM);
+			intstr(interp, i, &s), &v, SEE_ATTR_DONTENUM);
 	    }
 	}
 
@@ -1107,7 +1131,7 @@ function_inst_delete(interp, o, p)
 	struct SEE_object *common;
 
 	common = (struct SEE_object *)tofunction(interp, o)->function->common;
-	return SEE_OBJECT_DELETE(interp, common, SEE_intern(interp, p));
+	return SEE_OBJECT_DELETE(interp, common, p);
 }
 
 static struct SEE_enum *
