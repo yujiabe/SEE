@@ -247,7 +247,7 @@ shell_isatty_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_value **argv, *res;
 {
 #if HAVE_ISATTY
-	SEE_SET_BOOLEAN(res, isatty(0));
+	SEE_SET_BOOLEAN(res, isatty(1));
 #else
 	SEE_SET_BOOLEAN(res, 0);
 #endif

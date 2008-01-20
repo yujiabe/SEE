@@ -1,7 +1,14 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#if STDC_HEADERS
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <unistd.h>
+#endif
+
 #include <see/string.h>
 #include <see/value.h>
 
@@ -75,6 +82,7 @@ const char *_test_type_to_string(enum SEE_type t);
 static int _test_count, _test_failures, _test_verbose=1, _test_strict,
 	   _test_described;
 static const char *_test_program;
+static int _test_isatty;
 
 
 /* Converts a value type into a string */
@@ -120,10 +128,14 @@ _test(cond, desc, detail, file, line)
 	_test_count++;
 	if (cond) {
 		if (_test_verbose)
-		    printf("[32mPASS[m line %3d: %s\n", line, desc);
+		    printf("%s line %3d: %s\n", 
+			_test_isatty ? "[32mPASS[m" : "PASS",
+			line, desc);
 		return 1;
 	} else {
-		printf("[41mFAIL[m line %3d: %s", line, desc);
+		printf("%s line %3d: %s", 
+		    _test_isatty ? "[41mFAIL[m" : "FAIL",
+		    line, desc);
 		if (detail && detail->length) {
 		    printf(" [");
 		    SEE_string_fputs(detail, stdout);
@@ -150,6 +162,12 @@ int
 main(int argc, char **argv)
 {
 	int optind;
+
+#if HAVE_ISATTY
+	_test_isatty = isatty(1);
+#else
+	_test_isatty = 0;
+#endif
 
 #if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
 	GC_INIT();
