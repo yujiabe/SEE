@@ -11,6 +11,7 @@
  *  version	- a function that changes compatibility flags
  *		  based on an integer argument
  *
+ *  Shell.isatty - function that returns true if stdout is a tty
  *  Shell.exit   - function to force immediate exit of shell
  *  Shell.abort  - force an interpreter abort
  *  Shell.gcdump - calls GC_dump(), if available
@@ -33,6 +34,7 @@
 
 #if STDC_HEADERS
 # include <stdio.h>
+# include <unistd.h>
 #endif
 
 #include <see/see.h>
@@ -64,6 +66,8 @@ static void shell_abort_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_gcdump_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
+static void shell_isatty_fn(struct SEE_interpreter *, struct SEE_object *,
+        struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_exit_fn(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 static void shell_regex_engines_fn(struct SEE_interpreter *, 
@@ -91,6 +95,7 @@ shell_strings()
 	SEE_intern_global("window");
 	SEE_intern_global("gcdump");
 	SEE_intern_global("gc");
+	SEE_intern_global("isatty");
 	SEE_intern_global("exit");
 	SEE_intern_global("args");
 	SEE_intern_global("Shell");
@@ -235,6 +240,23 @@ shell_gcdump_fn(interp, self, thisobj, argc, argv, res)
  * Exit the shell process
  */
 static void
+shell_isatty_fn(interp, self, thisobj, argc, argv, res)
+        struct SEE_interpreter *interp;
+        struct SEE_object *self, *thisobj;
+        int argc;
+        struct SEE_value **argv, *res;
+{
+#if HAVE_ISATTY
+	SEE_SET_BOOLEAN(res, isatty(0));
+#else
+	SEE_SET_BOOLEAN(res, 0);
+#endif
+}
+
+/*
+ * Exit the shell process
+ */
+static void
 shell_exit_fn(interp, self, thisobj, argc, argv, res)
         struct SEE_interpreter *interp;
         struct SEE_object *self, *thisobj;
@@ -372,6 +394,7 @@ shell_add_globals(interp)
 		{0}
 	}, shell_methods[] = {
 		{ "gcdump",		shell_gcdump_fn,	0 },
+		{ "isatty",		shell_isatty_fn,	0 },
 		{ "exit",		shell_exit_fn,		1 },
 		{ "abort",		shell_abort_fn,		1 },
 		{ "regex_engines",	shell_regex_engines_fn,	0 },

@@ -149,6 +149,9 @@ options are used:
 	       if no compatible(!) If called with a numeric argument,
 	       then sets the JS compatibility to that number.
 
+ Shell.isatty()
+	     - Returns true if the output is a TTY
+
  Shell.exit([int])
 	     - Causes the interpreter to immediately exit with the given
 	       exit code. If no argument is given, 0 is used.

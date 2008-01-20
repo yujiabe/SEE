@@ -333,7 +333,8 @@ fi
 dnl -- functions that have workarounds written for
 AC_CHECK_FUNCS([strdup GC_malloc getopt \
 		time gettimeofday GetSystemTimeAsFileTime \
-		localtime mktime
+		localtime mktime \
+		isatty \
 		])
 AC_CHECK_FUNCS([GC_gcollect GC_dump GC_malloc_atomic GC_free])
 
