@@ -383,17 +383,23 @@ object_proto_isPrototypeOf(interp, self, thisobj, argc, argv, res)
 	    SEE_error_throw_string(interp, interp->TypeError,
 	       STR(null_thisobj));
 
-	if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) != SEE_OBJECT) {
+/*2*/	if (argc == 0 || SEE_VALUE_GET_TYPE(argv[0]) != SEE_OBJECT) {
 		SEE_SET_BOOLEAN(res, 0);
 		return;
 	}
-	v = argv[0]->u.object->Prototype;
-	if (v == NULL)
-		SEE_SET_BOOLEAN(res, 0);
-	else if (SEE_OBJECT_JOINED(thisobj, v)) 
-		SEE_SET_BOOLEAN(res, 1);
-	else
-		SEE_SET_BOOLEAN(res, 0);
+	v = argv[0]->u.object;
+	for (;;) {
+/*3*/	    v = v->Prototype;
+/*4*/	    if (v == NULL) {
+		    SEE_SET_BOOLEAN(res, 0);
+		    return;
+	    }
+/*5*/	    if (SEE_OBJECT_JOINED(thisobj, v)) {
+		    SEE_SET_BOOLEAN(res, 1);
+		    return;
+	    }
+	} 
+
 }
 
 /* Object.prototype.propertyIsEnumerable (15.2.4.7) */

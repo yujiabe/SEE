@@ -145,4 +145,7 @@ test("/.**./", Exception(SyntaxError))
 test("/+/", Exception(SyntaxError))
 test("/?/", Exception(SyntaxError))
 
+
+/* Bug 115 */
+test("Object.prototype.isPrototypeOf(new Number(123))", true);
 finish()
