@@ -215,9 +215,8 @@ SEE_PrintString(interp, s, f)
 			break;
 		}
 	    }
-	    fprintf(f, "\"<%s%s%p>", 
+	    fprintf(f, "\"<%s%p>", 
 		    s->flags & SEE_STRING_FLAG_INTERNED ? "i" : "",
-		    s->flags & SEE_STRING_FLAG_STATIC ? "s" : "",
 		    (void *)s);
 	}
 }
