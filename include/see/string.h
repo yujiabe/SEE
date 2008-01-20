@@ -38,7 +38,7 @@ struct SEE_string {
 	int 			 flags;
 };
 #define SEE_STRING_FLAG_INTERNED  1
-#define SEE_STRING_FLAG_STATIC    2
+#define SEE_STRING_FLAG_STATIC    2		/* Deprecated. Do not use. */
 
 #define SEE_STRING_DECL(chararray) \
 	{ sizeof (chararray) / sizeof (SEE_char_t), (chararray), \
@@ -73,6 +73,7 @@ struct SEE_string *SEE_string_vsprintf(struct SEE_interpreter *i,
 				const char *fmt, va_list ap);
 struct SEE_string *SEE_string_literal(struct SEE_interpreter *i,
 				const struct SEE_string *s);
+struct SEE_string *SEE_string_fix(const struct SEE_string *s);
 
 void	SEE_string_free(struct SEE_interpreter *i, struct SEE_string **sp);
 

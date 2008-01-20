@@ -107,6 +107,31 @@ SEE_string_dup(interp, s)
 }
 
 /*
+ * Returns a string suitable for simultaneous use between multiple 
+ * interpreters. The resulting string is allocated against the NULL
+ * interpreter.
+ */
+struct SEE_string *
+SEE_string_fix(s)
+	const struct SEE_string *s;
+{
+	struct SEE_string *cp;
+
+	if (!s->interpreter && !IS_GROWABLE(s))
+	    return s;
+	if (!s->length)
+	    return STR(empty_string);
+	cp = SEE_NEW(NULL, struct SEE_string);
+	cp->length = s->length;
+	cp->data = SEE_NEW_STRING_ARRAY(NULL, SEE_char_t, cp->length);
+	memcpy(cp->data, s->data, sizeof *cp->data * cp->length);
+	cp->interpreter = NULL;
+	cp->flags = 0;
+	MAKE_UNGROWABLE(cp);
+	return cp;
+}
+
+/*
  * Creates a new (ungrowable) string that is a substring of another.
  * Raises an error if the substring indixies are out of bounds.
  * The source string (s) may continue to be grown, but should not
@@ -172,6 +197,7 @@ SEE_string_cmp(a, b)
 /*
  * Compares a SEE string with an ASCII string.
  * Returns -1,0,+1 just like SEE_string_cmp().
+ * Non-ASCII parts of b compare higher than any Unicode codepoint in a.
  */
 int
 SEE_string_cmp_ascii(a, b)
@@ -181,7 +207,8 @@ SEE_string_cmp_ascii(a, b)
 	unsigned int i;
 
 	for (i = 0; i < a->length && b[i]; i++) {
-	    SEE_ASSERT(a->interpreter, (b[i] & 0x80) == 0);/* b must be ASCII */
+	    if (b[i] & 0x80)
+		return -1;
 	    if (a->data[i] != b[i])
 		return a->data[i] < b[i] ? -1 : 1;
 	}

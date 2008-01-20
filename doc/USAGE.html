@@ -349,6 +349,13 @@ completely independent of each other only if the application:
 <li>uses a thread-safe (or interpreter-dependent) memory allocator.
 </ul>
 
+<p>
+Strings generated from one interpreter, can be exported for use in 
+another interpreter by using the
+<code>SEE_string_fix()</code> function
+(See <a href="#string">&sect;5.3</a>).
+</p>
+
 <h3 id="abort">2.2 Fatal error handlers</h3>
 
 <p>
@@ -1536,8 +1543,14 @@ Once a new string has been passed to any other SEE function, it should not
 have its contents modified in any way.
 Strings should not be shared
 between different interpreters, unless internalised with 
-<code>SEE_intern_global()</code> (see <a href="#staticstr">&sect;5.3.1</a>).
+<code>SEE_intern_global()</code> (see <a href="#staticstr">&sect;5.3.1</a>)
+or 'fixed' with
+<code>SEE_string_fix()</code>.
+<q>Fixing</q> a string ensures the string content will not be corrupted
+by another interpreter.
 </p>
+
+<pre>struct SEE_string *<dfn id="SEE_string_fix">SEE_string_fix</dfn>(struct SEE_string *s);</pre>
 
 <p>
 All strings in SEE use UTF-16 encoding, meaning that in some cases
@@ -1789,24 +1802,29 @@ the following <q>internal method</q> macros:
 
 <ul>
 <li><code>SEE_OBJECT_GET()</code>
+	  <a href="#propintern" class="footnote">*</a>
         - retrieve a named property or return <code class="js">undefined</code>
           ('<code class="js">o.prop</code>');
           also known as the <code class="js">[[Get]]</code> internal method
 <li><code>SEE_OBJECT_PUT()</code>
+	  <a href="#propintern" class="footnote">*</a>
         - create/update a named property
           ('<code class="js">o.prop = val</code>');
           also known as the <code class="js">[[Put]]</code> internal method
 <li><code>SEE_OBJECT_CANPUT()</code>
+	  <a href="#propintern" class="footnote">*</a>
         - returns true if the property can be changed;
           also known as the <code class="js">[[CanPut]]</code> internal method;
           assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_HASPROPERTY()</code>
+	  <a href="#propintern" class="footnote">*</a>
         - tests for existence of a property
           ('<code class="js">"prop" in o</code>');
           also known as the <code class="js">[[HasProperty]]</code> 
           internal method;
           assumes <code>prop</code> is an internalised string
 <li><code>SEE_OBJECT_DELETE()</code>
+	  <a href="#propintern" class="footnote">*</a>
         - delete a property; returns true on success 
           ('<code class="js">delete o.prop</code>');
           also known as the <code class="js">[[Delete]]</code> internal method;
@@ -1873,6 +1891,15 @@ struct SEE_enum *<dfn id="SEE_OBJECT_ENUMERATOR">SEE_OBJECT_ENUMERATOR</dfn>(str
                 struct SEE_object *obj);
 void *<dfn id="SEE_OBJECT_GET_SEC_DOMAIN">SEE_OBJECT_GET_SEC_DOMAIN</dfn>(struct SEE_interpreter *interp,
                 struct SEE_object *obj);</pre>
+
+<p id="propintern">
+<span class="footnote">*</span>
+The property <code>SEE_string</code> arguments to the property
+operation macros <strong>must</strong>
+be internalised with <code>SEE_intern()</code>.
+You can define the preprocessor symbol <code>SEE_ASSERT_PROPERTY_INTERNS</code>
+if you would like these macros to assert their arguments are internalised.
+</p>
 
 <p id="objcheck">
 <span class="footnote">&dagger;</span>
@@ -3741,6 +3768,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
 <a href="#SEE_string_dup">SEE_string_dup</a><br>
+<a href="#SEE_string_fix">SEE_string_fix</a> (2.1)<br>
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>

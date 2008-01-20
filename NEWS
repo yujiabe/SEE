@@ -1,6 +1,8 @@
 $Id$
 
 2.1 [unreleased]
+  Bug 115: Object.prototype.isPrototypeOf() didn't follow prototype chain
+  Feature: SEE_string_fix() for passing string values between interpreters
   Bug 112: /)/ is strictly an illegal regex 
   Bug 110: /[]/ is a legal regex even though it can't match anything
   Bug 109: detect illegal unicode escapes in identifiers
