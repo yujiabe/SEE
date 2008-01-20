@@ -49,6 +49,7 @@ setup(interp, cascade, store)
 	*store = (void *)ret;
 }
 
+#if TEST_CYCLES
 static void 
 setup2(interp, store)
 	struct SEE_interpreter *interp;
@@ -65,6 +66,7 @@ setup2(interp, store)
 
 	*store = (void *)o1;
 }
+#endif
 
 
 void
@@ -98,7 +100,7 @@ test()
 	COLLECT();
 	TEST_EQ_INT(initialized, finalized);
 
-#if 0
+#if TEST_CYCLES
 	/* Generate a cycle of two */
 	setup2(interp, &interp->host_data);
 	COLLECT();
