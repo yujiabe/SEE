@@ -2198,6 +2198,13 @@ corresponding 'do-nothing' function(s) from this list:
 Use <code>NULL</code> instead.
 </p>
 
+<p class="note">
+&#9888; Note:
+Property strings returned from an enumerator's <code>next()</code> method
+are required to have been internalised, e.g. with <code>SEE_intern()</code>.
+This requirement was added in API 2.1.
+</p>
+
 <p>
 The <code>Prototype</code> field of an object instance
 can either be set to:
