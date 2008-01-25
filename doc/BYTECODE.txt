@@ -9,17 +9,17 @@ SEE is designed to support different code generators. The model defined
 in this document is an interface between the parser and the code generation-
 execution back-end which implements the virtual machine.
 
-The virtual machine executes a sequence of virtual instructions that 
-ultimatgely operate on 
+The virtual machine executes a sequence of virtual instructions.
+The instructions operate on:
 
     * the environment available through a SEE_context structure
-    * a virtual stack of SEE_values of known maximum size
-    * a virtual stack of 'blocks' of known maximum size
-    * a 'C' register (a SEE_value always of type SEE_COMPLETION)
-    * an 'L' register (a SEE_location)
-    * an 'E' register (used by S.ENUM/B.ENUM)
-    * a program counter 'PC' (index into the instruction stream)
-    * an array of variable identifiers (see VREF)
+    * a bounded stack of SEE_values ("the value stack")
+    * a bounded stack of 'blocks' (eg TRY,WITH. "the block stack")
+    * a bounded array of local variable values (see VREF instruction)
+    * the 'C' register (the last value resulting from a statement)
+    * the 'L' register (a SEE_location)
+    * the 'E' register (current enumeration, see B.ENUM)
+    * The 'PC' register (the current instruction stream index)
 
 A sequence of instructions implements a SourceElements production
 minus any FunctionDeclarations. That is, the code generator is used to
@@ -29,10 +29,11 @@ one entry point.
 This document does not define a physical byte code format, instead
 it defines the instructions identified by the enumerated types of code.h.
 Some instructions take operands. It is up to the code generator how to
-encode these operands. The operands given include
-    * addresses (branch instructions)
-    * actual parameter count (for call instructions)
-    * SEE_value (for the literal instruction)
+encode these operands. The operands to instructions include:
+
+    * address operands (branch and block instructions)
+    * integer operands (actual parameter count for call instructions)
+    * literal SEE_value (for the LITERAL instruction)
 
 The value stack
 ---------------
@@ -40,7 +41,8 @@ The value stack
 The value stack is used for computing expressions. Most of the instructions
 described in this file work on the value stack.
 
-See the section on 'Notation' below for more information.
+See the section on 'Notation' below for more information on how the
+top content of the value stack is represented in this document.
 
 The block stack
 ---------------
@@ -55,22 +57,26 @@ stack is used for keeping track of:
 Blocks are created using S.ENUM, S.TRYC, S.TRYF, S.WITH instructions, and
 are numbered from one. Some block types cannot be directly created by an
 instruction. All blocks end with the END instruction, which can end
-multiple blocks. Ending block zero (END,0) terminates the function.
+multiple blocks. Ending block zero (END,0) terminates the function and
+returns the C register to the caller. This is how 'return' is implemented.
 
 The process of ending a block will have side effects depending on the block
 being ended. For example, ending the FINALLY block transfers control to a
 finally handler, and pushes a FINALLY2 block onto the block stack (whose 
 purpose is to restore C and PC correctly when it is ended).
 
+Generally, expressions will make use of the value stack, while statements 
+will make use of the block stack and the C register.
+
 Initial conditions
 ------------------
 
-    PC <- initial instruction
-    C <- undefined
-    T <- "":0
-    E <- ? (not defined)
-    block stack <- empty
-    value stack <- empty
+    PC = initial instruction
+    C  = undefined
+    L  = not defined
+    E  = not defined
+    block stack = empty
+    value stack = empty
 
 INSTRUCTION SUMMARY
 ===================
@@ -79,7 +85,7 @@ Notation
 --------
 
 Instructions marked with a '*' below may throw exceptions. Instructions 
-without an '*' do not throw exceptions.
+without a '*' do not throw exceptions.
 
 Instructions that operate on the value stack describe the before and after
 states of the stack in the form "before | after". For example, the
@@ -88,11 +94,12 @@ subtraction operator SUB is indicated like this:
 	SUB    num1 num2 | num3
 
 Indicating that num2 is first popped off the stack, followed by num1,
-then num3 is pushed. The top of the stack is always rightmost in the list.
-An empty list is represented by "-"
+then num3 is pushed. On both sides, the top of the stack is always 
+written rightmost in the list.  An empty list is represented by '-'.
 
-The elements on the value stack are of constrained types. The abbreviations used
-are:
+The elements on the value stack are of constrained types. For example
+the 'num2' element above is a number value. The abbreviations of the
+value types, and (some union types) are:
 
     * bool	- SEE_BOOLEAN
     * num	- SEE_NUMBER
@@ -104,59 +111,62 @@ are:
     * undef	- SEE_UNDEFINED
 
     * any	- any SEE_value (i.e. unknown type)
-    * val	- sam as any, excluding cmpl or ref
-    * prim	- same as val, excluding obj
+                  i.e. { bool + num + str + obj + ref + cmpl + null + undef }
 
+    * val	- values; same as 'any', but excluding 'cmpl' or 'ref'
+                  i.e. { bool + num + str + obj + null + undef }
 
-Three further abbreviations are used to refer to special implementation
-values, that need not be represented on the physical stack but could be:
-
-    * enum	- a value encapsulating a struct SEE_enum *
-    * ctxt	- a value encapsulating a SEE_context_t
-    * with	- a value encapsulating restoration of a scope context
-
-Generally, expressions make use of the value stack, while statements 
-make use of the block stack and the C register.
+    * prim	- primitives; The same as 'val', but excluding 'obj'
+                  i.e. { bool + num + str + null + undef }
 
 
 Call instructions
+-----------------
 
 *   NEW,n 	objC any1..anyn | objR
 
-	1. If Type(objC) is not object, throw a TypeError exception
-	2. If objC does not implement [[Construct]] throw a TypeError exception
+	1. If typeof(objC) is not object, throw a TypeError exception.
+	2. If objC does not implement [[Construct]] throw a TypeError exception.
 	3. Call the [[Construct]] method on objC, providing any0..anyn as
-	   the argument values (may be empty, i.e. n = 0) setting 
+	   the argument values (may be empty, i.e. n = 0) setting .
+	4. Let objR be the result of the previous [[Construct]] call.
 
 *   CALL,n 	anyC any1..anyn | valR 
 
-	1. Call GetValue(anyC) -> objC
-	2. If Type(objC) is not Object, throw a TypeError exception
-	3. If objC does not implement [[Call]] throw a TypeError exception
-	4. if anyC is a reference, t <- GetBase(anyC)
-	   otherwise t <- NULL
-	5. if t is an activation object then t <- NULL
-	6. Call the [[Call]] method on objC, providing any0..anyn as he
-	   argument values (may be empty) -> anyR
-
-	Postconditions:
-	    anyR is NOT a reference or a completion
+	1. Compute objC = GetValue(anyC).
+	2. If typeof(objC) is not object, throw a TypeError exception.
+	3. If objC does not implement [[Call]] throw a TypeError exception.
+	4. If anyC is a reference, let t = GetBase(anyC),
+	   otherwise let t = NULL.
+	5. If t is an activation object then set t = NULL.
+	6. Call the [[Call]] method on objC, providing any0..anyn as the
+	   argument values (may be empty).
+	7. Let valR be the result of the previous [[Call]] call.
 
     Note: The L, C, E registers are unchanged by the CALL/NEW instructions.
 
+
 Special instructions
+--------------------
 
     FUNC,func	    - | obj
-	Pushes a function instance object onto the stack bound to 
-	the current scope.
+	Binds a function instance object to the current scope
+	and pushes it onto the stack.
 
     LITERAL,val    - | val
-	Pushes a literal value onto the stack.
+	Pushes a copy of a literal value onto the stack.
 
     LOC,filename,lineno      - | -
 	Sets the current location ('L' register).
 
+
+    Notes: Implementations are encouraged to generate fixed tables (of 
+    functions, literals and location tags) during parse, and then to use 
+    integer arguments to the special instructions above.
+
+
 Generic instructions
+--------------------
 
     NOP		   - | -
 	No operation. (Used for padding)
@@ -167,24 +177,30 @@ Generic instructions
     POP		any1 | -
 	Removes the topmost element on the stack
 
-    EXCH	    a b | b a
+    EXCH	    any1 any2 | any2 any1
 	Exchanges the top two elements on the stack
 
-    ROLL3	    a b c | c a b
-	Rotates the top three elements.
+    ROLL3	    any1 any2 any3 | any3 any1 any2
+	Rotates the top three elements. The top element is
+	pushed down past the next two elements, and those two elements
+	rise up by one position.
+
 
 Miscellaneous instructions
+--------------------------
 
 *   THROW	    val | ?
-	Throws an exception using the given value
+	Throws an exception consisting of the given value
 
     SETC	val | -
-	Sets C to the given value. This is the value result of a statement.
+	Sets the C register to the given value. 
 
     GETC	- | val
-	Pushes the value of C onto the value stack.
+	Pushes the value of the C register 
+
 
 Context instructions
+--------------------
 
     THIS	- | obj
 	Pushes the 'this' object from the current context
@@ -198,19 +214,22 @@ Context instructions
     REGEXP	- | obj
 	Pushes the object interp->Regexp onto the stack
 
+
 Primitive instructions
+----------------------
 
     REF		obj str | ref
-	Creates a reference from obj and str
+	Creates a reference value by combining obj and str.
 
 *   GETVALUE	ref | val
-	Computes GetValue(ref) (8.7.1), which calls [[Get]] on an object
+	Computes GetValue(ref) (8.7.1), i.e. val = ref.[[Get]]
 
     LOOKUP	str | ref
-	Builds a reference from the current scope (10.1.4)
+	Creates a reference by looking up an identifier in the current 
+	scope (10.1.4)
 
 *   PUTVALUE	ref val | -
-	Computes PutValue(ref, val) (8.7.2), which calls [[Put]] on an object
+	Computes PutValue(ref, val) (8.7.2), i.e ref.[[Put]](val)
 
     VREF,n	- | ref
 	Returns a reference to a variable. Variables are always referenced
@@ -221,16 +240,20 @@ Primitive instructions
 	in scope.
 
 *   DELETE	any1 | bool
-	1. If any is a reference, then pushes TRUE
+	1. If any is not a reference, then pushes TRUE
 	2. Otherwise call [[Delete]] on the reference (11.4.1)
 	3. Push the result of the [[Delete]] call
 
     TYPEOF	any | str
-	1. If any is a reference with null base, push "undefined"
-	2. If any is a reference, call GetValue(any)
-	3. Push a string representing the type (11.4.3)
+	1. If any is a reference with null base, then 
+	   let v = undefined
+	2. If any is a reference with a non-null base, then
+	   let v = GetValue(any)
+	3. If any is not a reference, then let v = any
+	3. Push a string representing the type of v (11.4.3)
 
 Conversion instructions
+-----------------------
 
 *   TOOBJECT	val | obj
 	Calls ToObject(val) (9.9). May throw an exception
@@ -247,45 +270,56 @@ Conversion instructions
 *   TOPRIMITIVE	val | prim
 	Calls ToPrimitive(val) (9.1) May thrown an exception
 
+    Notes: These instructions have no effect when the value on the top
+    of the stack is already the right type. Peephole optimization can 
+    occur when the type constraints of instructions obviate the need 
+    for conversions. For example, the DELETE instruction always pushes 
+    a boolean; so an immediately subsequent TOBOOLEAN instruction can be
+    removed.
+
+
 Arithmetic instructions (11.6.3)
+-----------------------
 
     NEG		num1 -> num2
-	if num1 is NaN, then num2 := NaN
-	otherwise num2 := -num1	(i.e. num1 with opposite sign)
+	If num1 is NaN, then let num2 = NaN
+	otherwise let num2 = -num1	(i.e. num1 with opposite sign)
 
     INV		val1 -> num2
-	compute num2 := ~ToInt32(val1) (i.e. complement)
+	Let num2 = ~ToInt32(val1) (i.e. bitwise one's complement)
 
     NOT		bool1 -> bool2
-	compute bool2 := !bool1
+	Let bool2 = !bool1 (i.e. logical inverse)
 
     MUL		num1 num2 | num3
     DIV		num1 num2 | num3
     MOD		num1 num2 | num3
-	compute num3 <- num1 [*/%] num2 (see 11.5)
+	Let num3 = num1 [*/%] num2 (see 11.5)
 
 *   ADD		prim1 prim2 | prim3
 	If either of prim1 or prim2 is a string then
-	    prim3 = concat(ToString(prim1), ToString(prim2))
+	    let prim3 = concat(ToString(prim1), ToString(prim2))
 	otherwise
-	    prim3 = ToNumber(prim1) + ToNumber(prim2)
+	    let prim3 = ToNumber(prim1) + ToNumber(prim2)
 
     SUB		num1 num2 | num3
-	Compute num3 <- num1 - num2
+	Let num3 = num1 - num2
 
     LSHIFT	val1 val2 | num3
-	Compute num3 <- ToInt32(val1) << (ToUint32(val2) & 0x1f)
+	Let num3 = ToInt32(val1) << (ToUint32(val2) & 0x1f)
 
     RSHIFT	val1 val2 | num3
-	Compute num3 <- ToInt32(val1) >> (ToUint32(val2) & 0x1f) 
+	Let num3 = ToInt32(val1) >> (ToUint32(val2) & 0x1f) 
 	The most significant bit is propagated, and the result is signed.
 
     URSHIFT	val1 val2 | num3
-	Compute num3 <- ToUint32(val1) >> (ToUint32(val2) & 0x1f)
+	Let num3 = ToUint32(val1) >> (ToUint32(val2) & 0x1f)
 	The most signifiant bit of result is set to zero, and the result is
-	an unsigned 31 bit integer. (11.7.3)
+	an positive 31 bit integer. (11.7.3)
+
 
 Relational instructions (11.8)
+-----------------------
 
     LT		val1 val2 | bool
 	Compute val1 < val2 (see 11.8.1)
@@ -300,7 +334,7 @@ Relational instructions (11.8)
 	Compute val1 >= val2 (see 11.8.4)
 
 *   INSTANCEOF	val1 val2 | bool
-	1. if val2 is not an object, throws a TypeError exception
+	1. If val2 is not an object, throws a TypeError exception
 	2. compute val2.[[HasInstance]](val1)
 
 *   IN		str1 val2 | bool
@@ -313,20 +347,24 @@ Relational instructions (11.8)
     SEQ		val1 val2 | bool
 	Compute val1 === val2 (see 11.9.6)
 
+
 Binary bitwise instructions (11.10)
+---------------------------
 
     BAND	val1 val2 | num3
     BXOR	val1 val2 | num3
     BOR		val1 val2 | num3
-	Compute num3 := ToInt32(val1) @ ToInt32(val2)
+	Compute num3 = ToInt32(val1) @ ToInt32(val2)
+
 
 Branch instructions
+-------------------
 
     B.ALWAYS,x 	    - | -
-	Sets PC <- x
+	Sets PC = x
 
     B.TRUE,x	 bool | -
-	If bool is true, then set PC <- x
+	If bool is true, then set PC = x
 
     B.ENUM,x	    - | - str		(when branch IS taken)
 		    - | -		(when branch IS NOT taken)
@@ -336,13 +374,15 @@ Branch instructions
 	The B.ENUM instruction only returns strings str where 
 	obj.[[HasProperty]](str) is true. (This is checked each time).
 
+
 Block instructions
+------------------
 
     S.ENUM	    obj | -
 	Pushes an enumeration block. See B.ENUM instruction and
 	the section below on 'The ENUM block'.
 	
-	Conceptually, this instruction saves register E, and then
+	Conceptually, this instruction saves register E, and
 	then sets E to the enumeration of obj.
 
     S.WITH	    obj | -
@@ -354,7 +394,7 @@ Block instructions
 	The address x indicates the entry point of the catch handler.
 
     S.TRYF,x	    - | -
-	Creates and pushes a CATCH block. See 'The CATCH block' below.
+	Creates and pushes a FINALLY block. See 'The FINALLY block' below.
 	The address x indicates the entry point of the finally handler.
 	The finally handler should end with an END
 
@@ -363,20 +403,20 @@ Block instructions
 	end behaviours in sequence. The virtual machine is terminated
 	on an END,0 instruction.
 
-	Conceptually, the END instruction performs one pop, and then
+	Conceptually, the END instruction pops one block, and then
 	returns control to itself (i.e. the PC does not advance) until the
 	block stack height is smaller than n.
 
 
 Block behaviour
----------------
+===============
 
 The WITH block
 
     A WITH block is created with the S.WITH instruction. 
 
     When this block is created, it records the state of the scope chain
-    before the insertion by S.WITH.
+    before the scope insertion of the S.WITH instruction.
 
     When this block is ended, it restores the scope chain.
     There is no other side-effect.
@@ -384,10 +424,12 @@ The WITH block
 The ENUM block
 
     An ENUM block is created with the S.ENUM instruction. 
-    It affects only the way the B.ENUM instruction works.
+    It affects only the way the B.ENUM branch instruction works.
+    It records the value of the E register before it is changed
+    by the S.ENUM instruction.
 
-    When this block is ended, it restores any previous enumeration before
-    the S.ENUM instruction. There is no other side-effect.
+    When this block is ended, it restores the E register.
+    There is no other side-effect.
 
 The CATCH block
 
@@ -398,6 +440,7 @@ The CATCH block
     the SEE_TRY context is finalized. There is no other side-effect.
 
     If an exception occurs within the context, the following steps happen:
+
 	- the SEE_TRY context is finalized.
 	- the value stack is truncated to its length at the time of S.TRYC
 	- a new Object is created, with a property set to the caught exception
@@ -405,8 +448,8 @@ The CATCH block
 	- the CATCH block is replaced by a WITH block
 	- control is passed to the address given to the S.TRYC instruction
 
-    Note that the catch handler should end with an END,n instruction and
-    fall through to control after the try-catch block.
+    Note that the catch handler should end the WITH block with an END,n 
+    instruction and then explicitly pass control to after the try-catch block.
 
 The FINALLY block
 
@@ -414,6 +457,7 @@ The FINALLY block
     a SEE_TRY context.
 
     When a FINALLY block is ended, the following steps happen:
+
 	- the SEE_TRY context is finalised.
 	- the value stack is truncated to its length at the time of S.TRYF
 	- the FINALLY block is replaced with a FINALLY2 block
@@ -426,7 +470,7 @@ The FINALLY block
     should be re-thrown.
 
     Note that the finally handler should end with an END,n instruction
-    that will send flow of control elsewhere.
+    that will direct flow of control elsewhere. (See below)
 
 The FINALLY2 block
 
