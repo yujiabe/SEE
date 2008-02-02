@@ -254,15 +254,14 @@ add_location(code, loc)
 {
     unsigned int i;
     struct SEE_interpreter *interp = code->code.interpreter;
-
-    SEE_ASSERT(interp, loc->filename->flags & SEE_STRING_FLAG_INTERNED);
+    struct SEE_string *loc_filename = _SEE_INTERN_ASSERT(interp, loc->filename);
 
     /* Search backwards because if it's any line, its probably the last one */
     i = code->nlocation;
     while (i > 0) {
 	i--;
 	if (code->location[i].lineno == loc->lineno &&
-	    code->location[i].filename == loc->filename)
+	    code->location[i].filename == loc_filename)
 	    return i;
     }
     i = code->nlocation;
@@ -654,7 +653,7 @@ GetValue(interp, vp)
 	    struct SEE_string *prop = vp->u.reference.property;
 	    if (base == NULL)
 		SEE_error_throw_string(interp, interp->ReferenceError, prop);
-	    SEE_OBJECT_GET(interp, base, prop, vp);
+	    SEE_OBJECT_GET(interp, base, SEE_intern(interp, prop), vp);
 	}
 }
 
@@ -799,7 +798,7 @@ code1_exec(sco, ctxt, res)
 	struct SEE_context *ctxt;
 	struct SEE_value *res;
 {
-	struct SEE_interpreter *interp = ctxt->interpreter;
+	struct SEE_interpreter * const interp = ctxt->interpreter;
 	struct code1 * const co = CAST_CODE(sco);
 	struct SEE_string *str;
 	struct SEE_value t, u, v;		/* scratch values */
@@ -807,22 +806,22 @@ code1_exec(sco, ctxt, res)
 	struct SEE_value **argv;
 	struct SEE_value undefined, Number;
 	struct SEE_object *obj, *baseobj;
-	volatile unsigned char *pc;
-	struct SEE_value *stackbottom;
-	volatile struct SEE_value *stack;
 	struct SEE_throw_location *location = NULL;
 	unsigned char op;
 	SEE_int32_t arg;
 	SEE_int32_t int32;
 	SEE_uint32_t uint32;
-	int i;
-	struct block *blockbottom, *block;
-	volatile struct block *try_block = NULL;
-	volatile int blocklevel;
-	int new_blocklevel;
-	struct enum_context *enum_context = NULL;
-	struct SEE_scope *scope;
+	int i, new_blocklevel;
 	SEE_number_t number;
+#define VOLATILE /* volatile */
+	VOLATILE unsigned char *pc;
+	VOLATILE struct SEE_value *stackbottom;
+	VOLATILE struct SEE_value *stack;
+	VOLATILE struct block *blockbottom, *block;
+	VOLATILE struct block *try_block = NULL;
+	VOLATILE int blocklevel;
+	VOLATILE struct enum_context *enum_context = NULL;
+	VOLATILE struct SEE_scope *scope;
 
 /*
  * The PUSH() and POP() macros work by setting /pointers/ into
@@ -950,8 +949,8 @@ code1_exec(sco, ctxt, res)
     /* Initialise all vars, and build lookups */
     for (i = 0; i < co->nvar; i++) {
 	struct SEE_string *ident;
-	SEE_ASSERT(ident, co->var[i] < co->nliteral);
-	SEE_ASSERT(ident, SEE_VALUE_GET_TYPE(&co->literal[co->var[i]]) == 
+	SEE_ASSERT(interp, co->var[i] < co->nliteral);
+	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&co->literal[co->var[i]]) == 
 			    SEE_STRING);
 	ident = co->literal[co->var[i]].u.string;
 	if (!SEE_OBJECT_HASPROPERTY(interp, ctxt->variable, ident))
@@ -993,17 +992,20 @@ code1_exec(sco, ctxt, res)
 	}
 #endif
 
-	/* Fetch next instruction byte */
-	op = *pc++;
+	/* Fetch next instruction byte into op,arg and increment pc */
+#define FETCH_INST(pc, op, arg)	 do {			    \
+	op = *pc++;					    \
+	if ((op & INST_ARG_MASK) == INST_ARG_NONE) 	    \
+	    ;						    \
+	else if ((op & INST_ARG_MASK) == INST_ARG_BYTE)	    \
+	    arg = *pc++;				    \
+	else {						    \
+	    memcpy(&arg, pc, sizeof arg);		    \
+	    pc += sizeof arg;				    \
+	}						    \
+    } while (0)
 
-	if ((op & INST_ARG_MASK) == INST_ARG_NONE) {
-	} else if ((op & INST_ARG_MASK) == INST_ARG_BYTE) {
-	    arg = *pc++;
-	} else {
-	    memcpy(&arg, pc, sizeof arg);
-	    pc += sizeof arg;
-	}
-
+	FETCH_INST(pc, op, arg);
 	switch (op & INST_OP_MASK) {
 	case INST_NOP:
 	    break;
@@ -1098,7 +1100,7 @@ code1_exec(sco, ctxt, res)
 		struct SEE_string *prop = vp->u.reference.property;
 		if (base == NULL)
 		    base = interp->Global;
-		SEE_OBJECT_PUT(interp, base, prop, up, 0);
+		SEE_OBJECT_PUT(interp, base, SEE_intern(interp, prop), up, 0);
 	    } else
 		SEE_error_throw_string(interp, interp->ReferenceError,
 		    STR(bad_lvalue));
@@ -1341,10 +1343,7 @@ code1_exec(sco, ctxt, res)
 	    if (SEE_VALUE_GET_TYPE(vp) != SEE_OBJECT)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(instanceof_not_object));
-	    if (!SEE_OBJECT_HAS_HASINSTANCE(vp->u.object))
-		SEE_error_throw_string(interp, interp->TypeError,
-		    STR(no_hasinstance));
-	    i = SEE_OBJECT_HASINSTANCE(interp, vp->u.object, up);
+	    i = SEE_object_instanceof(interp, up, vp->u.object);
 	    SEE_SET_BOOLEAN(up, i);
 	    break;
 
@@ -1462,6 +1461,8 @@ code1_exec(sco, ctxt, res)
 		    baseobj = NULL;
 		GetValue(interp, vp);
 	    }
+	    if (!baseobj)
+		baseobj = interp->Global;
 	    if (SEE_VALUE_GET_TYPE(vp) == SEE_UNDEFINED)
 		SEE_error_throw_string(interp, interp->TypeError,
 		    STR(no_such_function));
@@ -1587,6 +1588,10 @@ code1_exec(sco, ctxt, res)
 
 	case INST_B_TRUE:
 	    POP(vp);
+	    if (SEE_VALUE_GET_TYPE(vp) != SEE_BOOLEAN) {
+		SEE_ToBoolean(interp, vp, &v);
+		vp = &v;
+	    }
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_BOOLEAN);
 	    if (vp->u.boolean)
 		pc = co->inst + arg;
@@ -1674,6 +1679,50 @@ code1_exec(sco, ctxt, res)
 	}
     }
 }
+
+#ifdef notyet
+/*
+ * A basic block is a sequence of instructions which are always
+ * executed in sequence. The first instruction is the only entry point,
+ * and the last has at least one exit that is not the 'next instruction'.
+ */
+struct basic_block {
+	unsigned char *pc;		/* instruction base */
+	SEE_int32_t length;		/* instruction segment */
+	struct basic_block *out[2];	/* egress links (NULL if unused) */
+	unsigned int incoming;		/* number of incoming edges */
+	struct basic_block *a_next;	/* linked list #a */
+};
+
+/* Constructs a graph of basic blocks. */
+static struct basic_block *
+build_basic_blocks(co)
+	struct code1 *co;
+{
+	unsigned char op, *pc;
+	const unsigned char *endpc = co->inst + co->ninst;
+	SEE_int32_t arg;
+
+	/*
+	 * Step 1: count the number of basic blocks by finding
+	 * instructions that mark the end of a block, or the
+	 * branch targets that would start a block.
+	 */
+	pc = co->inst;
+	while (pc < endpc) {
+	    FETCH_INST(pc, op, arg);
+	    switch (op) {
+
+	    /* Branch instructions */
+	    case INST_B_ALWAYS:
+	    case INST_B_TRUE:
+	    case INST_B_ENUM:
+	    case INST_END:
+		; /* TBD */
+	    }
+	}
+}
+#endif
 
 #ifndef NDEBUG
 static SEE_int32_t

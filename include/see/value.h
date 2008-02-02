@@ -45,7 +45,7 @@ struct _SEE_reference {
 /* This structure is not part of the public API and may change */
 struct _SEE_completion {
 	struct SEE_value *value;	/* Return value */
-	void *target;			/* Throw context or break target */
+	unsigned int target;		/* Throw context or break target */
 	enum { SEE_COMPLETION_NORMAL,
 	       SEE_COMPLETION_BREAK, 
 	       SEE_COMPLETION_CONTINUE, 
@@ -70,10 +70,11 @@ struct SEE_value {
 
 /* Copy between value storages */
 #define SEE_VALUE_COPY(dst, src)		\
-	memcpy(dst, src, sizeof (struct SEE_value))
+	*(dst) = *(src)
 
 /* Obtain the value's type */
-#define SEE_VALUE_GET_TYPE(v)	((v)->_type)
+#define SEE_VALUE_GET_TYPE(v)			\
+	((v)->_type)
 
 /* This macro is not part of the public API and may change */
 #define _SEE_VALUE_SET_TYPE(v, t)		\

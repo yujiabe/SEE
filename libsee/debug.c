@@ -98,16 +98,10 @@ SEE_PrintValue(interp, v, f)
 		fprintf(f, ">");
 		break;
 	    case SEE_COMPLETION_BREAK:
-		fprintf(f, "<break");
-		if (v->u.completion.target != (void *)1)
-			fprintf(f, " %p", v->u.completion.target);
-		fprintf(f, ">");
+		fprintf(f, "<break %u>", v->u.completion.target);
 		break;
 	    case SEE_COMPLETION_CONTINUE:
-		fprintf(f, "<continue");
-		if (v->u.completion.target != (void *)2)
-			fprintf(f, " %p", v->u.completion.target);
-		fprintf(f, ">");
+		fprintf(f, "<continue %u>", v->u.completion.target);
 		break;
 	    case SEE_COMPLETION_RETURN:
 		fprintf(f, "<return ");

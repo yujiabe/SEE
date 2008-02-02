@@ -156,7 +156,7 @@ struct code_context {
 		SEE_code_patchable_t *break_patch;
 		unsigned int nbreak_patch;
 		struct SEE_growable gbreak_patch;
-		void *target;
+		unsigned int target;
 		struct patchables *prev;
 		int continuable;
 		unsigned int block_depth;
@@ -258,15 +258,43 @@ struct node {
 #endif
 };
 
-struct label {
-	struct SEE_string *name;	/* interned */
-	struct SEE_string *labelset;
-	struct SEE_throw_location location;
-	struct label *next;
-	int continuable;		/* can be target of continue */
+/*
+ * A label is the identifier (string) before a statement that binds a 
+ * "labelset" to the statement. Conversely, a labelset represents the 
+ * set of labels associated with a statement. Labelsets are the targets 
+ * of break and continue statements. If a 'break' or 'continue' statement 
+ * is followed by an identifier, then the current label stack is searched 
+ * for the corresponding labelset.
+ *
+ * For 'break' or 'continue' statements without a label, the label stack 
+ * is searched for the internal names ".BREAK" or ".CONTINUE", respectively.
+ * All 'iteration' statements are initialised with a labelset containing
+ * one or both of .BREAK or .CONTINUE.
+ *
+ * A break to a labelset branches to the end of its statement. A continue
+ * to a labelset branches to its statement's 'continue point', which is 
+ * usually the body of the iteration.
+ *
+ * During any statement the labelset_current() method returns the currently
+ * active labelset.
+ * 
+ * A labelset is given a unique target number only if and when it is 
+ * referenced. In this way, the parser generates sequential branch targets 
+ * IDs. Unused labelsets have an internal ID of -1.
+ */
+
+struct labelset {
+	int		 continuable;	    /* can be target of continue */
+	unsigned int	 target;	    /* unique id or -1 */
+	struct labelset *next;		    /* list of all labelsets */
 };
 
-#define COPY_LABELSET(dst, src) labelset_copy(dst, src);
+struct label {
+	struct SEE_string *name;	    /* interned label name */
+	struct labelset	*labelset;	    /* containing labelset */
+	struct SEE_throw_location location; /* where the label is defined */
+	struct label	*next;		    /* stack link of active labels */
+};
 
 #define UNGET_MAX 3
 struct parser {
@@ -280,9 +308,10 @@ struct parser {
 	int 		  noin;	  /* ignore 'in' in RelationalExpression */
 	int		  is_lhs; /* derived LeftHandSideExpression */
 	int		  funcdepth;
-	struct SEE_string*current_labelset;
-	struct label     *labels;
-	struct var	**vars;		/* list of declared variables */
+	struct var	**vars;		    /* list of declared variables */
+	struct labelset	 *labelsets;	    /* list of all labelsets */
+	struct label     *labels;	    /* stack of active labels */
+	struct labelset	 *current_labelset; /* statement's labelset or NULL */
 };
 
 #if WITH_PARSER_PRINT
@@ -300,11 +329,6 @@ struct printer {
 	int	bol;
 };
 #endif
-
-struct Targetable_node {
-	struct node node;
-	void *target;
-};
 
 /*------------------------------------------------------------
  * function prototypes
@@ -439,12 +463,7 @@ static struct node *cast_node(struct node *na, struct nodeclass *nc,
         const char *cname, const char *file, int line);
 static void parser_init(struct parser *parser, 
         struct SEE_interpreter *interp, struct lex *lex);
-static void label_push(struct parser *parser, struct SEE_string *name, 
-	struct SEE_string *labelset, int continuable);
-static void label_pop(struct parser *parser);
-static void label_set_continuable(struct parser *parser,
-	struct SEE_string *labelset);
-static struct label *label_lookup(struct parser *parser, 
+static unsigned int target_lookup(struct parser *parser, 
 	struct SEE_string *name, int kind);
 static int lookahead(struct parser *parser, int n);
 static void trace_event(struct SEE_context *ctxt, enum SEE_trace_event);
@@ -908,6 +927,7 @@ static void ReturnStatement_undef_print(struct node *na,
         struct printer *printer);
 static void WithStatement_print(struct node *na, struct printer *printer);
 static void SwitchStatement_print(struct node *na, struct printer *printer);
+static void Label_print(unsigned int target, struct printer *printer);
 static void LabelledStatement_print(struct node *na, struct printer *printer);
 static void ThrowStatement_print(struct node *na, struct printer *printer);
 static void TryStatement_catch_print(struct node *na, 
@@ -978,11 +998,12 @@ static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
 #endif
 
 #if WITH_PARSER_CODEGEN
-static void push_patchables(struct code_context *cc, void *target, int cont);
+static void push_patchables(struct code_context *cc, unsigned int target, 
+	int cont);
 static void pop_patchables(struct code_context *cc, 
 	SEE_code_addr_t cont_addr, SEE_code_addr_t break_addr);
-static struct patchables *patch_find(struct code_context *cc, void *target,
-	int tok);
+static struct patchables *patch_find(struct code_context *cc, 
+	unsigned int target, int tok);
 static void patch_add_continue(struct code_context *cc, struct patchables *p,
 	SEE_code_patchable_t pa);
 static void patch_add_break(struct code_context *cc, struct patchables *p,
@@ -1004,8 +1025,6 @@ static int cg_var_set_all_scope(struct code_context *, int);
 static void *make_body(struct parser *parser, struct node *node);
 
 #define CONTINUABLE 1
-static int target_matches(struct Targetable_node *, void *);
-static void target_init(struct Targetable_node *, struct parser *, int);
 
 /*------------------------------------------------------------
  * macros
@@ -1464,42 +1483,50 @@ parser_init(parser, interp, lex)
 	parser->unget_end = 0;
 	parser->noin = 0;
 	parser->is_lhs = 0;
-	parser->labels = NULL;
-	parser->vars = NULL;
 	parser->funcdepth = 0;
+	parser->vars = NULL;
+	parser->labelsets = NULL;
+	parser->labels = NULL;
+	parser->current_labelset = NULL;
 }
 
 /*------------------------------------------------------------
  * Labels
- *
- * LabelledStatements that appear consecutively are converted
- * into a 'label set' named by the first label. Each successive 
- * label becomes an alias for the first.
- *
- * Only Iteration/SwitchStatements that are immediately parented by 
- * a LabelledStatement are passed a 'current label set' consisting of 
- * either NULL or the first label. The Iteration/SwitchStatement then
- * translates break/continues to that labelset into the equivalent 
- * break/continues with an empty label. (All other statements ignore
- * their 'current label set', which is typically empty anyway.)
- *
- * During parse, the stack of currently active labels, is available
- * in parser->labels. This is used to check for duplicates, and
- * also to map identifier targets of 'break' and 'continue' to the
- * first label of a labelset.
  */
 
+/* Returns a labelset for the current statement, creating one if needed. */
+static struct labelset *
+labelset_current(parser)
+	struct parser *parser;
+{
+	struct labelset *ls;
+
+	if (!parser->current_labelset) {
+	    ls = SEE_NEW(parser->interpreter, struct labelset);
+	    if (parser->labelsets)
+		ls->target = parser->labelsets->target + 1;
+	    else
+		ls->target = 1;
+	    ls->next = parser->labelsets;
+	    parser->labelsets = ls;
+	    parser->current_labelset = ls;
+#ifndef NDEBUG
+	    if (SEE_parse_debug)
+		dprintf("labelset_current(): new %p\n", 
+		    parser->current_labelset);
+#endif
+	}
+	return parser->current_labelset;
+}
+
 /*
- * Pushes a label onto the current label stack.
- * Checks for duplicate labels already in the current label
- * stack.
+ * Pushes a new label for the current labelset onto the label scope stack.
+ * Checks for duplicate labels, which are not allowed, except for EMPTY_LABEL.
  */
 static void
-label_push(parser, name, labelset, continuable)
+label_enter(parser, name)
 	struct parser *parser;
 	struct SEE_string *name;
-	struct SEE_string *labelset;
-	int continuable;
 {
 	struct label *l;
 	struct SEE_string *msg;
@@ -1508,8 +1535,18 @@ label_push(parser, name, labelset, continuable)
 	location.lineno = NEXT_LINENO;
 	location.filename = NEXT_FILENAME;
 
-	/* check for duplicate labels */
-	if (name)
+#ifndef NDEBUG
+	if (SEE_parse_debug) {
+	    dprintf("label_enter() [");
+	    if (name == EMPTY_LABEL)
+		dprintf("EMPTY_LABEL");
+	    else
+		dprints(name);
+	    dprintf("]\n");
+	}
+#endif
+
+	if (name != EMPTY_LABEL)
 	    for (l = parser->labels; l; l = l->next)
 		if (l->name == name) {
 		    msg = SEE_location_string(parser->interpreter, &location);
@@ -1526,60 +1563,49 @@ label_push(parser, name, labelset, continuable)
 			    parser->interpreter->SyntaxError, msg);
 		}
 
+
 	l = SEE_NEW(parser->interpreter, struct label);
 	l->name = name;
-	l->labelset = labelset;
-	l->next = parser->labels;
+	l->labelset = labelset_current(parser);
 	l->location.lineno = location.lineno;
 	l->location.filename = location.filename;
-	l->continuable = continuable;
+	/* Push onto parser->labels */
+	l->next = parser->labels;
 	parser->labels = l;
-//dprintf("label_push("); dprints(l->name); dprintf(")\n");
 }
 
-/*
- * Pops the last pushed label from the current label stack.
- */
+/* Pops the last label pushed by label_enter(). */
 static void
-label_pop(parser)
+label_leave(parser)
 	struct parser *parser;
 {
-	struct label *l;
 
 	SEE_ASSERT(parser->interpreter, parser->labels != NULL);
-	l = parser->labels;
-//dprintf("label_pop ("); dprints(l->name); dprintf(")\n");
-	parser->labels = l->next;
-	l->next = NULL;
-	SEE_free(parser->interpreter, (void **)&l);
+#ifndef NDEBUG
+	if (SEE_parse_debug) {
+	    dprintf("label_leave() [");
+	    if (parser->labels->name == EMPTY_LABEL)
+		dprintf("EMPTY_LABEL");
+	    else
+		dprints(parser->labels->name);
+	    dprintf("]\n");
+	}
+#endif
+	parser->labels = parser->labels->next;
 }
 
 /*
- * Marks a label as being a valid target for the continue statement.
+ * Returns the target ID correspnding to the label, or raises a SyntaxError
+ * if it isn't found.
+ * Kind is a token indicating the kind of statement using the label 
+ * (tBREAK or tCONTINUE), and a SyntaxError is thrown if the found labelset
+ * is incompatible.
+ * Always returns a valid target ID.
  */
-static void
-label_set_continuable(parser, labelset)
+static unsigned int
+target_lookup(parser, label_name, kind)
 	struct parser *parser;
-	struct SEE_string *labelset;
-{
-	struct label *l;
-
-	for (l = parser->labels; l; l = l->next)
-	    if (l->labelset == labelset)
-	    	break;
-	SEE_ASSERT(parser->interpreter, l != NULL);
-	l->continuable = 1;
-}
-
-/*
- * Looks for the given label name (or implied name), raising a
- * SyntaxError if it isn't found. Kind is a token indicates the kind of
- * statement using the label (tBREAK or tCONTINUE).
- */
-static struct label *
-label_lookup(parser, name, kind)
-	struct parser *parser;
-	struct SEE_string *name;
+	struct SEE_string *label_name;
 	int kind;
 {
 	struct SEE_string *msg;
@@ -1589,33 +1615,34 @@ label_lookup(parser, name, kind)
 
 #ifndef NDEBUG
 	if (SEE_parse_debug) {
-	    dprintf("label_find: searching for '");
-	    if (name == EMPTY_LABEL)
+	    dprintf("labelset_lookup_target: searching for '");
+	    if (label_name == EMPTY_LABEL)
 	        dprintf("EMPTY_LABEL");
 	    else
-	    	dprints(name);
+	    	dprints(label_name);
 	    dprintf("\n");
 	}
 #endif
+
 	for (l = parser->labels; l; l = l->next)
-	    if (l->name == name) {
-	        if (kind == tCONTINUE && !l->continuable) {
-		    if (name == NULL)
+	    if (l->name == label_name) {
+	        if (kind == tCONTINUE && !l->labelset->continuable) {
+		    if (label_name == EMPTY_LABEL)
 		        continue;
 		    msg = error_at(parser, "label '");
-		    SEE_string_append(msg, name);
+		    SEE_string_append(msg, label_name);
 		    SEE_string_append(msg, 
 			SEE_string_sprintf(parser->interpreter,
 			"' not suitable for continue"));
 		    SEE_error_throw_string(parser->interpreter,
 			    parser->interpreter->SyntaxError, msg);
 		}
-		return l;
+		return l->labelset->target;
 	    }
 
-	if (name) {
+	if (label_name) {
 	    msg = error_at(parser, "label '");
-	    SEE_string_append(msg, name);
+	    SEE_string_append(msg, label_name);
 	    SEE_string_append(msg, 
 		SEE_string_sprintf(parser->interpreter,
 		"' not defined, or not reachable"));
@@ -1631,49 +1658,12 @@ label_lookup(parser, name, kind)
 	/* NOTREACHED */
 }
 
-/*
- * Returns the labelset associated with a label.
- * The label argument may be NULL, in which case NULL is returned.
- */
-static void *
-label_get_target(label)
-	struct label *label;
-{
-	return label ? label->labelset : NULL;
-}
-
-/*
- * Returns true if the node is a valid target of the labelset target.
- */
-static int
-target_matches(itn, ls_target)
-	struct Targetable_node *itn;
-	void *ls_target;
-{
-	return ls_target == NULL || ls_target == itn->target;
-}
-
-/*
- * Initialises a targetable node with the current label set,
- * and optionally modifies the labelset to be continuable.
- */
-static void
-target_init(itn, parser, continuable)
-	struct Targetable_node *itn;
-	struct parser *parser;
-	int continuable;
-{
-	itn->target = (void *)parser->current_labelset;
-	if (continuable && parser->current_labelset)
-	    label_set_continuable(parser, parser->current_labelset);
-}
-
 #if WITH_PARSER_CODEGEN
 /* Creates a new patchables for breaking/continuing */
 static void
 push_patchables(cc, target, continuable)
 	struct code_context *cc;
-	void *target;
+	unsigned int target;
 	int continuable;
 {
 	struct patchables *p;
@@ -1729,7 +1719,7 @@ pop_patchables(cc, cont_addr, break_addr)
 static struct patchables *
 patch_find(cc, target, tok)
 	struct code_context *cc;
-	void *target;
+	unsigned int target;
 	int tok;    /* tBREAK or tCONTINUE */
 {
 	struct patchables *p;
@@ -3687,6 +3677,8 @@ CallExpression_eval_common(context, loc, r1, argc, argv, res)
 #ifndef NDEBUG
 	    SEE_SET_STRING(res, STR(internal_error));
 #endif
+	    if (!r7)
+		r7 = interp->Global;
 	    SEE_OBJECT_CALL(interp, r3.u.object, r7, argc, argv, res);
 	}
 	TRACE(loc, context, SEE_TRACE_RETURN);
@@ -8993,7 +8985,8 @@ IfStatement_parse(parser)
  */
 
 struct IterationStatement_while_node {
-	struct Targetable_node targetable;
+	struct node  node;
+	unsigned int target;
 	struct node *cond, *body;
 };
 
@@ -9012,10 +9005,10 @@ IterationStatement_dowhile_eval(na, context, res)
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 	    goto step7;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 	    goto step11;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 	    goto out;
@@ -9039,9 +9032,8 @@ IterationStatement_dowhile_codegen(na, cc)
 	struct IterationStatement_while_node *n = 
 		CAST_NODE(na, IterationStatement_while);
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
     L1 = CG_HERE();
 	CODEGEN(n->body);
@@ -9150,10 +9142,10 @@ IterationStatement_while_eval(na, context, res)
 	if (res->u.completion.value)
 		v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 		goto step2;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 	{
 	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
 	    return;
@@ -9173,9 +9165,8 @@ IterationStatement_while_codegen(na, cc)
 		CAST_NODE(na, IterationStatement_while);
 	SEE_code_patchable_t P1;
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
 	CG_B_ALWAYS_f(P1);
     L1 = CG_HERE();
@@ -9245,7 +9236,8 @@ static struct nodeclass IterationStatement_while_nodeclass
 
 
 struct IterationStatement_for_node {
-	struct Targetable_node targetable;
+	struct node node;
+	unsigned int target;
 	struct node *init, *cond, *incr, *body;
 };
 
@@ -9278,10 +9270,10 @@ IterationStatement_for_eval(na, context, res)
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 		goto step19;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 		goto step15;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
@@ -9304,9 +9296,8 @@ IterationStatement_for_codegen(na, cc)
 		CAST_NODE(na, IterationStatement_for);
 	SEE_code_patchable_t P1;
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
 	if (n->init) {
 		CG_LOC(&n->init->location);
@@ -9455,10 +9446,10 @@ IterationStatement_forvar_eval(na, context, res)
 	if (res->u.completion.value)
 	    v = res->u.completion.value;
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 		goto step17;
 	if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 		goto step13;
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		return;
@@ -9481,9 +9472,8 @@ IterationStatement_forvar_codegen(na, cc)
 		CAST_NODE(na, IterationStatement_for);
 	SEE_code_patchable_t P1;
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
 	CG_LOC(&n->init->location);
 	CODEGEN(n->init);
@@ -9566,7 +9556,8 @@ static struct nodeclass IterationStatement_forvar_nodeclass
 
 
 struct IterationStatement_forin_node {
-	struct Targetable_node targetable;
+	struct node node;
+	unsigned int target;
 	struct node *lhs, *list, *body;
 };
 
@@ -9601,10 +9592,10 @@ IterationStatement_forin_eval(na, context, res)
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
 	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-		target_matches(&n->targetable, res->u.completion.target))
+		n->target == res->u.completion.target)
 		    break;
 	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-		target_matches(&n->targetable, res->u.completion.target))
+		n->target == res->u.completion.target)
 		    continue;
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
@@ -9623,7 +9614,6 @@ IterationStatement_forin_codegen(na, cc)
 		CAST_NODE(na, IterationStatement_forin);
 	SEE_code_patchable_t P1;
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
 	CG_LOC(&na->location);
 	CODEGEN(n->list);		/* ref */
@@ -9635,7 +9625,7 @@ IterationStatement_forin_codegen(na, cc)
 	CG_S_ENUM();			/* -  */
 	cg_block_enter(cc);
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
 	CG_B_ALWAYS_f(P1);
 
@@ -9749,10 +9739,10 @@ IterationStatement_forvarin_eval(na, context, res)
 	    if (res->u.completion.value)
 		v = res->u.completion.value;
 	    if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-		target_matches(&n->targetable, res->u.completion.target))
+		n->target == res->u.completion.target)
 		    break;
 	    if (res->u.completion.type == SEE_COMPLETION_CONTINUE &&
-		target_matches(&n->targetable, res->u.completion.target))
+		n->target == res->u.completion.target)
 		    continue;
 	    if (res->u.completion.type != SEE_COMPLETION_NORMAL)
 		    return;
@@ -9773,7 +9763,6 @@ IterationStatement_forvarin_codegen(na, cc)
 		= CAST_NODE(n->lhs, VariableDeclaration);
 	SEE_code_patchable_t P1;
 	SEE_code_addr_t L1, L2, L3;
-	void *targ = &n->targetable;
 
 	CG_LOC(&na->location);
 	CODEGEN(n->lhs);		/* - */
@@ -9786,7 +9775,7 @@ IterationStatement_forvarin_codegen(na, cc)
 	CG_S_ENUM();			/* -  */
 	cg_block_enter(cc);
 
-	push_patchables(cc, targ, CONTINUABLE);
+	push_patchables(cc, n->target, CONTINUABLE);
 
 	CG_B_ALWAYS_f(P1);
 
@@ -9863,33 +9852,34 @@ IterationStatement_parse(parser)
 	struct IterationStatement_for_node *fn;
 	struct IterationStatement_forin_node *fin;
 	struct node *n;
+	struct labelset *labelset = labelset_current(parser);
 
+	labelset->continuable = 1;
+	label_enter(parser, EMPTY_LABEL);
 	switch (NEXT) {
 	case tDO:
 		w = NEW_NODE(struct IterationStatement_while_node,
 			&IterationStatement_dowhile_nodeclass);
 		SKIP;
-		target_init(&w->targetable, parser, CONTINUABLE);
-		label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
+		w->target = labelset->target;
 		w->body = PARSE(Statement);
 		EXPECT(tWHILE);
 		EXPECT('(');
 		w->cond = PARSE(Expression);
 		EXPECT(')');
 		EXPECT_SEMICOLON;
-		label_pop(parser);
+		label_leave(parser);
 		return (struct node *)w;
 	case tWHILE:
 		w = NEW_NODE(struct IterationStatement_while_node,
 			&IterationStatement_while_nodeclass);
 		SKIP;
-		target_init(&w->targetable, parser, CONTINUABLE);
-		label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
+		w->target = labelset->target;
 		EXPECT('(');
 		w->cond = PARSE(Expression);
 		EXPECT(')');
 		w->body = PARSE(Statement);
-		label_pop(parser);
+		label_leave(parser);
 		return (struct node *)w;
 	case tFOR:
 		break;
@@ -9910,14 +9900,13 @@ IterationStatement_parse(parser)
 	    {					/* "for ( var VarDecl in" */
 		fin = NEW_NODE(struct IterationStatement_forin_node,
 		    &IterationStatement_forvarin_nodeclass);
-		target_init(&fin->targetable, parser, CONTINUABLE);
+		fin->target = labelset->target;
 		fin->lhs = n;
 		SKIP;	/* tIN */
 		fin->list = PARSE(Expression);
 		EXPECT(')');
-		label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
 		fin->body = PARSE(Statement);
-		label_pop(parser);
+		label_leave(parser);
 		return (struct node *)fin;
 	    }
 
@@ -9929,8 +9918,7 @@ IterationStatement_parse(parser)
 					    /* "for ( var VarDeclList ;" */
 	    fn = NEW_NODE(struct IterationStatement_for_node,
 		&IterationStatement_forvar_nodeclass);
-	    target_init(&fn->targetable, parser, CONTINUABLE);
-	    label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
+	    fn->target = labelset->target;
 	    fn->init = n;
 	    if (NEXT != ';')
 		fn->cond = PARSE(Expression);
@@ -9943,7 +9931,7 @@ IterationStatement_parse(parser)
 		fn->incr = NULL;
 	    EXPECT(')');
 	    fn->body = PARSE(Statement);
-	    label_pop(parser);
+	    label_leave(parser);
 	    return (struct node *)fn;
 	}
 
@@ -9954,14 +9942,13 @@ IterationStatement_parse(parser)
 	    if (NEXT == tIN && parser->is_lhs) {   /* "for ( lhs in" */
 		fin = NEW_NODE(struct IterationStatement_forin_node,
 		    &IterationStatement_forin_nodeclass);
-		target_init(&fin->targetable, parser, CONTINUABLE);
-		label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
+		fin->target = labelset->target;
 		fin->lhs = n;
 		SKIP;		/* tIN */
 		fin->list = PARSE(Expression);
 		EXPECT(')');
 		fin->body = PARSE(Statement);
-		label_pop(parser);
+		label_leave(parser);
 		return (struct node *)fin;
 	    }
 	} else
@@ -9969,8 +9956,7 @@ IterationStatement_parse(parser)
 
 	fn = NEW_NODE(struct IterationStatement_for_node,
 	    &IterationStatement_for_nodeclass);
-	target_init(&fn->targetable, parser, CONTINUABLE);
-	label_push(parser, EMPTY_LABEL, NULL, CONTINUABLE);
+	fn->target = labelset->target;
 	fn->init = n;
 	EXPECT(';');
 	if (NEXT != ';')
@@ -9984,7 +9970,7 @@ IterationStatement_parse(parser)
 	    fn->incr = NULL;
 	EXPECT(')');
 	fn->body = PARSE(Statement);
-	label_pop(parser);
+	label_leave(parser);
 	return (struct node *)fn;
 }
 
@@ -9999,7 +9985,7 @@ IterationStatement_parse(parser)
 
 struct ContinueStatement_node {
 	struct node node;
-	void *target;
+	unsigned int target;
 };
 
 static void
@@ -10049,8 +10035,7 @@ ContinueStatement_print(na, printer)
 
 	PRINT_STRING(STR(continue));
 	PRINT_CHAR(' ');
-	PRINT_CHAR('L');
-	print_hex(printer, (int)n->target);
+	Label_print(n->target, printer);
 	PRINT_CHAR(';');
 	PRINT_NEWLINE(0);
 }
@@ -10072,20 +10057,19 @@ ContinueStatement_parse(parser)
 	struct parser *parser;
 {
 	struct ContinueStatement_node *cn;
-	struct label *label = NULL;
 
 	cn = NEW_NODE(struct ContinueStatement_node,
 		&ContinueStatement_nodeclass);
 	EXPECT(tCONTINUE);
 	if (NEXT_IS_SEMICOLON)
-	    label = label_lookup(parser, EMPTY_LABEL, tCONTINUE);
+	    cn->target = target_lookup(parser, EMPTY_LABEL, tCONTINUE);
 	else {
 	    if (NEXT == tIDENT)
-		label = label_lookup(parser, NEXT_VALUE->u.string, tCONTINUE);
+		cn->target = target_lookup(parser, NEXT_VALUE->u.string, 
+			tCONTINUE);
 	    EXPECT(tIDENT);
 	}
 	EXPECT_SEMICOLON;
-	cn->target = label_get_target(label);
 	return (struct node *)cn;
 }
 
@@ -10100,7 +10084,7 @@ ContinueStatement_parse(parser)
 
 struct BreakStatement_node {
 	struct node node;
-	void *target;
+	unsigned int target;
 };
 
 static void
@@ -10147,10 +10131,10 @@ BreakStatement_print(na, printer)
 	struct printer *printer;
 {
 	struct BreakStatement_node *n = CAST_NODE(na, BreakStatement);
+
 	PRINT_STRING(STR(break));
 	PRINT_CHAR(' ');
-	PRINT_CHAR('L');
-	print_hex(printer, (int)n->target);
+	Label_print(n->target, printer);
 	PRINT_CHAR(';');
 	PRINT_NEWLINE(0);
 }
@@ -10170,20 +10154,19 @@ BreakStatement_parse(parser)
 	struct parser *parser;
 {
 	struct BreakStatement_node *cn;
-	struct label *label = NULL;
 
 	cn = NEW_NODE(struct BreakStatement_node,
 		&BreakStatement_nodeclass);
 	EXPECT(tBREAK);
 	if (NEXT_IS_SEMICOLON)
-	    label = label_lookup(parser, EMPTY_LABEL, tBREAK);
+	    cn->target = target_lookup(parser, EMPTY_LABEL, tBREAK);
 	else {
 	    if (NEXT == tIDENT)
-		label = label_lookup(parser, NEXT_VALUE->u.string, tBREAK);
+		cn->target = target_lookup(parser, NEXT_VALUE->u.string, 
+		    tBREAK);
 	    EXPECT(tIDENT);
 	}
 	EXPECT_SEMICOLON;
-	cn->target = label_get_target(label);
 	return (struct node *)cn;
 }
 
@@ -10199,7 +10182,6 @@ BreakStatement_parse(parser)
 struct ReturnStatement_node {
 	struct node node;
 	struct node *expr;
-	void *target;
 };
 
 static void
@@ -10485,7 +10467,8 @@ WithStatement_parse(parser)
  */
 
 struct SwitchStatement_node {
-	struct Targetable_node targetable;
+	struct node node;
+	unsigned int target;
 	struct node *cond;
 	struct case_list {
 		struct node *expr;	/* NULL for default case */
@@ -10545,7 +10528,7 @@ SwitchStatement_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	SwitchStatement_caseblock(n, context, &r2, res);
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-	    target_matches(&n->targetable, res->u.completion.target))
+	    n->target == res->u.completion.target)
 	{
 		v = res->u.completion.value;
 		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
@@ -10559,7 +10542,6 @@ SwitchStatement_codegen(na, cc)
 	struct code_context *cc;
 {
 	struct SwitchStatement_node *n = CAST_NODE(na, SwitchStatement);
-	void *targ = &n->targetable;
 	struct case_list *c;
 	int ncases, i;
 	SEE_code_patchable_t *case_patches, default_patch;
@@ -10589,7 +10571,7 @@ SwitchStatement_codegen(na, cc)
 	    }
 	CG_B_ALWAYS_f(default_patch);
 
-	push_patchables(cc, targ, !CONTINUABLE);
+	push_patchables(cc, n->target, !CONTINUABLE);
 
 	for (i = 0, c = n->cases; c; c = c->next) {
 	    if (!c->expr)
@@ -10695,12 +10677,13 @@ SwitchStatement_parse(parser)
 	struct SwitchStatement_node *n;
 	struct case_list **cp, *c;
 	int next;
+	struct labelset *labelset = labelset_current(parser);
 
 	n = NEW_NODE(struct SwitchStatement_node,
 		&SwitchStatement_nodeclass);
-	target_init(&n->targetable, parser, 0);
+	n->target = labelset->target;
+	label_enter(parser, EMPTY_LABEL);
 	EXPECT(tSWITCH);
-	label_push(parser, EMPTY_LABEL, NULL, 0);
 	EXPECT('(');
 	n->cond = PARSE(Expression);
 	EXPECT(')');
@@ -10735,7 +10718,7 @@ SwitchStatement_parse(parser)
 	}
 	*cp = NULL;
 	EXPECT('}');
-	label_pop(parser);
+	label_leave(parser);
 	return (struct node *)n;
 }
 
@@ -10750,7 +10733,7 @@ SwitchStatement_parse(parser)
 
 struct LabelledStatement_node {
 	struct Unary_node unary;
-	struct SEE_string *labelset;
+	unsigned int target;
 };
 
 static void
@@ -10763,7 +10746,7 @@ LabelledStatement_eval(na, context, res)
 
 	EVAL(n->unary.a, context, res);
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
-		res->u.completion.target == n->labelset)
+		res->u.completion.target == n->target)
 	{
 	    res->u.completion.type = SEE_COMPLETION_NORMAL;
 	    res->u.completion.target = NULL;
@@ -10778,9 +10761,8 @@ LabelledStatement_codegen(na, cc)
 {
 	struct LabelledStatement_node *n = CAST_NODE(na, LabelledStatement);
 	SEE_code_addr_t L1;
-	void *targ = n->labelset;
 
-	push_patchables(cc, targ, !CONTINUABLE);
+	push_patchables(cc, n->target, !CONTINUABLE);
 	CODEGEN(n->unary.a);
     L1 = CG_HERE();
 	pop_patchables(cc, NULL, L1);
@@ -10790,12 +10772,22 @@ LabelledStatement_codegen(na, cc)
 
 #if WITH_PARSER_PRINT
 static void
+Label_print(target, printer)
+	unsigned int target;
+	struct printer *printer;
+{
+	PRINT_CHAR('L');
+	print_hex(printer, target);
+}
+
+static void
 LabelledStatement_print(na, printer)
 	struct node *na; /* (struct Unary_node) */
 	struct printer *printer;
 {
 	struct LabelledStatement_node *n = CAST_NODE(na, LabelledStatement);
-	PRINT_STRING(n->labelset);
+
+	Label_print(n->target, printer);
 	PRINT_CHAR(':');
 	PRINT(n->unary.a);
 }
@@ -10815,32 +10807,31 @@ LabelledStatement_parse(parser)
 	struct parser *parser;
 {
 	struct LabelledStatement_node *n;
-	struct SEE_string *label, *labelset = NULL;
+	struct SEE_string *label;
 	unsigned int label_count = 0;
+	struct labelset *old_labelset = parser->current_labelset;
 
 	n = NEW_NODE(struct LabelledStatement_node, 
 			&LabelledStatement_nodeclass);
+	
+	parser->current_labelset = NULL;
+	n->target = labelset_current(parser)->target;
 	do {
 		/* Lookahead is IDENT ':' */
 		label = NEXT_VALUE->u.string;
-		if (!labelset)
-			labelset = label;
-		label_push(parser, label, labelset, 0);
+		label_enter(parser, label);
 		label_count++;
 		EXPECT(tIDENT);
 		EXPECT(':');
 	} while (NEXT == tIDENT && lookahead(parser, 1) == ':');
-	n->labelset = labelset;
 
 	switch (NEXT) {
 	case tDO:
 	case tWHILE:
 	case tFOR:
-		parser->current_labelset = labelset;
 		n->unary.a = PARSE(IterationStatement);
 		break;
 	case tSWITCH:
-		parser->current_labelset = labelset;
 		n->unary.a = PARSE(SwitchStatement);
 		break;
 	default:
@@ -10848,7 +10839,9 @@ LabelledStatement_parse(parser)
 	}
 
 	while (label_count--)
-		label_pop(parser);
+		label_leave(parser);
+
+	parser->current_labelset = old_labelset;
 	return (struct node *)n;
 }
 
