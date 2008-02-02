@@ -4,7 +4,6 @@ AC_INIT([see],
         [2.1.]esyscmd((svnversion . /trunk||echo 0)|tr : _|tr -d \\012)[_snapshot],
 	[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
-AC_REVISION([$Id$])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_FILES([Makefile
