@@ -145,7 +145,10 @@ test("/.**./", Exception(SyntaxError))
 test("/+/", Exception(SyntaxError))
 test("/?/", Exception(SyntaxError))
 
-
 /* Bug 115 */
 test("Object.prototype.isPrototypeOf(new Number(123))", true);
+
+/* Bug 117 */
+test("var functest; (function functest(arg){if(arg)return 1;functest=function(arg){return 2;};return functest(true);})(false)", 1)
+
 finish()

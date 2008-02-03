@@ -29,7 +29,8 @@ enum SEE_code_op1 {
 	SEE_CODE_NEW,			/* obj any1..anyn | obj */
 	SEE_CODE_CALL, 			/* any any1..anyn | val */
 	SEE_CODE_END,			/*              - | -   */
-	SEE_CODE_VREF  			/*                | ref */
+	SEE_CODE_VREF, 			/*                | ref */
+	SEE_CODE_PUTVALUEA		/*        ref val | -   */
 };
 
 /* Generic operators that work on the stack or virtual registers */

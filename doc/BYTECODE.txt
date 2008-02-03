@@ -229,7 +229,10 @@ Primitive instructions
 	scope (10.1.4)
 
 *   PUTVALUE	ref val | -
+*   PUTVALUE,n	ref val | -
 	Computes PutValue(ref, val) (8.7.2), i.e ref.[[Put]](val)
+	PUTVALUE,n is a variant that assigns non-default (non-zero)
+	attributes.
 
     VREF,n	- | ref
 	Returns a reference to a variable. Variables are always referenced

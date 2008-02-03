@@ -1335,6 +1335,9 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 # define CG_S_ENUM()		_CG_OP0(S_ENUM)
 # define CG_S_WITH()		_CG_OP0(S_WITH)
 
+/* Special PUTVALUE that takes attributes */
+# define CG_PUTVALUEA(attr)	_CG_OP1(PUTVALUEA,attr)
+
 /* Literals */
 # define CG_LITERAL(vp) \
 	(*cc->code->code_class->gen_literal)(cc->code, vp)
@@ -9439,7 +9442,7 @@ IterationStatement_forvar_eval(na, context, res)
 	    EVAL(n->cond, context, &r4);
 	    GetValue(context, &r4, &r5);
 	    SEE_ToBoolean(context->interpreter, &r5, &r6);
-	    if (!r6.u.boolean) goto step17; /* XXX spec bug: says step 14 */
+	    if (!r6.u.boolean) goto step17; /* spec bug: says step 14 */
 	} else
 	    TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	EVAL(n->body, context, res);
@@ -11616,8 +11619,7 @@ FunctionExpression_codegen(na, cc)
 		    cg_var_set_scope(cc, n->function->name, 1);
 	    CG_DUP();			    /* ref obj obj */
 	    CG_ROLL3();			    /* obj ref obj */
-	    CG_PUTVALUE();		    /* obj */
-		/* XXX PutValue should use DONTDELETE|READONLY here */
+	    CG_PUTVALUEA(SEE_ATTR_DONTDELETE | SEE_ATTR_READONLY); /* obj */
 
 	    na->maxstack = 3;
 	}

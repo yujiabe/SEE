@@ -464,6 +464,7 @@ code1_gen_op1(sco, op, n)
 	case SEE_CODE_CALL:	add_byte_arg(co, INST_CALL, n); break;
 	case SEE_CODE_END:	add_byte_arg(co, INST_END, n); break;
 	case SEE_CODE_VREF:	add_byte_arg(co, INST_VREF, n); break;
+	case SEE_CODE_PUTVALUEA:add_byte_arg(co, INST_PUTVALUE, n); break;
 	default: SEE_ASSERT(sco->interpreter, !"bad op1");
 	}
 
@@ -996,7 +997,7 @@ code1_exec(sco, ctxt, res)
 #define FETCH_INST(pc, op, arg)	 do {			    \
 	op = *pc++;					    \
 	if ((op & INST_ARG_MASK) == INST_ARG_NONE) 	    \
-	    ;						    \
+	    arg = 0;					    \
 	else if ((op & INST_ARG_MASK) == INST_ARG_BYTE)	    \
 	    arg = *pc++;				    \
 	else {						    \
@@ -1100,7 +1101,8 @@ code1_exec(sco, ctxt, res)
 		struct SEE_string *prop = vp->u.reference.property;
 		if (base == NULL)
 		    base = interp->Global;
-		SEE_OBJECT_PUT(interp, base, SEE_intern(interp, prop), up, 0);
+		SEE_OBJECT_PUT(interp, base, SEE_intern(interp, prop), up,
+		    arg);
 	    } else
 		SEE_error_throw_string(interp, interp->ReferenceError,
 		    STR(bad_lvalue));
@@ -1739,6 +1741,7 @@ disasm(co, pc)
 
 	op = base[pc];
 	if ((op & INST_ARG_MASK) == INST_ARG_NONE) {
+	    arg = 0;
 	    len = 1;
 	} else if ((op & INST_ARG_MASK) == INST_ARG_BYTE) {
 	    arg = base[pc + 1];
@@ -1770,8 +1773,21 @@ disasm(co, pc)
 	case INST_REF:		dprintf("REF"); break;
 	case INST_GETVALUE:	dprintf("GETVALUE"); break;
 	case INST_LOOKUP:	dprintf("LOOKUP"); break;
-	case INST_PUTVALUE:	dprintf("PUTVALUE"); break;
-	case INST_VREF:		dprintf("VREF,%-4d    ; ", arg);
+	case INST_PUTVALUE:	if (len == 1) {
+				    dprintf("PUTVALUE"); 
+				    break;
+				}
+				dprintf("PUTVALUE,%-4d  ;", arg);
+				if (arg & SEE_ATTR_READONLY)
+				    dprintf(" ReadOnly");
+				if (arg & SEE_ATTR_DONTENUM)
+				    dprintf(" DontEnum");
+				if (arg & SEE_ATTR_DONTDELETE)
+				    dprintf(" DontDelete");
+				if (arg & SEE_ATTR_INTERNAL)
+				    dprintf(" Internal");
+				break;
+	case INST_VREF:		dprintf("VREF,%-4d      ; ", arg);
 				if (arg >= 0 && arg < co->nvar &&
 				    co->var[arg] < co->nliteral &&
 				    SEE_VALUE_GET_TYPE(co->literal +
@@ -1822,7 +1838,7 @@ disasm(co, pc)
 	case INST_S_TRYC:	dprintf("S_TRYC,0x%x", arg); break;
 	case INST_S_TRYF:	dprintf("S_TRYF,0x%x", arg); break;
 
-	case INST_FUNC:		dprintf("FUNC,%-4d    ;", arg);
+	case INST_FUNC:		dprintf("FUNC,%-4d      ;", arg);
 				if (arg >= 0 && arg < co->nfunc) {
 				    struct function *f = co->func[arg];
 				    dprintf(" %p", f);
@@ -1837,14 +1853,14 @@ disasm(co, pc)
 				    dprintf(" <invalid!>");
 				break;
 	case INST_LITERAL:	
-				dprintf("LITERAL,%-4d ; ", arg);
+				dprintf("LITERAL,%-4d   ; ", arg);
 				if (arg >= 0 && arg < co->nliteral)
 				    dprintv(co->code.interpreter, 
 					co->literal + arg);
 				else
 				    dprintf("<invalid!>");
 				break;
-	case INST_LOC:		dprintf("LOC,%-4d     ; ", arg); 
+	case INST_LOC:		dprintf("LOC,%-4d       ; ", arg); 
 				if (arg >= 0 && arg < co->nlocation) {
 				    dprintf("\"");
 				    dprints(co->location[arg].filename);
