@@ -74,7 +74,7 @@ struct SEE_object {
 	struct SEE_object *	Prototype;		/* [[Prototype]] */
 };
 
-#if !defined(NDEBUG)
+#ifndef NDEBUG
 # define _SEE_INTERN_ASSERT(i,s)	_SEE_intern_assert(i, s)
 struct SEE_string *_SEE_intern_assert(struct SEE_interpreter *i, 
 	struct SEE_string *s);
