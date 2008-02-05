@@ -173,7 +173,7 @@ SEE_PrintObject(interp, o, f)
 		fprintf(f, " \"%s\"", o->objectclass->Class);
 	}
 	if (o->host_data)
-		fprintf(f, " %p", o->host_data)
+		fprintf(f, " %p", o->host_data);
 	fprintf(f, ">");
 }
 
