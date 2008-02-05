@@ -16,6 +16,9 @@ test()
 
 	TEST_DESCRIBE("the simple example from the documentation");
 
+	/* Initialise the SEE library */
+	SEE_init();
+
 	/* Initialise an interpreter */
 	SEE_interpreter_init(&interp_storage);
 	interp = &interp_storage;
