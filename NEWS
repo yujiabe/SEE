@@ -59,8 +59,8 @@ $Id$
   New: ssp example, a threaded server-side javascript HTTP server
   Deprecated: thisobj field of constructors deprecated (it was never used)
   Deprecated: SEE_no_enumerator deprecated (use NULL instead)
-  Experimental: support external regex library --with-pcre (pcre.org)
-  Experimental: bytecode generator
+  Experimental: support external regex library --with-pcre (pcre.org) (bug 107)
+  Experimental: bytecode generator --enable-bytecode (Bug 72)
 
 2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)
