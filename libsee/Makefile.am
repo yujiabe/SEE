@@ -93,7 +93,7 @@ CLEANFILES+=	   see.pc
 #    then set AGE to 0. (`c+1:0:0`)
 #
 
-libsee_version_info=	1:0:0
+libsee_version_info=	2:0:1
 
 SUBDIRS=		. test
 
