@@ -1,16 +1,11 @@
 $Id$
 
 2.1 [unreleased]
-  Changed: Get, Put, CanPut, HasProperty, Delete APIs assume interned property
   Bug 115: Object.prototype.isPrototypeOf() didn't follow prototype chain
-  Feature: SEE_string_fix() for passing string values between interpreters
   Bug 112: /)/ is strictly an illegal regex 
   Bug 110: /[]/ is a legal regex even though it can't match anything
   Bug 109: detect illegal unicode escapes in identifiers
   Bug 108: fix Number.toString(undefined)
-  Experimental: support external regex library --with-pcre (pcre.org)
-  Feature: see-shell -dg option for tracebacks on SIGINFO
-  Feature: SEE_string_cmp_ascii()
   Bug 105: make SEE_intern() work right with strings from other interps
   Bug 106: fix prematurely reclaimed objects
   Bug 104: fix leaked finalized objects
@@ -28,38 +23,43 @@ $Id$
   Bug 84: add compatibility with ECMA262-3 errata document
   Bug 83: Function.toString() wrongly displayed numeric literals as '?'
   Bug 82: improve compatibility of instanceof operator
-  Feature: SEE_call_args() counterpart to SEE_parse_args()
   Bug 87: varargs SEE_error_throw_va() and SEE_error_throw_sys_va()
   Bug 81: varargs SEE_call_args_va() and SEE_parse_args_va()
-  Bug 73: new function SEE_eval() provides more control for host developers
   Bug 79: '-->' at start of line treated like '//' in SGMLCOM compat mode
   Bug 78: fix crash when pretty-printing a switch with adjacent case clauses
-  Changed: see-shell has -i option for interactive use, instead of -f '-'
-  Improved: see-shell has -e option for executing javascript strings
   Bug 77: portability improvements with isnan, finite, copysign
-  Deprecated: SEE_no_enumerator (use NULL instead)
   Bug 75: fix crash when enumerating a host object with no enumerator
   Bug 74: portability improvement in module loader
-  Improved: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception
+  Bug 73: new function SEE_eval() provides more control for host developers
   Bug 70: SEE_context_eval() was leaking reference values
   Bug 69: fix crash when some methods are called without 'this' context
-  Bug 47: Added Object.prototype.eval for JS1.2 compatibility
   Bug 68: free the right pointer in SEE_grow_to()
-  Bug 14: use floor() instead of rint()
-  Bug 16: support for keeping static strings in a resource segment
   Bug 66: fix line numbering with '//' and '<!--' comments
   Bug 65: fixed alloca support on some systems
-  Bug 20: added SEE_grow_to() for limited, growable memory regions
-  Improved: error messages from eval() label as <eval> instead of <string>
   Bug 62: document that SEE_OBJECT_DELETE assumes intern'd property
   Bug 61: fixed operator -= raising spurious TypeError exceptions
-  Example: 'ssp', a threaded server-side javascript HTTP server example
-  Bug 53: improved support for cross-compiling
   Bug 52: attach tracebacks to try contexts when exceptions are thrown
-  Bug 49: detect alloca on FreeBSD; correct readline; fix daylight savings
+  Bug 53: improved support for cross-compiling
   Bug 50: use finite() instead of isinf() for libm portability
-  Improved: thisobj field of constructors deprecated (it was never used)
-  Experimental: code generator
+  Bug 49: detect alloca on FreeBSD; correct readline; fix daylight savings
+  Bug 47: Added Object.prototype.eval for JS1.2 compatibility
+  Bug 20: added SEE_grow_to() for limited, growable memory regions
+  Bug 16: support for keeping static strings in a resource segment
+  Bug 14: use floor() instead of rint()
+  Changed: Get, Put, CanPut, HasProperty, Delete APIs assume interned property
+  Changed: see-shell has -i option for interactive use, instead of -f '-'
+  Changed: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception
+  Changed: error messages from eval() label as <eval> instead of <string>
+  New: SEE_string_fix() for passing string values between interpreters
+  New: see-shell -dg option for tracebacks on SIGINFO
+  New: SEE_string_cmp_ascii()
+  New: SEE_call_args() counterpart to SEE_parse_args()
+  New: see-shell has -e option for executing javascript strings
+  New: ssp example, a threaded server-side javascript HTTP server
+  Deprecated: thisobj field of constructors deprecated (it was never used)
+  Deprecated: SEE_no_enumerator deprecated (use NULL instead)
+  Experimental: support external regex library --with-pcre (pcre.org)
+  Experimental: bytecode generator
 
 2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)
