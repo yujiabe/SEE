@@ -57,6 +57,7 @@
                     color: #008; }
 	div.example { margin-left: 4ex; margin-right: 4ex;
 		      padding-left: 1ex; padding-right: 1ex;
+		      margin-top: 1ex;
 		      border: thin dashed green;
 		      background: #f4fff4; }
 // -->
@@ -123,6 +124,7 @@ for SEE version 2.1
  <li><a href="#compatjs">8.1 Compatibility with other JavaScript implementations</a>
  <li><a href="#compatsee">8.2 Compatibility with future versions of SEE</a>
  <li><a href="#port10_20">8.3 Porting from API 1.0 to API 2.0</a>
+ <li><a href="#port20_21">8.4 Porting from API 2.0 to API 2.1</a>
  </ul>
  <li><a href="#security">9 Security</a>
  <ul>
@@ -277,7 +279,8 @@ for other users. Please send mail to <a href="mailto:leonard&#64;users.sourcefor
 <h2 id="interp">2 Creating interpreters</h2>
 
 <p>
-The first step in executing ECMAScript program text with SEE is to create
+After having initialised the library with a call to <code>SEE_init()</code>,
+the first step in executing an ECMAScript program is to create
 an <em>interpreter</em> instance. 
 Each interpreter instance represents an execution context and 
 global variable space.
@@ -311,7 +314,10 @@ example()
     struct SEE_interpreter interp_storage;
 
     SEE_interpreter_init(&amp;interp_storage);
-    <i>/* now the interpreter is ready for use */</i>
+    <i>/* Now the interpreter is ready for use */</i>
+
+    <i>/* Because the interpreter storage is on the stack, it
+     * will be garbage collected after this function returns.*/</i>
 }</pre>
 </div>
 
@@ -354,6 +360,49 @@ Strings generated from one interpreter, can be exported for use in
 another interpreter by using the
 <code>SEE_string_fix()</code> function
 (See <a href="#string">&sect;5.3</a>).
+</p>
+
+<p>
+If you need to allow multiple threads to call into the interpreter,
+but in a serialized manner (which you must enforce), then you can save
+and restore some of the interpreter state with the following functions.
+</p>
+
+<pre>struct SEE_interpreter_state * <dfn id="SEE_interpreter_save_state">SEE_interpreter_save_state</dfn>(
+        struct SEE_interpreter *interp);
+void <dfn id="SEE_interpreter_restore_state">SEE_interpreter_restore_state</dfn>(
+        struct SEE_interpreter *interp, struct SEE_interpreter_state *state);</pre>
+
+<div class="example">Example:
+of a cfunction that allows a re-entrant call into the SEE library.
+
+<pre>void
+example_block(interp, self, thisobj, argc, argv, res)
+	struct SEE_interpreter *interp;
+	struct SEE_object *self, *thisobj;
+	int argc;
+	struct SEE_value **argv, *res;
+
+{
+	struct SEE_interpreter_state *saved_state;
+
+	/* Save the interpreter state */
+	saved_state = SEE_interpreter_save_state(interp);
+
+	<i>/* The following three calls are not part of SEE */</i>
+	RELEASE_MUTEX(interp);
+	BLOCK();
+	ACQUIRE_MUTEX(interp);
+
+	/* Restore the interpreter state */
+	SEE_interpreter_restore_state(interp, saved_state);
+	SEE_SET_UNDEFINED(res);
+}</pre>
+</div>
+
+<p>
+Note that calls to <code>SEE_eval()</code> and <code>SEE_Global_eval()</code>
+are automatically re-entrant.
 </p>
 
 <h3 id="abort">2.2 Fatal error handlers</h3>
@@ -428,6 +477,11 @@ These hooks are invoked through the following functions:
 <li><code>SEE_gcollect()</code>
 - detects and releases all unreachable objects
 </ul>
+
+<p>
+These functions should not be directly used by applications;
+instead use the macros below (for example, <code>SEE_NEW()</code>).
+</p>
 
 <pre>void * <dfn id="SEE_malloc">SEE_malloc</dfn>(struct SEE_interpreter *interp, SEE_size_t size);
 void * <dfn id="SEE_malloc_finalize">SEE_malloc_finalize</dfn>(struct SEE_interpreter *interp, SEE_size_t size
@@ -774,6 +828,7 @@ as <dfn>program text</dfn>.
 You should execute program text using the following general
 strategy:
 <ol>
+ <li> initialise the SEE library once with a call to <code>SEE_init()</code>
  <li> obtain a reference to an (initialised) <code>SEE_interpreter</code>
         (<a href="#interp">&sect;2</a>);
  <li> construct a <code>SEE_input</code> unicode stream reader 
@@ -789,6 +844,21 @@ strategy:
  <li> examine the value result returned
         (<a href="#value">&sect;5</a>) (optional)
 </ol>
+</p>
+
+<p>
+The <code>SEE_init()</code> function initialises the SEE library, and
+need only be called once by the application. 
+Subsequent calls to <code>SEE_init()</code> will have no effect.
+This function should be called before any customization of the 
+<code>SEE_system<code> structure occurs.
+</p>
+
+<pre>void <dfn id="SEE_init">SEE_init</dfn>(void);</pre>
+
+<p class="note">
+&#9888; Note:
+The <code>SEE_init()</code> function appeared in API 2.1.
 </p>
 
 <p>
@@ -828,7 +898,7 @@ A more versatile execution function is <code>SEE_eval()</code>.
 <p>
 The program text executed by <code>SEE_eval()</code> is run in an
 execution context with the specified <code class="js">this</code> 
-object, variables object (where <code class="js">var</code> statements
+object, variables object (in which <code class="js">var</code> statements
 create properties) and scope chain.
 This is useful for host applications that need fine control over
 the evaluation context of user scripts.
@@ -862,6 +932,9 @@ main()
         SEE_try_context_t try_ctxt;
         struct SEE_value result;
         char *program_text = "<code class="js">Math.sqrt(3 + 4 * 7) + 9</code>";
+
+        <i>/* Initialise the SEE library */</i>
+	SEE_init();
 
         <i>/* Initialise an interpreter */</i>
         SEE_interpreter_init(&amp;interp_storage);
@@ -1098,7 +1171,7 @@ struct SEE_value *e;
         <i>/* 
          * Because the SEE_TRY macro expands into a 'for' loop,
          * avoid using 'break', or 'return' statements.
-         * If you must leave the try block, use 'continue;',
+         * If you must leave the try block, use <b>SEE_TRY_BREAK</b>
          * or throw an exception.
          */</i>
 }
@@ -1110,8 +1183,8 @@ if ((e = <b>SEE_CAUGHT</b>(c))) {
         <i>/* Handle the thrown exception 'e', somehow. */</i>
         handle_exception(e);
 
-        <i>/* or you can throw it up to the next try-catch like so: */</i>
-        <b>SEE_THROW</b>(interp, e);
+        <i>/* OR you can throw it up to the next try-catch like so: */</i>
+        <b>SEE_RETHROW</b>(interp, c);
 }
 
 <i>...</i></pre>
@@ -1121,6 +1194,9 @@ Do <strong>not</strong> <code>return</code>, <code>goto</code> or
 <code>break</code> out of a try block; the macro does not check for this, 
 and the try-catch context may not be restored properly, causing all sorts of
 havoc.
+Currently, the <code>SEE_TRY_BREAK</code> macro expands into a 
+<code>continue</code> statement, which terminates the <code>SEE_TRY</code>
+block correctly.
 </p>
 
 <p>
@@ -1139,12 +1215,28 @@ If you are not interested in catching exceptions, and only want the
 do_finally();    <i>/* optional */</i>
 <b>SEE_DEFAULT_CATCH</b>(interp, c);</pre>
 
+<p>
+If you need to re-throw an exception, use the <code>SEE_RETHROW()</code> macro.
+This macro must only be called when an exception has actually been caught;
+its behaviour when no exception has been caught is undefined.
+Note that you can still use <code>SEE_THROW()</code> to re-throw an exception,
+but the traceback information will be lost.
+</p>
+
 <p>The signatures of these macros are:</p>
 
 <pre><dfn id="SEE_TRY">SEE_TRY</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt) { <i>stmt...</i> }
 struct SEE_object *<dfn id="SEE_CAUGHT">SEE_CAUGHT</dfn>(SEE_try_context_t ctxt);
 void <dfn id="SEE_THROW">SEE_THROW</dfn>(struct SEE_interpreter *interp, struct SEE_object *exception);
-void <dfn id="SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt);</pre>
+void <dfn id="SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt);
+void <dfn id="SEE_RETHROW">SEE_RETHROW</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt);</pre>
+
+<p>
+The <code>SEE_DEFAULT_CATCH(interp, c)</code> macro is equivalent to:
+</p>
+
+<pre>if (SEE_CAUGHT(c))
+	SEE_RETHROW(interp, c);</pre>
 
 <h3 id="periodic">4.4 Periodic callbacks</h3>
 
@@ -1424,9 +1516,27 @@ int <dfn id="SEE_NUMBER_ISFINITE">SEE_NUMBER_ISFINITE</dfn>(struct SEE_value *va
 
 <p class="note">
 &#9888; Note:
-The <code>SEE_NUMBER_ISINF() macro of API 1.0 has been deprecated in API 2.0.
+The <code>SEE_NUMBER_ISINF()</code> and
+<code>SEE_ISINF()</code> macros of API 1.0 were deprecated in API 2.0.
 Previously, it returned true for values of &plusmn;&infin;
 </p>
+
+<p>While the <code>SEE_NUMBER_xx()</code> macros work on values, the
+following macros are provided for operating on <code>SEE_number_t</code> types directly:</p>
+
+<ul>
+<li><code>SEE_ISNAN()</code> - return true if the argument represents an error condition (not a number)
+<li><code>SEE_ISFINITE()</code> - return true if the argument is a finite number
+<li><code>SEE_ISPINF()</code> - return true if the argument is +&infin;
+<li><code>SEE_ISNINF()</code> - return true if the argument is -&infin;
+<li><code>SEE_COPYSIGN()</code> - returns the first argument converted to have the sign of the second
+</ul>
+
+<pre>int <dfn id="SEE_ISNAN">SEE_ISNAN</dfn>(SEE_number_t);
+int <dfn id="SEE_ISFINITE">SEE_ISFINITE</dfn>(SEE_number_t);
+int <dfn id="SEE_ISPINF">SEE_ISPINF</dfn>(SEE_number_t);
+int <dfn id="SEE_ISNINF">SEE_ISNINF</dfn>(SEE_number_t);
+SEE_number_t <dfn id="SEE_COPYSIGN">SEE_COPYSIGN</dfn>(SEE_number_t, SEE_number_t);</pre>
 
 <p>
 SEE also provides constants <code>SEE_Infinity</code> and <code>SEE_NaN</code>
@@ -1464,7 +1574,8 @@ for integers:
 <p>
 String values are pointers to <code>SEE_string</code> structures, 
 that hold UTF-16 strings.
-The structure is defined something like this:
+Strings are stored as arrays of 16-bit unicode character codepoints.
+The <code>SEE_string</code> structure is defined something like this:
 </p>
 
 <pre><dfn id="struct_SEE_string">struct SEE_string</dfn> {
@@ -1512,7 +1623,7 @@ To manipulate a string, first create a new string using one of the following:
 <pre>struct SEE_string *<dfn id="SEE_string_new">SEE_string_new</dfn>(struct SEE_interpreter *interp,
                 unsigned int space);
 struct SEE_string *<dfn id="SEE_string_dup">SEE_string_dup</dfn>(struct SEE_interpreter *interp,
-                struct SEE_string *s);
+                const struct SEE_string *s);
 struct SEE_string *<dfn id="SEE_string_sprintf">SEE_string_sprintf</dfn>(struct SEE_interpreter *interp,
                 const char *fmt, ...);
 struct SEE_string *<dfn id="SEE_string_vsprintf">SEE_string_vsprintf</dfn>(struct SEE_interpreter *interp,
@@ -1541,13 +1652,16 @@ void <dfn id="SEE_string_append_unicode">SEE_string_append_unicode</dfn>(struct 
 <p>
 Once a new string has been passed to any other SEE function, it should not
 have its contents modified in any way.
-Strings should not be shared
+This is because string data can end up being shared between strings.
+</p>
+
+<p>
+Strings themselves should not be passed
 between different interpreters, unless internalised with 
 <code>SEE_intern_global()</code> (see <a href="#staticstr">&sect;5.3.1</a>)
 or 'fixed' with
 <code>SEE_string_fix()</code>.
-<q>Fixing</q> a string ensures the string content will not be corrupted
-by another interpreter.
+<q>Fixing</q> a string ensures that its content will not be modified or extended by another interpreter.
 </p>
 
 <pre>struct SEE_string *<dfn id="SEE_string_fix">SEE_string_fix</dfn>(struct SEE_string *s);</pre>
@@ -2044,7 +2158,6 @@ print_properties(struct SEE_interpreter *interp, struct SEE_object *obj)
 }</pre>
 </div>
 
-
 <h3 id="objimpl">6.3 The object implementation interface</h3>
 
 <p>
@@ -2231,6 +2344,15 @@ application can access it through the <code>Global</code> member of the
 <code>SEE_interpreter</code> structure.
 </p>
 
+<p>
+If you need to test an object's prototype chain, then
+the <code class="js">instanceof</code> operator can be
+simulated with a call to <code>SEE_object_instanceof()</code>.
+This function tests if <code>val</code> is an instanceof <code>obj</code>:
+</p>
+
+<pre>int <dfn id="SEE_object_instanceof">SEE_object_instanceof</dfn>(struct SEE_interpreter *,
+                struct SEE_value *val, struct SEE_object *obj);</pre>
 
 <h3 id="native">6.4 Native objects</h3>
 
@@ -2665,7 +2787,7 @@ in the following table.
 
 <p>
 A cfunction may call 'back' into SEE using <code>SEE_Global_eval()</code>.
-In other words, cfunctions may be recursive. 
+In other words, cfunctions may be re-entrant. 
 The traceback context is automatically maintained by SEE.
 </p>
 
@@ -2937,7 +3059,8 @@ described in the following table.
 
 <p class="note">
 &#9888; Note:
-API 2.0 removed the <code>SEE_COMPAT_UNDEFDEF</code> flag and
+API 2.0 removed the <code>SEE_COMPAT_UNDEFDEF</code> 
+and <code>SEE_COMPAT_EXT1</code> flags and
 introduced the <code>SEE_COMPAT_JSxx</code> flags.
 </p>
 
@@ -3343,7 +3466,7 @@ const int <dfn id="SEE_VERSION_API_MINOR">SEE_VERSION_API_MINOR</dfn>;</pre>
 <h3 id="port10_20">8.3 Porting from API 1.0 to API 2.0</h3>
 
 <p>
-Applications written using SEE-1.3.1 (API 1.0) can be changed
+Applications previously written for SEE-1.3.1 (API 1.0) can be changed
 to compile against SEE-2.0 (API 2.0).
 If you want, both APIs can be supported by testing the macro
 <code>SEE_VERSION_API_MAJOR</code>.
@@ -3380,6 +3503,53 @@ The constants
 has been removed. Replace them with zero.
 
 </ul>
+
+<h3 id="port20_21">8.4 Porting from API 2.0 to API 2.1</h3>
+
+<p>
+Applications previously written for SEE-2.0 (API 2.0) should be
+changed in order to compile against SEE-2.1 (API 2.1).
+</p>
+
+<ul>
+
+<li>
+Applications should call <code>SEE_init()</code> early in
+<code>main()</code>, and after any garbage collectors have been
+initialised.
+(This is currently optional, but will become mandatory in the next major
+version of SEE.)
+
+<li>
+The most important change is that the property string 
+argument of the following functions must have been internalised, usually
+with a call to <code>SEE_intern()</code>, or 
+<code>SEE_global_intern()</code>.
+
+<ul>
+<li><code>SEE_OBJECT_CANPUT()</code>
+<li><code>SEE_OBJECT_DELETE()</code>
+<li><code>SEE_OBJECT_GET()</code>
+<li><code>SEE_OBJECT_HASPROPERTY()</code>
+<li><code>SEE_OBJECT_PUT()</code>
+</ul>
+
+Similarly, if you have written a property enumerator, then the
+enumerator class's <code>next()</code> method must return
+property strings that are already internalised.
+
+<li>
+The function <code>SEE_no_enumerator</code> has been deprecated.
+Please use <code>NULL</code> instead.
+This usually occurs when initialising the <code>Enumerator</code> field of a
+<code>SEE_objectclass</code> structure.
+
+<li>
+The <code>SEE_STRING_FLAG_STATIC</code> flag for strings
+has been deprecated. Do not use it.
+
+</ul>
+
 
 <h2 id="security">9 Security</h2>
 <p>
@@ -3674,22 +3844,24 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_call_args_va">SEE_call_args_va</a> (2.1)<br>
 <a href="#SEE_cfunction_make">SEE_cfunction_make</a><br>
 <a href="#SEE_context_eval">SEE_context_eval</a><br>
+<a href="#SEE_COPYSIGN">SEE_COPYSIGN</a> (2.1)<br>
 <a href="#SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</a><br>
 <a href="#SEE_ENUM_NEXT">SEE_ENUM_NEXT</a><br>
 <a href="#SEE_Error_make">SEE_Error_make</a><br>
 <a href="#SEE_error_throw">SEE_error_throw</a><br>
-<a href="#SEE_error_throw_va">SEE_error_throw_va</a> (2.1)<br>
 <a href="#SEE_error_throw_string">SEE_error_throw_string</a><br>
 <a href="#SEE_error_throw_sys">SEE_error_throw_sys</a><br>
 <a href="#SEE_error_throw_sys_va">SEE_error_throw_sys_va</a> (2.1)<br>
+<a href="#SEE_error_throw_va">SEE_error_throw_va</a> (2.1)<br>
 <a href="#SEE_eval">SEE_eval</a> (2.1)<br>
 <a href="#SEE_Function_new">SEE_Function_new</a><br>
 <a href="#SEE_gcollect">SEE_gcollect</a> (2.0)<br>
 <a href="#SEE_Global_eval">SEE_Global_eval</a><br>
-<a href="#struct_SEE_growable">SEE_growable</a> struct (2.0)<br>
-<a href="#SEE_GROW_INIT">SEE_GROW_INIT</a> (2.0)<br>
-<a href="#SEE_grow_to">SEE_grow_to</a> (2.0)<br>
+<a href="#struct_SEE_growable">SEE_growable</a> struct (2.1)<br>
+<a href="#SEE_GROW_INIT">SEE_GROW_INIT</a> (2.1)<br>
+<a href="#SEE_grow_to">SEE_grow_to</a> (2.1)<br>
 <a href="#SEE_Infinity">SEE_Infinity</a><br>
+<a href="#SEE_init">SEE_init</a> (2.1)<br>
 <a href="#struct_SEE_input">SEE_input</a> struct<br>
 <a href="#struct_SEE_inputclass">SEE_inputclass</a> struct<br>
 <a href="#SEE_INPUT_CLOSE">SEE_INPUT_CLOSE</a><br>
@@ -3698,11 +3870,17 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_input_string">SEE_input_string</a><br>
 <a href="#SEE_input_utf8">SEE_input_utf8</a><br>
 <a href="#SEE_intern">SEE_intern</a><br>
-<td>
 <a href="#SEE_intern_ascii">SEE_intern_ascii</a> (2.0)<br>
+<td>
 <a href="#SEE_intern_global">SEE_intern_global</a> (2.0*)<br>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
 <a href="#SEE_interpreter_init_compat">SEE_interpreter_init_compat</a><br>
+<a href="#SEE_interpreter_restore_state">SEE_interpreter_restore_state</a> (2.1)<br>
+<a href="#SEE_interpreter_save_state">SEE_interpreter_save_state</a> (2.1)<br>
+<a href="#SEE_ISFINITE">SEE_ISFINITE</a><br>
+<a href="#SEE_ISNAN">SEE_ISNAN</a><br>
+<a href="#SEE_ISNINF">SEE_ISNINF</a> (2.1)<br>
+<a href="#SEE_ISPINF">SEE_ISPINF</a> (2.1)<br>
 <a href="#SEE_malloc">SEE_malloc</a><br>
 <a href="#SEE_malloc_string">SEE_malloc_string</a><br>
 <a href="#SEE_malloc_finalize">SEE_malloc_finalize</a> (2.0)<br>
@@ -3728,8 +3906,8 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#struct_SEE_object">SEE_object</a> struct<br>
 <a href="#struct_SEE_objectclass">SEE_objectclass</a> struct<br>
 <a href="#SEE_OBJECT_CALL">SEE_OBJECT_CALL</a><br>
-<td>
 <a href="#SEE_OBJECT_CANPUT">SEE_OBJECT_CANPUT</a><br>
+<td>
 <a href="#SEE_OBJECT_CANPUTA">SEE_OBJECT_CANPUTA</a> (2.0)<br>
 <a href="#SEE_OBJECT_CONSTRUCT">SEE_OBJECT_CONSTRUCT</a><br>
 <a href="#SEE_OBJECT_DEFAULTVALUE">SEE_OBJECT_DEFAULTVALUE</a><br>
@@ -3750,6 +3928,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
+<a href="#SEE_object_instanceof">SEE_object_instanceof</a> (2.1)<br>
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
 <a href="#SEE_parse_args_va">SEE_parse_args_va</a> (2.1)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
@@ -3757,11 +3936,14 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_PrintContextTraceback">SEE_PrintContextTraceback</a> (2.1)<br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
+<a href="#SEE_regex_engine">SEE_regex_engine</a> (2.1)<br>
+<a href="#SEE_regex_engine_list">SEE_regex_engine_list</a> (2.1)<br>
+<a href="#SEE_RETHROW">SEE_RETHROW</a> (2.1)<br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
-<td>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
 <a href="#SEE_SET_OBJECT">SEE_SET_OBJECT</a><br>
+<td>
 <a href="#SEE_SET_STRING">SEE_SET_STRING</a><br>
 <a href="#SEE_SET_UNDEFINED">SEE_SET_UNDEFINED</a><br>
 <a href="#struct_SEE_string">SEE_string</a> struct<br>
@@ -3773,7 +3955,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_append_unicode">SEE_string_append_unicode</a> (2.1)<br>
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
-<a href="#SEE_string_dup">SEE_string_dup</a><br>
+<a href="#SEE_string_dup">SEE_string_dup</a> (2.0*)<br>
 <a href="#SEE_string_fix">SEE_string_fix</a> (2.1)<br>
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
@@ -3791,12 +3973,13 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ToObject">SEE_ToObject</a><br>
 <a href="#SEE_ToPrimitive">SEE_ToPrimitive</a><br>
 <a href="#SEE_ToString">SEE_ToString</a><br>
-<td>
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
 <a href="#SEE_TRY">SEE_TRY</a><br>
+<a href="#SEE_TRY_BREAK">SEE_TRY_BREAK</a> (2.1)<br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
+<td>
 <a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>
 <a href="#SEE_version">SEE_version</a><br>
 <a href="#SEE_VERSION_API_MAJOR">SEE_VERSION_API_MAJOR</a><br>
@@ -3810,18 +3993,20 @@ Commands available at the '<code>%</code>' prompt include:
 This documentation may be entirely reproduced and freely distributed,
 as long as this copyright notice remains intact, and either the 
 distributed reproduction or translation is a complete and bona fide copy, or
-the modified reproduction is subtantially the same and includes a brief
-summary of the modifications made. 
+the modified reproduction is subtantially the same and includes below this
+copyright statement a brief summary of the modifications made. 
 </p>
 
 <pre>$Id$</pre>
 
+<!-- outdated
 <ul class="misc">
 <li>Jan 2004: clean up and more examples
 <li>Mar 2004: add compatibility section, prototypes, index
 <li>Aug 2004: remove references to deprecated <code>SEE_ENUM_RESET</code>
 <li>Jan 2005: add <code>SEE_native_init</code>
 </ul>
+-->
 
 </body>
 </html>
