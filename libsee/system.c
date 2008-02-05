@@ -319,5 +319,11 @@ simple_free(interp, ptr)
 void
 SEE_init()
 {
+	static int initialised = 0;
+
+	if (initialised)
+	    return;
+	initialised = 1;
+
 	SEE_regex_init();
 }
