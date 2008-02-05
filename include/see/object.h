@@ -71,7 +71,8 @@ struct SEE_objectclass {
  */
 struct SEE_object {
 	struct SEE_objectclass *objectclass;
-	struct SEE_object *	Prototype;		/* [[Prototype]] */
+	struct SEE_object      *Prototype;		/* [[Prototype]] */
+	void                   *host_data;
 };
 
 #ifndef NDEBUG

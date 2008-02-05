@@ -172,12 +172,6 @@ SEE_native_put(interp, o, ip, val, attr)
 
 	SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
 
-	/*
-	 * Note: supply a non-zero attr implies that
-	 * the caller knows what they're doing. This means
-	 * we can ignore any restrictions on extant
-	 * properties!
-	 */
 	if (SEE_GET_JS_COMPAT(interp) && ip == STR(__proto__)) 
 	{
 		struct SEE_object *po;
@@ -198,6 +192,12 @@ SEE_native_put(interp, o, ip, val, attr)
 		return;
 	}
 
+	/*
+	 * Note: supply a non-zero attr implies that
+	 * the caller knows what they're doing. This means
+	 * we can ignore any restrictions on extant
+	 * properties!
+	 */
 	if (!attr && !SEE_OBJECT_CANPUT(interp, o, ip))
 		return;
 	x = find(interp, o, ip);
@@ -505,6 +505,7 @@ SEE_native_init(n, interp, objectclass, prototype)
 
 	n->object.objectclass = objectclass;
 	n->object.Prototype = prototype;
+	n->object.host_data = NULL;
 	for (i = 0; i < SEE_NATIVE_HASHLEN; i++)
 		n->properties[i] = NULL;
 }

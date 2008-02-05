@@ -133,6 +133,7 @@ SEE_cfunction_make(interp, func, name, length)
 	f = SEE_NEW(interp, struct cfunction);
 	f->object.objectclass = &SEE_cfunction_class;
 	f->object.Prototype = interp->Function_prototype;	/* 15 */
+	f->object.host_data = NULL;
 	f->func = func;
 	f->name = name;
 	f->length = length;

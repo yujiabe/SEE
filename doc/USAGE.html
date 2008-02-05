@@ -2174,7 +2174,18 @@ All SEE objects are in-memory structures starting with a
 <pre><dfn id="struct_SEE_object">struct SEE_object</dfn> {
         struct SEE_objectclass *objectclass;
         struct SEE_object *     Prototype;
+	void *                  host_data;
 };</pre>
+
+<p>
+The <code>host_data</code> field is for use by the host application.
+It is initialised to NULL in objects created by SEE.
+</p>
+
+<p class="note">
+&#9888; Note:
+The <code>host_data</code> field was added in API 2.1.
+</p>
 
 <p>
 Normally, the <code>SEE_object</code> structure

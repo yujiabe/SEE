@@ -172,6 +172,8 @@ SEE_PrintObject(interp, o, f)
 	if (o && o->objectclass && !known) {
 		fprintf(f, " \"%s\"", o->objectclass->Class);
 	}
+	if (o->host_data)
+		fprintf(f, " %p", o->host_data)
 	fprintf(f, ">");
 }
 

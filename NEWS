@@ -19,6 +19,7 @@ $Id$
   Bug 91: multiple function declarations inside a conditional
   Bug 90: document that applications must call GC_INIT() when using Boehm GC
   Bug 89: Use OSI's licence text exactly
+  Bug 88: Add host_data field to SEE_object
   Bug 85: add SEE_system.object_construct hook for host objects
   Bug 84: add compatibility with ECMA262-3 errata document
   Bug 83: Function.toString() wrongly displayed numeric literals as '?'

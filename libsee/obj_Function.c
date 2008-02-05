@@ -321,10 +321,12 @@ function_inst_init(fi, interp, f, scope)
 	if (f->common == NULL) {
 		f->common = SEE_native_new(interp);	/* 13.2(2) */
 		f->common->Prototype = interp->Function_prototype;
+		f->common->host_data = NULL;
 	}
 						/* 13.2(3&5&6|15&17&18): */
 	fi->object.objectclass = &function_inst_class;	
 	fi->object.Prototype = interp->Function_prototype; /* 13.2(4|16) */
+	fi->object.host_data = NULL;
 	fi->function = f;
 	fi->scope = scope;				/* 13.2(7|19) */
 }
