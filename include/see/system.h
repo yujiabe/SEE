@@ -55,7 +55,7 @@ struct SEE_system {
 		struct SEE_object *self, struct SEE_object *thisobj,
 		int argc, struct SEE_value **argv, struct SEE_value *res);
 
-	/* Default regex engine to use */
+	/* Default regex engine to use (experimental) */
 	const struct SEE_regex_engine *default_regex_engine;
 };
 
@@ -65,6 +65,7 @@ void SEE_init(void);	    /* no-op; reserved for API 3.0 */
 
 #define SEE_ABORT(interp, msg) (*SEE_system.abort)(interp, msg)
 
+/* The following two functions are experimental and may change */
 const char **SEE_regex_engine_list(void);
 const struct SEE_regex_engine *SEE_regex_engine(const char *name);
 

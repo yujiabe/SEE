@@ -77,7 +77,7 @@ struct SEE_interpreter {
 	void (*trace)(struct SEE_interpreter *, struct SEE_throw_location *,
 			struct SEE_context *, enum SEE_trace_event);
 
-	/* Regex implementation used by Regex object */
+	/* Regex implementation used by Regex object (experimental) */
 	const struct SEE_regex_engine *regex_engine;
 };
 
