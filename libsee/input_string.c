@@ -52,7 +52,7 @@
 static SEE_unicode_t input_string_next(struct SEE_input *);
 static void input_string_close(struct SEE_input *);
 
-struct SEE_inputclass input_string_class = {
+static struct SEE_inputclass input_string_class = {
 	input_string_next,
 	input_string_close
 };
