@@ -298,7 +298,7 @@ SEE_intern(interp, s)
 		x = find(interp->intern_tab, s, h);
 		WHERE("local");
 		if (!*x) {
-			*x = make(interp, SEE_string_dup(interp, s));
+			*x = make(interp, _SEE_string_dup_fix(interp, s));
 			WHERE("new");
 		}
 	}

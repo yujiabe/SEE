@@ -107,6 +107,32 @@ SEE_string_dup(interp, s)
 }
 
 /*
+ * Returns an ungrowable string.
+ * Returns the given string if it is of the same interpreter and ungrowable,
+ * oterwise creates a new, ungrowable copy.
+ */
+struct SEE_string *
+_SEE_string_dup_fix(interp, s)
+	struct SEE_interpreter *interp;
+	struct SEE_string *s;
+{
+	struct SEE_string *cp;
+
+	if (s->interpreter == interp && !IS_GROWABLE(s))
+	    return s;
+	if (!s->length)
+	    return STR(empty_string);
+	cp = SEE_NEW(interp, struct SEE_string);
+	cp->length = s->length;
+	cp->data = SEE_NEW_STRING_ARRAY(interp, SEE_char_t, cp->length);
+	memcpy(cp->data, s->data, sizeof *cp->data * cp->length);
+	cp->interpreter = interp;
+	cp->flags = 0;
+	MAKE_UNGROWABLE(cp);
+	return cp;
+}
+
+/*
  * Returns a string suitable for simultaneous use between multiple 
  * interpreters. The resulting string is allocated against the NULL
  * interpreter.
@@ -115,20 +141,7 @@ struct SEE_string *
 SEE_string_fix(s)
 	struct SEE_string *s;
 {
-	struct SEE_string *cp;
-
-	if (!s->interpreter && !IS_GROWABLE(s))
-	    return s;
-	if (!s->length)
-	    return STR(empty_string);
-	cp = SEE_NEW(NULL, struct SEE_string);
-	cp->length = s->length;
-	cp->data = SEE_NEW_STRING_ARRAY(NULL, SEE_char_t, cp->length);
-	memcpy(cp->data, s->data, sizeof *cp->data * cp->length);
-	cp->interpreter = NULL;
-	cp->flags = 0;
-	MAKE_UNGROWABLE(cp);
-	return cp;
+	return _SEE_string_dup_fix(NULL, s);
 }
 
 /*
@@ -524,7 +537,7 @@ SEE_string_free(interp, sp)
 	struct SEE_interpreter *interp;
 	struct SEE_string **sp;
 {
-	if (*sp) {
+	if (*sp && (*sp)->interpreter == interp) {
 		SEE_free(interp, (void **)&(*sp)->data);
 		SEE_free(interp, (void **)sp);
 	}

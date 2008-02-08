@@ -82,4 +82,6 @@ void	SEE_string_toutf8(struct SEE_interpreter *i, char *buf,
 SEE_size_t SEE_string_utf8_size(struct SEE_interpreter *interp,
 			const struct SEE_string *s);
 
+struct SEE_string *_SEE_string_dup_fix(struct SEE_interpreter *,
+	        struct SEE_string *);
 #endif /* _SEE_h_string_ */
