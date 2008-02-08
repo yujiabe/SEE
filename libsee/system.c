@@ -334,7 +334,7 @@ simple_finalize_all()
 	dprintf("Running finalizers\n");
 #endif
 
-    while (finalize_list) {
+    while (simple_finalize_list) {
 	entry = simple_finalize_list;
 	simple_finalize_list = entry->next;
 	(*entry->finalizefn)(entry->interp, entry->ptr, entry->closure);
