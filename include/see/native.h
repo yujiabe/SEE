@@ -31,6 +31,7 @@ struct SEE_property;
 struct SEE_native {
 	struct SEE_object       object;
 	struct SEE_property *   properties[SEE_NATIVE_HASHLEN];
+	struct SEE_property *   lru;
 };
 
 /* Object class methods that assume the object is a struct SEE_native */
