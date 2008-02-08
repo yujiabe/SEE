@@ -276,7 +276,7 @@ SEE_Function_init(interp)
 		&v, SEE_ATTR_DEFAULT);
 
 	PUTFUNC(toString, 1)					/* 15.3.4.2 */
-	PUTFUNC(apply, 1)					/* 15.3.4.3 */
+	PUTFUNC(apply, 2)					/* 15.3.4.3 */
 	PUTFUNC(call, 1)					/* 15.3.4.4 */
 
 	/* Function.prototype.constructor = Function */
