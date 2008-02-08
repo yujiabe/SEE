@@ -73,4 +73,4 @@ void SEE_init(void);	    /* no-op; reserved for API 3.0 */
 const char **SEE_regex_engine_list(void);
 const struct SEE_regex_engine *SEE_regex_engine(const char *name);
 
-#endif /* _SEE_h_interpreter_ */
+#endif /* _SEE_h_system_ */
