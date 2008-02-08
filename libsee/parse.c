@@ -1699,8 +1699,9 @@ pop_patchables(cc, cont_addr, break_addr)
 	/* Patch the continue locations with the break addresses */
 	for (i = 0; i < p->ncont_patch; i++) {
 #ifndef NDEBUG
-	    dprintf("patching continue to 0x%x at 0x%x\n", 
-		cont_addr, p->cont_patch[i]);
+	    if (SEE_parse_debug)
+		dprintf("patching continue to 0x%x at 0x%x\n", 
+		    cont_addr, p->cont_patch[i]);
 #endif
 	    (*cc->code->code_class->patch)(cc->code, p->cont_patch[i], 
 		cont_addr);
@@ -1709,8 +1710,9 @@ pop_patchables(cc, cont_addr, break_addr)
 	/* Patch the break locations with the break address */
 	for (i = 0; i < p->nbreak_patch; i++) {
 #ifndef NDEBUG
-	    dprintf("patching break to 0x%x at 0x%x\n", 
-		break_addr, p->break_patch[i]);
+	    if (SEE_parse_debug)
+		dprintf("patching break to 0x%x at 0x%x\n", 
+		    break_addr, p->break_patch[i]);
 #endif
 	    (*cc->code->code_class->patch)(cc->code, p->break_patch[i], 
 		break_addr);
