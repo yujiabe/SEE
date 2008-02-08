@@ -33,6 +33,7 @@
 #endif
 
 #include <windows.h>
+#include <see/type.h>
 
 #include "platform.h"
 
@@ -48,7 +49,7 @@ _SEE_platform_time(interp)
 	 * http://msdn.microsoft.com/library/default.asp?url=/library/
 	 *  en-us/sysinfo/base/converting_a_time_t_value_to_a_file_time.asp
 	 */
-	return (ft - 116444736000000000) / 10000.0;
+	return (ft - 116444736000000000LL) / 10000.0;
 
 }
 
