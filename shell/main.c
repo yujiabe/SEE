@@ -34,9 +34,8 @@ extern char *optarg;
 extern int optind;
 #endif
 
-#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
-/* Required for calling GC_INIT() */
-#include <gc.h>
+#if WITH_BOEHM_GC
+# include <gc/gc.h>
 #endif
 
 #include <see/see.h>
@@ -444,7 +443,7 @@ main(argc, argv)
 	int ran_something = 0;
 	char *s;
 
-#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+#if WITH_BOEHM_GC
 	GC_INIT();
 #endif
 

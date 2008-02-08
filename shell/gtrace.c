@@ -12,8 +12,8 @@
 #include <signal.h>
 #endif
 
-#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
-#include <gc.h>
+#if WITH_BOEHM_GC
+# include <gc/gc.h>
 #endif
 
 #include <see/see.h>
@@ -58,7 +58,7 @@ gtrace_dump(interp, loc, context)
 	    SEE_string_fputs(SEE_location_string(interp, loc), stderr);
 	    fprintf(stderr, "gtrace\n");
 	} 
-#if HAVE_GC_DUMP
+#if WITH_BOEHM_GC
 	{ void GC_dump(void); 
 	  fprintf(stderr, "gtrace: GC_dump() follows:\n");
 	  GC_dump(); }

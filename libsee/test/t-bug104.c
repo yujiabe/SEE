@@ -1,8 +1,6 @@
 #include "test.inc"
 #include <see/see.h>
 
-void GC_dump(void);
-
 static void obj_finalize(struct SEE_interpreter *i, void *p, void *closure);
 
 struct obj {
@@ -111,7 +109,9 @@ test()
 	interp->host_data = 0;
 	COLLECT();
 	TEST_EQ_INT(initialized, finalized);
-	GC_dump();
+# if WITH_BOEHM_GC
+	{ void GC_dump(void); GC_dump(); }
+# endif
 #endif
 
 }

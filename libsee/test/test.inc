@@ -12,9 +12,9 @@
 #include <see/string.h>
 #include <see/value.h>
 
-#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
 /* Required for calling GC_INIT() */
-#include <gc.h>
+#if WITH_BOEHM_GC
+# include <gc/gc.h>
 #endif
 
 /*
@@ -169,7 +169,7 @@ main(int argc, char **argv)
 	_test_isatty = 0;
 #endif
 
-#if defined(HAVE_GC_MALLOC) && defined(HAVE_GC_H)
+#if WITH_BOEHM_GC
 	GC_INIT();
 #endif
 

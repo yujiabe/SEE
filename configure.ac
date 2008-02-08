@@ -213,28 +213,47 @@ AC_ARG_WITH(boehm-gc,
 	[with_boehmgc=$withval], [with_boehmgc=yes])
 if test x"$with_boehmgc" != x"no"; then
     save_LIBSEE_LIBS="$LIBSEE_LIBS"
+    save_LIBS="$LIBS"
     save_LDFLAGS="$LDFLAGS"
     save_CPPFLAGS="$CPPFLAGS"
     case "$with_boehmgc" in 
      yes) 
         LIBSEE_LIBS="$LIBSEE_LIBS -lgc"
-        LDFLAGS="$LDFLAGS -lgc"
+        LIBS="$LIBS -lgc"
         ;;
      *) LIBSEE_LIBS="$LIBSEE_LIBS -L${with_boehmgc}/lib -lgc"
-        LDFLAGS="$LDFLAGS -L${with_boehmgc}/lib -lgc"
+        LDFLAGS="$LDFLAGS -L${with_boehmgc}/lib"
+        LIBS="$LIBS -lgc"
         CPPFLAGS="$CPPFLAGS -I${with_boehmgc}/include"
 	;;
     esac
+
+    # The following minimum for Boehm GC support:
+    #
+    #   #if WITH_BOEHM_GC
+    #   # include <gc/gc.h>
+    #   GC_INIT();
+    #   GC_MALLOC(...);
+    #   GC_dump();
+    #   GC_gcollect();
+    #   #endif
+
     have_boehm_gc=yes
-    AC_CHECK_HEADERS([gc.h],,[have_boehm_gc=no])
-    AC_CHECK_FUNC([GC_malloc],,[have_boehm_gc=no])
+    AC_CHECK_HEADERS([gc/gc.h],,[have_boehm_gc=no])
+    AC_TRY_LINK([#include <gc/gc.h>],
+	[GC_INIT();
+	 GC_MALLOC(1);
+	 GC_gcollect();
+	],,
+	[have_boehm_gc=no])
     if test x"$have_boehm_gc" = x"yes"; then
-	AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you want to use Boehm GC])
+	AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you have Boehm GC])
     else
 	LIBSEE_LIBS="$save_LIBSEE_LIBS"
-	LDFLAGS="$save_LDFLAGS"
 	CPPFLAGS="$save_CPPFLAGS"
     fi
+    LDFLAGS="$save_LDFLAGS"
+    LIBS="$save_LIBS"
 else
     have_boehm_gc=no
 fi
@@ -261,13 +280,16 @@ if test x"$ac_cv_use_pcre" != x"no"; then
     PKG_CHECK_MODULES([PCRE], [pcre], 
 	[have_pcre=yes
 	 LIBSEE_REQS="$LIBSEE_REQS,pcre"
-	 LDFLAGS="$LIBS $PCRE_LIBS"
+	 LIBSEE_LIBS="$LIBSEE_LIBS $PCRE_LIBS"
 	 CFLAGS="$CFLAGS $PCRE_CFLAGS"],
 	[have_pcre=yes
 	 AC_CHECK_HEADER([pcre.h],,[have_pcre=no])
+	 save_LIBS="$LIBS"
+	 LIBS="$LIBSEE_LIBS"
 	 AC_SEARCH_LIBS(pcre_compile, [pcre])
-	 LIBSEE_LIBS="$LIBSEE_LIBS -lpcre"
 	 AC_CHECK_FUNCS([pcre_compile pcre_exec],, [have_pcre=no])])
+	 LIBSEE_LIBS="$LIBS"
+	 LIBS="$save_LIBS"
     AC_MSG_CHECKING([if we can use PCRE])
     if test x"$have_pcre" = x"yes"; then
        AC_DEFINE(WITH_PCRE, [1],

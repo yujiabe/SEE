@@ -228,7 +228,7 @@ shell_gcdump_fn(interp, self, thisobj, argc, argv, res)
         int argc;
         struct SEE_value **argv, *res;
 {
-#if HAVE_GC_DUMP
+#if WITH_BOEHM_GC
 	void GC_dump(void);
 
 	GC_dump();

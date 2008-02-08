@@ -51,22 +51,8 @@
 # endif
 #endif
 
-#if HAVE_GC_H
-# include <gc.h>
-#else
-# if HAVE_GC_MALLOC
-extern void *GC_malloc(int);
-# define GC_MALLOC GC_malloc
-# endif
-# if HAVE_GC_MALLOC_ATOMIC
-extern void *GC_malloc_atomic(int);
-# define GC_MALLOC_ATOMIC GC_malloc_atomic
-# endif
-# if HAVE_GC_FREE
-extern void GC_free(void *);
-# define GC_FREE GC_free
-# endif
-typedef void *GC_PTR;
+#if WITH_BOEHM_GC
+# include <gc/gc.h>
 #endif
 
 #include <see/interpreter.h>
@@ -79,7 +65,7 @@ typedef void *GC_PTR;
 
 /* Prototypes */
 static unsigned int simple_random_seed(void);
-#if HAVE_GC_MALLOC
+#if WITH_BOEHM_GC
 static void *simple_gc_malloc(struct SEE_interpreter *, SEE_size_t,
 	const char *, int);
 static void *simple_gc_malloc_string(struct SEE_interpreter *, SEE_size_t,
@@ -89,7 +75,7 @@ static void *simple_gc_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
 		const char *, int);
 static void simple_gc_free(struct SEE_interpreter *, void *,
 	const char *, int);
-static void simple_finalizer(GC_PTR, GC_PTR);
+static void simple_gc_finalizer(void *, void *);
 static void simple_gc_gcollect(struct SEE_interpreter *);
 #else
 static void *simple_malloc(struct SEE_interpreter *, SEE_size_t,
@@ -99,6 +85,7 @@ static void *simple_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
 		const char *, int);
 static void simple_free(struct SEE_interpreter *, void *,
 	const char *, int);
+static void simple_finalize_all(void);
 #endif
 static void simple_mem_exhausted(struct SEE_interpreter *) SEE_dead;
 
@@ -118,7 +105,7 @@ struct SEE_system SEE_system = {
 	_SEE_platform_abort,		/* abort */
 	NULL,				/* periodic */
 
-#if HAVE_GC_MALLOC
+#if WITH_BOEHM_GC
 	simple_gc_malloc,		/* malloc */
 	simple_gc_malloc_finalize,	/* malloc_finalize */
 	simple_gc_malloc_string,	/* malloc_string */
@@ -166,7 +153,7 @@ simple_mem_exhausted(interp)
 }
 
 
-#if HAVE_GC_MALLOC
+#if WITH_BOEHM_GC
 
 /* Redefine GC_EXTRAS as a quick, happy way to pass through the file,line */
 #undef GC_EXTRAS
@@ -200,8 +187,9 @@ struct finalize_info {
 };
 
 static void
-simple_finalizer(p, cd)
-	GC_PTR p, cd;
+simple_gc_finalizer(p, cd)
+	void *p;
+	void *cd;
 {
 	struct finalize_info *info = 
 	    (struct finalize_info *)((char *)p + (SEE_size_t)cd);
@@ -237,7 +225,7 @@ simple_gc_malloc_finalize(interp, size, finalizefn, closure, file, line)
 	info->closure = closure;
 
 	/* Ask the GC to call the finalizer when data is unreachable */
-	GC_REGISTER_FINALIZER(data, simple_finalizer, (GC_PTR)padsz, NULL, NULL);
+	GC_REGISTER_FINALIZER(data, simple_gc_finalizer, (void *)padsz, NULL, NULL);
 
 	return data;
 }
@@ -252,11 +240,7 @@ simple_gc_malloc_string(interp, size, file, line)
 	const char *file;
 	int line;
 {
-# if HAVE_GC_MALLOC_ATOMIC
 	return GC_MALLOC_ATOMIC(size);
-# else
-	return GC_MALLOC(size);
-# endif
 }
 
 /*
@@ -269,21 +253,17 @@ simple_gc_free(interp, ptr, file, line)
 	const char *file;
 	int line;
 {
-# if HAVE_GC_FREE
 	GC_FREE(ptr);
-# endif
 }
 
 static void
 simple_gc_gcollect(interp)
 	struct SEE_interpreter *interp;
 {
-# if HAVE_GC_GCOLLECT
 	GC_gcollect();
-# endif
 }
 
-#else /* !HAVE_GC_MALLOC */
+#else /* !WITH_BOEHM_GC */
 
 
 /*
@@ -313,33 +293,33 @@ simple_malloc(interp, size, file, line)
 
 /* Linked list of all finalizers to run on exit */
 static struct finalize_entry {
-    struct SEE_interpreter *interp;
-    void *ptr;
-    void (*finalizefn)(struct SEE_interpreter *, void *, void *);
-    void *closure;
-    struct finalize_entry *next;
+	struct SEE_interpreter *interp;
+	void *ptr;
+	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+	struct finalize_entry *next;
 } *simple_finalize_list;
 
 /* Runs all the finalizers */
 static void
 simple_finalize_all()
 {
-    struct finalize_entry *entry;
+	struct finalize_entry *entry;
 #ifndef NDEBUG
-    extern int SEE_mem_debug;
+	extern int SEE_mem_debug;
 #endif
 
 #ifndef NDEBUG
-    if (SEE_mem_debug)
-	dprintf("Running finalizers\n");
+	if (SEE_mem_debug)
+	    dprintf("Running finalizers\n");
 #endif
 
-    while (simple_finalize_list) {
-	entry = simple_finalize_list;
-	simple_finalize_list = entry->next;
-	(*entry->finalizefn)(entry->interp, entry->ptr, entry->closure);
-	free(entry);
-    }
+	while (simple_finalize_list) {
+	    entry = simple_finalize_list;
+	    simple_finalize_list = entry->next;
+	    (*entry->finalizefn)(entry->interp, entry->ptr, entry->closure);
+	    free(entry);
+	}
 }
 
 static void *
@@ -392,7 +372,7 @@ simple_free(interp, ptr, file, line)
 	free(ptr);
 }
 
-#endif /* !HAVE_GC_MALLOC */
+#endif /* !WITH_BOEHM_GC */
 
 
 /* Reserved for future use */
