@@ -7,6 +7,7 @@
 struct SEE_interpreter;
 struct SEE_value;
 struct SEE_context;
+struct SEE_string;
 struct function;
 
 /*
