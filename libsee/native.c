@@ -604,6 +604,7 @@ SEE_native_init(n, interp, objectclass, prototype)
 	n->object.objectclass = objectclass;
 	n->object.Prototype = prototype;
 	n->object.host_data = NULL;
+	n->lru = NULL;
 	for (i = 0; i < SEE_NATIVE_HASHLEN; i++)
 		n->properties[i] = NULL;
 }
