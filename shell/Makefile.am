@@ -13,7 +13,7 @@ see_shell_CPPFLAGS=		-DPATH_PKGLIB='"$(pkglib)"'
 see_shell_LDADD+=		$(LIBLTDL)
 see_shell_CPPFLAGS+=		$(LTDLINCL)
 
-see_shell_LDADD+=		$(LIBSEE_LDADD)
+see_shell_LDADD+=		$(LIBSEE_LIBS)
 
 ## A statically linked version for running 'make check'
 noinst_PROGRAMS=		see-shell.static
@@ -34,7 +34,8 @@ INCLUDES=			-I$(top_builddir)/include \
 
 SUBDIRS=			test
 
-TESTS_ENVIRONMENT=		SHELLARGS="-f $(srcdir)/test/common.js" $(SHELL)
+TESTS_ENVIRONMENT=		SHELLARGS="-f $(srcdir)/test/common.js" \
+				LIBTOOL="$(LIBTOOL)" $(SHELL)
 TESTS=				t-File
 
 EXTRA_DIST=			README t-File t-File.js

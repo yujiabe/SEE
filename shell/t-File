@@ -1,5 +1,14 @@
 #! /bin/sh
-set -ex
-./see-shell -l./libFile.la $SHELLARGS -f $0.js
-rm -f t-File.out
 
+#- Don't run if shared libraries are disables
+if ${LIBTOOL} --features | grep '^disable shared libraries' > /dev/null; then
+    echo "skipping because shared libraries are disabled"
+    exit 77
+fi
+
+set -ex
+
+${LIBTOOL} --mode=execute \
+    -dlopen libFile.la \
+    ./see-shell -lFile $SHELLARGS -f $0.js
+rm -f t-File.out
