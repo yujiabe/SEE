@@ -169,3 +169,8 @@ function finish() {
 		throw new Error("tests failure");
 }
 
+/* Returns the class of an object */
+function getClass(v) {
+    return /^\[object (.*)\]$/.exec(Object.prototype.toString.apply(v))[1];
+}
+

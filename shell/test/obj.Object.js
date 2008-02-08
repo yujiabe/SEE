@@ -1,11 +1,6 @@
 
 describe("Object object tests")
 
-/* Returns the class of an object */
-function getClass(v) {
-    return /^\[object (.*)\]$/.exec(Object.prototype.toString.apply(v))[1];
-}
-
 /* Renders the string form of a value, recursively displaying */
 var TEST_RECURSE = "$TEST_RECURSE";
 function _(v) {
