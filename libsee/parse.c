@@ -1101,6 +1101,7 @@ static void *make_body(struct parser *parser, struct node *node);
     } while (0)
 
 #define EMPTY_LABEL		((struct SEE_string *)NULL)
+#define NO_TARGET		0
 
 /* 
  * Automatic semicolon insertion macros.
@@ -1727,11 +1728,11 @@ patch_find(cc, target, tok)
 {
 	struct patchables *p;
 
-	if (target == NULL && tok == tCONTINUE) {
+	if (target == NO_TARGET && tok == tCONTINUE) {
 	    for (p = cc->patchables; p; p = p->prev)
 		if (p->continuable)
 		    return p;
-	} else if (target == NULL)
+	} else if (target == NO_TARGET)
 	    return cc->patchables;
 	else
 	    for (p = cc->patchables; p; p = p->prev)
@@ -8239,7 +8240,7 @@ Block_empty_eval(n, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -8411,7 +8412,7 @@ VariableStatement_eval(na, context, res)
 
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, &v);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -8678,7 +8679,7 @@ EmptyStatement_eval(na, context, res)
 	struct SEE_value *res;
 {
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -8746,7 +8747,7 @@ ExpressionStatement_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	EVAL(n->a, context, &r1);
 	GetValue(context, &r1, v);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -8834,7 +8835,7 @@ IfStatement_eval(na, context, res)
 	else if (n->bfalse)
 		EVAL(n->bfalse, context, res);
 	else
-		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -9021,7 +9022,7 @@ IterationStatement_dowhile_eval(na, context, res)
 	SEE_ToBoolean(context->interpreter, &r8, &r9);
 	if (r9.u.boolean)
 	    goto step2;
- step11:_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+ step11:_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
  out:	;
 }
 
@@ -9138,7 +9139,7 @@ IterationStatement_while_eval(na, context, res)
 	GetValue(context, &r2, &r3);
 	SEE_ToBoolean(context->interpreter, &r3, &r4);
 	if (!r4.u.boolean) {
-	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 	    return;
 	}
 	EVAL(n->body, context, res);
@@ -9150,7 +9151,7 @@ IterationStatement_while_eval(na, context, res)
 	if (res->u.completion.type == SEE_COMPLETION_BREAK &&
 	    n->target == res->u.completion.target)
 	{
-	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	    _SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 	    return;
 	}
 	if (res->u.completion.type != SEE_COMPLETION_NORMAL)
@@ -9286,7 +9287,7 @@ step15: if (n->incr) {
 	    GetValue(context, &r16, &r17);	/* r17 not used */
 	}
 	goto step5;
-step19:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+step19:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -9462,7 +9463,7 @@ step13: if (n->incr) {
 	    GetValue(context, &r14, &r15); 		/* value not used */
 	}
 	goto step3;
-step17:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+step17:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -9604,7 +9605,7 @@ IterationStatement_forin_eval(na, context, res)
 		    return;
 	}
 	SEE_enumerate_free(interp, props0);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -9751,7 +9752,7 @@ IterationStatement_forvarin_eval(na, context, res)
 		    return;
 	}
 	SEE_enumerate_free(interp, props0);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -10200,7 +10201,7 @@ ReturnStatement_eval(na, context, res)
 	EVAL(n->expr, context, &r2);
 	v = SEE_NEW(context->interpreter, struct SEE_value);
 	GetValue(context, &r2, v);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, v, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, v, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -10268,7 +10269,7 @@ ReturnStatement_undef_eval(na, context, res)
 	static struct SEE_value undef = { SEE_UNDEFINED };
 
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, &undef, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, &undef, NO_TARGET);
 }
 
 #if WITH_PARSER_CODEGEN
@@ -10508,7 +10509,7 @@ SwitchStatement_caseblock(n, context, input, res)
 	}
 	if (!c)
 	    c = n->defcase;	/* can be NULL, meaning no default */
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 	for (; c; c = c->next) {
 	    if (c->body)
 		EVAL(c->body, context, res);
@@ -10534,7 +10535,7 @@ SwitchStatement_eval(na, context, res)
 	    n->target == res->u.completion.target)
 	{
 		v = res->u.completion.value;
-		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NULL);
+		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 	}
 }
 
@@ -10752,7 +10753,7 @@ LabelledStatement_eval(na, context, res)
 		res->u.completion.target == n->target)
 	{
 	    res->u.completion.type = SEE_COMPLETION_NORMAL;
-	    res->u.completion.target = NULL;
+	    res->u.completion.target = NO_TARGET;
 	}
 }
 
@@ -11412,7 +11413,7 @@ FunctionDeclaration_eval(na, context, res)
 	struct SEE_value *res;
 {
 	struct Function_node *n = CAST_NODE(na, Function);
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL); /* 14 */
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET); /* 14 */
 }
 
 #if WITH_PARSER_CODEGEN
@@ -11895,7 +11896,7 @@ SourceElements_eval(na, context, res)
 	 * so, we don't. We just run the non-functiondecl statements
 	 * instead. It has the same result.
 	 */
-	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NULL);
+	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 	for (e = n->statements; e; e = e->next) {
 		EVAL(e->node, context, res);
 		if (res->u.completion.type != SEE_COMPLETION_NORMAL)
