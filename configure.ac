@@ -15,7 +15,6 @@ AC_CONFIG_FILES([Makefile
 		 doc/Makefile 
 		 shell/Makefile
 		 shell/test/Makefile
-		 shell/test/mozilla/Makefile
 		 ssp/Makefile
 		 ])
 

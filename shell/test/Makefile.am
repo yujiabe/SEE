@@ -24,4 +24,3 @@ EXTRA_DIST=	common.js $(TESTS)
 TESTS_ENVIRONMENT=  $(LIBTOOL) --mode=execute ../see-shell \
 			$$TESTOPTS -f $(srcdir)/common.js -f
 SUBDIRS=
-DIST_SUBDIRS=	mozilla
