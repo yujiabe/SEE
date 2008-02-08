@@ -747,7 +747,7 @@ static struct node *LabelledStatement_parse(struct parser *parser);
 static void ThrowStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static struct node *ThrowStatement_parse(struct parser *parser);
-static SEE_boolean_t TryStatement_catch(struct TryStatement_node *n, 
+static int TryStatement_catch(struct TryStatement_node *n, 
         struct SEE_context *context, struct SEE_value *C, 
         struct SEE_value *res, SEE_try_context_t *ctxt);
 static void TryStatement_catch_eval(struct node *na, 
@@ -10970,7 +10970,7 @@ static struct nodeclass TryStatement_nodeclass
  * Return true if an exception was caught while executing the
  * catch clause.
  */
-static SEE_boolean_t
+static int
 TryStatement_catch(n, context, C, res, ctxt)
 	struct TryStatement_node *n;
 	struct SEE_context *context;
@@ -10990,7 +10990,7 @@ TryStatement_catch(n, context, C, res, ctxt)
 	SEE_TRY(interp, *ctxt)
 	    EVAL(n->bcatch, context, res);
 	context->scope = context->scope->next;
-	return SEE_CAUGHT(*ctxt);
+	return (int)SEE_CAUGHT(*ctxt);
 }
 
 static void
