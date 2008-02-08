@@ -151,6 +151,7 @@ SEE_ARG_ENABLE(developer,[no],
 			  [AC_MSG_RESULT(no)
 			   CFLAGS="$CFLAGS_save"])
     done
+    CPPFLAGS="$CPPFLAGS -DGC_DEBUG"
 ])
 
 SEE_ARG_ENABLE(diagnostic,[yes],

@@ -68,19 +68,29 @@ int SEE_mem_debug = 0;
 /*
  * Allocates size bytes of garbage-collected storage.
  */
-void *
-SEE_malloc(interp, size)
+static void *
+_SEE_malloc(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
+	const char *file;
+	int line;
 {
 	void *data;
 
 	if (size == 0)
 		return NULL;
-	data = (*SEE_system.malloc)(interp, size);
+	data = (*SEE_system.malloc)(interp, size, file, line);
 	if (data == NULL) 
 		(*SEE_system.mem_exhausted)(interp);
 	return data;
+}
+
+void *
+SEE_malloc(interp, size)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+{
+	return _SEE_malloc(interp, size, 0, 0);
 }
 
 /*
@@ -88,6 +98,26 @@ SEE_malloc(interp, size)
  * a finalizer function that will be called when the storage becomes
  * unreachable.
  */
+static void *
+_SEE_malloc_finalize(interp, size, finalizefn, closure, file, line)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+	const char *file;
+	int line;
+{
+	void *data;
+
+	if (size == 0)
+		return NULL;
+	data = (*SEE_system.malloc_finalize)(interp, size, finalizefn, closure,
+	    file, line);
+	if (data == NULL) 
+		(*SEE_system.mem_exhausted)(interp);
+	return data;
+}
+
 void *
 SEE_malloc_finalize(interp, size, finalizefn, closure)
 	struct SEE_interpreter *interp;
@@ -95,14 +125,7 @@ SEE_malloc_finalize(interp, size, finalizefn, closure)
 	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
 {
-	void *data;
-
-	if (size == 0)
-		return NULL;
-	data = (*SEE_system.malloc_finalize)(interp, size, finalizefn, closure);
-	if (data == NULL) 
-		(*SEE_system.mem_exhausted)(interp);
-	return data;
+	return _SEE_malloc_finalize(interp, size, finalizefn, closure, 0, 0);
 }
 
 /*
@@ -111,36 +134,56 @@ SEE_malloc_finalize(interp, size, finalizefn, closure)
  * guarantees that no pointers will be stored in the data. This
  * improves performance with strings.
  */
-void *
-SEE_malloc_string(interp, size)
+static void *
+_SEE_malloc_string(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
+	const char *file;
+	int line;
 {
 	void *data;
 
 	if (size == 0)
 		return NULL;
 	if (SEE_system.malloc_string)
-		data = (*SEE_system.malloc_string)(interp, size);
+		data = (*SEE_system.malloc_string)(interp, size, 0, 0);
 	else
-		data = (*SEE_system.malloc)(interp, size);
+		data = (*SEE_system.malloc)(interp, size, 0, 0);
 	if (data == NULL) 
 		(*SEE_system.mem_exhausted)(interp);
 	return data;
 }
 
+void *
+SEE_malloc_string(interp, size)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+{
+	return _SEE_malloc_string(interp, size, 0, 0);
+}
+
 /*
  * Releases memory that the caller *knows* is unreachable.
  */
+static void
+_SEE_free(interp, memp, file, line)
+	struct SEE_interpreter *interp;
+	void **memp;
+	const char *file;
+	int line;
+{
+	if (*memp) {
+		(*SEE_system.free)(interp, *memp, 0, 0);
+		*memp = NULL;
+	}
+}
+
 void
 SEE_free(interp, memp)
 	struct SEE_interpreter *interp;
 	void **memp;
 {
-	if (*memp) {
-		(*SEE_system.free)(interp, *memp);
-		*memp = NULL;
-	}
+	_SEE_free(interp, memp, 0, 0);
 }
 
 /*
@@ -154,95 +197,125 @@ SEE_gcollect(interp)
 		(*SEE_system.gcollect)(interp);
 }
 
+#ifdef NDEBUG
+
 /*
- * The debug variants must not be protected by NDEBUG.
- * This is for the case when the library is compiled with NDEBUG,
- * but the library-user application is not.
+ * Debugging variants, for when the library is compiled with NDEBUG,
+ * but the application isn't.
  */
 
 void *
-_SEE_malloc_debug(interp, size, file, line, arg)
+_SEE_malloc_debug(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
 	const char *file;
 	int line;
-	const char *arg;
 {
-	void *data;
-
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
-#endif
-	data = SEE_malloc(interp, size);
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf(" -> %p\n", data);
-#endif
-	return data;
+	return _SEE_malloc(interp, size, file, line);
 }
 
 void *
-_SEE_malloc_finalize_debug(interp, size, finalizefn, closure, file, line, arg)
+_SEE_malloc_finalize_debug(interp, size, finalizefn, closure, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
 	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
 	const char *file;
 	int line;
-	const char *arg;
 {
-	void *data;
-
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf("malloc %u (%s:%d '%s')", size, file, line, arg);
-#endif
-	data = SEE_malloc_finalize(interp, size, finalizefn, closure);
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf(" -> %p\n", data);
-#endif
-	return data;
+	return _SEE_malloc_finalize(interp, size, finalizefn, closure,
+	    file, line);
 }
 
 void *
-_SEE_malloc_string_debug(interp, size, file, line, arg)
+_SEE_malloc_string_debug(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
 	const char *file;
 	int line;
-	const char *arg;
 {
-	void *data;
-
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf("malloc_string %u (%s:%d '%s')", size, file, 
-			line, arg);
-#endif
-	data = SEE_malloc_string(interp, size);
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf(" -> %p\n", data);
-#endif
-	return data;
+	return _SEE_malloc_string(interp, size, file, line);
 }
 
 void
-_SEE_free_debug(interp, memp, file, line, arg)
+_SEE_free_debug(interp, memp, file, line)
 	struct SEE_interpreter *interp;
 	void **memp;
 	const char *file;
 	int line;
-	const char *arg;
 {
-#ifndef NDEBUG
-	if (SEE_mem_debug)
-		dprintf("free %p (%s:%d '%s')", *memp, file, line, arg);
-#endif
-	SEE_free(interp, memp);
+	_SEE_free(interp, memp, file, line);
 }
+
+#else /* !NDEBUG */
+
+void *
+_SEE_malloc_debug(interp, size, file, line)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+{
+	void *data;
+
+	if (SEE_mem_debug)
+		dprintf("malloc %u (%s:%d)", size, file, line);
+	data = _SEE_malloc(interp, size, file, line);
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+	return data;
+}
+
+void *
+_SEE_malloc_finalize_debug(interp, size, finalizefn, closure, file, line)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+	void *closure;
+	const char *file;
+	int line;
+{
+	void *data;
+
+	if (SEE_mem_debug)
+		dprintf("malloc_finalize %u %p(%p) (%s:%d)", 
+		    size, finalizefn, closure, file, line);
+	data = _SEE_malloc_finalize(interp, size, finalizefn, closure,
+	    file, line);
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+	return data;
+}
+
+void *
+_SEE_malloc_string_debug(interp, size, file, line)
+	struct SEE_interpreter *interp;
+	SEE_size_t size;
+	const char *file;
+	int line;
+{
+	void *data;
+
+	if (SEE_mem_debug)
+		dprintf("malloc_string %u (%s:%d)", size, file, line);
+	data = _SEE_malloc_string(interp, size, file, line);
+	if (SEE_mem_debug)
+		dprintf(" -> %p\n", data);
+	return data;
+}
+
+void
+_SEE_free_debug(interp, memp, file, line)
+	struct SEE_interpreter *interp;
+	void **memp;
+	const char *file;
+	int line;
+{
+	if (SEE_mem_debug)
+		dprintf("free %p (%s:%d)", *memp, file, line);
+	_SEE_free(interp, memp, file, line);
+}
+#endif
 
 /* 
  * Memory segments start at GROW_INITIAL_SIZE and double until
@@ -251,17 +324,19 @@ _SEE_free_debug(interp, memp, file, line, arg)
  * malloc overhead
  */
 #ifndef GROW_INITIAL_SIZE
-# define GROW_INITIAL_SIZE   1024		/* bytes */
+# define GROW_INITIAL_SIZE   64			/* bytes */
 #endif
 #ifndef GROW_MAXIMUM_SIZE
 # define GROW_MAXIMUM_SIZE   (UINT_MAX - 128)	/* bytes */
 #endif
 
-void
-SEE_grow_to(interp, grow, new_len)
+static void
+_SEE_grow_to(interp, grow, new_len, file, line)
 	struct SEE_interpreter *interp;
 	struct SEE_growable *grow;
 	unsigned int new_len;
+	const char *file;
+	int line;
 {
 	SEE_size_t new_alloc;
 	void *new_ptr;
@@ -271,7 +346,7 @@ SEE_grow_to(interp, grow, new_len)
 		STR(string_limit_reached));
 	new_alloc = grow->allocated;
 	while (new_len * grow->element_size > new_alloc)
-	    if (new_alloc == 0)
+	    if (new_alloc < GROW_INITIAL_SIZE / 2)
 		new_alloc = GROW_INITIAL_SIZE;
 	    else if (new_alloc >= GROW_MAXIMUM_SIZE / 2)
 		new_alloc = GROW_MAXIMUM_SIZE;
@@ -280,15 +355,16 @@ SEE_grow_to(interp, grow, new_len)
 
 	if (new_alloc > grow->allocated) {
 	    if (grow->is_string)
-		new_ptr = SEE_malloc_string(interp, new_alloc);
+		new_ptr = _SEE_malloc_string_debug(interp, new_alloc, 
+		    file, line);
 	    else
-		new_ptr = SEE_malloc(interp, new_alloc);
+		new_ptr = _SEE_malloc_debug(interp, new_alloc, file, line);
 	    if (*grow->length_ptr)
 		memcpy(new_ptr, *grow->data_ptr, 
 		    *grow->length_ptr * grow->element_size);
 #ifndef NDEBUG
 	    if (SEE_mem_debug)
-		dprintf("grow from %p/%u/%u -> %p/%u/%u%s\n", 
+		dprintf("{grow %p/%u/%u -> %p/%u/%u%s}", 
 		    *grow->data_ptr, *grow->length_ptr, grow->allocated,
 		    new_ptr, new_len, new_alloc, 
 		    grow->is_string ? " [string]":"");
@@ -297,6 +373,15 @@ SEE_grow_to(interp, grow, new_len)
 	    grow->allocated = new_alloc;
 	}
 	*grow->length_ptr = new_len;
+}
+
+void
+SEE_grow_to(interp, grow, new_len)
+	struct SEE_interpreter *interp;
+	struct SEE_growable *grow;
+	unsigned int new_len;
+{
+	_SEE_grow_to(interp, grow, new_len, 0, 0);
 }
 
 void
@@ -309,11 +394,16 @@ _SEE_grow_to_debug(interp, grow, new_len, file, line)
 {
 #ifndef NDEBUG
 	if (SEE_mem_debug)
-		dprintf("grow %p %d->%d (%s:%d)", 
+		dprintf("grow %p %d->%d*%d (%s:%d) ", 
 		    grow, 
 		    grow && grow->length_ptr ? *grow->length_ptr : -1,
 		    new_len,
+		    grow->element_size,
 		    file, line);
 #endif
 	SEE_grow_to(interp, grow, new_len);
+#ifndef NDEBUG
+	if (SEE_mem_debug)
+		dprintf("\n");
+#endif
 }

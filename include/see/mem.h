@@ -9,37 +9,36 @@
 struct SEE_interpreter;
 
 void *	SEE_malloc(struct SEE_interpreter *i, SEE_size_t sz) 
-		_SEE_malloc;
+		_SEE__malloc;
 void *	SEE_malloc_string(struct SEE_interpreter *i, SEE_size_t sz) 
-		_SEE_malloc;
+		_SEE__malloc;
 void *	SEE_malloc_finalize(struct SEE_interpreter *i, SEE_size_t sz,
 		void (*finalizefn)(struct SEE_interpreter *i, void *p,
 			void *closure), void *closure) 
-		_SEE_malloc;
+		_SEE__malloc;
 void  	SEE_free(struct SEE_interpreter *i, void **memp);
 void  	SEE_gcollect(struct SEE_interpreter *i);
 
 /* Debugging variants */
 void *	_SEE_malloc_debug(struct SEE_interpreter *i, SEE_size_t sz, 
-		const char *file, int line, const char *arg);
+		const char *file, int line);
 void *	_SEE_malloc_string_debug(struct SEE_interpreter *i, SEE_size_t sz, 
-		const char *file, int line, const char *arg);
+		const char *file, int line);
 void *	_SEE_malloc_finalize_debug(struct SEE_interpreter *i, SEE_size_t sz,
 		void (*finalizefn)(struct SEE_interpreter *i, void *p,
 			void *closure), void *closure, 
-			const char *file, int line, const char *arg);
+			const char *file, int line);
 void 	_SEE_free_debug(struct SEE_interpreter *i, void **memp,
-		const char *file, int line, const char *arg);
+		const char *file, int line);
 #ifndef NDEBUG
 #define SEE_malloc(i,s) \
-		_SEE_malloc_debug(i,s,__FILE__,__LINE__,#s)
+		_SEE_malloc_debug(i,s,__FILE__,__LINE__)
 #define SEE_malloc_string(i,s) \
-		_SEE_malloc_string_debug(i,s,__FILE__,__LINE__,#s)
+		_SEE_malloc_string_debug(i,s,__FILE__,__LINE__)
 #define SEE_malloc_finalize(i,s,f,c) \
-		_SEE_malloc_finalize_debug(i,s,f,c,__FILE__,__LINE__,\
-			#s "," #f "," #c)
+		_SEE_malloc_finalize_debug(i,s,f,c,__FILE__,__LINE__)
 #define SEE_free(i,p) \
-		_SEE_free_debug(i,p,__FILE__,__LINE__,#p)
+		_SEE_free_debug(i,p,__FILE__,__LINE__)
 #endif
 
 

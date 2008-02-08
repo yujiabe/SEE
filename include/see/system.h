@@ -35,12 +35,16 @@ struct SEE_system {
 	void (*periodic)(struct SEE_interpreter *);
 
 	/* Memory allocator */
-	void *(*malloc)(struct SEE_interpreter *, SEE_size_t);
+	void *(*malloc)(struct SEE_interpreter *, SEE_size_t,
+		const char *, int);
 	void *(*malloc_finalize)(struct SEE_interpreter *, SEE_size_t,
-		void (*)(struct SEE_interpreter *, void *, void *), void *);
-	void *(*malloc_string)(struct SEE_interpreter *, SEE_size_t);
+		void (*)(struct SEE_interpreter *, void *, void *), void *,
+		const char *, int);
+	void *(*malloc_string)(struct SEE_interpreter *, SEE_size_t,
+		const char *, int);
 
-	void (*free)(struct SEE_interpreter *, void *);
+	void (*free)(struct SEE_interpreter *, void *,
+		const char *, int);
 	void (*mem_exhausted)(struct SEE_interpreter *) SEE_dead;
 	void (*gcollect)(struct SEE_interpreter *);
 

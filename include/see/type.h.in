@@ -144,10 +144,10 @@ typedef SEE_uint32_t	  SEE_unicode_t;  /* UCS-4 encoding */
 /* attributes that assist the compiler */
 #if __GNUC__
 # define SEE_dead	__attribute__((__noreturn__))
-# define _SEE_malloc	__attribute__((__malloc__))
+# define _SEE__malloc	__attribute__((__malloc__))
 #else
 # define SEE_dead	/* nothing */
-# define _SEE_malloc	/* nothing */
+# define _SEE__malloc	/* nothing */
 #endif
 
 /* IEEE-754 constants defined in value.o */

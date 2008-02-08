@@ -56,12 +56,15 @@
 #else
 # if HAVE_GC_MALLOC
 extern void *GC_malloc(int);
+# define GC_MALLOC GC_malloc
 # endif
 # if HAVE_GC_MALLOC_ATOMIC
 extern void *GC_malloc_atomic(int);
+# define GC_MALLOC_ATOMIC GC_malloc_atomic
 # endif
 # if HAVE_GC_FREE
 extern void GC_free(void *);
+# define GC_FREE GC_free
 # endif
 typedef void *GC_PTR;
 #endif
@@ -77,18 +80,25 @@ typedef void *GC_PTR;
 /* Prototypes */
 static unsigned int simple_random_seed(void);
 #if HAVE_GC_MALLOC
-static void *simple_gc_malloc(struct SEE_interpreter *, SEE_size_t);
-static void *simple_gc_malloc_string(struct SEE_interpreter *, SEE_size_t);
+static void *simple_gc_malloc(struct SEE_interpreter *, SEE_size_t,
+	const char *, int);
+static void *simple_gc_malloc_string(struct SEE_interpreter *, SEE_size_t,
+	const char *, int);
 static void *simple_gc_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
-        void (*)(struct SEE_interpreter *, void *, void *), void *);
-static void simple_gc_free(struct SEE_interpreter *, void *);
+        void (*)(struct SEE_interpreter *, void *, void *), void *,
+		const char *, int);
+static void simple_gc_free(struct SEE_interpreter *, void *,
+	const char *, int);
 static void simple_finalizer(GC_PTR, GC_PTR);
 static void simple_gc_gcollect(struct SEE_interpreter *);
 #else
-static void *simple_malloc(struct SEE_interpreter *, SEE_size_t);
+static void *simple_malloc(struct SEE_interpreter *, SEE_size_t,
+	const char *, int);
 static void *simple_malloc_finalize(struct SEE_interpreter *, SEE_size_t,
-        void (*)(struct SEE_interpreter *, void *, void *), void *);
-static void simple_free(struct SEE_interpreter *, void *);
+        void (*)(struct SEE_interpreter *, void *, void *), void *,
+		const char *, int);
+static void simple_free(struct SEE_interpreter *, void *,
+	const char *, int);
 #endif
 static void simple_mem_exhausted(struct SEE_interpreter *) SEE_dead;
 
@@ -157,15 +167,26 @@ simple_mem_exhausted(interp)
 
 
 #if HAVE_GC_MALLOC
+
+/* Redefine GC_EXTRAS as a quick, happy way to pass through the file,line */
+#undef GC_EXTRAS
+#ifdef GC_ADD_CALLER
+#  define GC_EXTRAS GC_RETURN_ADDR, file, line
+#else
+#  define GC_EXTRAS file, line
+#endif
+
 /*
  * Memory allocator using Boehm GC
  */
 static void *
-simple_gc_malloc(interp, size)
+simple_gc_malloc(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
+	const char *file;
+	int line;
 {
-	return GC_malloc(size);
+	return GC_MALLOC(size);
 }
 
 /*
@@ -189,11 +210,13 @@ simple_finalizer(p, cd)
 }
 
 static void *
-simple_gc_malloc_finalize(interp, size, finalizefn, closure)
+simple_gc_malloc_finalize(interp, size, finalizefn, closure, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
         void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
+	const char *file;
+	int line;
 {
 	SEE_size_t padsz;
 	void *data;
@@ -205,7 +228,7 @@ simple_gc_malloc_finalize(interp, size, finalizefn, closure)
 	padsz -= padsz % sizeof (struct finalize_info);
 
 	/* Allocate, with space for the finalize_info */
-	data = GC_malloc(padsz + sizeof (struct finalize_info));
+	data = GC_MALLOC(padsz + sizeof (struct finalize_info));
 
 	/* Fill in the finalize_info now */
 	info = (struct finalize_info *)((char *)data + padsz);
@@ -214,7 +237,7 @@ simple_gc_malloc_finalize(interp, size, finalizefn, closure)
 	info->closure = closure;
 
 	/* Ask the GC to call the finalizer when data is unreachable */
-	GC_register_finalizer(data, simple_finalizer, (GC_PTR)padsz, NULL, NULL);
+	GC_REGISTER_FINALIZER(data, simple_finalizer, (GC_PTR)padsz, NULL, NULL);
 
 	return data;
 }
@@ -223,14 +246,16 @@ simple_gc_malloc_finalize(interp, size, finalizefn, closure)
  * Non-pointer memory allocator using Boehm GC
  */
 static void *
-simple_gc_malloc_string(interp, size)
+simple_gc_malloc_string(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
+	const char *file;
+	int line;
 {
 # if HAVE_GC_MALLOC_ATOMIC
-	return GC_malloc_atomic(size);
+	return GC_MALLOC_ATOMIC(size);
 # else
-	return GC_malloc(size);
+	return GC_MALLOC(size);
 # endif
 }
 
@@ -238,12 +263,14 @@ simple_gc_malloc_string(interp, size)
  * Non-pointer memory allocator using Boehm GC
  */
 static void
-simple_gc_free(interp, ptr)
+simple_gc_free(interp, ptr, file, line)
 	struct SEE_interpreter *interp;
 	void *ptr;
+	const char *file;
+	int line;
 {
 # if HAVE_GC_FREE
-	GC_free(ptr);
+	GC_FREE(ptr);
 # endif
 }
 
@@ -266,9 +293,11 @@ simple_gc_gcollect(interp)
  * This is a stub function.
  */
 static void *
-simple_malloc(interp, size)
+simple_malloc(interp, size, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
+	const char *file;
+	int line;
 {
 #ifndef NDEBUG
 	static int warning_printed = 0;
@@ -282,32 +311,83 @@ simple_malloc(interp, size)
 	return malloc(size);
 }
 
+/* Linked list of all finalizers to run on exit */
+static struct finalize_entry {
+    struct SEE_interpreter *interp;
+    void *ptr;
+    void (*finalizefn)(struct SEE_interpreter *, void *, void *);
+    void *closure;
+    struct finalize_entry *next;
+} *simple_finalize_list;
+
+/* Runs all the finalizers */
+static void
+simple_finalize_all()
+{
+    struct finalize_entry *entry;
+#ifndef NDEBUG
+    extern int SEE_mem_debug;
+#endif
+
+#ifndef NDEBUG
+    if (SEE_mem_debug)
+	dprintf("Running finalizers\n");
+#endif
+
+    while (finalize_list) {
+	entry = simple_finalize_list;
+	simple_finalize_list = entry->next;
+	(*entry->finalizefn)(entry->interp, entry->ptr, entry->closure);
+	free(entry);
+    }
+}
+
 static void *
-simple_malloc_finalize(interp, size, finalizefn, closure)
+simple_malloc_finalize(interp, size, finalizefn, closure, file, line)
 	struct SEE_interpreter *interp;
 	SEE_size_t size;
         void (*finalizefn)(struct SEE_interpreter *, void *, void *);
 	void *closure;
+	const char *file;
+	int line;
 {
-#ifndef NDEBUG
-	static int warning_printed = 0;
+	static int called = 0;
+	struct finalize_entry *entry;
+	void *ptr;
 
-	if (!warning_printed) {
-		warning_printed++;
-		dprintf("WARNING: SEE is using non-finalize malloc\n");
+	ptr = malloc(size);
+	if (!ptr)
+	    return NULL;
+
+	/* Record the finalization function to call at exit */
+	entry = (struct finalize_entry *)malloc(sizeof *entry);
+	if (entry) {
+	    entry->interp = interp;
+	    entry->ptr = ptr;
+	    entry->finalizefn = finalizefn;
+	    entry->closure = closure;
+	    /* Insert at head of list */
+	    entry->next = simple_finalize_list;
+	    simple_finalize_list = entry;
+	    /* Set up finalizers to be run during exit() */
+	    if (!called) {
+		called = 1;
+		atexit(simple_finalize_all);
+	    }
 	}
 
-#endif
-	return malloc(size);
+	return ptr;
 }
 
 /*
  * Memory deallocator using system free().
  */
 static void
-simple_free(interp, ptr)
+simple_free(interp, ptr, file, line)
 	struct SEE_interpreter *interp;
 	void *ptr;
+	const char *file;
+	int line;
 {
 	free(ptr);
 }
