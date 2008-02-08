@@ -19,6 +19,7 @@ TESTS+=		regress.js
 TESTS+=		throw.js 
 TESTS+=		obj.Global.js 
 TESTS+=		obj.Object.js 
+TESTS+=		obj.Function.js 
 
 EXTRA_DIST=	common.js $(TESTS)
 TESTS_ENVIRONMENT=  $(LIBTOOL) --mode=execute ../see-shell \
