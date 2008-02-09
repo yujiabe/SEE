@@ -72,7 +72,7 @@
 <p>
 by David Leonard, 2006
 <br>
-for SEE version 2.1
+for SEE version 3.0
 </p>
 
 
@@ -124,7 +124,7 @@ for SEE version 2.1
  <li><a href="#compatjs">8.1 Compatibility with other JavaScript implementations</a>
  <li><a href="#compatsee">8.2 Compatibility with future versions of SEE</a>
  <li><a href="#port10_20">8.3 Porting from API 1.0 to API 2.0</a>
- <li><a href="#port20_21">8.4 Porting from API 2.0 to API 2.1</a>
+ <li><a href="#port20_21">8.4 Porting from API 2.0 to API 3.0</a>
  </ul>
  <li><a href="#security">9 Security</a>
  <ul>
@@ -859,7 +859,7 @@ This function should be called before any customization of the
 
 <p class="note">
 &#9888; Note:
-The <code>SEE_init()</code> function appeared in API 2.1.
+The <code>SEE_init()</code> function appeared in API 3.0.
 </p>
 
 <p>
@@ -914,7 +914,7 @@ with a scope chain consisting of just the [[Global]] object.
 
 <p class="note">
 &#9888; Note:
-The <code>SEE_eval()</code> function appeared in API 2.1
+The <code>SEE_eval()</code> function appeared in API 3.0
 </p>
 
 <h3 id="runxmp">4.1 Example</h3>
@@ -2012,7 +2012,7 @@ void *<dfn id="SEE_OBJECT_GET_SEC_DOMAIN">SEE_OBJECT_GET_SEC_DOMAIN</dfn>(struct
 The property <code>SEE_string</code> arguments to the property
 operation macros <strong>must</strong> have been
 internalised with <code>SEE_intern()</code>.
-This requirement appeared in API 2.1
+This requirement appeared in API 3.0
 </p>
 
 <p id="objcheck">
@@ -2185,7 +2185,7 @@ It is initialised to NULL in objects created by SEE.
 
 <p class="note">
 &#9888; Note:
-The <code>host_data</code> field was added in API 2.1.
+The <code>host_data</code> field was added in API 3.0.
 </p>
 
 <p>
@@ -2327,7 +2327,7 @@ Use <code>NULL</code> instead.
 &#9888; Note:
 Property strings returned from an enumerator's <code>next()</code> method
 are required to have been internalised, e.g. with <code>SEE_intern()</code>.
-This requirement was added in API 2.1.
+This requirement was added in API 3.0.
 </p>
 
 <p>
@@ -2570,7 +2570,7 @@ void <dfn id="SEE_parse_args_va">SEE_parse_args_va</dfn>(struct SEE_interpreter 
 <p class="note">
 &#9888; Note:
 The <code>SEE_parse_args()</code> function first appeared in API 2.0,
-and <code>SEE_parse_args_va()</code> in 2.1.
+and <code>SEE_parse_args_va()</code> in 3.0.
 </p>
 
 <table>
@@ -2706,7 +2706,7 @@ void <dfn id="SEE_call_args_va">SEE_call_args_va</dfn>(struct SEE_interpreter *i
 <p class="note">
 &#9888; Note:
 The <code>SEE_call_args()</code> 
-and <code>SEE_call_args_va()</code> functions first appeared in API 2.1.
+and <code>SEE_call_args_va()</code> functions first appeared in API 3.0.
 
 <p>
 The <code>SEE_call_args()</code> function
@@ -3105,7 +3105,7 @@ Enables optional features from Appendix B of ECMA-262 ed3, namely:
 <td>
 Enables compatibility with Mozilla's 
 <a href="http://www.mozilla.org/js/language/E262-3-errata.html">ECMAScript Edition 3 Errata</a>.
-(Added in API 2.1)
+(Added in API 3.0)
 <ul>
 <li><code class="js">String.prototype.match()</code> returns <code class="js">null</code> instead of an empty array when there are no matches.
 </ul>
@@ -3516,11 +3516,11 @@ has been removed. Replace them with zero.
 
 </ul>
 
-<h3 id="port20_21">8.4 Porting from API 2.0 to API 2.1</h3>
+<h3 id="port20_21">8.4 Porting from API 2.0 to API 3.0</h3>
 
 <p>
 Applications previously written for SEE-2.0 (API 2.0) should be
-changed in order to compile against SEE-2.1 (API 2.1).
+changed in order to compile against SEE-3.0 (API 3.0).
 </p>
 
 <ul>
@@ -3853,28 +3853,28 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ALLOCA">SEE_ALLOCA</a><br>
 <a href="#SEE_CFUNCTION_PUTA">SEE_CFUNCTION_PUTA</a> (2.0)<br>
 <a href="#SEE_CAUGHT">SEE_CAUGHT</a><br>
-<a href="#SEE_call_args">SEE_call_args</a> (2.1)<br>
-<a href="#SEE_call_args_va">SEE_call_args_va</a> (2.1)<br>
+<a href="#SEE_call_args">SEE_call_args</a> (3.0)<br>
+<a href="#SEE_call_args_va">SEE_call_args_va</a> (3.0)<br>
 <a href="#SEE_cfunction_make">SEE_cfunction_make</a><br>
 <a href="#SEE_context_eval">SEE_context_eval</a><br>
-<a href="#SEE_COPYSIGN">SEE_COPYSIGN</a> (2.1)<br>
+<a href="#SEE_COPYSIGN">SEE_COPYSIGN</a> (3.0)<br>
 <a href="#SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</a><br>
 <a href="#SEE_ENUM_NEXT">SEE_ENUM_NEXT</a><br>
 <a href="#SEE_Error_make">SEE_Error_make</a><br>
 <a href="#SEE_error_throw">SEE_error_throw</a><br>
 <a href="#SEE_error_throw_string">SEE_error_throw_string</a><br>
 <a href="#SEE_error_throw_sys">SEE_error_throw_sys</a><br>
-<a href="#SEE_error_throw_sys_va">SEE_error_throw_sys_va</a> (2.1)<br>
-<a href="#SEE_error_throw_va">SEE_error_throw_va</a> (2.1)<br>
-<a href="#SEE_eval">SEE_eval</a> (2.1)<br>
+<a href="#SEE_error_throw_sys_va">SEE_error_throw_sys_va</a> (3.0)<br>
+<a href="#SEE_error_throw_va">SEE_error_throw_va</a> (3.0)<br>
+<a href="#SEE_eval">SEE_eval</a> (3.0)<br>
 <a href="#SEE_Function_new">SEE_Function_new</a><br>
 <a href="#SEE_gcollect">SEE_gcollect</a> (2.0)<br>
 <a href="#SEE_Global_eval">SEE_Global_eval</a><br>
-<a href="#struct_SEE_growable">SEE_growable</a> struct (2.1)<br>
-<a href="#SEE_GROW_INIT">SEE_GROW_INIT</a> (2.1)<br>
-<a href="#SEE_grow_to">SEE_grow_to</a> (2.1)<br>
+<a href="#struct_SEE_growable">SEE_growable</a> struct (3.0)<br>
+<a href="#SEE_GROW_INIT">SEE_GROW_INIT</a> (3.0)<br>
+<a href="#SEE_grow_to">SEE_grow_to</a> (3.0)<br>
 <a href="#SEE_Infinity">SEE_Infinity</a><br>
-<a href="#SEE_init">SEE_init</a> (2.1)<br>
+<a href="#SEE_init">SEE_init</a> (3.0)<br>
 <a href="#struct_SEE_input">SEE_input</a> struct<br>
 <a href="#struct_SEE_inputclass">SEE_inputclass</a> struct<br>
 <a href="#SEE_INPUT_CLOSE">SEE_INPUT_CLOSE</a><br>
@@ -3888,12 +3888,12 @@ Commands available at the '<code>%</code>' prompt include:
 <td>
 <a href="#SEE_interpreter_init">SEE_interpreter_init</a><br>
 <a href="#SEE_interpreter_init_compat">SEE_interpreter_init_compat</a><br>
-<a href="#SEE_interpreter_restore_state">SEE_interpreter_restore_state</a> (2.1)<br>
-<a href="#SEE_interpreter_save_state">SEE_interpreter_save_state</a> (2.1)<br>
+<a href="#SEE_interpreter_restore_state">SEE_interpreter_restore_state</a> (3.0)<br>
+<a href="#SEE_interpreter_save_state">SEE_interpreter_save_state</a> (3.0)<br>
 <a href="#SEE_ISFINITE">SEE_ISFINITE</a><br>
 <a href="#SEE_ISNAN">SEE_ISNAN</a><br>
-<a href="#SEE_ISNINF">SEE_ISNINF</a> (2.1)<br>
-<a href="#SEE_ISPINF">SEE_ISPINF</a> (2.1)<br>
+<a href="#SEE_ISNINF">SEE_ISNINF</a> (3.0)<br>
+<a href="#SEE_ISPINF">SEE_ISPINF</a> (3.0)<br>
 <a href="#SEE_malloc">SEE_malloc</a><br>
 <a href="#SEE_malloc_string">SEE_malloc_string</a><br>
 <a href="#SEE_malloc_finalize">SEE_malloc_finalize</a> (2.0)<br>
@@ -3941,15 +3941,15 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_Object_new">SEE_Object_new</a><br>
 <a href="#SEE_OBJECT_PUT">SEE_OBJECT_PUT</a><br>
 <a href="#SEE_OBJECT_PUTA">SEE_OBJECT_PUTA</a> (2.0)<br>
-<a href="#SEE_object_instanceof">SEE_object_instanceof</a> (2.1)<br>
+<a href="#SEE_object_instanceof">SEE_object_instanceof</a> (3.0)<br>
 <a href="#SEE_parse_args">SEE_parse_args</a> (2.0)<br>
-<a href="#SEE_parse_args_va">SEE_parse_args_va</a> (2.1)<br>
+<a href="#SEE_parse_args_va">SEE_parse_args_va</a> (3.0)<br>
 <a href="#SEE_PrintObject">SEE_PrintObject</a><br>
 <a href="#SEE_PrintString">SEE_PrintString</a><br>
-<a href="#SEE_PrintContextTraceback">SEE_PrintContextTraceback</a> (2.1)<br>
+<a href="#SEE_PrintContextTraceback">SEE_PrintContextTraceback</a> (3.0)<br>
 <a href="#SEE_PrintTraceback">SEE_PrintTraceback</a><br>
 <a href="#SEE_PrintValue">SEE_PrintValue</a><br>
-<a href="#SEE_RETHROW">SEE_RETHROW</a> (2.1)<br>
+<a href="#SEE_RETHROW">SEE_RETHROW</a> (3.0)<br>
 <a href="#SEE_SET_BOOLEAN">SEE_SET_BOOLEAN</a><br>
 <a href="#SEE_SET_NULL">SEE_SET_NULL</a><br>
 <a href="#SEE_SET_NUMBER">SEE_SET_NUMBER</a><br>
@@ -3963,11 +3963,11 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_string_append">SEE_string_append</a><br>
 <a href="#SEE_string_append_ascii">SEE_string_append_ascii</a> (2.0)<br>
 <a href="#SEE_string_append_int">SEE_string_append_int</a><br>
-<a href="#SEE_string_append_unicode">SEE_string_append_unicode</a> (2.1)<br>
+<a href="#SEE_string_append_unicode">SEE_string_append_unicode</a> (3.0)<br>
 <a href="#SEE_string_cmp">SEE_string_cmp</a><br>
 <a href="#SEE_string_concat">SEE_string_concat</a><br>
 <a href="#SEE_string_dup">SEE_string_dup</a> (2.0*)<br>
-<a href="#SEE_string_fix">SEE_string_fix</a> (2.1)<br>
+<a href="#SEE_string_fix">SEE_string_fix</a> (3.0)<br>
 <a href="#SEE_string_fputs">SEE_string_fputs</a><br>
 <a href="#SEE_string_literal">SEE_string_literal</a><br>
 <a href="#SEE_string_new">SEE_string_new</a><br>
@@ -3987,7 +3987,7 @@ Commands available at the '<code>%</code>' prompt include:
 <a href="#SEE_ToUint16">SEE_ToUint16</a><br>
 <a href="#SEE_ToUint32">SEE_ToUint32</a><br>
 <a href="#SEE_TRY">SEE_TRY</a><br>
-<a href="#SEE_TRY_BREAK">SEE_TRY_BREAK</a> (2.1)<br>
+<a href="#SEE_TRY_BREAK">SEE_TRY_BREAK</a> (3.0)<br>
 <a href="#struct_SEE_value">SEE_value</a> struct<br>
 <a href="#SEE_VALUE_COPY">SEE_VALUE_COPY</a><br>
 <a href="#SEE_VALUE_GET_TYPE">SEE_VALUE_GET_TYPE</a><br>

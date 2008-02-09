@@ -1,0 +1,128 @@
+
+This file summaries the API changes (header and library)
+
+API 3.0 / libsee 2:0:0
+
+   +SEE_call_args()
+   +SEE_call_args_va()
+   +SEE_COPYSIGN()
+   +SEE_error_throw_sys_va()
+   +SEE_error_throw_va()
+   +SEE_eval()
+   +SEE_GROW_INIT()
+   +SEE_grow_to()
+   +SEE_init()
+   +SEE_interpreter_restore_state()
+   +SEE_interpreter_save_state()
+   +SEE_ISNINF()
+   +SEE_ISPINF()
+   +SEE_object_instanceof()
+   +SEE_parse_args_va()
+   +SEE_PrintContextTraceback()
+   +SEE_RETHROW()
+   +SEE_string_append_unicode()
+   +SEE_string_cmp_ascii()
+   +SEE_string_fix()
+   +SEE_TRY_BREAK
+
+   +SEE_COMPAT_SEE
+   +SEE_COMPAT_ERRATA
+   +SEE_CALLTYPE_THROW
+
+   ~SEE_system struct
+       ~SEE_system.malloc
+       ~SEE_system.malloc_finalize
+       ~SEE_system.malloc_string
+       ~SEE_system.free
+       +SEE_system.code_alloc
+       +SEE_system.object_construct
+       +SEE_system.default_regex_engine
+   ~SEE_native struct
+       +SEE_native.lru
+
+   ~SEE_object struct
+       +SEE_object.host_data
+
+   +SEE_scope struct
+   +SEE_growable struct
+
+   ~SEE_try_context_t struct
+       +SEE_try_context.saved_traceback
+       +SEE_try_context.traceback
+
+   'SEE_OBJECT_GET()
+   'SEE_OBJECT_PUT()
+   'SEE_OBJECT_CANPUT()
+   'SEE_OBJECT_HASPROPERTY()
+   'SEE_OBJECT_DELETE()
+   'SEE_enumclass.next
+
+    SEE_STRING_FLAG_STATIC	deprecated
+    SEE_no_enumerator()		deprecated
+
+   -TRY_BREAK
+
+   +SEE_regex_engine()			experimental
+   +SEE_regex_engine_list()		experimental
+   ~SEE_interpreter struct:
+       +SEE_interpreter.regex_engine	experimental
+
+   ~SEE_value struct
+       ~_SEE_completion.target
+
+API 2.0 / libsee 1:0:0
+
+    +SEE_CFUNCTION_PUTA()
+    +SEE_gcollect()
+    +SEE_intern_ascii()
+    +SEE_malloc_finalize()
+    +SEE_module_add()
+    +SEE_MODULE_PRIVATE()
+    +SEE_NEW_FINALIZE()
+    +SEE_OBJECT_CANPUTA()
+    +SEE_OBJECT_DELETEA()
+    +SEE_OBJECT_GETA()
+    +SEE_OBJECT_GET_SEC_DOMAIN()
+    +SEE_OBJECT_HASPROPERTYA()
+    +SEE_OBJECT_HAS_GET_SEC_DOMAIN()
+    +SEE_OBJECT_PUTA()
+    +SEE_parse_args()
+    +SEE_string_append_ascii()
+    +SEE_string_toutf8()
+    +SEE_string_utf8_size()
+
+    ~SEE_intern_global()
+    ~SEE_string_dup()
+
+    ~SEE_interpreter struct:
+	+SEE_interpreter.module_private
+	+SEE_interpreter.sec_domain
+	~SEE_interpreter.trace
+
+    ~SEE_objectclass struct
+	~SEE_objectclass.Class
+
+    +SEE_traceevent enum
+
+    ~SEE_system.default_trace
+    +SEE_system.periodic
+    +SEE_system.malloc_finalize
+    +SEE_system.gcollect
+    +SEE_system.transit_sec_domain
+
+    +SEE_COMPAT_JS_NONE
+    +SEE_COMPAT_JS_MASK
+    +SEE_COMPAT_JS11
+    +SEE_COMPAT_JS12
+    +SEE_COMPAT_JS13
+    +SEE_COMPAT_JS14
+    +SEE_COMPAT_JS15
+    -SEE_COMPAT_EXT1
+    -SEE_COMPAT_UNDEFDEF
+    +SEE_MODULE_MAGIC
+
+    +SEE_module struct
+
+     SEE_enumclass.unused	    deprecated
+     SEE_NUMBER_ISINF		    deprecated
+
