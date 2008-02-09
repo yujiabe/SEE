@@ -285,17 +285,45 @@ SEE_ToString(interp, val, res)
 			SEE_ToString(interp, &neg, &negstr);
 			SEE_SET_STRING(res, SEE_string_concat(interp,
 			    STR(minus), negstr.u.string));
+			SEE_string_free(interp, &negstr.u.string);
 		} else if (SEE_NUMBER_ISPINF(val)) {
 			SEE_SET_STRING(res, STR(Infinity));
 		} else {
 			char *a, *endstr;
 			struct SEE_string *s;
 			int sign, k, n, i, exponent;
+			int len;
 
 			a = SEE_dtoa(val->u.number, DTOA_MODE_SHORT_SW, 31, 
 				&n, &sign, &endstr);
 			k = (int)(endstr - a);
-			s = SEE_string_new(interp, 0);
+
+			/* Numbers converted to strings are generally
+			 * small and short-lived. */
+			len = 0;
+			if (k <= n && n <= 21) {
+			    len = n;
+			} else if (0 < n && n <= 21) {
+			    len = k + 1;
+			} else if (-6 < n && n <= 0) {
+			    len = 2 + -n + k;
+			} else if (k == 1) {
+			    len = 1;
+			    goto add_exponent_len;
+			} else {
+			    len = k + 1;
+	    add_exponent_len:
+			    len += 2; /* e[+-] */
+			    exponent = n > 0 ? n - 1 : 1 - n;
+			    /* n!=1 => exponent!=0 */
+			    while (exponent) {
+				len++;
+				exponent /= 10;
+			    }
+			}
+			/* --end-- */
+
+			s = SEE_string_new(interp, len);
 			SEE_ASSERT(interp, !sign);
 			if (k <= n && n <= 21) {
 			    for (i = 0; i < k; i++)
@@ -329,6 +357,7 @@ SEE_ToString(interp, val, res)
 				SEE_string_addch(s, '+');
 			    SEE_string_append_int(s, exponent);
 			}
+			SEE_ASSERT(interp, len == s->length);
 			SEE_SET_STRING(res, s);
 			SEE_freedtoa(a);
 		} 
