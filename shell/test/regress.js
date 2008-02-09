@@ -151,4 +151,7 @@ test("Object.prototype.isPrototypeOf(new Number(123))", true);
 /* Bug 117 */
 test("var functest; (function functest(arg){if(arg)return 1;functest=function(arg){return 2;};return functest(true);})(false)", 1)
 
+/* Bug 118 */
+test("eval('function f118(){}'); typeof f118", "function");
+
 finish()
