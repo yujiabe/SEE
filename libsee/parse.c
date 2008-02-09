@@ -12226,7 +12226,9 @@ FunctionBody_isempty(interp, body)
 	
 	f = CAST_NODE(body, FunctionBody);
 	se = CAST_NODE(f->u.a, SourceElements);
-	return se->statements == NULL && se->vars == NULL;
+	return se->statements == NULL && 
+	       se->vars == NULL &&
+	       (!f->is_program || se->functions == NULL);
 }
 
 #if WITH_PARSER_PRINT
