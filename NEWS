@@ -1,5 +1,8 @@
 $Id$
 
+3.1 [unreleased]
+  Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
+
 3.0 [2008-02-09]
   Bug 118: Programs w/only function decls had no effect in bytecode mode
   Bug 115: Object.prototype.isPrototypeOf() didn't follow prototype chain

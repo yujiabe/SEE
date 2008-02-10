@@ -438,7 +438,6 @@ SEE_intern_global(s)
 	return (*x)->string;
 }
 
-#ifndef NDEBUG
 /**
  * Raises an assertion failure if the passed string is not internalised.
  * This function used by the SEE_OBJECT_*() macros.
@@ -448,8 +447,9 @@ _SEE_intern_assert(interp, s)
 	struct SEE_interpreter *interp;
         struct SEE_string *s;
 {
+#ifndef NDEBUG
 	if (s)
 	    SEE_ASSERT(interp, internalized(interp, s));
+#endif
 	return s;
 }
-#endif
