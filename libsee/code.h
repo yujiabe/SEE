@@ -131,10 +131,9 @@ struct SEE_code_class {
 	/* Adds a variable */
 	unsigned int (*gen_var)(struct SEE_code *co, struct SEE_string *ident);
 
-	/* Generates a instruction referring to an address. 
+	/* Generates an instruction referring to an address. 
 	 * If patchp is not NULL, then addr is ignored and a patch ref 
-	 * is stored in *patchp.
-	 * The target param is only used by the BREAK/CONTINUE test.
+	 * is stored in *patchp for later use by the patch method.
 	 */
 	void  	(*gen_opa)(struct SEE_code *co, enum SEE_code_opa op,
 			SEE_code_patchable_t *patchp, SEE_code_addr_t addr);
@@ -142,19 +141,19 @@ struct SEE_code_class {
 	/* Returns the next instruction's address; used for patching */
 	SEE_code_addr_t (*here)(struct SEE_code *co);
 
-	/* Patches a previously branch instruction's address */
+	/* Patches a previous instruction's address argument */
 	void	(*patch)(struct SEE_code *co, SEE_code_patchable_t patch,
 			SEE_code_addr_t addr);
 
-	/* Indicate the maximum stack and blocks sizes. (-1 means unknown) */
+	/* Indicates the maximum stack and blocks sizes. (-1 means unknown) */
 	void	(*maxstack)(struct SEE_code *co, int);
 	void	(*maxblock)(struct SEE_code *co, int);
 
 	/* Indicates no more code. Allows generator to cleanup/optimize. */
 	void	(*close)(struct SEE_code *co);
 
-	/* Executes the code in the given context. The result is always
-	 * of type SEE_COMPLETION. */
+	/* Executes the code in the given context. The result is the
+	 * last content of the C register. */
 	void	(*exec)(struct SEE_code *co, struct SEE_context *ctxt,
 	        	struct SEE_value *res);
 };
