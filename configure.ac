@@ -117,8 +117,7 @@ dnl and set dnl $enable_feature=yes if it makes sense to do so.
 dnl
 AC_DEFUN([_SEE_ARG_ENABLE],[
  AC_ARG_ENABLE([$1],
-  AC_HELP_STRING([ifelse($2,yes,[--disable-$1],$2,no,[--enable-$1],$2,no,[--enable-$1])],
-   [$3 ]default=[ifelse($2,yes,enabled,$2,no,disabled,$2,auto,auto)]),
+  AC_HELP_STRING([ifelse($2,yes,[--disable-$1],$2,no,[--enable-$1],$2,auto,[--disable-$1])],[$3]ifelse($2,auto,[ (auto)])),
   [dnl (( # two parens help editor balance
    case "$enableval" in ifelse([$4],,,auto|)yes|no) :;; *) #
     AC_MSG_WARN([unexpected value '$enableval' for --enable-$1. Using '$2'.])
@@ -206,6 +205,13 @@ SEE_ARG_ENABLE(longjmperror,[yes],
    [AC_DEFINE(WITH_LONGJMPERROR, [1],
         [Define if you want SEE to catch longjmp corruption])
 ])
+
+SEE_ARG_ENABLE(native-dtoa,[auto],
+    [dtoa from libc],
+    [enable_native_dtoa=yes
+     AC_CHECK_FUNCS([strtod dtoa freedtoa],,[enable_native_dtoa=no])
+])
+AM_CONDITIONAL(NATIVE_DTOA, test x"$enable_native_dtoa" = x"yes")
 
 
 dnl ------------------------------------------------------------
@@ -337,11 +343,6 @@ fi
 dnl --- things to add later?
 dnl  AC_CHECK_FUNCS([srand srandom vsprintf funopen])
 dnl  AC_CHECK_FUNC(vsnprintf,,AC_LIBOBJ(vsnprintf))
-
-SEE_ARG_ENABLE(native-dtoa,[auto], [dtoa() from libc],
-    [enable_native_dtoa=yes
-     AC_CHECK_FUNCS([strtod dtoa freedtoa],,[enable_native_dtoa=no])])
-AM_CONDITIONAL(NATIVE_DTOA, test x"$enable_native_dtoa" = x"yes")
 
 AC_CHECK_FUNC(rand_r)
 
