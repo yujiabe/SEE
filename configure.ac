@@ -180,10 +180,15 @@ SEE_ARG_ENABLE(parser-visit,[no],
 ])
 
 dnl XXX is this incompatible with parser_print?
-SEE_ARG_ENABLE(bytecode,[no],
-   [experimental bytecode generator],,
+SEE_ARG_ENABLE(bytecode,[yes],
+   [bytecode generator],,
    [AC_DEFINE(WITH_PARSER_CODEGEN, [1],
-        [Define if you want to include experimental code generator])
+        [Define if you want to use the code generator])
+])
+SEE_ARG_ENABLE(ast-eval,[no],
+   [in-AST evaluator],,
+   [AC_DEFINE(WITH_PARSER_EVAL, [1],
+        [Define if you want to use the stable AST evaluator])
 ])
 
 dnl XXX need to find a better way to get pthreads flags in

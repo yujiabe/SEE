@@ -178,9 +178,6 @@ add_literal(code, val)
     SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_REFERENCE);
     SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_COMPLETION);
 
-    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(val) != SEE_STRING || 
-		 	(val->u.string->flags & SEE_STRING_FLAG_INTERNED));
-
     for (i = 0; i < code->nliteral; i++) {
 	li = code->literal + i;
 	if (SEE_VALUE_GET_TYPE(li) != SEE_VALUE_GET_TYPE(val))

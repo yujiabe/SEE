@@ -1,6 +1,6 @@
 $Id$
 
-2.1 [unreleased]
+3.0 [2008-02-09]
   Bug 118: Programs w/only function decls had no effect in bytecode mode
   Bug 115: Object.prototype.isPrototypeOf() didn't follow prototype chain
   Bug 112: /)/ is strictly an illegal regex 
@@ -33,6 +33,7 @@ $Id$
   Bug 75: fix crash when enumerating a host object with no enumerator
   Bug 74: portability improvement in module loader
   Bug 73: new function SEE_eval() provides more control for host developers
+  Bug 72: bytecode generator --enable-bytecode (default)
   Bug 70: SEE_context_eval() was leaking reference values
   Bug 69: fix crash when some methods are called without 'this' context
   Bug 68: free the right pointer in SEE_grow_to()
@@ -52,6 +53,7 @@ $Id$
   Changed: see-shell has -i option for interactive use, instead of -f '-'
   Changed: SEE_ASSERT() now calls SEE_ABORT() instead of throwing an exception
   Changed: error messages from eval() label as <eval> instead of <string>
+  Changed: SEE_system allocators take file/line for allocator debugging
   New: SEE_string_fix() for passing string values between interpreters
   New: see-shell -dg option for tracebacks on SIGINFO
   New: SEE_string_cmp_ascii()
@@ -61,7 +63,6 @@ $Id$
   Deprecated: thisobj field of constructors deprecated (it was never used)
   Deprecated: SEE_no_enumerator deprecated (use NULL instead)
   Experimental: support external regex library --with-pcre (pcre.org) (bug 107)
-  Experimental: bytecode generator --enable-bytecode (Bug 72)
 
 2.0 [2006-08-06]
   API change: removed SEE_COMPAT_EXT1 (replaced with JSxx)

@@ -172,6 +172,9 @@ struct code_context {
 	 */
 	int in_var_scope;
 
+	/* True when we want to disable constant folding */
+	int no_const;
+
 	struct code_varscope *varscope;
 	unsigned int          nvarscope;
 	struct SEE_growable   gvarscope;
@@ -188,11 +191,15 @@ struct nodeclass {
 # define SUPERCLASS(cls)
 # define BASECLASS
 #endif
+#if WITH_PARSER_EVAL
 	void (*eval)(struct node *, struct SEE_context *, struct SEE_value *);
+#endif
 #if WITH_PARSER_CODEGEN
 	void (*codegen)(struct node *, struct code_context *);
 #endif
+#if WITH_PARSER_EVAL
 	void (*fproc)(struct node *, struct SEE_context *);
+#endif
 #if WITH_PARSER_PRINT
 	void (*print)(struct node *, struct printer *);
 #endif
@@ -201,6 +208,12 @@ struct nodeclass {
 #endif
 	int  (*isconst)(struct node *, struct SEE_interpreter *);
 };
+
+#if WITH_PARSER_EVAL
+# define PARSER_EVAL(fn)	fn,
+#else
+# define PARSER_EVAL(fn)	/* empty */
+#endif
 
 #if WITH_PARSER_CODEGEN
 # define PARSER_CODEGEN(fn)	fn,
@@ -457,6 +470,9 @@ static struct nodeclass Unary_nodeclass,
                         FunctionBody_nodeclass,
                         SourceElements_nodeclass;
 
+static struct node *new_node_internal(struct SEE_interpreter*interp, int sz, 
+        struct nodeclass *nc, struct SEE_string* filename, int lineno,
+	const char *dbg_nc);
 static struct node *new_node(struct parser *parser, int sz, 
         struct nodeclass *nc, const char *dbg_nc);
 static struct node *cast_node(struct node *na, struct nodeclass *nc, 
@@ -466,6 +482,7 @@ static void parser_init(struct parser *parser,
 static unsigned int target_lookup(struct parser *parser, 
 	struct SEE_string *name, int kind);
 static int lookahead(struct parser *parser, int n);
+#if WITH_PARSER_EVAL
 static void trace_event(struct SEE_context *ctxt, enum SEE_trace_event);
 static struct SEE_traceback *traceback_enter(struct SEE_interpreter *interp, 
         struct SEE_object *callee, struct SEE_throw_location *loc, 
@@ -476,54 +493,34 @@ static void GetValue(struct SEE_context *context, struct SEE_value *v,
         struct SEE_value *res);
 static void PutValue(struct SEE_context *context, struct SEE_value *v, 
         struct SEE_value *w);
-static struct SEE_string *error_at(struct parser *parser, const char *fmt, 
-        ...);
-static int Always_isconst(struct node *na, struct SEE_interpreter *interp);
 static void Literal_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *Literal_parse(struct parser *parser);
-static struct node *NumericLiteral_parse(struct parser *parser);
-static void StringLiteral_eval(struct node *na, struct SEE_context *context, 
-        struct SEE_value *res);
-static struct node *StringLiteral_parse(struct parser *parser);
 static void RegularExpressionLiteral_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *RegularExpressionLiteral_parse(struct parser *parser);
+static void StringLiteral_eval(struct node *na, struct SEE_context *context, 
+        struct SEE_value *res);
 static void PrimaryExpression_this_eval(struct node *n, 
         struct SEE_context *context, struct SEE_value *res);
 static void PrimaryExpression_ident_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *PrimaryExpression_parse(struct parser *parser);
 static void ArrayLiteral_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *ArrayLiteral_parse(struct parser *parser);
 static void ObjectLiteral_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *ObjectLiteral_parse(struct parser *parser);
 static void Arguments_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-#if WITH_PARSER_CODEGEN
-static void Arguments_codegen(struct node *na, struct code_context *cc);
-#endif
-static int Arguments_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
-static struct Arguments_node *Arguments_parse(struct parser *parser);
 static void MemberExpression_new_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void MemberExpression_dot_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void MemberExpression_bracket_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *MemberExpression_parse(struct parser *parser);
 static void CallExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *LeftHandSideExpression_parse(struct parser *parser);
-static int Unary_isconst(struct node *na, struct SEE_interpreter *interp);
 static void PostfixExpression_inc_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void PostfixExpression_dec_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *PostfixExpression_parse(struct parser *parser);
 static void UnaryExpression_delete_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_void_eval(struct node *na, 
@@ -542,11 +539,6 @@ static void UnaryExpression_inv_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static void UnaryExpression_not_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *UnaryExpression_parse(struct parser *parser);
-static int Binary_isconst(struct node *na, struct SEE_interpreter *interp);
-static void MultiplicativeExpression_mul_common(struct SEE_value *r2, 
-        struct SEE_value *r4, struct SEE_context *context, 
-	struct SEE_value *res);
 static void MultiplicativeExpression_mul_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void MultiplicativeExpression_div_common(struct SEE_value *r2, 
@@ -557,9 +549,11 @@ static void MultiplicativeExpression_div_eval(struct node *na,
 static void MultiplicativeExpression_mod_common(struct SEE_value *r2, 
         struct SEE_value *r4, struct SEE_context *context, 
 	struct SEE_value *res);
+static void MultiplicativeExpression_mul_common(struct SEE_value *r2, 
+        struct SEE_value *r4, struct SEE_context *context, 
+	struct SEE_value *res);
 static void MultiplicativeExpression_mod_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *MultiplicativeExpression_parse(struct parser *parser);
 static void AdditiveExpression_add_common(struct SEE_value *r2, 
         struct SEE_value *r4, struct SEE_context *context,
 	struct SEE_value *res);
@@ -570,7 +564,6 @@ static void AdditiveExpression_sub_common(struct SEE_value *r2,
 	struct SEE_value *res);
 static void AdditiveExpression_sub_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *AdditiveExpression_parse(struct parser *parser);
 static void ShiftExpression_lshift_common(struct SEE_value *r2, 
         struct node *bn, struct SEE_context *context, struct SEE_value *res);
 static void ShiftExpression_lshift_eval(struct node *na, 
@@ -585,7 +578,6 @@ static void ShiftExpression_urshift_common(struct SEE_value *r2,
 	struct SEE_value *res);
 static void ShiftExpression_urshift_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *ShiftExpression_parse(struct parser *parser);
 static void RelationalExpression_sub(struct SEE_interpreter *interp, 
         struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void RelationalExpression_lt_eval(struct node *na, 
@@ -600,11 +592,6 @@ static void RelationalExpression_instanceof_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_in_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *RelationalExpression_parse(struct parser *parser);
-static void EqualityExpression_eq(struct SEE_interpreter *interp, 
-        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
-static void EqualityExpression_seq(struct SEE_context *context, 
-        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void EqualityExpression_eq_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_ne_eval(struct node *na, 
@@ -613,40 +600,27 @@ static void EqualityExpression_seq_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static void EqualityExpression_sne_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *EqualityExpression_parse(struct parser *parser);
 static void BitwiseANDExpression_common(struct SEE_value *r2, 
         struct SEE_value *r4, struct SEE_context *context, 
 	struct SEE_value *res);
 static void BitwiseANDExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *BitwiseANDExpression_parse(struct parser *parser);
 static void BitwiseXORExpression_common(struct SEE_value *r2, 
         struct SEE_value *r4, struct SEE_context *context, 
 	struct SEE_value *res);
 static void BitwiseXORExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *BitwiseXORExpression_parse(struct parser *parser);
 static void BitwiseORExpression_common(struct SEE_value *r2, 
         struct SEE_value *r4, struct SEE_context *context,
 	struct SEE_value *res);
 static void BitwiseORExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *BitwiseORExpression_parse(struct parser *parser);
 static void LogicalANDExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int LogicalANDExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
-static struct node *LogicalANDExpression_parse(struct parser *parser);
 static void LogicalORExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int LogicalORExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
-static struct node *LogicalORExpression_parse(struct parser *parser);
 static void ConditionalExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int ConditionalExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
-static struct node *ConditionalExpression_parse(struct parser *parser);
 static void AssignmentExpression_simple_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_muleq_eval(struct node *na, 
@@ -671,82 +645,55 @@ static void AssignmentExpression_xoreq_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static void AssignmentExpression_oreq_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *AssignmentExpression_parse(struct parser *parser);
 static void Expression_comma_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *Expression_parse(struct parser *parser);
-static struct node *Statement_parse(struct parser *parser);
 static void Block_empty_eval(struct node *n, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *Block_parse(struct parser *parser);
 static void StatementList_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *StatementList_parse(struct parser *parser);
 static void VariableStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *VariableStatement_parse(struct parser *parser);
 static void VariableDeclarationList_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *VariableDeclarationList_parse(struct parser *parser);
 static void VariableDeclaration_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *VariableDeclaration_parse(struct parser *parser);
 static void EmptyStatement_eval(struct node *n, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *EmptyStatement_parse(struct parser *parser);
 static void ExpressionStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *ExpressionStatement_parse(struct parser *parser);
 static void IfStatement_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static int IfStatement_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
-static struct node *IfStatement_parse(struct parser *parser);
 static void IterationStatement_dowhile_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int IterationStatement_dowhile_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static void IterationStatement_while_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int IterationStatement_while_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static void IterationStatement_for_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static int IterationStatement_for_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static void IterationStatement_forvar_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void IterationStatement_forin_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void IterationStatement_forvarin_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *IterationStatement_parse(struct parser *parser);
 static void ContinueStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *ContinueStatement_parse(struct parser *parser);
 static void BreakStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *BreakStatement_parse(struct parser *parser);
 static void ReturnStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void ReturnStatement_undef_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *ReturnStatement_parse(struct parser *parser);
 static void WithStatement_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *WithStatement_parse(struct parser *parser);
 static void SwitchStatement_caseblock(struct SwitchStatement_node *n, 
         struct SEE_context *context, struct SEE_value *input, 
         struct SEE_value *res);
 static void SwitchStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *SwitchStatement_parse(struct parser *parser);
 static void LabelledStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *LabelledStatement_parse(struct parser *parser);
 static void ThrowStatement_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *ThrowStatement_parse(struct parser *parser);
 static int TryStatement_catch(struct TryStatement_node *n, 
         struct SEE_context *context, struct SEE_value *C, 
         struct SEE_value *res, SEE_try_context_t *ctxt);
@@ -756,28 +703,99 @@ static void TryStatement_finally_eval(struct node *na,
         struct SEE_context *context, struct SEE_value *res);
 static void TryStatement_catchfinally_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *TryStatement_parse(struct parser *parser);
-static void FunctionDeclaration_fproc(struct node *na, 
-        struct SEE_context *context);
-static struct node *FunctionDeclaration_parse(struct parser *parser);
 static void FunctionExpression_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static struct node *FunctionExpression_parse(struct parser *parser);
-static struct var *FormalParameterList_parse(struct parser *parser);
 static void FunctionBody_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
-static struct node *FunctionBody_parse(struct parser *parser);
-static struct node *FunctionStatement_parse(struct parser *parser);
-static struct function *Program_parse(struct parser *parser);
 static void SourceElements_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
+static void FunctionDeclaration_fproc(struct node *na, 
+        struct SEE_context *context);
 static void SourceElements_fproc(struct node *na, 
         struct SEE_context *context);
+static void EqualityExpression_seq(struct SEE_context *context, 
+        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
+#endif
+
+static struct SEE_string *error_at(struct parser *parser, const char *fmt, 
+        ...);
+static int Always_isconst(struct node *na, struct SEE_interpreter *interp);
+static void EqualityExpression_eq(struct SEE_interpreter *interp, 
+        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
+static struct node *Literal_parse(struct parser *parser);
+static struct node *NumericLiteral_parse(struct parser *parser);
+static struct node *StringLiteral_parse(struct parser *parser);
+static struct node *RegularExpressionLiteral_parse(struct parser *parser);
+static struct node *PrimaryExpression_parse(struct parser *parser);
+static struct node *ArrayLiteral_parse(struct parser *parser);
+static struct node *ObjectLiteral_parse(struct parser *parser);
+#if WITH_PARSER_CODEGEN
+static void Arguments_codegen(struct node *na, struct code_context *cc);
+#endif
+static int Arguments_isconst(struct node *na, 
+        struct SEE_interpreter *interp);
+static struct Arguments_node *Arguments_parse(struct parser *parser);
+static struct node *MemberExpression_parse(struct parser *parser);
+static struct node *LeftHandSideExpression_parse(struct parser *parser);
+static int Unary_isconst(struct node *na, struct SEE_interpreter *interp);
+static struct node *PostfixExpression_parse(struct parser *parser);
+static struct node *UnaryExpression_parse(struct parser *parser);
+static int Binary_isconst(struct node *na, struct SEE_interpreter *interp);
+static struct node *MultiplicativeExpression_parse(struct parser *parser);
+static struct node *AdditiveExpression_parse(struct parser *parser);
+static struct node *ShiftExpression_parse(struct parser *parser);
+static struct node *RelationalExpression_parse(struct parser *parser);
+static struct node *EqualityExpression_parse(struct parser *parser);
+static struct node *BitwiseANDExpression_parse(struct parser *parser);
+static struct node *BitwiseXORExpression_parse(struct parser *parser);
+static struct node *BitwiseORExpression_parse(struct parser *parser);
+static int LogicalANDExpression_isconst(struct node *na, 
+        struct SEE_interpreter *interp);
+static struct node *LogicalANDExpression_parse(struct parser *parser);
+static int LogicalORExpression_isconst(struct node *na, 
+        struct SEE_interpreter *interp);
+static struct node *LogicalORExpression_parse(struct parser *parser);
+static int ConditionalExpression_isconst(struct node *na, 
+        struct SEE_interpreter *interp);
+static struct node *ConditionalExpression_parse(struct parser *parser);
+static struct node *AssignmentExpression_parse(struct parser *parser);
+static struct node *Expression_parse(struct parser *parser);
+static struct node *Statement_parse(struct parser *parser);
+static struct node *Block_parse(struct parser *parser);
+static struct node *StatementList_parse(struct parser *parser);
+static struct node *VariableStatement_parse(struct parser *parser);
+static struct node *VariableDeclarationList_parse(struct parser *parser);
+static struct node *VariableDeclaration_parse(struct parser *parser);
+static struct node *EmptyStatement_parse(struct parser *parser);
+static struct node *ExpressionStatement_parse(struct parser *parser);
+static struct node *ExpressionStatement_make(struct SEE_interpreter *,
+	struct node *);
+static struct node *IfStatement_parse(struct parser *parser);
+static struct node *IterationStatement_parse(struct parser *parser);
+static struct node *ContinueStatement_parse(struct parser *parser);
+static struct node *BreakStatement_parse(struct parser *parser);
+static struct node *ReturnStatement_parse(struct parser *parser);
+static struct node *WithStatement_parse(struct parser *parser);
+static struct node *SwitchStatement_parse(struct parser *parser);
+static struct node *LabelledStatement_parse(struct parser *parser);
+static struct node *ThrowStatement_parse(struct parser *parser);
+static struct node *TryStatement_parse(struct parser *parser);
+static struct node *FunctionDeclaration_parse(struct parser *parser);
+static struct node *FunctionExpression_parse(struct parser *parser);
+static struct var *FormalParameterList_parse(struct parser *parser);
+static struct node *FunctionBody_parse(struct parser *parser);
+static struct node *FunctionBody_make(struct SEE_interpreter *, 
+	struct node *, int);
+static struct node *FunctionStatement_parse(struct parser *parser);
+static struct function *Program_parse(struct parser *parser);
+static struct node *SourceElements_make1(struct SEE_interpreter *,
+	struct node *);
 static struct node *SourceElements_parse(struct parser *parser);
 static int FunctionBody_isempty(struct SEE_interpreter *interp, 
         struct node *body);
 static void eval(struct SEE_context *context, struct SEE_object *thisobj, 
         int argc, struct SEE_value **argv, struct SEE_value *res);
+static void eval_functionbody(void *, struct SEE_context *, struct SEE_value *);
 
 #if WITH_PARSER_PRINT
 static void Literal_print(struct node *na, struct printer *printer);
@@ -1011,7 +1029,8 @@ static void patch_add_break(struct code_context *cc, struct patchables *p,
 #endif
 
 #if WITH_PARSER_CODEGEN
-static void cg_init(struct SEE_interpreter *interp, struct code_context *cc);
+static void cg_init(struct SEE_interpreter *, struct code_context *, int);
+static void cg_const_codegen(struct node *node, struct code_context *cc);
 static struct SEE_code *cg_fini(struct SEE_interpreter *interp,
 	struct code_context *cc, unsigned int maxstack);
 static void cg_block_enter(struct code_context *cc);
@@ -1022,9 +1041,13 @@ static int cg_var_is_in_scope(struct code_context *, struct SEE_string *);
 static void cg_var_set_scope(struct code_context *, struct SEE_string *, int);
 static int cg_var_set_all_scope(struct code_context *, int);
 #endif
-static void *make_body(struct parser *parser, struct node *node);
+
+static void *make_body(struct SEE_interpreter *, struct node *, int);
+static void const_evaluate(struct node *, struct SEE_interpreter *,
+	struct SEE_value *);
 
 #define CONTINUABLE 1
+#define NO_CONST    1
 
 /*------------------------------------------------------------
  * macros
@@ -1191,9 +1214,13 @@ static void *make_body(struct parser *parser, struct node *node);
 #ifndef NDEBUG
 #define NEW_NODE(t, nc)					\
 	((t *)new_node(parser, sizeof (t), nc, #nc))
+#define NEW_NODE_INTERNAL(i, t, nc)			\
+	((t *)new_node_internal(i, sizeof (t), nc, STR(empty_string), 0, #nc))
 #else
 #define NEW_NODE(t, nc)					\
 	((t *)new_node(parser, sizeof (t), nc, NULL))
+#define NEW_NODE_INTERNAL(i, t, nc)			\
+	((t *)new_node_internal(i, sizeof (t), nc, STR(empty_string), 0, NULL))
 #endif
 
 #ifdef NDEBUG
@@ -1274,8 +1301,14 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 
 #if WITH_PARSER_CODEGEN
 
-# define CODEGEN(node)					\
-	(*(node)->nodeclass->codegen)(node, cc)
+# define CODEGEN(node)	do {				\
+	if (!(cc)->no_const &&				\
+	    ISCONST(node, (cc)->code->interpreter) &&	\
+	    node->nodeclass != &Literal_nodeclass)	\
+		cg_const_codegen(node, cc);		\
+	else						\
+	    (*(node)->nodeclass->codegen)(node, cc);	\
+    } while (0)
 
 /* Call/construct operators */
 # define _CG_OP1(name, n) \
@@ -1351,7 +1384,7 @@ static struct node *cast_node(struct node *, struct nodeclass *,
 
 # define CG_STRING(str) do {		/* - | str */	\
 	struct SEE_value _cgtmp;			\
-	SEE_SET_STRING(&_cgtmp, SEE_intern(cc->code->interpreter, str));\
+	SEE_SET_STRING(&_cgtmp, str);\
 	CG_LITERAL(&_cgtmp);				\
   } while (0)
 
@@ -1416,6 +1449,31 @@ static struct node *cast_node(struct node *, struct nodeclass *,
  * line number as reported by the parser.
  */
 static struct node *
+new_node_internal(interp, sz, nc, filename, lineno, dbg_nc)
+	struct SEE_interpreter *interp;
+	int sz;
+	struct nodeclass *nc;
+	struct SEE_string *filename;
+	int lineno;
+	const char *dbg_nc;
+{
+	struct node *n;
+
+	n = (struct node *)SEE_malloc(interp, sz);
+	n->nodeclass = nc;
+	n->location.filename = filename;
+	n->location.lineno = lineno;
+	n->isconst_valid = 0;
+	n->isconst = 0;
+#if WITH_PARSER_CODEGEN
+	n->is = 0;
+	n->maxstack = 0;
+#endif
+
+	return n;
+}
+
+static struct node *
 new_node(parser, sz, nc, dbg_nc)
 	struct parser *parser;
 	int sz;
@@ -1424,23 +1482,13 @@ new_node(parser, sz, nc, dbg_nc)
 {
 	struct node *n;
 
-	n = (struct node *)SEE_malloc(parser->interpreter, sz);
-	n->nodeclass = nc;
-	n->location.filename = NEXT_FILENAME;
-	n->location.lineno = NEXT_LINENO;
-	n->isconst_valid = 0;
-	n->isconst = 0;
-#if WITH_PARSER_CODEGEN
-	n->is = 0;
-	n->maxstack = 0;
-#endif
-
+	n = new_node_internal(parser->interpreter, sz, nc, 
+	    NEXT_FILENAME, NEXT_LINENO, dbg_nc);
 #ifndef NDEBUG
 	if (SEE_parse_debug) 
 		dprintf("parse: %p %s (next=%s)\n", 
 			n, dbg_nc, SEE_tokenname(NEXT));
 #endif
-
 	return n;
 }
 
@@ -1780,15 +1828,17 @@ patch_add_break(cc, p, pa)
 
 #if WITH_PARSER_CODEGEN
 static void
-cg_init(interp, cc)
+cg_init(interp, cc, no_const)
 	struct SEE_interpreter *interp;
 	struct code_context *cc;
+	int no_const;
 {
 	cc->code = (*SEE_system.code_alloc)(interp);
 	cc->patchables = NULL;
 	cc->block_depth = 0;
 	cc->max_block_depth = 0;
 	cc->in_var_scope = 1;
+	cc->no_const = no_const;
 	SEE_GROW_INIT(interp, &cc->gvarscope, cc->varscope, cc->nvarscope);
 }
 
@@ -1807,6 +1857,32 @@ cg_fini(interp, cc, maxstack)
 	(*co->code_class->close)(co);
 	cc->code = NULL;
 	return co;
+}
+
+/*
+ * Evaluates a (constant) expression node, and then generates a LITERAL
+ * instruction.
+ */
+static void
+cg_const_codegen(node, cc)
+	struct node *node;
+	struct code_context *cc;
+{
+	struct SEE_value value;
+
+	const_evaluate(node, cc->code->interpreter, &value);
+	CG_LITERAL(&value);
+	switch (SEE_VALUE_GET_TYPE(&value)) {
+	case SEE_UNDEFINED: node->is = CG_TYPE_UNDEFINED; break;
+	case SEE_NULL:	    node->is = CG_TYPE_NULL;	  break;
+	case SEE_BOOLEAN:   node->is = CG_TYPE_BOOLEAN;   break;
+	case SEE_NUMBER:    node->is = CG_TYPE_NUMBER;    break;
+	case SEE_STRING:    node->is = CG_TYPE_STRING;    break;
+	case SEE_OBJECT:    node->is = CG_TYPE_OBJECT;    break;
+	case SEE_REFERENCE: node->is = CG_TYPE_REFERENCE; break;
+	default:	    node->is = 0;
+	}
+	node->maxstack = 1;
 }
 
 /* Called when entering a block. Increments the block depth */
@@ -1946,23 +2022,24 @@ cg_var_set_all_scope(cc, in_scope)
 }
 #endif /* WITH_PARSER_CODEGEN */
 
-/* Returns a body suitable for use by SEE_eval_functionbody() */
+/* Returns a body suitable for use by eval_functionbody() */
 static void *
-make_body(parser, node)
-	struct parser *parser;
+make_body(interp, node, no_const)
+	struct SEE_interpreter *interp;
 	struct node *node;
+	int no_const;
 {
 #if WITH_PARSER_CODEGEN
 	struct code_context ccstorage, *cc;
 
 	/* If there is no body, return NULL */
-	if (FunctionBody_isempty(parser->interpreter, node))
+	if (FunctionBody_isempty(interp, node))
 	    return NULL;
 
 	cc = &ccstorage;
-	cg_init(parser->interpreter, cc);
+	cg_init(interp, cc, no_const);
 	CODEGEN(node);
-	return cg_fini(parser->interpreter, cc, node->maxstack);
+	return cg_fini(interp, cc, node->maxstack);
 #else
 	return node;
 #endif
@@ -2010,6 +2087,7 @@ lookahead(parser, n)
 	return token;
 }
 
+#if WITH_PARSER_EVAL
 /*
  * Generates a trace event, giving the host application an opportunity to
  * step or trace execution.
@@ -2059,7 +2137,10 @@ traceback_leave(interp, old_tb)
 {
 	interp->traceback = old_tb;
 }
+#endif
 
+
+#if WITH_PARSER_EVAL
 /*------------------------------------------------------------
  * GetValue/SetValue
  */
@@ -2104,6 +2185,7 @@ PutValue(context, v, w)
 		target = interp->Global;
 	SEE_OBJECT_PUT(interp, target, v->u.reference.property, w, 0);
 }
+#endif
 
 /*------------------------------------------------------------
  * Error handling
@@ -2185,6 +2267,7 @@ struct Literal_node {
 	struct SEE_value value;
 };
 
+#if WITH_PARSER_EVAL
 static void
 Literal_eval(na, context, res)
 	struct node *na; /* (struct Literal_node) */
@@ -2194,6 +2277,7 @@ Literal_eval(na, context, res)
 	struct Literal_node *n = CAST_NODE(na, Literal);
 	SEE_VALUE_COPY(res, &n->value);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2241,9 +2325,9 @@ Literal_print(na, printer)
 
 static struct nodeclass Literal_nodeclass 
 	= { BASECLASS
-	    Literal_eval, 
+	    PARSER_EVAL(Literal_eval)
 	    PARSER_CODEGEN(Literal_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Literal_print)
 	    PARSER_VISIT(0)
 	    Always_isconst };
@@ -2328,6 +2412,7 @@ struct StringLiteral_node {
 	struct SEE_string *string;
 };
 
+#if WITH_PARSER_EVAL
 static void
 StringLiteral_eval(na, context, res)
 	struct node *na; /* (struct StringLiteral_node) */
@@ -2337,6 +2422,7 @@ StringLiteral_eval(na, context, res)
 	struct StringLiteral_node *n = CAST_NODE(na, StringLiteral);
 	SEE_SET_STRING(res, n->string);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2390,9 +2476,9 @@ StringLiteral_print(na, printer)
 
 static struct nodeclass StringLiteral_nodeclass 
 	= { BASECLASS
-	    StringLiteral_eval, 
+	    PARSER_EVAL(StringLiteral_eval)
 	    PARSER_CODEGEN(StringLiteral_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(StringLiteral_print)
 	    PARSER_VISIT(0)
 	    Always_isconst };
@@ -2422,6 +2508,7 @@ struct RegularExpressionLiteral_node {
 	struct SEE_value *argv[2];
 };
 
+#if WITH_PARSER_EVAL
 static void
 RegularExpressionLiteral_eval(na, context, res)
 	struct node *na; /* (struct RegularExpressionLiteral_node) */
@@ -2441,6 +2528,7 @@ RegularExpressionLiteral_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_RETURN);
         traceback_leave(interp, tb);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2484,9 +2572,9 @@ RegularExpressionLiteral_print(na, printer)
 
 static struct nodeclass RegularExpressionLiteral_nodeclass
 	= { BASECLASS
-	    RegularExpressionLiteral_eval, 
+	    PARSER_EVAL(RegularExpressionLiteral_eval)
 	    PARSER_CODEGEN(RegularExpressionLiteral_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RegularExpressionLiteral_print)
 	    PARSER_VISIT(0)
 	    0 };
@@ -2541,6 +2629,7 @@ RegularExpressionLiteral_parse(parser)
  */
 
 /* 11.1.1 */
+#if WITH_PARSER_EVAL
 static void
 PrimaryExpression_this_eval(n, context, res)
 	struct node *n;
@@ -2550,6 +2639,7 @@ PrimaryExpression_this_eval(n, context, res)
 	SEE_ASSERT(context->interpreter, context->thisobj != NULL);
 	SEE_SET_OBJECT(res, context->thisobj);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2577,9 +2667,9 @@ PrimaryExpression_this_print(n, printer)
 
 static struct nodeclass PrimaryExpression_this_nodeclass
 	= { BASECLASS
-	    PrimaryExpression_this_eval, 
+	    PARSER_EVAL(PrimaryExpression_this_eval)
 	    PARSER_CODEGEN(PrimaryExpression_this_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(PrimaryExpression_this_print)
 	    PARSER_VISIT(0)
 	    0 };
@@ -2591,6 +2681,7 @@ struct PrimaryExpression_ident_node {
 };
 
 /* 11.1.2 */
+#if WITH_PARSER_EVAL
 static void
 PrimaryExpression_ident_eval(na, context, res)
 	struct node *na; /* (struct PrimaryExpression_ident_node) */
@@ -2601,6 +2692,7 @@ PrimaryExpression_ident_eval(na, context, res)
 		CAST_NODE(na, PrimaryExpression_ident);
 	SEE_scope_lookup(context->interpreter, context->scope, n->string, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2638,9 +2730,9 @@ PrimaryExpression_ident_print(na, printer)
 
 static struct nodeclass PrimaryExpression_ident_nodeclass
 	= { BASECLASS
-	    PrimaryExpression_ident_eval, 
+	    PARSER_EVAL(PrimaryExpression_ident_eval)
 	    PARSER_CODEGEN(PrimaryExpression_ident_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(PrimaryExpression_ident_print)
 	    PARSER_VISIT(0)
 	    0 };
@@ -2715,6 +2807,7 @@ struct ArrayLiteral_node {
 };
 
 /* 11.1.4 */
+#if WITH_PARSER_EVAL
 static void
 ArrayLiteral_eval(na, context, res)
 	struct node *na; /* (struct ArrayLiteral_node) */
@@ -2749,6 +2842,7 @@ ArrayLiteral_eval(na, context, res)
 	SEE_SET_NUMBER(&elv, n->length);
 	SEE_OBJECT_PUT(interp, res->u.object, STR(length), &elv, 0);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2838,9 +2932,9 @@ ArrayLiteral_visit(na, v, va)
 
 static struct nodeclass ArrayLiteral_nodeclass 
 	= { BASECLASS
-	    ArrayLiteral_eval, 
+	    PARSER_EVAL(ArrayLiteral_eval)
 	    PARSER_CODEGEN(ArrayLiteral_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ArrayLiteral_print)
 	    PARSER_VISIT(ArrayLiteral_visit)
 	    0 };
@@ -2908,6 +3002,7 @@ struct ObjectLiteral_node {
 };
 
 /* 11.1.5 */
+#if WITH_PARSER_EVAL
 static void
 ObjectLiteral_eval(na, context, res)
 	struct node *na; /* (struct ObjectLiteral_node) */
@@ -2928,6 +3023,7 @@ ObjectLiteral_eval(na, context, res)
 	}
 	SEE_SET_OBJECT(res, o);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -2999,9 +3095,9 @@ ObjectLiteral_visit(na, v, va)
 
 static struct nodeclass ObjectLiteral_nodeclass = 
 	{ BASECLASS
-	  ObjectLiteral_eval,
+	  PARSER_EVAL(ObjectLiteral_eval)
 	  PARSER_CODEGEN(ObjectLiteral_codegen)
-	  0,
+	  PARSER_EVAL(0)
 	  PARSER_PRINT(ObjectLiteral_print)
 	  PARSER_VISIT(ObjectLiteral_visit)
 	  0 };
@@ -3123,6 +3219,7 @@ struct Arguments_node {				/* declare for early use */
 };
 
 /* 11.2.4 */
+#if WITH_PARSER_EVAL
 static void
 Arguments_eval(na, context, res)
 	struct node *na; /* (struct Arguments_node) */
@@ -3139,6 +3236,7 @@ Arguments_eval(na, context, res)
 		res++;
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3215,9 +3313,9 @@ Arguments_print(na, printer)
 
 static struct nodeclass Arguments_nodeclass 
 	= { BASECLASS
-	    Arguments_eval, 
+	    PARSER_EVAL(Arguments_eval)
 	    PARSER_CODEGEN(Arguments_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Arguments_print)
 	    PARSER_VISIT(Arguments_visit)
 	    Arguments_isconst };
@@ -3256,6 +3354,7 @@ struct MemberExpression_new_node {
 };
 
 /* 11.2.2 */
+#if WITH_PARSER_EVAL
 static void
 MemberExpression_new_eval(na, context, res)
 	struct node *na; /* (struct MemberExpression_new_node) */
@@ -3296,6 +3395,7 @@ MemberExpression_new_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_RETURN);
 	traceback_leave(interp, tb);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3360,9 +3460,9 @@ MemberExpression_new_visit(na, v, va)
 
 static struct nodeclass MemberExpression_new_nodeclass = 
 	{ BASECLASS
-	  MemberExpression_new_eval,
+	  PARSER_EVAL(MemberExpression_new_eval)
 	  PARSER_CODEGEN(MemberExpression_new_codegen)
-	  0, 
+	  PARSER_EVAL(0)
 	  PARSER_PRINT(MemberExpression_new_print)
 	  PARSER_VISIT(MemberExpression_new_visit)
 	  0 };
@@ -3375,6 +3475,7 @@ struct MemberExpression_dot_node {
 };
 
 /* 11.2.1 */
+#if WITH_PARSER_EVAL
 static void
 MemberExpression_dot_eval(na, context, res)
 	struct node *na; /* (struct MemberExpression_dot_node) */
@@ -3391,6 +3492,7 @@ MemberExpression_dot_eval(na, context, res)
 	SEE_ToObject(interp, &r2, &r5);
 	_SEE_SET_REFERENCE(res, r5.u.object, n->name);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3444,9 +3546,9 @@ MemberExpression_dot_visit(na, v, va)
 
 static struct nodeclass MemberExpression_dot_nodeclass
 	= { BASECLASS
-	    MemberExpression_dot_eval, 
+	    PARSER_EVAL(MemberExpression_dot_eval)
 	    PARSER_CODEGEN(MemberExpression_dot_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(MemberExpression_dot_print)
 	    PARSER_VISIT(MemberExpression_dot_visit)
 	    0 };
@@ -3458,6 +3560,7 @@ struct MemberExpression_bracket_node {
 };
 
 /* 11.2.1 */
+#if WITH_PARSER_EVAL
 static void
 MemberExpression_bracket_eval(na, context, res)
 	struct node *na; /* (struct MemberExpression_bracket_node) */
@@ -3477,6 +3580,7 @@ MemberExpression_bracket_eval(na, context, res)
 	SEE_ToString(interp, &r4, &r6);
 	_SEE_SET_REFERENCE(res, r5.u.object, SEE_intern(interp, r6.u.string));
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3540,9 +3644,9 @@ MemberExpression_bracket_visit(na, v, va)
 
 static struct nodeclass MemberExpression_bracket_nodeclass
 	= { BASECLASS
-	    MemberExpression_bracket_eval, 
+	    PARSER_EVAL(MemberExpression_bracket_eval)
 	    PARSER_CODEGEN(MemberExpression_bracket_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(MemberExpression_bracket_print)
 	    PARSER_VISIT(MemberExpression_bracket_visit) 
 	    0 };
@@ -3610,11 +3714,12 @@ struct CallExpression_node {
 	struct Arguments_node *args;
 };
 
+/* 11.2.3 */
+#if WITH_PARSER_EVAL
 static void CallExpression_eval_common(struct SEE_context *, 
 	struct SEE_throw_location *, struct SEE_value *, int, 
 	struct SEE_value **, struct SEE_value *);
 
-/* 11.2.3 */
 static void
 CallExpression_eval(na, context, res)
 	struct node *na; /* (struct CallExpression_node) */
@@ -3690,6 +3795,7 @@ CallExpression_eval_common(context, loc, r1, argc, argv, res)
 	TRACE(loc, context, SEE_TRACE_RETURN);
         traceback_leave(interp, tb);
 }
+#endif /* WITH_PARSER_EVAL */
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3737,9 +3843,9 @@ CallExpression_visit(na, v, va)
 
 static struct nodeclass CallExpression_nodeclass
 	= { BASECLASS
-	    CallExpression_eval, 
+	    PARSER_EVAL(CallExpression_eval)
 	    PARSER_CODEGEN(CallExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(CallExpression_print) 
 	    PARSER_VISIT(CallExpression_visit)
 	    0 };
@@ -3857,14 +3963,15 @@ Unary_isconst(na, interp)
 
 static struct nodeclass Unary_nodeclass
 	= { BASECLASS
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_CODEGEN(0)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Unary_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
 /* 11.3.1 */
+#if WITH_PARSER_EVAL
 static void
 PostfixExpression_inc_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -3880,6 +3987,7 @@ PostfixExpression_inc_eval(na, context, res)
 	SEE_SET_NUMBER(&r3, res->u.number + 1);
 	PutValue(context, &r1, &r3);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -3959,15 +4067,16 @@ PostfixExpression_inc_print(na, printer)
 
 static struct nodeclass PostfixExpression_inc_nodeclass
 	= { SUPERCLASS(Unary)
-	    PostfixExpression_inc_eval, 
+	    PARSER_EVAL(PostfixExpression_inc_eval)
 	    PARSER_CODEGEN(PostfixExpression_inc_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(PostfixExpression_inc_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
 
 
 /* 11.3.2 */
+#if WITH_PARSER_EVAL
 static void
 PostfixExpression_dec_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -3983,6 +4092,7 @@ PostfixExpression_dec_eval(na, context, res)
 	SEE_SET_NUMBER(&r3, res->u.number - 1);
 	PutValue(context, &r1, &r3);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4025,9 +4135,9 @@ PostfixExpression_dec_print(na, printer)
 
 static struct nodeclass PostfixExpression_dec_nodeclass
 	= { SUPERCLASS(Unary)
-	    PostfixExpression_dec_eval, 
+	    PARSER_EVAL(PostfixExpression_dec_eval)
 	    PARSER_CODEGEN(PostfixExpression_dec_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(PostfixExpression_dec_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
@@ -4072,10 +4182,11 @@ PostfixExpression_parse(parser)
  *	;
  */
 
+/* 11.4.1 */
+#if WITH_PARSER_EVAL
 static void UnaryExpression_delete_eval_common(struct SEE_context *,
 	struct SEE_value *, struct SEE_value *);
 
-/* 11.4.1 */
 static void
 UnaryExpression_delete_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4112,6 +4223,7 @@ UnaryExpression_delete_eval_common(context, r1, res)
 	else
 		SEE_SET_BOOLEAN(res, 0);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4144,15 +4256,16 @@ UnaryExpression_delete_print(na, printer)
 
 static struct nodeclass UnaryExpression_delete_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_delete_eval, 
+	    PARSER_EVAL(UnaryExpression_delete_eval)
 	    PARSER_CODEGEN(UnaryExpression_delete_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_delete_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
 
 /* 11.4.2 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_void_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4166,6 +4279,7 @@ UnaryExpression_void_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	SEE_SET_UNDEFINED(res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4202,17 +4316,18 @@ UnaryExpression_void_print(na, printer)
 
 static struct nodeclass UnaryExpression_void_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_void_eval, 
+	    PARSER_EVAL(UnaryExpression_void_eval)
 	    PARSER_CODEGEN(UnaryExpression_void_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_void_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
+/* 11.4.3 */
+#if WITH_PARSER_EVAL
 static void UnaryExpression_typeof_eval_common(struct SEE_context *,
 	struct SEE_value *, struct SEE_value *);
 
-/* 11.4.3 */
 static void
 UnaryExpression_typeof_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4255,6 +4370,7 @@ UnaryExpression_typeof_eval_common(context, r1, res)
 	}
 	SEE_SET_STRING(res, s);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4287,14 +4403,15 @@ UnaryExpression_typeof_print(na, printer)
 
 static struct nodeclass UnaryExpression_typeof_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_typeof_eval, 
+	    PARSER_EVAL(UnaryExpression_typeof_eval)
 	    PARSER_CODEGEN(UnaryExpression_typeof_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_typeof_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
 /* 11.4.4 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_preinc_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4310,6 +4427,7 @@ UnaryExpression_preinc_eval(na, context, res)
 	res->u.number++;
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4351,15 +4469,16 @@ UnaryExpression_preinc_print(na, printer)
 
 static struct nodeclass UnaryExpression_preinc_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_preinc_eval, 
+	    PARSER_EVAL(UnaryExpression_preinc_eval)
 	    PARSER_CODEGEN(UnaryExpression_preinc_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_preinc_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
 
 
 /* 11.4.5 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_predec_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4375,6 +4494,7 @@ UnaryExpression_predec_eval(na, context, res)
 	res->u.number--;
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4416,15 +4536,16 @@ UnaryExpression_predec_print(na, printer)
 
 static struct nodeclass UnaryExpression_predec_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_predec_eval, 
+	    PARSER_EVAL(UnaryExpression_predec_eval)
 	    PARSER_CODEGEN(UnaryExpression_predec_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_predec_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
 
 
 /* 11.4.6 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_plus_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4438,6 +4559,7 @@ UnaryExpression_plus_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	SEE_ToNumber(context->interpreter, &r2, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4473,15 +4595,16 @@ UnaryExpression_plus_print(na, printer)
 
 static struct nodeclass UnaryExpression_plus_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_plus_eval, 
+	    PARSER_EVAL(UnaryExpression_plus_eval)
 	    PARSER_CODEGEN(UnaryExpression_plus_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_plus_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
 
 /* 11.4.7 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_minus_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4496,6 +4619,7 @@ UnaryExpression_minus_eval(na, context, res)
 	SEE_ToNumber(context->interpreter, &r2, res);
 	res->u.number = -(res->u.number);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4532,17 +4656,18 @@ UnaryExpression_minus_print(na, printer)
 
 static struct nodeclass UnaryExpression_minus_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_minus_eval, 
+	    PARSER_EVAL(UnaryExpression_minus_eval)
 	    PARSER_CODEGEN(UnaryExpression_minus_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_minus_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
+/* 11.4.8 */
+#if WITH_PARSER_EVAL
 static void UnaryExpression_inv_eval_common(struct SEE_context *,
 	struct SEE_value *, struct SEE_value *);
 
-/* 11.4.8 */
 static void
 UnaryExpression_inv_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4567,6 +4692,7 @@ UnaryExpression_inv_eval_common(context, r2, res)
 	r3 = SEE_ToInt32(context->interpreter, r2);
 	SEE_SET_NUMBER(res, ~r3);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4601,15 +4727,16 @@ UnaryExpression_inv_print(na, printer)
 
 static struct nodeclass UnaryExpression_inv_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_inv_eval, 
+	    PARSER_EVAL(UnaryExpression_inv_eval)
 	    PARSER_CODEGEN(UnaryExpression_inv_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_inv_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
 
 
 /* 11.4.9 */
+#if WITH_PARSER_EVAL
 static void
 UnaryExpression_not_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -4624,6 +4751,7 @@ UnaryExpression_not_eval(na, context, res)
 	SEE_ToBoolean(context->interpreter, &r2, &r3);
 	SEE_SET_BOOLEAN(res, !r3.u.boolean);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4660,9 +4788,9 @@ UnaryExpression_not_print(na, printer)
 
 static struct nodeclass UnaryExpression_not_nodeclass
 	= { SUPERCLASS(Unary)
-	    UnaryExpression_not_eval, 
+	    PARSER_EVAL(UnaryExpression_not_eval)
 	    PARSER_CODEGEN(UnaryExpression_not_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(UnaryExpression_not_print)
 	    PARSER_VISIT(Unary_visit)
 	    Unary_isconst };
@@ -4765,14 +4893,15 @@ Binary_isconst(na, interp)
 
 static struct nodeclass Binary_nodeclass
 	= { BASECLASS
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_CODEGEN(0)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Binary_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 /* 11.5.1 */
+#if WITH_PARSER_EVAL
 static void
 MultiplicativeExpression_mul_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -4800,6 +4929,7 @@ MultiplicativeExpression_mul_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	MultiplicativeExpression_mul_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4862,15 +4992,16 @@ MultiplicativeExpression_mul_print(na, printer)
 
 static struct nodeclass MultiplicativeExpression_mul_nodeclass
 	= { SUPERCLASS(Binary)
-	    MultiplicativeExpression_mul_eval, 
+	    PARSER_EVAL(MultiplicativeExpression_mul_eval)
 	    PARSER_CODEGEN(MultiplicativeExpression_mul_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(MultiplicativeExpression_mul_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.5.2 */
+#if WITH_PARSER_EVAL
 static void
 MultiplicativeExpression_div_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -4898,6 +5029,7 @@ MultiplicativeExpression_div_eval(na, context, res)
 	GetValue(context, &r3, &r4);
         MultiplicativeExpression_div_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4928,15 +5060,16 @@ MultiplicativeExpression_div_print(na, printer)
 
 static struct nodeclass MultiplicativeExpression_div_nodeclass
 	= { SUPERCLASS(Binary)
-	    MultiplicativeExpression_div_eval, 
+	    PARSER_EVAL(MultiplicativeExpression_div_eval)
 	    PARSER_CODEGEN(MultiplicativeExpression_div_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(MultiplicativeExpression_div_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.5.3 */
+#if WITH_PARSER_EVAL
 static void
 MultiplicativeExpression_mod_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -4964,6 +5097,7 @@ MultiplicativeExpression_mod_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	MultiplicativeExpression_mod_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -4994,9 +5128,9 @@ MultiplicativeExpression_mod_print(na, printer)
 
 static struct nodeclass MultiplicativeExpression_mod_nodeclass
 	= { SUPERCLASS(Binary)
-	    MultiplicativeExpression_mod_eval, 
+	    PARSER_EVAL(MultiplicativeExpression_mod_eval)
 	    PARSER_CODEGEN(MultiplicativeExpression_mod_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(MultiplicativeExpression_mod_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -5045,6 +5179,7 @@ MultiplicativeExpression_parse(parser)
  */
 
 /* 11.6.1 */
+#if WITH_PARSER_EVAL
 static void
 AdditiveExpression_add_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -5086,6 +5221,7 @@ AdditiveExpression_add_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	AdditiveExpression_add_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5132,15 +5268,16 @@ AdditiveExpression_add_print(na, printer)
 
 static struct nodeclass AdditiveExpression_add_nodeclass
 	= { SUPERCLASS(Binary)
-	    AdditiveExpression_add_eval, 
+	    PARSER_EVAL(AdditiveExpression_add_eval)
 	    PARSER_CODEGEN(AdditiveExpression_add_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AdditiveExpression_add_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.6.2 */
+#if WITH_PARSER_EVAL
 static void
 AdditiveExpression_sub_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -5168,6 +5305,7 @@ AdditiveExpression_sub_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	AdditiveExpression_sub_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5208,9 +5346,9 @@ AdditiveExpression_sub_print(na, printer)
 
 static struct nodeclass AdditiveExpression_sub_nodeclass
 	= { SUPERCLASS(Binary)
-	    AdditiveExpression_sub_eval, 
+	    PARSER_EVAL(AdditiveExpression_sub_eval)
 	    PARSER_CODEGEN(AdditiveExpression_sub_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AdditiveExpression_sub_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -5257,6 +5395,7 @@ AdditiveExpression_parse(parser)
  */
 
 /* 11.7.1 */
+#if WITH_PARSER_EVAL
 static void
 ShiftExpression_lshift_common(r2, bn, context, res)
 	struct SEE_value *r2, *res;
@@ -5287,6 +5426,7 @@ ShiftExpression_lshift_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	ShiftExpression_lshift_common(&r2, n->b, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5321,15 +5461,16 @@ ShiftExpression_lshift_print(na, printer)
 
 static struct nodeclass ShiftExpression_lshift_nodeclass
 	= { SUPERCLASS(Binary)
-	    ShiftExpression_lshift_eval, 
+	    PARSER_EVAL(ShiftExpression_lshift_eval)
 	    PARSER_CODEGEN(ShiftExpression_lshift_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ShiftExpression_lshift_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.7.2 */
+#if WITH_PARSER_EVAL
 static void
 ShiftExpression_rshift_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -5358,6 +5499,7 @@ ShiftExpression_rshift_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	ShiftExpression_rshift_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5392,15 +5534,16 @@ ShiftExpression_rshift_print(na, printer)
 
 static struct nodeclass ShiftExpression_rshift_nodeclass
 	= { SUPERCLASS(Binary)
-	    ShiftExpression_rshift_eval, 
+	    PARSER_EVAL(ShiftExpression_rshift_eval)
 	    PARSER_CODEGEN(ShiftExpression_rshift_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ShiftExpression_rshift_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.7.3 */
+#if WITH_PARSER_EVAL
 static void
 ShiftExpression_urshift_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -5428,6 +5571,7 @@ ShiftExpression_urshift_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	ShiftExpression_urshift_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5463,9 +5607,9 @@ ShiftExpression_urshift_print(na, printer)
 
 static struct nodeclass ShiftExpression_urshift_nodeclass
 	= { SUPERCLASS(Binary)
-	    ShiftExpression_urshift_eval, 
+	    PARSER_EVAL(ShiftExpression_urshift_eval)
 	    PARSER_CODEGEN(ShiftExpression_urshift_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ShiftExpression_urshift_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -5582,6 +5726,7 @@ RelationalExpression_sub(interp, x, y, res)
 }
 
 /* 11.8.1 < */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_lt_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5599,6 +5744,7 @@ RelationalExpression_lt_eval(na, context, res)
 	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5632,15 +5778,16 @@ RelationalExpression_lt_print(na, printer)
 
 static struct nodeclass RelationalExpression_lt_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_lt_eval, 
+	    PARSER_EVAL(RelationalExpression_lt_eval)
 	    PARSER_CODEGEN(RelationalExpression_lt_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_lt_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.8.2 > */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_gt_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5658,6 +5805,7 @@ RelationalExpression_gt_eval(na, context, res)
 	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5691,15 +5839,16 @@ RelationalExpression_gt_print(na, printer)
 
 static struct nodeclass RelationalExpression_gt_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_gt_eval, 
+	    PARSER_EVAL(RelationalExpression_gt_eval)
 	    PARSER_CODEGEN(RelationalExpression_gt_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_gt_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.8.3 <= */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_le_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5719,6 +5868,7 @@ RelationalExpression_le_eval(na, context, res)
 	else
 		SEE_SET_BOOLEAN(res, !r5.u.boolean);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5753,15 +5903,16 @@ RelationalExpression_le_print(na, printer)
 
 static struct nodeclass RelationalExpression_le_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_le_eval, 
+	    PARSER_EVAL(RelationalExpression_le_eval)
 	    PARSER_CODEGEN(RelationalExpression_le_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_le_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.8.4 >= */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_ge_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5781,6 +5932,7 @@ RelationalExpression_ge_eval(na, context, res)
 	else
 		SEE_SET_BOOLEAN(res, !r5.u.boolean);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5815,15 +5967,16 @@ RelationalExpression_ge_print(na, printer)
 
 static struct nodeclass RelationalExpression_ge_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_ge_eval, 
+	    PARSER_EVAL(RelationalExpression_ge_eval)
 	    PARSER_CODEGEN(RelationalExpression_ge_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_ge_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.8.6 */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_instanceof_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5845,6 +5998,7 @@ RelationalExpression_instanceof_eval(na, context, res)
 	r7 = SEE_object_instanceof(interp, &r2, r4.u.object);
 	SEE_SET_BOOLEAN(res, r7);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5878,15 +6032,16 @@ RelationalExpression_instanceof_print(na, printer)
 
 static struct nodeclass RelationalExpression_instanceof_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_instanceof_eval, 
+	    PARSER_EVAL(RelationalExpression_instanceof_eval)
 	    PARSER_CODEGEN(RelationalExpression_instanceof_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_instanceof_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
 /* 11.8.7 */
+#if WITH_PARSER_EVAL
 static void
 RelationalExpression_in_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -5910,6 +6065,7 @@ RelationalExpression_in_eval(na, context, res)
 		SEE_intern(interp, r6.u.string));
 	SEE_SET_BOOLEAN(res, r7);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -5951,9 +6107,9 @@ RelationalExpression_in_print(na, printer)
 
 static struct nodeclass RelationalExpression_in_nodeclass
 	= { SUPERCLASS(Binary)
-	    RelationalExpression_in_eval, 
+	    PARSER_EVAL(RelationalExpression_in_eval)
 	    PARSER_CODEGEN(RelationalExpression_in_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(RelationalExpression_in_print)
 	    PARSER_VISIT(Binary_visit) 
 	    Binary_isconst };
@@ -6093,6 +6249,7 @@ EqualityExpression_eq(interp, x, y, res)
 /*
  * 19.9.6 Strict equality function
  */
+#if WITH_PARSER_EVAL
 static void
 EqualityExpression_seq(context, x, y, res)
 	struct SEE_context *context;
@@ -6145,6 +6302,7 @@ EqualityExpression_eq_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	EqualityExpression_eq(context->interpreter, &r4, &r2, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6179,14 +6337,15 @@ EqualityExpression_eq_print(na, printer)
 
 static struct nodeclass EqualityExpression_eq_nodeclass
 	= { SUPERCLASS(Binary)
-	    EqualityExpression_eq_eval, 
+	    PARSER_EVAL(EqualityExpression_eq_eval)
 	    PARSER_CODEGEN(EqualityExpression_eq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(EqualityExpression_eq_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
+#if WITH_PARSER_EVAL
 static void
 EqualityExpression_ne_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -6203,6 +6362,7 @@ EqualityExpression_ne_eval(na, context, res)
 	EqualityExpression_eq(context->interpreter, &r4, &r2, &t);
 	SEE_SET_BOOLEAN(res, !t.u.boolean);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6238,14 +6398,15 @@ EqualityExpression_ne_print(na, printer)
 
 static struct nodeclass EqualityExpression_ne_nodeclass
 	= { SUPERCLASS(Binary)
-	    EqualityExpression_ne_eval, 
+	    PARSER_EVAL(EqualityExpression_ne_eval)
 	    PARSER_CODEGEN(EqualityExpression_ne_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(EqualityExpression_ne_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
+#if WITH_PARSER_EVAL
 static void
 EqualityExpression_seq_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -6261,6 +6422,7 @@ EqualityExpression_seq_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	EqualityExpression_seq(context, &r4, &r2, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6296,14 +6458,15 @@ EqualityExpression_seq_print(na, printer)
 
 static struct nodeclass EqualityExpression_seq_nodeclass
 	= { SUPERCLASS(Binary)
-	    EqualityExpression_seq_eval, 
+	    PARSER_EVAL(EqualityExpression_seq_eval)
 	    PARSER_CODEGEN(EqualityExpression_seq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(EqualityExpression_seq_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
 
 
+#if WITH_PARSER_EVAL
 static void
 EqualityExpression_sne_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -6320,6 +6483,7 @@ EqualityExpression_sne_eval(na, context, res)
 	EqualityExpression_seq(context, &r4, &r2, &r5);
 	SEE_SET_BOOLEAN(res, !r5.u.boolean);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6356,9 +6520,9 @@ EqualityExpression_sne_print(na, printer)
 
 static struct nodeclass EqualityExpression_sne_nodeclass
 	= { SUPERCLASS(Binary)
-	    EqualityExpression_sne_eval, 
+	    PARSER_EVAL(EqualityExpression_sne_eval)
 	    PARSER_CODEGEN(EqualityExpression_sne_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(EqualityExpression_sne_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -6415,6 +6579,7 @@ EqualityExpression_parse(parser)
  */
 
 /* 11.10 */
+#if WITH_PARSER_EVAL
 static void
 BitwiseANDExpression_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -6442,6 +6607,7 @@ BitwiseANDExpression_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	BitwiseANDExpression_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6475,9 +6641,9 @@ BitwiseANDExpression_print(na, printer)
 
 static struct nodeclass BitwiseANDExpression_nodeclass
 	= { SUPERCLASS(Binary)
-	    BitwiseANDExpression_eval, 
+	    PARSER_EVAL(BitwiseANDExpression_eval)
 	    PARSER_CODEGEN(BitwiseANDExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(BitwiseANDExpression_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -6515,6 +6681,7 @@ BitwiseANDExpression_parse(parser)
  */
 
 /* 11.10 */
+#if WITH_PARSER_EVAL
 static void
 BitwiseXORExpression_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -6542,6 +6709,7 @@ BitwiseXORExpression_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	BitwiseXORExpression_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6575,9 +6743,9 @@ BitwiseXORExpression_print(na, printer)
 
 static struct nodeclass BitwiseXORExpression_nodeclass
 	= { SUPERCLASS(Binary)
-	    BitwiseXORExpression_eval, 
+	    PARSER_EVAL(BitwiseXORExpression_eval)
 	    PARSER_CODEGEN(BitwiseXORExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(BitwiseXORExpression_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -6615,6 +6783,7 @@ BitwiseXORExpression_parse(parser)
  */
 
 /* 11.10 */
+#if WITH_PARSER_EVAL
 static void
 BitwiseORExpression_common(r2, r4, context, res)
 	struct SEE_value *r2, *r4, *res;
@@ -6642,6 +6811,7 @@ BitwiseORExpression_eval(na, context, res)
 	GetValue(context, &r3, &r4);
 	BitwiseORExpression_common(&r2, &r4, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6675,9 +6845,9 @@ BitwiseORExpression_print(na, printer)
 
 static struct nodeclass BitwiseORExpression_nodeclass
 	= { SUPERCLASS(Binary)
-	    BitwiseORExpression_eval, 
+	    PARSER_EVAL(BitwiseORExpression_eval)
 	    PARSER_CODEGEN(BitwiseORExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(BitwiseORExpression_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -6716,6 +6886,7 @@ BitwiseORExpression_parse(parser)
  *	;
  */
 
+#if WITH_PARSER_EVAL
 static void
 LogicalANDExpression_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -6733,6 +6904,7 @@ LogicalANDExpression_eval(na, context, res)
 	EVAL(n->b, context, &r5);
 	GetValue(context, &r5, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6780,6 +6952,50 @@ LogicalANDExpression_print(na, printer)
 }
 #endif
 
+/* Executes a known-constant subtree to yield its value. */
+static void
+const_evaluate(node, interp, res)
+	struct node *node;
+	struct SEE_interpreter *interp;
+	struct SEE_value *res;
+{
+	void *body;
+	struct SEE_context const_context;
+
+#ifndef NDEBUG
+	if (SEE_parse_debug) {
+	    dprintf("const_evaluate: evaluating (");
+#if WITH_PARSER_PRINT
+	    { struct printer *printer = stdio_printer_new(interp, stderr);
+	      PRINT(node); }
+#else
+	    dprintf("%p", node);
+#endif
+	    dprintf(")\n");
+	}
+#endif
+	
+	body = make_body(interp, 
+	    FunctionBody_make(interp, 
+	      SourceElements_make1(interp, 
+	        ExpressionStatement_make(interp, node)), 1),
+	    NO_CONST);
+
+	/* A dummy context with the minimum we can get away with */
+	memset(&const_context, 0, sizeof const_context);
+	const_context.interpreter = interp;
+
+	eval_functionbody(body, &const_context, res);
+
+#ifndef NDEBUG
+	if (SEE_parse_debug) {
+	    dprintf("const_evaluate: result is ");
+	    dprintv(interp, res);
+	    dprintf("\n");
+	}
+#endif
+}
+
 static int
 LogicalANDExpression_isconst(na, interp)
 	struct node *na; /* (struct Binary_node) */
@@ -6788,7 +7004,7 @@ LogicalANDExpression_isconst(na, interp)
 	struct Binary_node *n = CAST_NODE(na, Binary);
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct SEE_context *)NULL, &r1);
+		const_evaluate(n->a, interp, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? ISCONST(n->b, interp) : 1;
@@ -6798,9 +7014,9 @@ LogicalANDExpression_isconst(na, interp)
 
 static struct nodeclass LogicalANDExpression_nodeclass
 	= { SUPERCLASS(Binary)
-	    LogicalANDExpression_eval, 
+	    PARSER_EVAL(LogicalANDExpression_eval)
 	    PARSER_CODEGEN(LogicalANDExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(LogicalANDExpression_print)
 	    PARSER_VISIT(Binary_visit)
 	    LogicalANDExpression_isconst };
@@ -6837,6 +7053,7 @@ LogicalANDExpression_parse(parser)
  *	;
  */
 
+#if WITH_PARSER_EVAL
 static void
 LogicalORExpression_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -6854,6 +7071,7 @@ LogicalORExpression_eval(na, context, res)
 	EVAL(n->b, context, &r5);
 	GetValue(context, &r5, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -6911,7 +7129,7 @@ LogicalORExpression_isconst(na, interp)
 	struct Binary_node *n = CAST_NODE(na, Binary);
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct SEE_context *)NULL, &r1);
+		const_evaluate(n->a, interp, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean ? 1: ISCONST(n->b, interp);
@@ -6921,9 +7139,9 @@ LogicalORExpression_isconst(na, interp)
 
 static struct nodeclass LogicalORExpression_nodeclass
 	= { SUPERCLASS(Binary)
-	    LogicalORExpression_eval, 
+	    PARSER_EVAL(LogicalORExpression_eval)
 	    PARSER_CODEGEN(LogicalORExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(LogicalORExpression_print)
 	    PARSER_VISIT(Binary_visit)
 	    LogicalORExpression_isconst };
@@ -6969,6 +7187,7 @@ struct ConditionalExpression_node {
 	struct node *a, *b, *c;
 };
 
+#if WITH_PARSER_EVAL
 static void
 ConditionalExpression_eval(na, context, res)
 	struct node *na; /* (struct ConditionalExpression_node) */
@@ -6988,6 +7207,7 @@ ConditionalExpression_eval(na, context, res)
 		EVAL(n->c, context, &t);
 	GetValue(context, &t, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7070,7 +7290,7 @@ ConditionalExpression_isconst(na, interp)
 		CAST_NODE(na, ConditionalExpression);
 	if (ISCONST(n->a, interp)) {
 		struct SEE_value r1, r3;
-		EVAL(n->a, (struct SEE_context *)NULL, &r1);
+		const_evaluate(n->a, interp, &r1);
 		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
 		SEE_ToBoolean(interp, &r1, &r3);
 		return r3.u.boolean 
@@ -7082,9 +7302,9 @@ ConditionalExpression_isconst(na, interp)
 
 static struct nodeclass ConditionalExpression_nodeclass
 	= { BASECLASS
-	    ConditionalExpression_eval, 
+	    PARSER_EVAL(ConditionalExpression_eval)
 	    PARSER_CODEGEN(ConditionalExpression_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ConditionalExpression_print)
 	    PARSER_VISIT(ConditionalExpression_visit)
 	    ConditionalExpression_isconst };
@@ -7159,13 +7379,16 @@ AssignmentExpression_visit(na, v, va)
 }
 #endif
 
-static struct nodeclass AssignmentExpression_nodeclass	/* Abstract */
+static struct nodeclass /* abstract */ AssignmentExpression_nodeclass
 	= { BASECLASS
-	    0, 0, 
+	    PARSER_EVAL(0)
+	    PARSER_CODEGEN(0)
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(0)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_simple_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7181,6 +7404,7 @@ AssignmentExpression_simple_eval(na, context, res)
 	GetValue(context, &r2, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7291,15 +7515,16 @@ AssignmentExpression_simple_print(na, printer)
 
 static struct nodeclass AssignmentExpression_simple_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_simple_eval, 
+	    PARSER_EVAL(AssignmentExpression_simple_eval)
 	    PARSER_CODEGEN(AssignmentExpression_simple_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_simple_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_muleq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7317,6 +7542,7 @@ AssignmentExpression_muleq_eval(na, context, res)
 	MultiplicativeExpression_mul_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7352,15 +7578,16 @@ AssignmentExpression_muleq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_muleq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_muleq_eval, 
+	    PARSER_EVAL(AssignmentExpression_muleq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_muleq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_muleq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_diveq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7378,6 +7605,7 @@ AssignmentExpression_diveq_eval(na, context, res)
 	MultiplicativeExpression_div_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7413,15 +7641,16 @@ AssignmentExpression_diveq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_diveq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_diveq_eval, 
+	    PARSER_EVAL(AssignmentExpression_diveq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_diveq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_diveq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_modeq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7439,6 +7668,7 @@ AssignmentExpression_modeq_eval(na, context, res)
 	MultiplicativeExpression_mod_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7474,15 +7704,16 @@ AssignmentExpression_modeq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_modeq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_modeq_eval, 
+	    PARSER_EVAL(AssignmentExpression_modeq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_modeq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_modeq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_addeq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7500,6 +7731,7 @@ AssignmentExpression_addeq_eval(na, context, res)
 	AdditiveExpression_add_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7549,15 +7781,16 @@ AssignmentExpression_addeq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_addeq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_addeq_eval, 
+	    PARSER_EVAL(AssignmentExpression_addeq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_addeq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_addeq_print)
 	    PARSER_VISIT(AssignmentExpression_visit) 
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_subeq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7575,6 +7808,7 @@ AssignmentExpression_subeq_eval(na, context, res)
 	AdditiveExpression_sub_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7610,15 +7844,16 @@ AssignmentExpression_subeq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_subeq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_subeq_eval, 
+	    PARSER_EVAL(AssignmentExpression_subeq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_subeq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_subeq_print)
 	    PARSER_VISIT(AssignmentExpression_visit) 
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_lshifteq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7634,6 +7869,7 @@ AssignmentExpression_lshifteq_eval(na, context, res)
 	ShiftExpression_lshift_common(&r2, n->expr, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7670,15 +7906,16 @@ AssignmentExpression_lshifteq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_lshifteq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_lshifteq_eval, 
+	    PARSER_EVAL(AssignmentExpression_lshifteq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_lshifteq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_lshifteq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_rshifteq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7696,6 +7933,7 @@ AssignmentExpression_rshifteq_eval(na, context, res)
 	ShiftExpression_rshift_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7732,15 +7970,16 @@ AssignmentExpression_rshifteq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_rshifteq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_rshifteq_eval, 
+	    PARSER_EVAL(AssignmentExpression_rshifteq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_rshifteq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_rshifteq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_urshifteq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7758,6 +7997,7 @@ AssignmentExpression_urshifteq_eval(na, context, res)
 	ShiftExpression_urshift_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7795,15 +8035,16 @@ AssignmentExpression_urshifteq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_urshifteq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_urshifteq_eval, 
+	    PARSER_EVAL(AssignmentExpression_urshifteq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_urshifteq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_urshifteq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_andeq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7821,6 +8062,7 @@ AssignmentExpression_andeq_eval(na, context, res)
 	BitwiseANDExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7856,15 +8098,16 @@ AssignmentExpression_andeq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_andeq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_andeq_eval, 
+	    PARSER_EVAL(AssignmentExpression_andeq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_andeq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_andeq_print)
 	    PARSER_VISIT(AssignmentExpression_visit) 
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_xoreq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7882,6 +8125,7 @@ AssignmentExpression_xoreq_eval(na, context, res)
 	BitwiseXORExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7917,15 +8161,16 @@ AssignmentExpression_xoreq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_xoreq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_xoreq_eval, 
+	    PARSER_EVAL(AssignmentExpression_xoreq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_xoreq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_xoreq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
 
 
 /* 11.13.2 */
+#if WITH_PARSER_EVAL
 static void
 AssignmentExpression_oreq_eval(na, context, res)
 	struct node *na; /* (struct AssignmentExpression_node) */
@@ -7943,6 +8188,7 @@ AssignmentExpression_oreq_eval(na, context, res)
 	BitwiseORExpression_common(&r2, &r4, context, res);
 	PutValue(context, &r1, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -7978,9 +8224,9 @@ AssignmentExpression_oreq_print(na, printer)
 
 static struct nodeclass AssignmentExpression_oreq_nodeclass
 	= { SUPERCLASS(AssignmentExpression)
-	    AssignmentExpression_oreq_eval, 
+	    PARSER_EVAL(AssignmentExpression_oreq_eval)
 	    PARSER_CODEGEN(AssignmentExpression_oreq_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(AssignmentExpression_oreq_print)
 	    PARSER_VISIT(AssignmentExpression_visit)
 	    0 };
@@ -8071,6 +8317,7 @@ AssignmentExpression_parse(parser)
  */
 
 /* 11.14 */
+#if WITH_PARSER_EVAL
 static void
 Expression_comma_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -8085,6 +8332,7 @@ Expression_comma_eval(na, context, res)
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8123,9 +8371,9 @@ Expression_comma_print(na, printer)
 
 static struct nodeclass Expression_comma_nodeclass
 	= { SUPERCLASS(Binary)
-	    Expression_comma_eval, 
+	    PARSER_EVAL(Expression_comma_eval)
 	    PARSER_CODEGEN(Expression_comma_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Expression_comma_print)
 	    PARSER_VISIT(Binary_visit)
 	    Binary_isconst };
@@ -8236,6 +8484,7 @@ Statement_parse(parser)
  */
 
 /* 12.1 */
+#if WITH_PARSER_EVAL
 static void
 Block_empty_eval(n, context, res)
 	struct node *n;
@@ -8244,6 +8493,7 @@ Block_empty_eval(n, context, res)
 {
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8269,12 +8519,12 @@ Block_empty_print(n, printer)
 
 static struct nodeclass Block_empty_nodeclass
 	= { BASECLASS
-	    Block_empty_eval, 
+	    PARSER_EVAL(Block_empty_eval)
 	    PARSER_CODEGEN(Block_empty_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Block_empty_print)
 	    PARSER_VISIT(0)
-	    Always_isconst };
+	    0 };
 
 static struct node *
 Block_parse(parser)
@@ -8299,6 +8549,7 @@ Block_parse(parser)
  */
 
 /* 12.1 */
+#if WITH_PARSER_EVAL
 static void
 StatementList_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -8318,6 +8569,7 @@ StatementList_eval(na, context, res)
 			SEE_free(context->interpreter, (void **)&val);
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8335,12 +8587,12 @@ StatementList_codegen(na, cc)
 
 static struct nodeclass StatementList_nodeclass
 	= { SUPERCLASS(Binary)
-	    StatementList_eval, 
+	    PARSER_EVAL(StatementList_eval)
 	    PARSER_CODEGEN(StatementList_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Binary_print)
 	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst };
+	    0 };
 
 static struct node *
 StatementList_parse(parser)
@@ -8403,6 +8655,7 @@ StatementList_parse(parser)
  *	;
  */
 
+#if WITH_PARSER_EVAL
 static void
 VariableStatement_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -8416,6 +8669,7 @@ VariableStatement_eval(na, context, res)
 	EVAL(n->a, context, &v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8449,9 +8703,9 @@ VariableStatement_print(na, printer)
 
 static struct nodeclass VariableStatement_nodeclass
 	= { SUPERCLASS(Unary)
-	    VariableStatement_eval, 
+	    PARSER_EVAL(VariableStatement_eval)
 	    PARSER_CODEGEN(VariableStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(VariableStatement_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
@@ -8471,6 +8725,7 @@ VariableStatement_parse(parser)
 
 
 /* 12.2 */
+#if WITH_PARSER_EVAL
 static void
 VariableDeclarationList_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -8482,6 +8737,7 @@ VariableDeclarationList_eval(na, context, res)
 	EVAL(n->a, context, res);
 	EVAL(n->b, context, res);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8513,9 +8769,9 @@ VariableDeclarationList_print(na, printer)
 
 static struct nodeclass VariableDeclarationList_nodeclass
 	= { SUPERCLASS(Binary)
-	    VariableDeclarationList_eval, 
+	    PARSER_EVAL(VariableDeclarationList_eval)
 	    PARSER_CODEGEN(VariableDeclarationList_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(VariableDeclarationList_print)
 	    PARSER_VISIT(Binary_visit)
 	    0 };
@@ -8545,6 +8801,7 @@ struct VariableDeclaration_node {
 	struct node *init;
 };
 
+#if WITH_PARSER_EVAL
 static void
 VariableDeclaration_eval(na, context, res)
 	struct node *na; /* (struct VariableDeclaration_node) */
@@ -8563,6 +8820,7 @@ VariableDeclaration_eval(na, context, res)
 		PutValue(context, &r1, &r3);
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8631,9 +8889,9 @@ VariableDeclaration_visit(na, v, va)
 
 static struct nodeclass VariableDeclaration_nodeclass
 	= { BASECLASS
-	    VariableDeclaration_eval, 
+	    PARSER_EVAL(VariableDeclaration_eval)
 	    PARSER_CODEGEN(VariableDeclaration_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(VariableDeclaration_print)
 	    PARSER_VISIT(VariableDeclaration_visit)
 	    0 };
@@ -8674,6 +8932,7 @@ VariableDeclaration_parse(parser)
  */
 
 /* 12.3 */
+#if WITH_PARSER_EVAL
 static void
 EmptyStatement_eval(na, context, res)
 	struct node *na;
@@ -8683,6 +8942,7 @@ EmptyStatement_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8709,12 +8969,12 @@ EmptyStatement_print(n, printer)
 
 static struct nodeclass EmptyStatement_nodeclass
 	= { BASECLASS
-	    EmptyStatement_eval, 
+	    PARSER_EVAL(EmptyStatement_eval)
 	    PARSER_CODEGEN(EmptyStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(EmptyStatement_print)
 	    PARSER_VISIT(0)
-	    Always_isconst };
+	    0 };
 
 static struct node *
 EmptyStatement_parse(parser)
@@ -8736,6 +8996,7 @@ EmptyStatement_parse(parser)
  */
 
 /* 12.4 */
+#if WITH_PARSER_EVAL
 static void
 ExpressionStatement_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -8751,6 +9012,7 @@ ExpressionStatement_eval(na, context, res)
 	GetValue(context, &r1, v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8785,24 +9047,38 @@ ExpressionStatement_print(na, printer)
 
 static struct nodeclass ExpressionStatement_nodeclass
 	= { SUPERCLASS(Unary)
-	    ExpressionStatement_eval, 
+	    PARSER_EVAL(ExpressionStatement_eval)
 	    PARSER_CODEGEN(ExpressionStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ExpressionStatement_print)
 	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst };
+	    0 };
+
+static struct node *
+ExpressionStatement_make(interp, node)
+	struct SEE_interpreter *interp;
+	struct node *node;
+{
+	struct Unary_node *n;
+
+	n = NEW_NODE_INTERNAL(interp, struct Unary_node, 
+	    &ExpressionStatement_nodeclass);
+	n->a = node;
+	return (struct node *)n;
+}
 
 static struct node *
 ExpressionStatement_parse(parser)
 	struct parser *parser;
 {
-	struct Unary_node *n;
+        struct Unary_node *n;
 
 	n = NEW_NODE(struct Unary_node, &ExpressionStatement_nodeclass);
 	n->a = PARSE(Expression);
 	EXPECT_SEMICOLON;
 	return (struct node *)n;
 }
+
 
 /*
  *	-- 12.5
@@ -8819,6 +9095,7 @@ struct IfStatement_node {
 };
 
 /* 12.5 */
+#if WITH_PARSER_EVAL
 static void
 IfStatement_eval(na, context, res)
 	struct node *na; /* (struct IfStatement_node) */
@@ -8839,6 +9116,7 @@ IfStatement_eval(na, context, res)
 	else
 		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -8911,32 +9189,14 @@ IfStatement_visit(na, v, va)
 }
 #endif
 
-static int
-IfStatement_isconst(na, interp)
-	struct node *na; /* (struct IfStatement_node) */
-	struct SEE_interpreter *interp;
-{
-	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
-	if (ISCONST(n->cond, interp)) {
-		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean 
-		    ? ISCONST(n->btrue, interp) 
-		    : (n->bfalse ? ISCONST(n->bfalse, interp) : 1);
-	} else
-		return 0;
-}
-
 static struct nodeclass IfStatement_nodeclass
 	= { BASECLASS
-	    IfStatement_eval, 
+	    PARSER_EVAL(IfStatement_eval)
 	    PARSER_CODEGEN(IfStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IfStatement_print)
 	    PARSER_VISIT(IfStatement_visit)
-	    IfStatement_isconst };
+	    0 };
 
 static struct node *
 IfStatement_parse(parser)
@@ -8996,6 +9256,7 @@ struct IterationStatement_while_node {
 	struct node *cond, *body;
 };
 
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_dowhile_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_while_node) */
@@ -9027,9 +9288,9 @@ IterationStatement_dowhile_eval(na, context, res)
  step11:_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
  out:	;
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
-
 static void
 IterationStatement_dowhile_codegen(na, cc)
 	struct node *na;
@@ -9097,34 +9358,17 @@ IterationStatement_while_visit(na, v, va)
 }
 #endif
 
-static int
-IterationStatement_dowhile_isconst(na, interp)
-        struct node *na; /* (struct IterationStatement_while_node) */
-	struct SEE_interpreter *interp;
-{
-        struct IterationStatement_while_node *n = 
-		CAST_NODE(na, IterationStatement_while);
-
-	if (ISCONST(n->cond, interp)) {
-		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean ? 0 : ISCONST(n->body, interp);
-	} else
-		return 0;
-}
-
 static struct nodeclass IterationStatement_dowhile_nodeclass
 	= { SUPERCLASS(IterationStatement_while)
-	    IterationStatement_dowhile_eval, 
+	    PARSER_EVAL(IterationStatement_dowhile_eval)
 	    PARSER_CODEGEN(IterationStatement_dowhile_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_dowhile_print)
 	    PARSER_VISIT(IterationStatement_while_visit)
-	    IterationStatement_dowhile_isconst };
+	    0 };
 
 
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_while_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_while_node) */
@@ -9160,6 +9404,7 @@ IterationStatement_while_eval(na, context, res)
 	    return;
 	goto step2;
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -9214,31 +9459,14 @@ IterationStatement_while_print(na, printer)
 }
 #endif
 
-static int
-IterationStatement_while_isconst(na, interp)
-	struct node *na; /* (struct IterationStatement_while_node) */
-	struct SEE_interpreter *interp;
-{
-	struct IterationStatement_while_node *n = 
-		CAST_NODE(na, IterationStatement_while);
-	if (ISCONST(n->cond, interp)) {
-		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean ? ISCONST(n->body, interp) : 1;
-	} else
-		return 0;
-}
-
 static struct nodeclass IterationStatement_while_nodeclass
 	= { BASECLASS
-	    IterationStatement_while_eval, 
+	    PARSER_EVAL(IterationStatement_while_eval)
 	    PARSER_CODEGEN(IterationStatement_while_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_while_print)
 	    PARSER_VISIT(IterationStatement_while_visit)
-	    IterationStatement_while_isconst };
+	    0 };
 
 
 struct IterationStatement_for_node {
@@ -9248,6 +9476,7 @@ struct IterationStatement_for_node {
 };
 
 /* 12.6.3 - "for (init; cond; incr) body" */
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_for_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_for_node) */
@@ -9291,6 +9520,7 @@ step15: if (n->incr) {
 	goto step5;
 step19:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -9391,42 +9621,17 @@ IterationStatement_for_visit(na, v, va)
 }
 #endif
 
-static int
-IterationStatement_for_isconst(na, interp)
-        struct node *na; /* (struct IterationStatement_for_node) */
-	struct SEE_interpreter *interp;
-{
-        struct IterationStatement_for_node *n = 
-		CAST_NODE(na, IterationStatement_for);
-
-	if (n->cond && ISCONST(n->cond, interp)) {
-		struct SEE_value r1, r3;
-		EVAL(n->cond, (struct SEE_context *)NULL, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		if (r3.u.boolean)
-			return 0;	/* Infinite loop */
-		if (n->init && !ISCONST(n->init, interp))
-			return 0;
-		if (n->cond && !ISCONST(n->cond, interp))
-			return 0;
-		if (n->incr && !ISCONST(n->incr, interp))
-			return 0;
-		return ISCONST(n->body, interp);
-	} else
-		return 0;
-}
-
 static struct nodeclass IterationStatement_for_nodeclass
 	= { BASECLASS
-	    IterationStatement_for_eval, 
+	    PARSER_EVAL(IterationStatement_for_eval)
 	    PARSER_CODEGEN(IterationStatement_for_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_for_print)
 	    PARSER_VISIT(IterationStatement_for_visit)
-	    IterationStatement_for_isconst };
+	    0 };
 
 /* 12.6.3 - "for (var init; cond; incr) body" */
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_forvar_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_for_node) */
@@ -9467,6 +9672,7 @@ step13: if (n->incr) {
 	goto step3;
 step17:	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -9553,12 +9759,12 @@ IterationStatement_forvar_print(na, printer)
 
 static struct nodeclass IterationStatement_forvar_nodeclass
 	= { SUPERCLASS(IterationStatement_for)
-	    IterationStatement_forvar_eval, 
+	    PARSER_EVAL(IterationStatement_forvar_eval)
 	    PARSER_CODEGEN(IterationStatement_forvar_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_forvar_print)
 	    PARSER_VISIT(IterationStatement_for_visit)
-	    IterationStatement_for_isconst };
+	    0 };
 
 
 struct IterationStatement_forin_node {
@@ -9568,6 +9774,7 @@ struct IterationStatement_forin_node {
 };
 
 /* 12.6.3 - "for (lhs in list) body" */
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_forin_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_forin_node) */
@@ -9609,6 +9816,7 @@ IterationStatement_forin_eval(na, context, res)
 	SEE_enumerate_free(interp, props0);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -9702,14 +9910,15 @@ IterationStatement_forin_visit(na, v, va)
 
 static struct nodeclass IterationStatement_forin_nodeclass
 	= { SUPERCLASS(IterationStatement_forin)
-	    IterationStatement_forin_eval, 
+	    PARSER_EVAL(IterationStatement_forin_eval)
 	    PARSER_CODEGEN(IterationStatement_forin_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_forin_print)
 	    PARSER_VISIT(IterationStatement_forin_visit)
 	    0 };
 
 
+#if WITH_PARSER_EVAL
 static void
 IterationStatement_forvarin_eval(na, context, res)
 	struct node *na; /* (struct IterationStatement_forin_node) */
@@ -9756,6 +9965,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	SEE_enumerate_free(interp, props0);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -9842,9 +10052,9 @@ IterationStatement_forvarin_print(na, printer)
 
 static struct nodeclass IterationStatement_forvarin_nodeclass
 	= { SUPERCLASS(IterationStatement_forin)
-	    IterationStatement_forvarin_eval, 
+	    PARSER_EVAL(IterationStatement_forvarin_eval)
 	    PARSER_CODEGEN(IterationStatement_forvarin_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(IterationStatement_forvarin_print)
 	    PARSER_VISIT(IterationStatement_forin_visit)
 	    0 };
@@ -9994,6 +10204,7 @@ struct ContinueStatement_node {
 	unsigned int target;
 };
 
+#if WITH_PARSER_EVAL
 static void
 ContinueStatement_eval(na, context, res)
 	struct node *na; /* (struct ContinueStatement_node) */
@@ -10005,6 +10216,7 @@ ContinueStatement_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_CONTINUE, NULL, n->target);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10049,13 +10261,12 @@ ContinueStatement_print(na, printer)
 
 static struct nodeclass ContinueStatement_nodeclass
 	= { BASECLASS
-	    ContinueStatement_eval, 
+	    PARSER_EVAL(ContinueStatement_eval)
 	    PARSER_CODEGEN(ContinueStatement_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ContinueStatement_print)
 	    PARSER_VISIT(0)
-	    0
-	    };
+	    0 };
 
 
 static struct node *
@@ -10093,6 +10304,7 @@ struct BreakStatement_node {
 	unsigned int target;
 };
 
+#if WITH_PARSER_EVAL
 static void
 BreakStatement_eval(na, context, res)
 	struct node *na; /* (struct BreakStatement_node) */
@@ -10104,6 +10316,7 @@ BreakStatement_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_BREAK, NULL, n->target);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10148,9 +10361,9 @@ BreakStatement_print(na, printer)
 
 static struct nodeclass BreakStatement_nodeclass
 	= { BASECLASS
-	    BreakStatement_eval, 
+	    PARSER_EVAL(BreakStatement_eval)
 	    PARSER_CODEGEN(BreakStatement_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(BreakStatement_print)
 	    PARSER_VISIT(0)
 	    0 };
@@ -10190,6 +10403,7 @@ struct ReturnStatement_node {
 	struct node *expr;
 };
 
+#if WITH_PARSER_EVAL
 static void
 ReturnStatement_eval(na, context, res)
 	struct node *na; /* (struct ReturnStatement_node) */
@@ -10205,6 +10419,7 @@ ReturnStatement_eval(na, context, res)
 	GetValue(context, &r2, v);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, v, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10254,14 +10469,15 @@ ReturnStatement_visit(na, v, va)
 
 static struct nodeclass ReturnStatement_nodeclass
 	= { BASECLASS
-	    ReturnStatement_eval, 
+	    PARSER_EVAL(ReturnStatement_eval)
 	    PARSER_CODEGEN(ReturnStatement_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ReturnStatement_print)
 	    PARSER_VISIT(ReturnStatement_visit)
 	    0 };
 
 
+#if WITH_PARSER_EVAL
 static void
 ReturnStatement_undef_eval(na, context, res)
 	struct node *na; /* (struct ReturnStatement_node) */
@@ -10273,6 +10489,7 @@ ReturnStatement_undef_eval(na, context, res)
 	TRACE(&na->location, context, SEE_TRACE_STATEMENT);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_RETURN, &undef, NO_TARGET);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10303,9 +10520,9 @@ ReturnStatement_undef_print(na, printer)
 
 static struct nodeclass ReturnStatement_undef_nodeclass
 	= { BASECLASS
-	    ReturnStatement_undef_eval, 
+	    PARSER_EVAL(ReturnStatement_undef_eval)
 	    PARSER_CODEGEN(ReturnStatement_undef_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ReturnStatement_undef_print)
 	    PARSER_VISIT(0)
 	    0 };
@@ -10338,6 +10555,7 @@ ReturnStatement_parse(parser)
  *	;
  */
 
+#if WITH_PARSER_EVAL
 static void
 WithStatement_eval(na, context, res)
 	struct node *na; /* (struct Binary_node) */
@@ -10364,6 +10582,7 @@ WithStatement_eval(na, context, res)
 	context->scope = context->scope->next;
 	SEE_DEFAULT_CATCH(context->interpreter, ctxt);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10417,9 +10636,9 @@ WithStatement_print(na, printer)
 
 static struct nodeclass WithStatement_nodeclass
 	= { SUPERCLASS(Binary)
-	    WithStatement_eval, 
+	    PARSER_EVAL(WithStatement_eval)
 	    PARSER_CODEGEN(WithStatement_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(WithStatement_print)
 	    PARSER_VISIT(Binary_visit)
 	    0 };
@@ -10483,6 +10702,7 @@ struct SwitchStatement_node {
 	} *cases, *defcase;
 };
 
+#if WITH_PARSER_EVAL
 static void
 SwitchStatement_caseblock(n, context, input, res)
 	struct SwitchStatement_node *n;
@@ -10540,6 +10760,7 @@ SwitchStatement_eval(na, context, res)
 		_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, v, NO_TARGET);
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10668,9 +10889,9 @@ SwitchStatement_visit(na, v, va)
 
 static struct nodeclass SwitchStatement_nodeclass
 	= { BASECLASS
-	    SwitchStatement_eval, 
+	    PARSER_EVAL(SwitchStatement_eval)
 	    PARSER_CODEGEN(SwitchStatement_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(SwitchStatement_print)
 	    PARSER_VISIT(SwitchStatement_visit)
 	    0 };
@@ -10742,6 +10963,7 @@ struct LabelledStatement_node {
 	unsigned int target;
 };
 
+#if WITH_PARSER_EVAL
 static void
 LabelledStatement_eval(na, context, res)
 	struct node *na; /* (struct LabelledStatement_node) */
@@ -10758,6 +10980,7 @@ LabelledStatement_eval(na, context, res)
 	    res->u.completion.target = NO_TARGET;
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10801,9 +11024,9 @@ LabelledStatement_print(na, printer)
 
 static struct nodeclass LabelledStatement_nodeclass
 	= { SUPERCLASS(Unary)
-	    LabelledStatement_eval, 
+	    PARSER_EVAL(LabelledStatement_eval)
 	    PARSER_CODEGEN(LabelledStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(LabelledStatement_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
@@ -10859,6 +11082,7 @@ LabelledStatement_parse(parser)
  *	;
  */
 
+#if WITH_PARSER_EVAL
 static void
 ThrowStatement_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -10879,6 +11103,7 @@ ThrowStatement_eval(na, context, res)
 
 	/* NOTREACHED */
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -10915,9 +11140,9 @@ ThrowStatement_print(na, printer)
 
 static struct nodeclass ThrowStatement_nodeclass
 	= { SUPERCLASS(Unary)
-	    ThrowStatement_eval, 
+	    PARSER_EVAL(ThrowStatement_eval)
 	    PARSER_CODEGEN(ThrowStatement_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(ThrowStatement_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
@@ -10961,13 +11186,16 @@ struct TryStatement_node {
 	struct SEE_string *ident;
 };
 
-static struct nodeclass TryStatement_nodeclass
+static struct nodeclass /* abstract */ TryStatement_nodeclass
 	= { BASECLASS
-	    0, 0, 
+	    PARSER_EVAL(0)
+	    PARSER_CODEGEN(0)
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(0)
 	    PARSER_VISIT(0)
 	    0 };
 
+#if WITH_PARSER_EVAL
 /*
  * Helper function to evaluate the catch clause in a new scope.
  * Return true if an exception was caught while executing the
@@ -11016,6 +11244,7 @@ TryStatement_catch_eval(na, context, res)
 		    SEE_RETHROW(context->interpreter, catch_ctxt);
 		} 
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11088,14 +11317,15 @@ TryStatement_catch_visit(na, v, va)
 
 static struct nodeclass TryStatement_catch_nodeclass
 	= { SUPERCLASS(TryStatement)
-	    TryStatement_catch_eval, 
+	    PARSER_EVAL(TryStatement_catch_eval)
 	    PARSER_CODEGEN(TryStatement_catch_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(TryStatement_catch_print)
 	    PARSER_VISIT(TryStatement_catch_visit)
 	    0 };
 
 
+#if WITH_PARSER_EVAL
 static void
 TryStatement_finally_eval(na, context, res)
 	struct node *na; /* (struct TryStatement_node) */
@@ -11118,6 +11348,7 @@ TryStatement_finally_eval(na, context, res)
 	    SEE_RETHROW(context->interpreter, ctxt);
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11183,14 +11414,15 @@ TryStatement_finally_visit(na, v, va)
 
 static struct nodeclass TryStatement_finally_nodeclass
 	= { SUPERCLASS(TryStatement)
-	    TryStatement_finally_eval, 
+	    PARSER_EVAL(TryStatement_finally_eval)
 	    PARSER_CODEGEN(TryStatement_finally_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(TryStatement_finally_print)
 	    PARSER_VISIT(TryStatement_finally_visit)
 	    0 };
 
 
+#if WITH_PARSER_EVAL
 static void
 TryStatement_catchfinally_eval(na, context, res)
 	struct node *na; /* (struct TryStatement_node) */
@@ -11227,6 +11459,7 @@ TryStatement_catchfinally_eval(na, context, res)
 		SEE_RETHROW(interp, *C);
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11326,9 +11559,9 @@ TryStatement_catchfinally_visit(na, v, va)
 
 static struct nodeclass TryStatement_catchfinally_nodeclass
 	= { SUPERCLASS(TryStatement)
-	    TryStatement_catchfinally_eval, 
+	    PARSER_EVAL(TryStatement_catchfinally_eval)
 	    PARSER_CODEGEN(TryStatement_catchfinally_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(TryStatement_catchfinally_print)
 	    PARSER_VISIT(TryStatement_catchfinally_visit)
 	    0 };
@@ -11408,6 +11641,7 @@ struct Function_node {
 
 #if 0
 /* This is never called, but defined in the spec. (Spec bug?) */
+#if WITH_PARSER_EVAL
 static void
 FunctionDeclaration_eval(na, context, res)
 	struct node *na; /* (struct Function_node) */
@@ -11417,6 +11651,7 @@ FunctionDeclaration_eval(na, context, res)
 	struct Function_node *n = CAST_NODE(na, Function);
 	_SEE_SET_COMPLETION(res, SEE_COMPLETION_NORMAL, NULL, NO_TARGET); /* 14 */
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11476,15 +11711,16 @@ Function_visit(na, v, va)
 }
 #endif
 
-static struct nodeclass Function_nodeclass
+static struct nodeclass /* abstract */ Function_nodeclass
 	= { BASECLASS
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_CODEGEN(0)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Function_print)
 	    PARSER_VISIT(Function_visit)
 	    0 };
 
+#if WITH_PARSER_EVAL
 static void
 FunctionDeclaration_fproc(na, context)
 	struct node *na; /* struct Function_node */
@@ -11501,12 +11737,13 @@ FunctionDeclaration_fproc(na, context)
 	SEE_OBJECT_PUT(context->interpreter, context->variable,
 	    n->function->name, &funcval, context->varattr);
 }
+#endif
 
 static struct nodeclass FunctionDeclaration_nodeclass
 	= { SUPERCLASS(Function)
-	    0 /* FunctionDeclaration_eval */,
+	    PARSER_EVAL(0 /* FunctionDeclaration_eval */)
 	    PARSER_CODEGEN(0)
-	    FunctionDeclaration_fproc,
+	    PARSER_EVAL(FunctionDeclaration_fproc)
 	    PARSER_PRINT(Function_print)
 	    PARSER_VISIT(Function_visit)
 	    0 };
@@ -11538,12 +11775,13 @@ FunctionDeclaration_parse(parser)
 	EXPECT('}');
 
 	n->function = SEE_function_make(parser->interpreter, 
-		name, formal, make_body(parser, body));
+		name, formal, make_body(parser->interpreter, body, 0));
 
 	return (struct node *)n;
 }
 
 
+#if WITH_PARSER_EVAL
 static void
 FunctionExpression_eval(na, context, res)
 	struct node *na; /* (struct Function_node) */
@@ -11586,6 +11824,7 @@ FunctionExpression_eval(na, context, res)
 	    SEE_DEFAULT_CATCH(interp, ctxt);	/* re-throw any exception */
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11631,9 +11870,9 @@ FunctionExpression_codegen(na, cc)
 
 static struct nodeclass FunctionExpression_nodeclass
 	= { SUPERCLASS(Function)
-	    FunctionExpression_eval, 
+	    PARSER_EVAL(FunctionExpression_eval)
 	    PARSER_CODEGEN(FunctionExpression_codegen)
-	    0,
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Function_print)
 	    PARSER_VISIT(Function_visit)
 	    0 };
@@ -11672,7 +11911,7 @@ FunctionExpression_parse(parser)
 	EXPECT('}');
 
 	n->function = SEE_function_make(parser->interpreter,
-		name, formal, make_body(parser, body));
+		name, formal, make_body(parser->interpreter, body, 0));
 
 	/* Restore parser state */
 	parser->noin = noin_save;
@@ -11716,6 +11955,7 @@ struct FunctionBody_node {
 	int is_program;
 };
 
+#if WITH_PARSER_EVAL
 static void
 FunctionBody_eval(na, context, res)
 	struct node *na; /* (struct Unary_node) */
@@ -11743,6 +11983,7 @@ FunctionBody_eval(na, context, res)
 	else
 	    SEE_VALUE_COPY(res, v.u.completion.value);
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11768,18 +12009,33 @@ FunctionBody_codegen(na, cc)
 
 static struct nodeclass FunctionBody_nodeclass
 	= { SUPERCLASS(Unary)
-	    FunctionBody_eval, 
+	    PARSER_EVAL(FunctionBody_eval)
 	    PARSER_CODEGEN(FunctionBody_codegen)
-	    0, 
+	    PARSER_EVAL(0)
 	    PARSER_PRINT(Unary_print)
 	    PARSER_VISIT(Unary_visit)
 	    0 };
 
 static struct node *
+FunctionBody_make(interp, source_elements, is_program)
+	struct SEE_interpreter *interp;
+	struct node *source_elements;
+	int is_program;
+{
+	struct FunctionBody_node *n;
+
+	n = NEW_NODE_INTERNAL(interp, struct FunctionBody_node, 
+	    &FunctionBody_nodeclass);
+	n->u.a = source_elements;
+	n->is_program = is_program;
+	return (struct node *)n;
+}
+
+static struct node *
 FunctionBody_parse(parser)
 	struct parser *parser;
 {
-	struct FunctionBody_node *n;
+        struct FunctionBody_node *n;
 
 	n = NEW_NODE(struct FunctionBody_node, &FunctionBody_nodeclass);
 	n->u.a = PARSE(SourceElements);
@@ -11871,7 +12127,7 @@ Program_parse(parser)
 	f->is_program = 1;
 
 	return SEE_function_make(parser->interpreter,
-		NULL, NULL, make_body(parser, body));
+		NULL, NULL, make_body(parser->interpreter, body, 0));
 }
 
 struct SourceElements_node {
@@ -11883,6 +12139,7 @@ struct SourceElements_node {
 	struct var *vars;
 };
 
+#if WITH_PARSER_EVAL
 static void
 SourceElements_eval(na, context, res)
 	struct node *na; /* (struct SourceElements_node) */
@@ -11905,6 +12162,7 @@ SourceElements_eval(na, context, res)
 			break;
 	}
 }
+#endif
 
 #if WITH_PARSER_CODEGEN
 static void
@@ -11949,6 +12207,7 @@ SourceElements_codegen(na, cc)
 }
 #endif
 
+#if WITH_PARSER_EVAL
 static void
 SourceElements_fproc(na, context)
 	struct node *na; /* struct SourceElements_node */
@@ -11976,6 +12235,7 @@ SourceElements_fproc(na, context)
 	            SEE_OBJECT_PUT(context->interpreter, context->variable, 
 			v->name, &undefv, context->varattr);
 }
+#endif
 
 #if WITH_PARSER_PRINT
 static void
@@ -12034,12 +12294,31 @@ SourceElements_visit(na, v, va)
 
 static struct nodeclass SourceElements_nodeclass
 	= { BASECLASS
-	    SourceElements_eval,
+	    PARSER_EVAL(SourceElements_eval)
 	    PARSER_CODEGEN(SourceElements_codegen)
-	    SourceElements_fproc,
+	    PARSER_EVAL(SourceElements_fproc)
 	    PARSER_PRINT(SourceElements_print)
 	    PARSER_VISIT(SourceElements_visit)
 	    0 };
+
+/* Builds a simple SourceElements around a single statement */
+static struct node *
+SourceElements_make1(interp, statement)
+	struct SEE_interpreter *interp;
+	struct node *statement;
+{
+	struct SourceElements_node *ss;
+	struct SourceElement *s;
+
+	s = SEE_NEW(interp, struct SourceElement);
+	s->node = statement;
+	s->next = NULL;
+	ss = NEW_NODE_INTERNAL(interp, struct SourceElements_node, 
+		&SourceElements_nodeclass); 
+	ss->statements = s;
+	ss->functions = NULL;
+	return (struct node *)ss;
+}
 
 static struct node *
 SourceElements_parse(parser)
@@ -12149,7 +12428,7 @@ SEE_parse_function(interp, name, paraminp, bodyinp)
 	EXPECT_NOSKIP(tEND);
 
 	return SEE_function_make(interp, name, formal, 
-	    make_body(parser, body));
+		make_body(interp, body, 0));
 }
 
 /*
@@ -12182,6 +12461,23 @@ SEE_parse_program(interp, inp)
 	return f;
 }
 
+/*
+ * Evaluates the function body with the given execution context. 
+ * Function body must not be NULL
+ */
+static void
+eval_functionbody(body, context, res)
+	void *body;
+	struct SEE_context *context;
+	struct SEE_value *res;
+{
+#if WITH_PARSER_CODEGEN
+	CG_EXEC((struct SEE_code *)body, context, res);
+#else
+	EVAL((struct node *)body, context, res);
+#endif
+}
+
 /* Evaluates the function body with the given execution context. */
 void
 SEE_eval_functionbody(f, context, res)
@@ -12189,14 +12485,10 @@ SEE_eval_functionbody(f, context, res)
 	struct SEE_context *context;
 	struct SEE_value *res;
 {
-#if WITH_PARSER_CODEGEN
 	if (f && f->body)
-	    CG_EXEC((struct SEE_code *)f->body, context, res);
+	    eval_functionbody(f->body, context, res);
 	else
 	    SEE_SET_UNDEFINED(res);
-#else
-	EVAL((struct node *)f->body, context, res);
-#endif
 	SEE_ASSERT(context->interpreter,
 	    SEE_VALUE_GET_TYPE(res) != SEE_COMPLETION);
 	SEE_ASSERT(context->interpreter,
@@ -12328,9 +12620,9 @@ stdio_print_node(printer, n)
 {
 	struct stdio_printer *sp = (struct stdio_printer *)printer;
 
-	fprintf(sp->output, "(%d: ", n->location.lineno); 
+/*	fprintf(sp->output, "(%d: ", n->location.lineno);  */
 	(*(n)->nodeclass->print)(n, printer);
-	fprintf(sp->output, ")"); 
+/*	fprintf(sp->output, ")");  */
 	fflush(sp->output);
 }
 
@@ -12405,7 +12697,6 @@ string_printer_new(interp, string)
 	sp->string = string;
 	return (struct printer *)sp;
 }
-
 
 /*
  * Prints a function body to standard error.
