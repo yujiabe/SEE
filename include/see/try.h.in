@@ -171,11 +171,7 @@ void	SEE_throw_abort(struct SEE_interpreter *, const struct SEE_value *,
 struct SEE_string *SEE_location_string(struct SEE_interpreter *i,
 		struct SEE_throw_location *loc);
 
-/* Debugger hook for exceptions */
-#ifndef NDEBUG
+/* Debugger hook for exceptions (do not call) */
 void	SEE_throw(void);
-#else
-# define SEE_throw() /* nothing */
-#endif
 
 #endif /* _SEE_h_try_ */

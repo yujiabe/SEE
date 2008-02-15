@@ -122,17 +122,17 @@ SEE_location_string(interp, loc)
 	return s;
 }
 
-#ifndef NDEBUG
 /**
  * A dummy function for debugging.
  * This function exists solely for debuggers to break on.
  * It is called immediately before the longjmp takes effect.
+ * Except in applications compiled with NDEBUG, in which case
+ * flow of control does not pass through this function.
  */
 void
 SEE_throw()
 {
 }
-#endif
 
 #if WITH_LONGJMPERROR
 /**
