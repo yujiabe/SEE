@@ -1227,8 +1227,8 @@ but the traceback information will be lost.
 <p>The signatures of these macros are:</p>
 
 <pre><dfn id="SEE_TRY">SEE_TRY</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt) { <i>stmt...</i> }
-struct SEE_object *<dfn id="SEE_CAUGHT">SEE_CAUGHT</dfn>(SEE_try_context_t ctxt);
-void <dfn id="SEE_THROW">SEE_THROW</dfn>(struct SEE_interpreter *interp, struct SEE_object *exception);
+struct SEE_value *<dfn id="SEE_CAUGHT">SEE_CAUGHT</dfn>(SEE_try_context_t ctxt);
+void <dfn id="SEE_THROW">SEE_THROW</dfn>(struct SEE_interpreter *interp, struct SEE_value *exception);
 void <dfn id="SEE_DEFAULT_CATCH">SEE_DEFAULT_CATCH</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt);
 void <dfn id="SEE_RETHROW">SEE_RETHROW</dfn>(struct SEE_interpreter *interp, SEE_try_context_t ctxt);</pre>
 
