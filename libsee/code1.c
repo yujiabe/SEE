@@ -1477,6 +1477,7 @@ code1_exec(sco, ctxt, res)
 		struct SEE_context context2;
 		memcpy(&context2, ctxt, sizeof context2);
 		context2.scope = scope;
+		context2.thisobj = baseobj;
 		if (arg == 0)
 		    SEE_SET_UNDEFINED(vp);
 		else if (SEE_VALUE_GET_TYPE(argv[0]) != SEE_STRING)

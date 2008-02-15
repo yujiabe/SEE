@@ -1,7 +1,7 @@
 $Id$
 
 3.1 [unreleased]
-  Bug 121: library compiled with -DNDEBUG misses SEE_throw() debug point
+  Bug 120: library compiled with -DNDEBUG misses SEE_throw() debug point
   Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
 
 3.0 [2008-02-09]

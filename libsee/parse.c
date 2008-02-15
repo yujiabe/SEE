@@ -12820,7 +12820,7 @@ SEE_context_eval(context, expr, res)
 
 	argv[0] = &s;
 	SEE_SET_STRING(argv[0], expr);
-	eval(context, context->interpreter->Global, 1, argv, res);
+	eval(context, context->thisobj, 1, argv, res);
 }
 
 /*

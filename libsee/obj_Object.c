@@ -156,7 +156,7 @@ SEE_Object_init(interp)
 	PUTFUNC(isPrototypeOf, 1)
 	PUTFUNC(propertyIsEnumerable, 1)
 
-	if (SEE_COMPAT_JS(interp, <=, JS12)) {
+	if (SEE_COMPAT_JS(interp, >=, JS11)) {
 	    /*
 	     * The execution system checks for calls to interp->Global_eval
 	     * and diverts to a special handler that carries the context 
