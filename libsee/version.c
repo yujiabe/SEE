@@ -63,6 +63,15 @@ SEE_version()
 #if WITH_PARSER_CODEGEN
 		" +codegen"
 #endif
+#if WITH_PARSER_EVAL
+		" +ast-eval"
+#endif
+#if WITH_BOEHM_GC
+		" +gc"
+#endif
+#if WITH_PCRE
+		" +pcre"
+#endif
 		;
 	return version;
 }
