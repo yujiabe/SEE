@@ -12317,6 +12317,7 @@ SourceElements_make1(interp, statement)
 		&SourceElements_nodeclass); 
 	ss->statements = s;
 	ss->functions = NULL;
+	ss->vars = NULL;
 	return (struct node *)ss;
 }
 
