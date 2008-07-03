@@ -38,6 +38,7 @@
  *      %C             SEE_char_t          [0x00..0xffff]
  *      %[-][#][.#]s   char *
  *      %[-][#][.#]S   struct SEE_string *
+ *      %f	       SEE_number_t
  *      %[-][#]p       void *
  *
  * Arguments to %s,%S,%c,%C are padded without heeding Unicode combining chars
@@ -61,6 +62,7 @@
 #include <see/error.h>
 
 #include "printf.h"
+#include "dtoa.h"
 
 /* vararg copying */
 /* XXX This should be detected by autoconf'd */
@@ -112,7 +114,6 @@ _SEE_vsprintf(interp, s, fmt, ap)
     char strch, fmtch;
     SEE_char_t *out, *sstr = 0, sstrch;
     const char *fmtstart = 0;
-    double dbl;
 
 #define OUTPUT(c) do { \
 	if (phase) *out++ = (c); else outlen++; \
@@ -358,12 +359,36 @@ _SEE_vsprintf(interp, s, fmt, ap)
 		break;
 
 	    /* Floating point formats - not implemented */
-	    case 'e': 
 	    case 'f': 
-	    case 'g':
-		    /* For now, consume the argument and skip */
-		    dbl = va_arg(ap, double);
-		    /* FALLTHROUGH */
+	    {
+		SEE_number_t num;
+		char *endstr;
+		int sign, k, n, e;
+		num = va_arg(ap, SEE_number_t);
+		str = SEE_dtoa(num, DTOA_MODE_FCVT,
+		    32, &n, &sign, &endstr);
+		k = (int)(endstr - str);
+		if (sign) OUTPUT('-');
+		OUTPUT('0');
+		OUTPUT('.');
+		if (out)
+		    for (i = 0; i < k; i++)
+			*out++ = str[i];
+		else
+		    outlen += k;
+		OUTPUT('e');
+		if (n < 0) {
+		    OUTPUT('-');
+		    n = -n;
+		}
+		e = n;
+		if (n >= 1000) { OUTPUT('0' + (e/1000)); e %= 1000; }
+		if (n >=  100) { OUTPUT('0' + (e/ 100)); e %=  100; }
+		if (n >=   10) { OUTPUT('0' + (e/  10)); e %=   10; }
+		OUTPUT('0' + e);
+	    }
+
+		break;
 
 	    /* Unknown formats */
 	    default: badform:

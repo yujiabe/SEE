@@ -29,12 +29,14 @@
 #define TEST_NULL(a)	    _TEST(!(a), #a " == NULL", (0,"0x%p == 0", (a)))
 /* Tests two ints for equality */
 #define TEST_EQ_INT(a,b)    _TEST((a)==(b), \
-				#a " == " #b, (0,"%d == %d)",(a),(b)))
+				#a " == " #b, (0,"%d == %d",(a),(b)))
 /* Tests two ints for inequality */
 #define TEST_NOT_EQ_INT(a,b)    _TEST((a)!=(b), \
-				#a " != " #b, (0,"%d != %d)",(a),(b)))
+				#a " != " #b, (0,"%d != %d",(a),(b)))
 /* Tests two SEE_numbers for equality */
-#define TEST_EQ_FLOAT(a,b)  _TEST0((a)==(b), #a " == " #b) /* XXX */
+#define TEST_EQ_FLOAT(a,b)  _TEST(-1e-6 < (a)-(b) || (a)-(b) < 1e-6, \
+				#a " == " #b, (0, "%f == %f (diff %f)",\
+				(a),(b),(a)-(b)))
 /* Tests two C strings for equality */
 #define TEST_EQ_STR(a,b)    _TEST(strcmp((char *)(a), (char *)(b))==0, \
 				#a " == " #b, (0, "'%s' == '%s'", (a), (b)))

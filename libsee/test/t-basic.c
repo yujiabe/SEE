@@ -1,6 +1,7 @@
 #include <math.h>
 #include "test.inc"
 #include <see/see.h>
+#include "../nmath.h"
 
 /*
  * This tests the example given in the documentation.
@@ -34,8 +35,8 @@ test()
 
 		/* Print the result */
 		TEST(SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER);
-		if (SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER)
-			TEST_EQ_FLOAT(result.u.number, sqrt(3+4*7.)+9);
+		if (SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER) 
+		    TEST_EQ_FLOAT(result.u.number,  NUMBER_sqrt(3 + 4 * 7) + 9);
 	}
 
 	/* Finally: */
