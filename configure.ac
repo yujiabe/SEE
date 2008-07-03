@@ -259,6 +259,8 @@ if test x"$with_boehmgc" != x"no"; then
 	[have_boehm_gc=no])
     if test x"$have_boehm_gc" = x"yes"; then
 	AC_DEFINE(WITH_BOEHM_GC, [1], [Define if you have Boehm GC])
+	AC_CHECK_FUNCS([GC_malloc GC_gcollect GC_dump GC_malloc_atomic GC_free],
+			,[have_boehm_gc=no])
     else
 	LIBSEE_LIBS="$save_LIBSEE_LIBS"
 	CPPFLAGS="$save_CPPFLAGS"
@@ -358,12 +360,11 @@ if test -n "$missing_funcs"; then
 fi
 
 dnl -- functions that have workarounds written for
-AC_CHECK_FUNCS([strdup GC_malloc getopt \
+AC_CHECK_FUNCS([strdup getopt \
 		time gettimeofday GetSystemTimeAsFileTime \
 		localtime mktime \
 		isatty \
 		])
-AC_CHECK_FUNCS([GC_gcollect GC_dump GC_malloc_atomic GC_free])
 
 dnl ------------------------------------------------------------
 dnl miscellanea
