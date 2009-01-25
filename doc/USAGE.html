@@ -852,7 +852,7 @@ The <code>SEE_init()</code> function initialises the SEE library, and
 need only be called once by the application. 
 Subsequent calls to <code>SEE_init()</code> will have no effect.
 This function should be called before any customization of the 
-<code>SEE_system<code> structure occurs.
+<code>SEE_system</code> structure occurs.
 </p>
 
 <pre>void <dfn id="SEE_init">SEE_init</dfn>(void);</pre>
@@ -2796,6 +2796,12 @@ in the following table.
     <td>space character is ignored</td>
 </tbody>
 </table>
+
+<p class="note">
+&#9888; Note:
+Be careful when using the '<code>*</code>' format as the second parameter 
+may need to be explicitly cast to a <code>SEE_size_t</code> type.
+</p>
 
 <p>
 A cfunction may call 'back' into SEE using <code>SEE_Global_eval()</code>.

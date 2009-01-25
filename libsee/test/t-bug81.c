@@ -170,7 +170,7 @@ test()
 	    sample_utf8,		/* Z sample */
 	    NULL,			/* Z undefined */
 	    sample_utf8,		/* z sample */
-	    "foo", 3,			/* * "foo" */
+	    "foo", (SEE_size_t)3,	/* * "foo" */
 	    0,				/* b false */
 	    -1,				/* b true */
 	    -12345,			/* i -12345 */
