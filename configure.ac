@@ -189,6 +189,9 @@ SEE_ARG_ENABLE(ast-eval,[no],
    [AC_DEFINE(WITH_PARSER_EVAL, [1],
         [Define if you want to use the stable AST evaluator])
 ])
+if test x"$enable_bytecode" = x"no" -a x"$enable_ast_eval" = x"no"; then
+    AC_MSG_ERROR([Must have one of --enable-bytecode or --enable-ast-eval])
+fi
 
 dnl XXX need to find a better way to get pthreads flags in
 SEE_ARG_ENABLE(ssp-example,[no],
