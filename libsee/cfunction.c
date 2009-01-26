@@ -316,6 +316,7 @@ from_utf8_string(interp, cp)
 
 	while (!input->eof) 
 		SEE_string_addch(s, SEE_INPUT_NEXT(input));
+        SEE_INPUT_CLOSE(input);
 	return s;
 }
 
