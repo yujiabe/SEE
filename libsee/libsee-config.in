@@ -10,7 +10,7 @@ case "$1" in
     --version) 
 	echo "@PACKAGE_NAME@-@PACKAGE_VERSION@" ;;
     --libs)
-	echo "-L$libdir -lsee @LDFLAGS@ @LIBS@" ;;
+	echo "-L$libdir -lsee @LDFLAGS@ @LIBS@ @LIBSEE_LIBS@" ;;
     --cppflags)
 	echo "-I$includedir" ;;
     --prefix)
