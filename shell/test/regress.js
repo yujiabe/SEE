@@ -154,4 +154,7 @@ test("var functest; (function functest(arg){if(arg)return 1;functest=function(ar
 /* Bug 118 */
 test("eval('function f118(){}'); typeof f118", "function");
 
+/* Bug 125 */
+test("for (i in new Array(0,1,2,3,4)) { void i; }", undefined);
+
 finish()
