@@ -16,7 +16,7 @@
 #   define IEEE_8087
 #endif
 
-#if defined(__m68k__) || defined(__sparc__) || defined(__ppc__)
+#if defined(__m68k__) || defined(__sparc__) || defined(__ppc__) || defined(__powerpc__)
 #   define IEEE_MC68k 
 #endif
 
