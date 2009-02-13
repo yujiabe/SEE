@@ -1,6 +1,9 @@
 $Id$
 
 3.1 [unreleased]
+  Bug 139: detect NetBSD/powerpc in dtoa
+  Bug 133, 135: add -lpcre, -lgcc to output from libsee-config --libs
+  Bug 126: add missing call to SEE_INPUT_CLOSE in SEE_call_args's UTF8 handler
   Bug 122: uninitialized AST field in parser
   Bug 120: library compiled with -DNDEBUG misses SEE_throw() debug point
   Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
