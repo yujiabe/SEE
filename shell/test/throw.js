@@ -39,4 +39,10 @@ testf("try{return 1} catch(e){throw  2} finally{throw  3}; return 4",
 testf("try{throw  0} catch(e){throw  2} finally{throw  3}; return 4",
 							    Exception(3));
 
+/* Interaction between try and break */
+test("var s=0;   a:{try{s+=1;break a}finally{s+=2        }s+=4}     s", 3);
+test("var s=0;b:{a:{try{s+=1;break b}finally{s+=2        }s+=4}s+=8}s", 3);
+test("var s=0;b:{a:{try{s+=1;break a}finally{s+=2;break b}s+=4}s+=8}s", 3);
+test("var s=0;   a:{try{throw 0}catch(e){s+=1; break a}s+=2}  s", 1);
+
 finish()

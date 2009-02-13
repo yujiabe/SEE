@@ -157,4 +157,10 @@ test("eval('function f118(){}'); typeof f118", "function");
 /* Bug 125 */
 test("for (i in new Array(0,1,2,3,4)) { void i; }", undefined);
 
+/* Bug 131 */
+test("function F(){try{1;}finally{return 2;}return 3;}F()", 2);
+
+/* Bug 132 */
+test("function F(){while(1){try{throw 1}catch(e){break}return 1}return 2}F()", 2);
+
 finish()
