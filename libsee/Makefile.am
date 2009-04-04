@@ -26,7 +26,7 @@ libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
 		     dprint.h enumerate.h function.h init.h code1.h	\
 		     lex.h nmath.h parse.h platform.h printf.h regex.h 	\
 		     scope.h tokens.h unicase.inc unicode.h unicode.inc	\
-		     stringdefs.h stringdefs.inc replace.h
+		     stringdefs.h stringdefs.inc replace.h parse_node.h
 		   
 if NATIVE_DTOA
 libsee_la_SOURCES += dtoa_native.c
