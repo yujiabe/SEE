@@ -1,5 +1,4 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
-/* $Id: array.h 725 2004-10-24 00:55:49Z d $ */
 
 #ifndef _SEE_h_code1_
 #define _SEE_h_code1_

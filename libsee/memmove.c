@@ -27,7 +27,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/* $Id: memcmp.c 751 2004-12-02 11:24:25Z d $ */
 
 #if HAVE_CONFIG_H
 # include <config.h>

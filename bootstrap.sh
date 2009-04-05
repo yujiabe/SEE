@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 # Bootstrap the auxilliary files that don't need to be kept in CVS
 
 

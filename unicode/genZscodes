@@ -2,7 +2,6 @@
 
 #
 # Spit out a C structure that lists all the Zs (whitespace) Unicode codepoints 
-# $Id$
 #
 
 echo ""

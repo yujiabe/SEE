@@ -1,5 +1,4 @@
 /* Copyright (c) 2004, David Leonard. All rights reserved. */
-/* $Id$ */
 
 #ifndef _SEE_h_init_
 #define _SEE_h_init_

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* These headers are used for intergration into SEE */
 #include "dtoa.h"
 #include "dtoa_config.h"

@@ -1,5 +1,4 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
-/* $Id$ */
 
 #if HAVE_CONFIG_H
 # include <config.h>

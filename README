@@ -31,5 +31,4 @@ Directory organisation:
   include/see	- Public header files
   shell/	- Demo/test program 'see-shell'
 
-$Id$
 

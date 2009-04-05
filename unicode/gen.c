@@ -1,5 +1,4 @@
 /* Copyright David Leonard, 2003. */
-/* $Id$ */
 
 /*
  * Generate Unicode tables.

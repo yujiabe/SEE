@@ -1,4 +1,3 @@
-$Id$
 
 3.1 [unreleased]
   Bug 139: detect NetBSD/powerpc in dtoa

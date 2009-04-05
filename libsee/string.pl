@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-# $Id$
 #
 # The author of this software is David Leonard.
 #

@@ -1,5 +1,4 @@
 /* Copyright (c) 2005, David Leonard. All rights reserved. */
-/* $Id$ */
 
 #ifndef _SEE_h_version_
 #define _SEE_h_version_

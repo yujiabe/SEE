@@ -1,5 +1,4 @@
 /* Copyright (c) 2005, David Leonard. All rights reserved. */
-/* $Id$ */
 
 #ifndef _h_shell_debug
 #define _h_shell_debug

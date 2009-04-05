@@ -1,5 +1,4 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
-/* $Id$ */
 
 /*
  * Configuration directives for dtoa when used by SEE

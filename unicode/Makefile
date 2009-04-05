@@ -1,6 +1,5 @@
 
 #
-# $Id$
 #
 # Simple rules to make the unicode.c tables
 #

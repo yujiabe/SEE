@@ -1,5 +1,4 @@
 ## Process this file with automake to produce Makefile.in
-## $Id$
 
 bin_PROGRAMS=			see-shell
 see_shell_SOURCES=		main.c shell.c getopt.c readline.c 	\

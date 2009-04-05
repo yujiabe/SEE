@@ -27,7 +27,10 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/* $Id$ */
+
+/*
+ * code1 is a bytecode generator and executer.
+ */
 
 #if HAVE_CONFIG_H
 # include <config.h>

@@ -1,5 +1,4 @@
 /* David Leonard, 2006. This file released into the public domain. */
-/* $Id$ */
 
 /*
  * This module is intended to provide an example of how to write a module

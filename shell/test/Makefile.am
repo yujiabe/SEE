@@ -1,5 +1,4 @@
 ## Process this file with automake to produce Makefile.in
-## $Id$
 
 #
 # Running 'make check' will run the parser over a basic grammar

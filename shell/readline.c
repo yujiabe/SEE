@@ -1,5 +1,4 @@
 /* Copyright (c) 2005, David Leonard. All rights reserved. */
-/* $Id$ */
 
 /*
  * Simplified readline, provided for when GNU readline is not available.

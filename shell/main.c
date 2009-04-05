@@ -1,5 +1,4 @@
 /* Copyright (c) 2003, David Leonard. All rights reserved. */
-/* $Id$ */
 
 /*
  * The SEE shell

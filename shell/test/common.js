@@ -1,6 +1,5 @@
 /*
  * Common test code
- * $Id: grammar.js 561 2003-12-04 10:39:04Z d $
  */
 
 /*
