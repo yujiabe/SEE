@@ -911,7 +911,7 @@ argument_index(a, s)
 	unsigned int i;
 
 	if (s->length == 0)
-		return NULL;
+		return -1;
 	value = 0;
 	for (i = 0; i < s->length; i++) {
 		if (s->data[i] >= '0' && s->data[i] <= '9')

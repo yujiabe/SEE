@@ -36,7 +36,8 @@ test()
 		/* Print the result */
 		TEST(SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER);
 		if (SEE_VALUE_GET_TYPE(&result) == SEE_NUMBER) 
-		    TEST_EQ_FLOAT(result.u.number,  NUMBER_sqrt(3 + 4 * 7) + 9);
+		    TEST_EQ_FLOAT(result.u.number,  
+                                  NUMBER_sqrt(3. + 4. * 7.) + 9.);
 	}
 
 	/* Finally: */
