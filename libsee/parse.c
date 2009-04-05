@@ -112,6 +112,10 @@
 # include "code.h"
 #endif
 
+#if WITH_PARSER_PRINT
+# include "parse_print.h"
+#endif
+
 #include "parse_node.h"
 
 #define MAX3(a, b, c)    MAX(MAX(a, b), c)
@@ -130,11 +134,6 @@ int SEE_eval_debug = 0;
  * Abstract syntax tree basic structure
  */
 struct node;
-
-#if WITH_PARSER_PRINT
-struct printer;
-#endif
-
 
 #if WITH_PARSER_CODEGEN
 struct code_varscope {
@@ -179,9 +178,6 @@ struct code_context {
 };
 #endif
 
-#ifndef NDEBUG
-extern enum nodeclass_enum _SEE_nodeclass_superclass[];
-#endif
 #if WITH_PARSER_EVAL
 extern void (*_SEE_nodeclass_eval[])(struct node *, 
         struct SEE_context *, struct SEE_value *);
@@ -189,10 +185,6 @@ extern void (*_SEE_nodeclass_eval[])(struct node *,
 #if WITH_PARSER_CODEGEN
 extern void (*_SEE_nodeclass_codegen[])(struct node *, 
         struct code_context *);
-#endif
-#if WITH_PARSER_PRINT
-extern void (*_SEE_nodeclass_print[])(struct node *, 
-        struct printer *);
 #endif
 extern int (*_SEE_nodeclass_isconst[])(struct node *, 
         struct SEE_interpreter *);
@@ -283,120 +275,10 @@ struct parser {
 	struct labelset	 *current_labelset; /* statement's labelset or NULL */
 };
 
-#if WITH_PARSER_PRINT
-struct printerclass {
-	void	(*print_string)(struct printer *, struct SEE_string *);
-	void	(*print_char)(struct printer *, int);
-	void	(*print_newline)(struct printer *, int);
-	void	(*print_node)(struct printer *, struct node *);
-};
-
-struct printer {
-	struct printerclass *printerclass;
-	struct SEE_interpreter *interpreter;
-	int	indent;
-	int	bol;
-};
-#endif
 
 /*------------------------------------------------------------
  * function prototypes
  */
-
-#define Unary_nodeclass _SEE_parse_nodeclass[NODECLASS_Unary]
-#define Binary_nodeclass _SEE_parse_nodeclass[NODECLASS_Binary]
-#define Literal_nodeclass _SEE_parse_nodeclass[NODECLASS_Literal]
-#define StringLiteral_nodeclass _SEE_parse_nodeclass[NODECLASS_StringLiteral]
-#define RegularExpressionLiteral_nodeclass _SEE_parse_nodeclass[NODECLASS_RegularExpressionLiteral]
-#define PrimaryExpression_this_nodeclass _SEE_parse_nodeclass[NODECLASS_PrimaryExpression_this]
-#define PrimaryExpression_ident_nodeclass _SEE_parse_nodeclass[NODECLASS_PrimaryExpression_ident]
-#define ArrayLiteral_nodeclass _SEE_parse_nodeclass[NODECLASS_ArrayLiteral]
-#define ObjectLiteral_nodeclass _SEE_parse_nodeclass[NODECLASS_ObjectLiteral]
-#define Arguments_nodeclass _SEE_parse_nodeclass[NODECLASS_Arguments]
-#define MemberExpression_new_nodeclass _SEE_parse_nodeclass[NODECLASS_MemberExpression_new]
-#define MemberExpression_dot_nodeclass _SEE_parse_nodeclass[NODECLASS_MemberExpression_dot]
-#define MemberExpression_bracket_nodeclass _SEE_parse_nodeclass[NODECLASS_MemberExpression_bracket]
-#define CallExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_CallExpression]
-#define PostfixExpression_inc_nodeclass _SEE_parse_nodeclass[NODECLASS_PostfixExpression_inc]
-#define PostfixExpression_dec_nodeclass _SEE_parse_nodeclass[NODECLASS_PostfixExpression_dec]
-#define UnaryExpression_delete_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_delete]
-#define UnaryExpression_void_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_void]
-#define UnaryExpression_typeof_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_typeof]
-#define UnaryExpression_preinc_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_preinc]
-#define UnaryExpression_predec_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_predec]
-#define UnaryExpression_plus_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_plus]
-#define UnaryExpression_minus_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_minus]
-#define UnaryExpression_inv_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_inv]
-#define UnaryExpression_not_nodeclass _SEE_parse_nodeclass[NODECLASS_UnaryExpression_not]
-#define MultiplicativeExpression_mul_nodeclass _SEE_parse_nodeclass[NODECLASS_MultiplicativeExpression_mul]
-#define MultiplicativeExpression_div_nodeclass _SEE_parse_nodeclass[NODECLASS_MultiplicativeExpression_div]
-#define MultiplicativeExpression_mod_nodeclass _SEE_parse_nodeclass[NODECLASS_MultiplicativeExpression_mod]
-#define AdditiveExpression_add_nodeclass _SEE_parse_nodeclass[NODECLASS_AdditiveExpression_add]
-#define AdditiveExpression_sub_nodeclass _SEE_parse_nodeclass[NODECLASS_AdditiveExpression_sub]
-#define ShiftExpression_lshift_nodeclass _SEE_parse_nodeclass[NODECLASS_ShiftExpression_lshift]
-#define ShiftExpression_rshift_nodeclass _SEE_parse_nodeclass[NODECLASS_ShiftExpression_rshift]
-#define ShiftExpression_urshift_nodeclass _SEE_parse_nodeclass[NODECLASS_ShiftExpression_urshift]
-#define RelationalExpression_lt_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_lt]
-#define RelationalExpression_gt_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_gt]
-#define RelationalExpression_le_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_le]
-#define RelationalExpression_ge_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_ge]
-#define RelationalExpression_instanceof_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_instanceof]
-#define RelationalExpression_in_nodeclass _SEE_parse_nodeclass[NODECLASS_RelationalExpression_in]
-#define EqualityExpression_eq_nodeclass _SEE_parse_nodeclass[NODECLASS_EqualityExpression_eq]
-#define EqualityExpression_ne_nodeclass _SEE_parse_nodeclass[NODECLASS_EqualityExpression_ne]
-#define EqualityExpression_seq_nodeclass _SEE_parse_nodeclass[NODECLASS_EqualityExpression_seq]
-#define EqualityExpression_sne_nodeclass _SEE_parse_nodeclass[NODECLASS_EqualityExpression_sne]
-#define BitwiseANDExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_BitwiseANDExpression]
-#define BitwiseXORExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_BitwiseXORExpression]
-#define BitwiseORExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_BitwiseORExpression]
-#define LogicalANDExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_LogicalANDExpression]
-#define LogicalORExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_LogicalORExpression]
-#define ConditionalExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_ConditionalExpression]
-#define AssignmentExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression]
-#define AssignmentExpression_simple_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_simple]
-#define AssignmentExpression_muleq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_muleq]
-#define AssignmentExpression_diveq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_diveq]
-#define AssignmentExpression_modeq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_modeq]
-#define AssignmentExpression_addeq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_addeq]
-#define AssignmentExpression_subeq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_subeq]
-#define AssignmentExpression_lshifteq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_lshifteq]
-#define AssignmentExpression_rshifteq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_rshifteq]
-#define AssignmentExpression_urshifteq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_urshifteq]
-#define AssignmentExpression_andeq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_andeq]
-#define AssignmentExpression_xoreq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_xoreq]
-#define AssignmentExpression_oreq_nodeclass _SEE_parse_nodeclass[NODECLASS_AssignmentExpression_oreq]
-#define Expression_comma_nodeclass _SEE_parse_nodeclass[NODECLASS_Expression_comma]
-#define Block_empty_nodeclass _SEE_parse_nodeclass[NODECLASS_Block_empty]
-#define StatementList_nodeclass _SEE_parse_nodeclass[NODECLASS_StatementList]
-#define VariableStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_VariableStatement]
-#define VariableDeclarationList_nodeclass _SEE_parse_nodeclass[NODECLASS_VariableDeclarationList]
-#define VariableDeclaration_nodeclass _SEE_parse_nodeclass[NODECLASS_VariableDeclaration]
-#define EmptyStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_EmptyStatement]
-#define ExpressionStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_ExpressionStatement]
-#define IfStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_IfStatement]
-#define IterationStatement_dowhile_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_dowhile]
-#define IterationStatement_while_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_while]
-#define IterationStatement_for_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_for]
-#define IterationStatement_forvar_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_forvar]
-#define IterationStatement_forin_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_forin]
-#define IterationStatement_forvarin_nodeclass _SEE_parse_nodeclass[NODECLASS_IterationStatement_forvarin]
-#define ContinueStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_ContinueStatement]
-#define BreakStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_BreakStatement]
-#define ReturnStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_ReturnStatement]
-#define ReturnStatement_undef_nodeclass _SEE_parse_nodeclass[NODECLASS_ReturnStatement_undef]
-#define WithStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_WithStatement]
-#define SwitchStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_SwitchStatement]
-#define LabelledStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_LabelledStatement]
-#define ThrowStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_ThrowStatement]
-#define TryStatement_nodeclass _SEE_parse_nodeclass[NODECLASS_TryStatement]
-#define TryStatement_catch_nodeclass _SEE_parse_nodeclass[NODECLASS_TryStatement_catch]
-#define TryStatement_finally_nodeclass _SEE_parse_nodeclass[NODECLASS_TryStatement_finally]
-#define TryStatement_catchfinally_nodeclass _SEE_parse_nodeclass[NODECLASS_TryStatement_catchfinally]
-#define Function_nodeclass _SEE_parse_nodeclass[NODECLASS_Function]
-#define FunctionDeclaration_nodeclass _SEE_parse_nodeclass[NODECLASS_FunctionDeclaration]
-#define FunctionExpression_nodeclass _SEE_parse_nodeclass[NODECLASS_FunctionExpression]
-#define FunctionBody_nodeclass _SEE_parse_nodeclass[NODECLASS_FunctionBody]
-#define SourceElements_nodeclass _SEE_parse_nodeclass[NODECLASS_SourceElements]
 
 static struct node *new_node_internal(struct SEE_interpreter*interp, int sz, 
         enum nodeclass_enum nc, struct SEE_string* filename, int lineno,
@@ -723,185 +605,6 @@ static void eval(struct SEE_context *context, struct SEE_object *thisobj,
         int argc, struct SEE_value **argv, struct SEE_value *res);
 static void eval_functionbody(void *, struct SEE_context *, struct SEE_value *);
 
-#if WITH_PARSER_PRINT
-static void Literal_print(struct node *na, struct printer *printer);
-static void NumericLiteral_print(struct Literal_node *, struct printer *);
-static void StringLiteral_print(struct node *na, struct printer *printer);
-static void RegularExpressionLiteral_print(struct node *na, 
-        struct printer *printer);
-static void PrimaryExpression_this_print(struct node *n, 
-        struct printer *printer);
-static void PrimaryExpression_ident_print(struct node *na, 
-        struct printer *printer);
-static void ArrayLiteral_print(struct node *na, struct printer *printer);
-static void ObjectLiteral_print(struct node *na, struct printer *printer);
-static void Arguments_print(struct node *na, struct printer *printer);
-static void MemberExpression_new_print(struct node *na, 
-        struct printer *printer);
-static void MemberExpression_dot_print(struct node *na, 
-        struct printer *printer);
-static void MemberExpression_bracket_print(struct node *na, 
-        struct printer *printer);
-static void CallExpression_print(struct node *na, struct printer *printer);
-static void Unary_print(struct node *na, struct printer *printer);
-static void PostfixExpression_inc_print(struct node *na, 
-        struct printer *printer);
-static void PostfixExpression_dec_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_delete_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_void_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_typeof_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_preinc_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_predec_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_plus_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_minus_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_inv_print(struct node *na, 
-        struct printer *printer);
-static void UnaryExpression_not_print(struct node *na, 
-        struct printer *printer);
-static void Binary_print(struct node *na, struct printer *printer);
-static void MultiplicativeExpression_mul_print(struct node *na, 
-        struct printer *printer);
-static void MultiplicativeExpression_div_print(struct node *na, 
-        struct printer *printer);
-static void MultiplicativeExpression_mod_print(struct node *na, 
-        struct printer *printer);
-static void AdditiveExpression_add_print(struct node *na, 
-        struct printer *printer);
-static void AdditiveExpression_sub_print(struct node *na, 
-        struct printer *printer);
-static void ShiftExpression_lshift_print(struct node *na, 
-        struct printer *printer);
-static void ShiftExpression_rshift_print(struct node *na, 
-        struct printer *printer);
-static void ShiftExpression_urshift_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_lt_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_gt_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_le_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_ge_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_instanceof_print(struct node *na, 
-        struct printer *printer);
-static void RelationalExpression_in_print(struct node *na, 
-        struct printer *printer);
-static void EqualityExpression_eq_print(struct node *na, 
-        struct printer *printer);
-static void EqualityExpression_ne_print(struct node *na, 
-        struct printer *printer);
-static void EqualityExpression_seq_print(struct node *na, 
-        struct printer *printer);
-static void EqualityExpression_sne_print(struct node *na, 
-        struct printer *printer);
-static void BitwiseANDExpression_print(struct node *na, 
-        struct printer *printer);
-static void BitwiseXORExpression_print(struct node *na, 
-        struct printer *printer);
-static void BitwiseORExpression_print(struct node *na, 
-        struct printer *printer);
-static void LogicalANDExpression_print(struct node *na, 
-        struct printer *printer);
-static void LogicalORExpression_print(struct node *na, 
-        struct printer *printer);
-static void ConditionalExpression_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_simple_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_muleq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_diveq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_modeq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_addeq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_subeq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_lshifteq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_rshifteq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_urshifteq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_andeq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_xoreq_print(struct node *na, 
-        struct printer *printer);
-static void AssignmentExpression_oreq_print(struct node *na, 
-        struct printer *printer);
-static void Expression_comma_print(struct node *na, struct printer *printer);
-static void Block_empty_print(struct node *n, struct printer *printer);
-static void VariableStatement_print(struct node *na, 
-        struct printer *printer);
-static void VariableDeclarationList_print(struct node *na, 
-        struct printer *printer);
-static void VariableDeclaration_print(struct node *na, 
-        struct printer *printer);
-static void EmptyStatement_print(struct node *n, struct printer *printer);
-static void ExpressionStatement_print(struct node *na, 
-        struct printer *printer);
-static void IfStatement_print(struct node *na, struct printer *printer);
-static void IterationStatement_dowhile_print(struct node *na, 
-        struct printer *printer);
-static void IterationStatement_while_print(struct node *na, 
-        struct printer *printer);
-static void IterationStatement_for_print(struct node *na, 
-        struct printer *printer);
-static void IterationStatement_forvar_print(struct node *na, 
-        struct printer *printer);
-static void IterationStatement_forin_print(struct node *na, 
-        struct printer *printer);
-static void IterationStatement_forvarin_print(struct node *na, 
-        struct printer *printer);
-static void ContinueStatement_print(struct node *na, 
-        struct printer *printer);
-static void BreakStatement_print(struct node *na, struct printer *printer);
-static void ReturnStatement_print(struct node *na, struct printer *printer);
-static void ReturnStatement_undef_print(struct node *na, 
-        struct printer *printer);
-static void WithStatement_print(struct node *na, struct printer *printer);
-static void SwitchStatement_print(struct node *na, struct printer *printer);
-static void Label_print(unsigned int target, struct printer *printer);
-static void LabelledStatement_print(struct node *na, struct printer *printer);
-static void ThrowStatement_print(struct node *na, struct printer *printer);
-static void TryStatement_catch_print(struct node *na, 
-        struct printer *printer);
-static void TryStatement_finally_print(struct node *na, 
-        struct printer *printer);
-static void TryStatement_catchfinally_print(struct node *na, 
-        struct printer *printer);
-static void Function_print(struct node *na, struct printer *printer);
-static void SourceElements_print(struct node *na, struct printer *printer);
-static void printer_init(struct printer *printer, 
-        struct SEE_interpreter *interp, struct printerclass *printerclass);
-static void printer_atbol(struct printer *printer);
-static void printer_print_newline(struct printer *printer, int indent);
-static void printer_print_node(struct printer *printer, struct node *n);
-static void print_hex(struct printer *printer, int i);
-static void stdio_print_string(struct printer *printer, 
-        struct SEE_string *s);
-static void stdio_print_char(struct printer *printer, int c);
-static void stdio_print_node(struct printer *printer, struct node *n);
-static struct printer *stdio_printer_new(struct SEE_interpreter *interp, 
-        FILE *output);
-static void string_print_string(struct printer *printer, 
-        struct SEE_string *s);
-static void string_print_char(struct printer *printer, int c);
-static struct printer *string_printer_new(struct SEE_interpreter *interp, 
-        struct SEE_string *string);
-static void print_functionbody(struct SEE_interpreter *interp, 
-        struct function *f, FILE *fp);
-#endif
 
 
 #if WITH_PARSER_CODEGEN
@@ -1116,25 +819,6 @@ static void const_evaluate(struct node *, struct SEE_interpreter *,
 	((t *)new_node_internal(i, sizeof (t), nc, STR(empty_string), 0, NULL))
 #endif
 
-#if WITH_PARSER_PRINT
-#define PRINTFN(n) _SEE_nodeclass_print[(n)->nodeclass]
-#endif
-
-/*
- * Convenience function to cast a node to type 'struct Foo_node'
- * but only if it has NODECLASS_Foo as its type or supertype
- */
-#ifdef NDEBUG
-#define CAST_NODE(na, cls)				\
-	((struct cls##_node *)(na))
-#else
-#define CAST_NODE(na, cls)				\
-	((struct cls##_node *)cast_node(na, 		\
-		NODECLASS_##cls, #cls, __FILE__, __LINE__))
-static struct node *cast_node(struct node *, enum nodeclass_enum, 
-	const char *, const char *, int);
-#endif
-
 #ifndef NDEBUG
 #define PARSE(prod)					\
     ((void)(SEE_parse_debug ? 				\
@@ -1162,21 +846,6 @@ static struct node *cast_node(struct node *, enum nodeclass_enum,
 	    error_at(parser, "%s, near %s",		\
 	    m, SEE_tokenname(NEXT)))
 
-#if WITH_PARSER_PRINT
-/*
- * Printer macros
- */
-# define PRINT(n)	 (*printer->printerclass->print_node)(printer, n)
-# define PRINT_STRING(s) (*printer->printerclass->print_string)(printer, s)
-# define PRINT_CSTRING(s)(*printer->printerclass->print_cstring)(printer, s)
-# define PRINT_CHAR(c)	 (*printer->printerclass->print_char)(printer, c)
-# define PRINT_NEWLINE(i)(*printer->printerclass->print_newline)(printer, i)
-# define PRINTP(n) do {					\
-	     PRINT_CHAR('(');				\
-	     PRINT(n);					\
-	     PRINT_CHAR(')');				\
-    } while (0)
-#endif
 
 
 /* Returns true if the node returns a constant expression */
@@ -1392,33 +1061,6 @@ new_node(parser, sz, nc, dbg_nc)
 #endif
 	return n;
 }
-
-#ifndef NDEBUG
-/*
- * Checks that the node pointer na has node class nc in its class chain.
- * Used by the CAST_NODE() macro to runtime check casts.
- */
-static struct node *
-cast_node(na, nc, cname, file, line)
-	struct node *na;
-	enum nodeclass_enum nc;
-	const char *cname;
-	const char *file;
-	int line;
-{
-	if (na) {
-		enum nodeclass_enum nac = na->nodeclass;
-		while (nac != NODECLASS_None && nac != nc)
-		    nac = _SEE_nodeclass_superclass[nac];
-		if (!nac) {
-		    dprintf("%s:%d: internal error: cast to %s failed [vers %s]\n",
-			file, line, cname, PACKAGE_VERSION);
-		    abort();
-		}
-	}
-	return na;
-}
-#endif
 
 /*
  * Initialises a parser state.
@@ -2191,32 +1833,6 @@ Literal_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-Literal_print(na, printer)
-	struct node *na; /* (struct Literal_node) */
-	struct printer *printer;
-{
-	struct Literal_node *n = CAST_NODE(na, Literal);
-
-	switch (SEE_VALUE_GET_TYPE(&n->value)) {
-	case SEE_BOOLEAN:
-		PRINT_STRING(n->value.u.boolean
-			? STR(true)
-			: STR(false));
-		break;
-	case SEE_NULL:
-		PRINT_STRING(STR(null));
-		break;
-	case SEE_NUMBER:
-		NumericLiteral_print(n, printer);
-		break;
-	default:
-		PRINT_CHAR('?');
-	}
-	PRINT_CHAR(' ');
-}
-#endif
 
 static struct node *
 Literal_parse(parser)
@@ -2260,20 +1876,6 @@ Literal_parse(parser)
  *		tNUMBER				-- 7.8.3
  */
 
-#if WITH_PARSER_PRINT
-static void
-NumericLiteral_print(n, printer)
-	struct Literal_node *n;
-	struct printer *printer;
-{
-	struct SEE_value numstr;
-
-	SEE_ASSERT(printer->interpreter, 
-	    SEE_VALUE_GET_TYPE(&n->value) == SEE_NUMBER);
-	SEE_ToString(printer->interpreter, &n->value, &numstr);
-	PRINT_STRING(numstr.u.string);
-}
-#endif
 
 static struct node *
 NumericLiteral_parse(parser)
@@ -2319,41 +1921,6 @@ StringLiteral_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-StringLiteral_print(na, printer)
-	struct node *na; /* (struct StringLiteral_node) */
-	struct printer *printer;
-{
-	struct StringLiteral_node *n = CAST_NODE(na, StringLiteral);
-	unsigned int i;
-
-	PRINT_CHAR('"');
-	for (i = 0; i < n->string->length; i ++) {
-		SEE_char_t c = n->string->data[i];
-		if (c == '\\' || c == '\"') {
-			PRINT_CHAR('\\');
-			PRINT_CHAR(c & 0x7f);
-		} else if (c >= ' ' && c <= '~')
-			PRINT_CHAR(c & 0x7f);
-		else if (c < 0x100) {
-			PRINT_CHAR('\\');
-			PRINT_CHAR('x');
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 4) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 0) & 0xf ]);
-		} else {
-			PRINT_CHAR('\\');
-			PRINT_CHAR('u');
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >>12) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 8) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 4) & 0xf ]);
-			PRINT_CHAR(SEE_hexstr_lowercase[ (c >> 0) & 0xf ]);
-		}
-	}
-	PRINT_CHAR('"');
-	PRINT_CHAR(' ');
-}
-#endif
 
 static struct node *
 StringLiteral_parse(parser)
@@ -2419,21 +1986,6 @@ RegularExpressionLiteral_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RegularExpressionLiteral_print(na, printer)
-	struct node *na; /* (struct RegularExpressionLiteral_node) */
-	struct printer *printer;
-{
-	struct RegularExpressionLiteral_node *n = 
-		CAST_NODE(na, RegularExpressionLiteral);
-	PRINT_CHAR('/');
-	PRINT_STRING(n->pattern.u.string);
-	PRINT_CHAR('/');
-	PRINT_STRING(n->flags.u.string);
-	PRINT_CHAR(' ');
-}
-#endif
 
 static struct node *
 RegularExpressionLiteral_parse(parser)
@@ -2510,16 +2062,6 @@ PrimaryExpression_this_codegen(n, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-PrimaryExpression_this_print(n, printer)
-	struct printer *printer;
-	struct node *n;
-{
-	PRINT_STRING(STR(this));
-	PRINT_CHAR(' ');
-}
-#endif
 
 
 /* 11.1.2 */
@@ -2557,18 +2099,6 @@ PrimaryExpression_ident_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-PrimaryExpression_ident_print(na, printer)
-	struct node *na; /* (struct PrimaryExpression_ident_node) */
-	struct printer *printer;
-{
-	struct PrimaryExpression_ident_node *n = 
-		CAST_NODE(na, PrimaryExpression_ident);
-	PRINT_STRING(n->string);
-	PRINT_CHAR(' ');
-}
-#endif
 
 
 static struct node *
@@ -2709,34 +2239,6 @@ ArrayLiteral_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ArrayLiteral_print(na, printer)
-	struct node *na; /* (struct ArrayLiteral_node) */
-	struct printer *printer;
-{
-	struct ArrayLiteral_node *n = CAST_NODE(na, ArrayLiteral);
-	struct ArrayLiteral_element *element;
-	int pos;
-
-	PRINT_CHAR('[');
-	PRINT_CHAR(' ');
-	for (pos = 0, element = n->first; element; element = element->next) {
-		while (pos < element->index) {
-			PRINT_CHAR(',');
-			PRINT_CHAR(' ');
-			pos++;
-		}
-		PRINT(element->expr);
-	}
-	while (pos < n->length) {
-		PRINT_CHAR(',');
-		PRINT_CHAR(' ');
-		pos++;
-	}
-	PRINT_CHAR(']');
-}
-#endif
 
 
 static struct node *
@@ -2844,30 +2346,6 @@ ObjectLiteral_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ObjectLiteral_print(na, printer)
-	struct node *na; /* (struct ObjectLiteral_node) */
-	struct printer *printer;
-{
-	struct ObjectLiteral_node *n = CAST_NODE(na, ObjectLiteral);
-	struct ObjectLiteral_pair *pair;
-
-	PRINT_CHAR('{');
-	PRINT_CHAR(' ');
-	for (pair = n->first; pair; pair = pair->next) {
-		if (pair != n->first) {
-			PRINT_CHAR(',');
-			PRINT_CHAR(' ');
-		}
-		PRINT_STRING(pair->name);
-		PRINT_CHAR(':');
-		PRINT_CHAR(' ');
-		PRINT(pair->value);
-	}
-	PRINT_CHAR('}');
-}
-#endif
 
 
 static struct node *
@@ -3035,26 +2513,6 @@ Arguments_isconst(na, interp)
 	return 1;
 }
 
-#if WITH_PARSER_PRINT
-static void
-Arguments_print(na, printer)
-	struct node *na; /* (struct Arguments_node) */
-	struct printer *printer;
-{
-	struct Arguments_node *n = CAST_NODE(na, Arguments);
-	struct Arguments_arg *arg;
-
-	PRINT_CHAR('(');
-	for (arg = n->first; arg; arg = arg->next) {
-		if (arg != n->first) {
-			PRINT_CHAR(',');
-			PRINT_CHAR(' ');
-		}
-		PRINTP(arg->expr);
-	}
-	PRINT_CHAR(')');
-}
-#endif
 
 static struct Arguments_node *
 Arguments_parse(parser)
@@ -3157,21 +2615,6 @@ MemberExpression_new_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MemberExpression_new_print(na, printer)
-	struct node *na; /* (struct MemberExpression_new_node) */
-	struct printer *printer;
-{
-	struct MemberExpression_new_node *n = 
-		CAST_NODE(na, MemberExpression_new);
-	PRINT_STRING(STR(new));
-	PRINT_CHAR(' ');
-	PRINTP(n->mexp);
-	if (n->args)
-		PRINT((struct node *)n->args);
-}
-#endif
 
 
 
@@ -3217,20 +2660,6 @@ MemberExpression_dot_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MemberExpression_dot_print(na, printer)
-	struct node *na; /* (struct MemberExpression_dot_node) */
-	struct printer *printer;
-{
-	struct MemberExpression_dot_node *n = 
-		CAST_NODE(na, MemberExpression_dot);
-	PRINTP(n->mexp);
-	PRINT_CHAR('.');
-	PRINT_STRING(n->name);
-	PRINT_CHAR(' ');
-}
-#endif
 
 
 
@@ -3288,20 +2717,6 @@ MemberExpression_bracket_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MemberExpression_bracket_print(na, printer)
-	struct node *na; /* (struct MemberExpression_bracket_node) */
-	struct printer *printer;
-{
-	struct MemberExpression_bracket_node *n = 
-		CAST_NODE(na, MemberExpression_bracket);
-	PRINTP(n->mexp);
-	PRINT_CHAR('[');
-	PRINT(n->name);
-	PRINT_CHAR(']');
-}
-#endif
 
 
 
@@ -3463,17 +2878,6 @@ CallExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-CallExpression_print(na, printer)
-	struct node *na; /* (struct CallExpression_node) */
-	struct printer *printer;
-{
-	struct CallExpression_node *n = CAST_NODE(na, CallExpression);
-	PRINTP(n->exp);
-	PRINT((struct node *)n->args);
-}
-#endif
 
 
 static struct node *
@@ -3551,16 +2955,6 @@ LeftHandSideExpression_parse(parser)
  */
 
 
-#if WITH_PARSER_PRINT
-static void
-Unary_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT(n->a);
-}
-#endif
 
 static int
 Unary_isconst(na, interp)
@@ -3652,19 +3046,6 @@ PostfixExpression_inc_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-PostfixExpression_inc_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINTP(n->a);
-	PRINT_CHAR('+');
-	PRINT_CHAR('+');
-	PRINT_CHAR(' ');
-}
-#endif
 
 
 /* 11.3.2 */
@@ -3711,19 +3092,6 @@ PostfixExpression_dec_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-PostfixExpression_dec_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINTP(n->a);
-	PRINT_CHAR('-');
-	PRINT_CHAR('-');
-	PRINT_CHAR(' ');
-}
-#endif
 
 
 static struct node *
@@ -3825,18 +3193,6 @@ UnaryExpression_delete_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_delete_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_STRING(STR(delete));
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 /* 11.4.2 */
@@ -3876,18 +3232,6 @@ UnaryExpression_void_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_void_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_STRING(STR(void));
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 /* 11.4.3 */
@@ -3955,18 +3299,6 @@ UnaryExpression_typeof_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_typeof_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_STRING(STR(typeof));
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 /* 11.4.4 */
@@ -4012,19 +3344,6 @@ UnaryExpression_preinc_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_preinc_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('+');
-	PRINT_CHAR('+');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 
@@ -4071,19 +3390,6 @@ UnaryExpression_predec_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_predec_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('-');
-	PRINT_CHAR('-');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 
@@ -4123,18 +3429,6 @@ UnaryExpression_plus_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_plus_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('+');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 
@@ -4176,18 +3470,6 @@ UnaryExpression_minus_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_minus_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('-');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 /* 11.4.8 */
@@ -4239,18 +3521,6 @@ UnaryExpression_inv_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_inv_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('~');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 
@@ -4292,18 +3562,6 @@ UnaryExpression_not_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-UnaryExpression_not_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_CHAR('!');
-	PRINT_CHAR(' ');
-	PRINTP(n->a);
-}
-#endif
 
 
 static struct node *
@@ -4364,17 +3622,6 @@ UnaryExpression_parse(parser)
 
 
 
-#if WITH_PARSER_PRINT
-static void
-Binary_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINT(n->a);
-	PRINT(n->b);
-}
-#endif
 
 static int
 Binary_isconst(na, interp)
@@ -4461,19 +3708,6 @@ MultiplicativeExpression_mul_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MultiplicativeExpression_mul_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('*');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -4521,19 +3755,6 @@ MultiplicativeExpression_div_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MultiplicativeExpression_div_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('/');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -4581,19 +3802,6 @@ MultiplicativeExpression_mod_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-MultiplicativeExpression_mod_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('%');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 static struct node *
 MultiplicativeExpression_parse(parser)
@@ -4712,19 +3920,6 @@ AdditiveExpression_add_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AdditiveExpression_add_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('+');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 /* 11.6.2 */
@@ -4781,19 +3976,6 @@ AdditiveExpression_sub_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AdditiveExpression_sub_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('-');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 static struct node *
 AdditiveExpression_parse(parser)
@@ -4886,20 +4068,6 @@ ShiftExpression_lshift_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ShiftExpression_lshift_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('<');
-	PRINT_CHAR('<');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 /* 11.7.2 */
@@ -4950,20 +4118,6 @@ ShiftExpression_rshift_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ShiftExpression_rshift_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5014,21 +4168,6 @@ ShiftExpression_urshift_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ShiftExpression_urshift_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5179,19 +4318,6 @@ RelationalExpression_lt_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_lt_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('<');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 /* 11.8.2 > */
@@ -5231,19 +4357,6 @@ RelationalExpression_gt_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_gt_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('>');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5286,20 +4399,6 @@ RelationalExpression_le_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_le_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('<');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5342,20 +4441,6 @@ RelationalExpression_ge_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_ge_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('>');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5400,19 +4485,6 @@ RelationalExpression_instanceof_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_instanceof_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_STRING(STR(instanceof));
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5467,19 +4539,6 @@ RelationalExpression_in_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-RelationalExpression_in_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_STRING(STR(in));
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5688,20 +4747,6 @@ EqualityExpression_eq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-EqualityExpression_eq_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('=');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 #if WITH_PARSER_EVAL
@@ -5740,20 +4785,6 @@ EqualityExpression_ne_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-EqualityExpression_ne_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('!');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5791,21 +4822,6 @@ EqualityExpression_seq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-EqualityExpression_seq_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('=');
-	PRINT_CHAR('=');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5845,21 +4861,6 @@ EqualityExpression_sne_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-EqualityExpression_sne_print(na, printer)
-	struct printer *printer;
-	struct node *na; /* (struct Binary_node) */
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('!');
-	PRINT_CHAR('=');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -5960,19 +4961,6 @@ BitwiseANDExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-BitwiseANDExpression_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('&');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 static struct node *
@@ -6053,19 +5041,6 @@ BitwiseXORExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-BitwiseXORExpression_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('^');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -6147,19 +5122,6 @@ BitwiseORExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-BitwiseORExpression_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('|');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 
 
@@ -6247,20 +5209,6 @@ LogicalANDExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-LogicalANDExpression_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('&');
-	PRINT_CHAR('&');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 /* Executes a known-constant subtree to yield its value. */
 static void
@@ -6276,8 +5224,9 @@ const_evaluate(node, interp, res)
 	if (SEE_parse_debug) {
 	    dprintf("const_evaluate: evaluating (");
 #if WITH_PARSER_PRINT
-	    { struct printer *printer = stdio_printer_new(interp, stderr);
-	      PRINT(node); }
+            _SEE_parser_print(
+                _SEE_parser_print_stdio_new(interp, stderr),
+                node);
 #else
 	    dprintf("%p", node);
 #endif
@@ -6407,20 +5356,6 @@ LogicalORExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-LogicalORExpression_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINTP(n->a);
-	PRINT_CHAR('|');
-	PRINT_CHAR('|');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-}
-#endif
 
 static int
 LogicalORExpression_isconst(na, interp)
@@ -6536,23 +5471,6 @@ ConditionalExpression_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ConditionalExpression_print(na, printer)
-	struct node *na; /* (struct ConditionalExpression_node) */
-	struct printer *printer;
-{
-	struct ConditionalExpression_node *n = 
-		CAST_NODE(na, ConditionalExpression);
-	PRINTP(n->a);
-	PRINT_CHAR('?');
-	PRINT_CHAR(' ');
-	PRINTP(n->b);
-	PRINT_CHAR(':');
-	PRINT_CHAR(' ');
-	PRINTP(n->c);
-}
-#endif
 
 
 static int
@@ -6736,20 +5654,6 @@ AssignmentExpression_simple_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_simple_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 /* 11.13.2 */
@@ -6789,21 +5693,6 @@ AssignmentExpression_muleq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_muleq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('*');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -6844,21 +5733,6 @@ AssignmentExpression_diveq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_diveq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('/');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -6899,21 +5773,6 @@ AssignmentExpression_modeq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_modeq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('%');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -6968,21 +5827,6 @@ AssignmentExpression_addeq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_addeq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('+');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7023,21 +5867,6 @@ AssignmentExpression_subeq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_subeq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('-');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7076,22 +5905,6 @@ AssignmentExpression_lshifteq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_lshifteq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('<');
-	PRINT_CHAR('<');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7132,22 +5945,6 @@ AssignmentExpression_rshifteq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_rshifteq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7188,23 +5985,6 @@ AssignmentExpression_urshifteq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_urshifteq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR('>');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7245,21 +6025,6 @@ AssignmentExpression_andeq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_andeq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('&');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7300,21 +6065,6 @@ AssignmentExpression_xoreq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_xoreq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('^');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7355,21 +6105,6 @@ AssignmentExpression_oreq_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-AssignmentExpression_oreq_print(na, printer)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	struct printer *printer;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	PRINTP(n->lhs);
-	PRINT_CHAR('|');
-	PRINT_CHAR('=');
-	PRINT_CHAR(' ');
-	PRINTP(n->expr);
-}
-#endif
 
 
 
@@ -7496,19 +6231,6 @@ Expression_comma_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-Expression_comma_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINT(n->a);
-	PRINT_CHAR(',');
-	PRINT_CHAR(' ');
-	PRINT(n->b);
-}
-#endif
 
 static struct node *
 Expression_parse(parser)
@@ -7638,16 +6360,6 @@ Block_empty_codegen(n, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-Block_empty_print(n, printer)
-	struct node *n;
-	struct printer *printer;
-{
-	PRINT_CHAR('{');
-	PRINT_CHAR('}');
-}
-#endif
 
 static struct node *
 Block_parse(parser)
@@ -7800,20 +6512,6 @@ VariableStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-VariableStatement_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_STRING(STR(var));
-	PRINT_CHAR(' ');
-	PRINT(n->a);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 static struct node *
 VariableStatement_parse(parser)
@@ -7858,19 +6556,6 @@ VariableDeclarationList_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-VariableDeclarationList_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINT(n->a);
-	PRINT_CHAR(',');
-	PRINT_CHAR(' ');
-	PRINT(n->b);
-}
-#endif
 
 static struct node *
 VariableDeclarationList_parse(parser)
@@ -7904,7 +6589,7 @@ VariableDeclaration_eval(na, context, res)
 
 	if (n->init) {
 		SEE_scope_lookup(context->interpreter, context->scope, 
-			n->var.name, &r1);
+			n->var->name, &r1);
 		EVAL(n->init, context, &r2);
 		GetValue(context, &r2, &r3);
 		PutValue(context, &r1, &r3);
@@ -7921,10 +6606,10 @@ VariableDeclaration_codegen(na, cc)
 	struct VariableDeclaration_node *n = 
 		CAST_NODE(na, VariableDeclaration);
 	if (n->init) {
-		if (cg_var_is_in_scope(cc, n->var.name)) 
-		    CG_VREF(cg_var_id(cc, n->var.name));    /* ref */
+		if (cg_var_is_in_scope(cc, n->var->name)) 
+		    CG_VREF(cg_var_id(cc, n->var->name));    /* ref */
 		else {
-		    CG_STRING(n->var.name);		    /* str */
+		    CG_STRING(n->var->name);		    /* str */
 		    CG_LOOKUP();			    /* ref */
 		}
 		CODEGEN(n->init);			    /* ref ref */
@@ -7945,23 +6630,6 @@ VariableDeclaration_codegen(na, cc)
  *	SourceElements_fproc()		- put vars
  */
 
-#if WITH_PARSER_PRINT
-static void
-VariableDeclaration_print(na, printer)
-	struct node *na; /* (struct VariableDeclaration_node) */
-	struct printer *printer;
-{
-	struct VariableDeclaration_node *n = 
-		CAST_NODE(na, VariableDeclaration);
-	PRINT_STRING(n->var.name);
-	PRINT_CHAR(' ');
-	if (n->init) {
-		PRINT_CHAR('=');
-		PRINT_CHAR(' ');
-		PRINT(n->init);
-	}
-}
-#endif
 
 
 
@@ -7973,8 +6641,9 @@ VariableDeclaration_parse(parser)
 
 	v = NEW_NODE(struct VariableDeclaration_node, 
 		NODECLASS_VariableDeclaration);
+        v->var = SEE_NEW(parser->interpreter, struct var);
 	if (NEXT == tIDENT)
-		v->var.name = NEXT_VALUE->u.string;
+		v->var->name = NEXT_VALUE->u.string;
 	EXPECT(tIDENT);
 	if (NEXT == '=') {
 		SKIP;
@@ -7984,8 +6653,8 @@ VariableDeclaration_parse(parser)
 
 	/* Record declared variables */
 	if (parser->vars) {
-		*parser->vars = &v->var;
-		parser->vars = &v->var.next;
+		*parser->vars = v->var;
+		parser->vars = &v->var->next;
 	}
 
 	return (struct node *)v;
@@ -8024,16 +6693,6 @@ EmptyStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-EmptyStatement_print(n, printer)
-	struct node *n;
-	struct printer *printer;
-{
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 static struct node *
 EmptyStatement_parse(parser)
@@ -8091,18 +6750,6 @@ ExpressionStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ExpressionStatement_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT(n->a);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 static struct node *
 ExpressionStatement_make(interp, node)
@@ -8191,33 +6838,6 @@ IfStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IfStatement_print(na, printer)
-	struct node *na; /* (struct IfStatement_node) */
-	struct printer *printer;
-{
-	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
-	PRINT_STRING(STR(if));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->cond);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->btrue);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	if (n->bfalse) {
-	    PRINT_STRING(STR(else));
-	    PRINT_CHAR('{');
-	    PRINT_NEWLINE(1);
-	    PRINT(n->bfalse);
-	    PRINT_CHAR('}');
-	    PRINT_NEWLINE(-1);
-	}
-}
-#endif
 
 
 static struct node *
@@ -8334,30 +6954,6 @@ IterationStatement_dowhile_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_dowhile_print(na, printer)
-	struct node *na; /* (struct IterationStatement_while_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_while_node *n = 
-		CAST_NODE(na, IterationStatement_while);
-
-	PRINT_STRING(STR(do));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(while));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->cond);
-	PRINT_CHAR(')');
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 
@@ -8430,27 +7026,6 @@ IterationStatement_while_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_while_print(na, printer)
-	struct node *na; /* (struct IterationStatement_while_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_while_node *n = 
-		CAST_NODE(na, IterationStatement_while);
-
-	PRINT_STRING(STR(while));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->cond);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 /* 12.6.3 - "for (init; cond; incr) body" */
@@ -8554,33 +7129,6 @@ IterationStatement_for_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_for_print(na, printer)
-	struct node *na; /* (struct IterationStatement_for_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_for_node *n = 
-		CAST_NODE(na, IterationStatement_for);
-
-	PRINT_STRING(STR(for));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	if (n->init) PRINT(n->init);
-	PRINT_CHAR(';');
-	PRINT_CHAR(' ');
-	if (n->cond) PRINT(n->cond);
-	PRINT_CHAR(';');
-	PRINT_CHAR(' ');
-	if (n->incr) PRINT(n->incr);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 /* 12.6.3 - "for (var init; cond; incr) body" */
@@ -8678,35 +7226,6 @@ IterationStatement_forvar_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_forvar_print(na, printer)
-	struct node *na; /* (struct IterationStatement_for_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_for_node *n = 
-		CAST_NODE(na, IterationStatement_for);
-		
-	PRINT_STRING(STR(for));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT_STRING(STR(var));
-	PRINT_CHAR(' ');
-	PRINT(n->init);
-	PRINT_CHAR(';');
-	PRINT_CHAR(' ');
-	if (n->cond) PRINT(n->cond);
-	PRINT_CHAR(';');
-	PRINT_CHAR(' ');
-	if (n->incr) PRINT(n->incr);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 /* NB : the VarDecls of n->init are exposed through parser->vars */
 
@@ -8807,30 +7326,6 @@ IterationStatement_forin_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_forin_print(na, printer)
-	struct node *na; /* (struct IterationStatement_forin_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_forin_node *n = 
-		CAST_NODE(na, IterationStatement_forin);
-
-	PRINT_STRING(STR(for));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->lhs);
-	PRINT_STRING(STR(in));
-	PRINT_CHAR(' ');
-	PRINT(n->list);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 
@@ -8865,7 +7360,7 @@ IterationStatement_forvarin_eval(na, context, res)
 	    SEE_SET_STRING(&r6, *props);
 	    /* spec bug: "see 0" in step 7 */
 	    SEE_scope_lookup(context->interpreter, context->scope, 
-	    	lhs->var.name, &r7);
+	    	lhs->var->name, &r7);
 	    PutValue(context, &r7, &r6);
 	    EVAL(n->body, context, res);
 	    if (res->u.completion.value)
@@ -8913,10 +7408,10 @@ IterationStatement_forvarin_codegen(na, cc)
 	CG_B_ALWAYS_f(P1);
 
     L1 = CG_HERE();
-	if (cg_var_is_in_scope(cc, lhs->var.name)) 
-	    CG_VREF(cg_var_id(cc, lhs->var.name));    /* ref */
+	if (cg_var_is_in_scope(cc, lhs->var->name)) 
+	    CG_VREF(cg_var_id(cc, lhs->var->name));    /* ref */
 	else {
-	    CG_STRING(lhs->var.name);		    /* str */
+	    CG_STRING(lhs->var->name);		    /* str */
 	    CG_LOOKUP();			    /* ref */
 	}
 	CG_EXCH();			/* ref str */
@@ -8941,31 +7436,6 @@ IterationStatement_forvarin_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-IterationStatement_forvarin_print(na, printer)
-	struct node *na; /* (struct IterationStatement_forin_node) */
-	struct printer *printer;
-{
-	struct IterationStatement_forin_node *n = 
-		CAST_NODE(na, IterationStatement_forin);
-
-	PRINT_STRING(STR(for));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT_STRING(STR(var));
-	PRINT(n->lhs);
-	PRINT_STRING(STR(in));
-	PRINT_CHAR(' ');
-	PRINT(n->list);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->body);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 
@@ -9147,21 +7617,6 @@ ContinueStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ContinueStatement_print(na, printer)
-	struct node *na; /* (struct ContinueStatement_node) */
-	struct printer *printer;
-{
-	struct ContinueStatement_node *n = CAST_NODE(na, ContinueStatement);
-
-	PRINT_STRING(STR(continue));
-	PRINT_CHAR(' ');
-	Label_print(n->target, printer);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 static struct node *
@@ -9233,21 +7688,6 @@ BreakStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-BreakStatement_print(na, printer)
-	struct node *na; /* (struct BreakStatement_node) */
-	struct printer *printer;
-{
-	struct BreakStatement_node *n = CAST_NODE(na, BreakStatement);
-
-	PRINT_STRING(STR(break));
-	PRINT_CHAR(' ');
-	Label_print(n->target, printer);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 static struct node *
 BreakStatement_parse(parser)
@@ -9316,20 +7756,6 @@ ReturnStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ReturnStatement_print(na, printer)
-	struct node *na; /* (struct ReturnStatement_node) */
-	struct printer *printer;
-{
-	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
-	PRINT_STRING(STR(return));
-	PRINT_CHAR(' ');
-	PRINT(n->expr);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 
@@ -9362,17 +7788,6 @@ ReturnStatement_undef_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ReturnStatement_undef_print(na, printer)
-	struct node *na; /* (struct ReturnStatement_node) */
-	struct printer *printer;
-{
-	PRINT_STRING(STR(return));
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 static struct node *
@@ -9462,25 +7877,6 @@ WithStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-WithStatement_print(na, printer)
-	struct node *na; /* (struct Binary_node) */
-	struct printer *printer;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	PRINT_STRING(STR(with));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->a);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->b);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 static struct node *
@@ -9652,49 +8048,6 @@ SwitchStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-SwitchStatement_print(na, printer)
-	struct node *na; /* (struct SwitchStatement_node) */
-	struct printer *printer;
-{
-	struct SwitchStatement_node *n = CAST_NODE(na, SwitchStatement);
-	struct case_list *c;
-
-	PRINT_STRING(STR(switch));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT(n->cond);
-	PRINT_CHAR(')');
-	PRINT_CHAR(' ');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-
-	for (c = n->cases; c; c = c->next) {
-		if (c == n->defcase) {
-			PRINT_STRING(STR(default));
-			PRINT_CHAR(':');
-			PRINT_NEWLINE(0);
-		}
-		if (c->expr) {
-			PRINT_STRING(STR(case));
-			PRINT_CHAR(' ');
-			PRINT(c->expr);
-			PRINT_CHAR(':');
-			PRINT_NEWLINE(0);
-		}
-		if (c->body) {
-			PRINT_NEWLINE(1);
-			PRINT(c->body);
-			PRINT_NEWLINE(-1);
-		}
-	}
-
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 
@@ -9795,28 +8148,6 @@ LabelledStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-Label_print(target, printer)
-	unsigned int target;
-	struct printer *printer;
-{
-	PRINT_CHAR('L');
-	print_hex(printer, target);
-}
-
-static void
-LabelledStatement_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct LabelledStatement_node *n = CAST_NODE(na, LabelledStatement);
-
-	Label_print(n->target, printer);
-	PRINT_CHAR(':');
-	PRINT(n->unary.a);
-}
-#endif
 
 static struct node *
 LabelledStatement_parse(parser)
@@ -9910,20 +8241,6 @@ ThrowStatement_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-ThrowStatement_print(na, printer)
-	struct node *na; /* (struct Unary_node) */
-	struct printer *printer;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	PRINT_STRING(STR(throw));
-	PRINT_CHAR(' ');
-	PRINT(n->a);
-	PRINT_CHAR(';');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 static struct node *
 ThrowStatement_parse(parser)
@@ -10041,29 +8358,6 @@ TryStatement_catch_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-TryStatement_catch_print(na, printer)
-	struct node *na; /* (struct TryStatement_node) */
-	struct printer *printer;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	PRINT_STRING(STR(try));
-	PRINT_NEWLINE(1);
-	PRINT(n->block);
-	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(catch));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT_STRING(n->ident);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->bcatch);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 
@@ -10120,27 +8414,6 @@ TryStatement_finally_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-TryStatement_finally_print(na, printer)
-	struct node *na; /* (struct TryStatement_node) */
-	struct printer *printer;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	PRINT_STRING(STR(try));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->block);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(finally));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->bfinally);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 
@@ -10234,37 +8507,6 @@ TryStatement_catchfinally_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-TryStatement_catchfinally_print(na, printer)
-	struct node *na; /* (struct TryStatement_node) */
-	struct printer *printer;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	PRINT_STRING(STR(try));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->block);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(catch));
-	PRINT_CHAR(' ');
-	PRINT_CHAR('(');
-	PRINT_STRING(n->ident);
-	PRINT_CHAR(')');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->bcatch);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-	PRINT_STRING(STR(finally));
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT(n->bfinally);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(-1);
-}
-#endif
 
 
 
@@ -10368,39 +8610,6 @@ FunctionDeclaration_codegen(na, cc)
 #endif
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-Function_print(na, printer)
-	struct node *na; /* (struct Function_node) */
-	struct printer *printer;
-{
-	struct Function_node *n = CAST_NODE(na, Function);
-	int i;
-
-	PRINT_STRING(STR(function));
-	PRINT_CHAR(' ');
-	if (n->function->name) {
-	    PRINT_STRING(n->function->name);
-	    PRINT_CHAR(' ');
-	}
-	PRINT_CHAR('(');
-	for (i = 0; i < n->function->nparams; i++) {
-	    if (i) {
-		PRINT_CHAR(',');
-		PRINT_CHAR(' ');
-	    }
-	    PRINT_STRING(n->function->params[i]);
-	}
-	PRINT_CHAR(')');
-	PRINT_CHAR(' ');
-	PRINT_CHAR('{');
-	PRINT_NEWLINE(1);
-	PRINT((struct node *)n->function->body);
-	PRINT_NEWLINE(-1);
-	PRINT_CHAR('}');
-	PRINT_NEWLINE(0);
-}
-#endif
 
 
 #if WITH_PARSER_EVAL
@@ -10879,43 +9088,6 @@ SourceElements_fproc(na, context)
 }
 #endif
 
-#if WITH_PARSER_PRINT
-static void
-SourceElements_print(na, printer)
-	struct node *na; /* (struct SourceElements_node) */
-	struct printer *printer;
-{
-	struct SourceElements_node *n = CAST_NODE(na, SourceElements);
-	struct var *v;
-	struct SourceElement *e;
-        SEE_char_t c;
-
-	if (n->vars) {
-	    PRINT_CHAR('/');
-	    PRINT_CHAR('*');
-	    PRINT_CHAR(' ');
-	    PRINT_STRING(STR(var));
-	    c = ' ';
-	    for (v = n->vars; v; v = v->next)  {
-		PRINT_CHAR(c); c = ',';
-		PRINT_STRING(v->name);
-	    }
-	    PRINT_CHAR(';');
-	    PRINT_CHAR(' ');
-	    PRINT_CHAR('*');
-	    PRINT_CHAR('/');
-	    PRINT_NEWLINE(0);
-	}
-
-	for (e = n->functions; e; e = e->next)
-		PRINT(e->node);
-
-	PRINT_NEWLINE(0);
-
-	for (e = n->statements; e; e = e->next)
-		PRINT(e->node);
-}
-#endif
 
 
 /* Builds a simple SourceElements around a single statement */
@@ -11071,7 +9243,9 @@ SEE_parse_program(interp, inp)
 #if !defined(NDEBUG) && WITH_PARSER_PRINT && !WITH_PARSER_CODEGEN
 	if (SEE_parse_debug) {
 	    dprintf("parse Program result:\n");
-	    print_functionbody(interp, f, stderr);
+            _SEE_parser_print(
+                _SEE_parser_print_stdio_new(interp, stderr),
+                (struct node *)f->body);
 	    dprintf("<end>\n");
 	}
 #endif
@@ -11141,196 +9315,6 @@ FunctionBody_isempty(interp, body)
 	       (!f->is_program || se->functions == NULL);
 }
 
-#if WITH_PARSER_PRINT
-/*------------------------------------------------------------
- * Printer common code
- */
-
-static void
-printer_init(printer, interp, printerclass)
-	struct printer *printer;
-	struct SEE_interpreter *interp;
-	struct printerclass *printerclass;
-{
-	printer->printerclass = printerclass;
-	printer->interpreter = interp;
-	printer->indent = 0;
-	printer->bol = 0;
-}
-
-/* Called when the printer is at the beginning of a line. */
-static void
-printer_atbol(printer)
-	struct printer *printer;
-{
-	int i;
-
-	printer->bol = 0;		/* prevent recursion */
-	PRINT_CHAR('\n');
-	for (i = 0; i < printer->indent; i++) {
-		PRINT_CHAR(' ');
-		PRINT_CHAR(' ');
-	}
-}
-
-static void
-printer_print_newline(printer, indent)
-	struct printer *printer;
-	int indent;
-{
-	printer->bol = 1;
-	printer->indent += indent;
-}
-
-static void
-printer_print_node(printer, n)
-	struct printer *printer;
-	struct node *n;
-{
-	(*PRINTFN(n))(n, printer);
-}
-
-static void
-print_hex(printer, i)
-	struct printer *printer;
-	int i;
-{
-	if (i >= 16) print_hex(printer, i >> 4);
-	PRINT_CHAR(SEE_hexstr_lowercase[i & 0xf]);
-}
-
-/*------------------------------------------------------------
- * Stdio printer - Prints each node in an AST to a stdio file.
- * So we can reconstruct parsed programs and print them to the screen.
- */
-
-struct stdio_printer {
-	struct printer printer;
-	FILE *output;
-};
-
-static void
-stdio_print_string(printer, s)
-	struct printer *printer;
-	struct SEE_string *s;
-{
-	struct stdio_printer *sp = (struct stdio_printer *)printer;
-
-	if (printer->bol) printer_atbol(printer);
-	SEE_string_fputs(s, sp->output);
-}
-
-static void
-stdio_print_char(printer, c)
-	struct printer *printer;
-	int c;		/* SEE_char_t promoted to int */
-{
-	struct stdio_printer *sp = (struct stdio_printer *)printer;
-
-	if (printer->bol) printer_atbol(printer);
-	fputc(c & 0x7f, sp->output);
-}
-
-static void
-stdio_print_node(printer, n)
-	struct printer *printer;
-	struct node *n;
-{
-	struct stdio_printer *sp = (struct stdio_printer *)printer;
-
-/*	fprintf(sp->output, "(%d: ", n->location.lineno);  */
-	(PRINTFN(n))(n, printer);
-/*	fprintf(sp->output, ")");  */
-	fflush(sp->output);
-}
-
-static struct printerclass stdio_printerclass = {
-	stdio_print_string,
-	stdio_print_char,
-	printer_print_newline,
-	stdio_print_node, /* printer_print_node */
-};
-
-static struct printer *
-stdio_printer_new(interp, output)
-	struct SEE_interpreter *interp;
-	FILE *output;
-{
-	struct stdio_printer *sp;
-
-	sp = SEE_NEW(interp, struct stdio_printer);
-	printer_init(&sp->printer, interp, &stdio_printerclass);
-	sp->output = output;
-	return (struct printer *)sp;
-}
-
-/*------------------------------------------------------------
- * String printer
- * Used to reconstruct parsed programs and save them in a string.
- */
-
-struct string_printer {
-	struct printer printer;
-	struct SEE_string *string;
-};
-
-static void
-string_print_string(printer, s)
-	struct printer *printer;
-	struct SEE_string *s;
-{
-	struct string_printer *sp = (struct string_printer *)printer;
-
-	if (printer->bol) printer_atbol(printer);
-	SEE_string_append(sp->string, s);
-}
-
-static void
-string_print_char(printer, c)
-	struct printer *printer;
-	int c;		/* SEE_char_t promoted to int */
-{
-	struct string_printer *sp = (struct string_printer *)printer;
-
-	if (printer->bol) printer_atbol(printer);
-	SEE_string_addch(sp->string, c);
-}
-
-static struct printerclass string_printerclass = {
-	string_print_string,
-	string_print_char,
-	printer_print_newline,
-	printer_print_node
-};
-
-static struct printer *
-string_printer_new(interp, string)
-	struct SEE_interpreter *interp;
-	struct SEE_string *string;
-{
-	struct string_printer *sp;
-
-	sp = SEE_NEW(interp, struct string_printer);
-	printer_init(&sp->printer, interp, &string_printerclass);
-	sp->string = string;
-	return (struct printer *)sp;
-}
-
-/*
- * Prints a function body to standard error.
- */
-static void
-print_functionbody(interp, f, fp)
-	struct SEE_interpreter *interp;
-	struct function *f;
-	FILE *fp;
-{
-	struct printer *printer;
-
-	printer = stdio_printer_new(interp, fp);
-	PRINT((struct node *)f->body);
-}
-#endif /* WITH_PARSER_PRINT */
 
 /* Returns the function body as a string */
 struct SEE_string *
@@ -11341,8 +9325,8 @@ SEE_functionbody_string(interp, f)
 	struct SEE_string *s = SEE_string_new(interp, 0);
 
 #if WITH_PARSER_PRINT && !WITH_PARSER_CODEGEN
-	struct printer *printer = string_printer_new(interp, s);
-	PRINT((struct node *)f->body);
+        _SEE_parser_print(_SEE_parser_print_string_new(interp, s),
+	        (struct node *)f->body);
 #else
 	SEE_string_addch(s, '/');
 	SEE_string_addch(s, '*');
@@ -11465,109 +9449,6 @@ SEE_compare(interp, x, y)
 	else
 		return -1;
 }
-
-#ifndef NDEBUG
-/* 
- * Table of superclasses for a nodeclass.
- * These are only used for checking CAST_NODE() calls
- */
-enum nodeclass_enum _SEE_nodeclass_superclass[NODECLASS_MAX] = { 0 
-    ,NODECLASS_None                         /*Unary*/
-    ,NODECLASS_None                         /*Binary*/
-    ,NODECLASS_None                         /*Literal*/
-    ,NODECLASS_None                         /*StringLiteral*/
-    ,NODECLASS_None                         /*RegularExpressionLiteral*/
-    ,NODECLASS_None                         /*PrimaryExpression_this*/
-    ,NODECLASS_None                         /*PrimaryExpression_ident*/
-    ,NODECLASS_None                         /*ArrayLiteral*/
-    ,NODECLASS_None                         /*ObjectLiteral*/
-    ,NODECLASS_None                         /*Arguments*/
-    ,NODECLASS_None                         /*MemberExpression_new*/
-    ,NODECLASS_None                         /*MemberExpression_dot*/
-    ,NODECLASS_None                         /*MemberExpression_bracket*/
-    ,NODECLASS_None                         /*CallExpression*/
-    ,NODECLASS_Unary                        /*PostfixExpression_inc*/
-    ,NODECLASS_Unary                        /*PostfixExpression_dec*/
-    ,NODECLASS_Unary                        /*UnaryExpression_delete*/
-    ,NODECLASS_Unary                        /*UnaryExpression_void*/
-    ,NODECLASS_Unary                        /*UnaryExpression_typeof*/
-    ,NODECLASS_Unary                        /*UnaryExpression_preinc*/
-    ,NODECLASS_Unary                        /*UnaryExpression_predec*/
-    ,NODECLASS_Unary                        /*UnaryExpression_plus*/
-    ,NODECLASS_Unary                        /*UnaryExpression_minus*/
-    ,NODECLASS_Unary                        /*UnaryExpression_inv*/
-    ,NODECLASS_Unary                        /*UnaryExpression_not*/
-    ,NODECLASS_Binary                       /*MultiplicativeExpression_mul*/
-    ,NODECLASS_Binary                       /*MultiplicativeExpression_div*/
-    ,NODECLASS_Binary                       /*MultiplicativeExpression_mod*/
-    ,NODECLASS_Binary                       /*AdditiveExpression_add*/
-    ,NODECLASS_Binary                       /*AdditiveExpression_sub*/
-    ,NODECLASS_Binary                       /*ShiftExpression_lshift*/
-    ,NODECLASS_Binary                       /*ShiftExpression_rshift*/
-    ,NODECLASS_Binary                       /*ShiftExpression_urshift*/
-    ,NODECLASS_Binary                       /*RelationalExpression_lt*/
-    ,NODECLASS_Binary                       /*RelationalExpression_gt*/
-    ,NODECLASS_Binary                       /*RelationalExpression_le*/
-    ,NODECLASS_Binary                       /*RelationalExpression_ge*/
-    ,NODECLASS_Binary                       /*RelationalExpression_instanceof*/
-    ,NODECLASS_Binary                       /*RelationalExpression_in*/
-    ,NODECLASS_Binary                       /*EqualityExpression_eq*/
-    ,NODECLASS_Binary                       /*EqualityExpression_ne*/
-    ,NODECLASS_Binary                       /*EqualityExpression_seq*/
-    ,NODECLASS_Binary                       /*EqualityExpression_sne*/
-    ,NODECLASS_Binary                       /*BitwiseANDExpression*/
-    ,NODECLASS_Binary                       /*BitwiseXORExpression*/
-    ,NODECLASS_Binary                       /*BitwiseORExpression*/
-    ,NODECLASS_Binary                       /*LogicalANDExpression*/
-    ,NODECLASS_Binary                       /*LogicalORExpression*/
-    ,NODECLASS_None                         /*ConditionalExpression*/
-    ,NODECLASS_None                         /*AssignmentExpression*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_simple*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_muleq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_diveq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_modeq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_addeq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_subeq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_lshifteq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_rshifteq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_urshifteq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_andeq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_xoreq*/
-    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_oreq*/
-    ,NODECLASS_Binary                       /*Expression_comma*/
-    ,NODECLASS_None                         /*Block_empty*/
-    ,NODECLASS_Binary                       /*StatementList*/
-    ,NODECLASS_Unary                        /*VariableStatement*/
-    ,NODECLASS_Binary                       /*VariableDeclarationList*/
-    ,NODECLASS_None                         /*VariableDeclaration*/
-    ,NODECLASS_None                         /*EmptyStatement*/
-    ,NODECLASS_Unary                        /*ExpressionStatement*/
-    ,NODECLASS_None                         /*IfStatement*/
-    ,NODECLASS_IterationStatement_while     /*IterationStatement_dowhile*/
-    ,NODECLASS_None                         /*IterationStatement_while*/
-    ,NODECLASS_None                         /*IterationStatement_for*/
-    ,NODECLASS_IterationStatement_for       /*IterationStatement_forvar*/
-    ,NODECLASS_IterationStatement_forin     /*IterationStatement_forin*/
-    ,NODECLASS_IterationStatement_forin     /*IterationStatement_forvarin*/
-    ,NODECLASS_None                         /*ContinueStatement*/
-    ,NODECLASS_None                         /*BreakStatement*/
-    ,NODECLASS_None                         /*ReturnStatement*/
-    ,NODECLASS_None                         /*ReturnStatement_undef*/
-    ,NODECLASS_Binary                       /*WithStatement*/
-    ,NODECLASS_None                         /*SwitchStatement*/
-    ,NODECLASS_Unary                        /*LabelledStatement*/
-    ,NODECLASS_Unary                        /*ThrowStatement*/
-    ,NODECLASS_None                         /*TryStatement*/
-    ,NODECLASS_TryStatement                 /*TryStatement_catch*/
-    ,NODECLASS_TryStatement                 /*TryStatement_finally*/
-    ,NODECLASS_TryStatement                 /*TryStatement_catchfinally*/
-    ,NODECLASS_None                         /*Function*/
-    ,NODECLASS_Function                     /*FunctionDeclaration*/
-    ,NODECLASS_Function                     /*FunctionExpression*/
-    ,NODECLASS_Unary                        /*FunctionBody*/
-    ,NODECLASS_None                         /*SourceElements*/
-};
-#endif
 
 #if WITH_PARSER_EVAL
 /*
@@ -11772,105 +9653,6 @@ void (*_SEE_nodeclass_codegen[NODECLASS_MAX])(struct node *,
 };
 #endif
 
-#if WITH_PARSER_PRINT
-void (*_SEE_nodeclass_print[NODECLASS_MAX])(struct node *, 
-        struct printer *) = { 0
-    ,Unary_print                            /*Unary*/
-    ,Binary_print                           /*Binary*/
-    ,Literal_print                          /*Literal*/
-    ,StringLiteral_print                    /*StringLiteral*/
-    ,RegularExpressionLiteral_print         /*RegularExpressionLiteral*/
-    ,PrimaryExpression_this_print           /*PrimaryExpression_this*/
-    ,PrimaryExpression_ident_print          /*PrimaryExpression_ident*/
-    ,ArrayLiteral_print                     /*ArrayLiteral*/
-    ,ObjectLiteral_print                    /*ObjectLiteral*/
-    ,Arguments_print                        /*Arguments*/
-    ,MemberExpression_new_print             /*MemberExpression_new*/
-    ,MemberExpression_dot_print             /*MemberExpression_dot*/
-    ,MemberExpression_bracket_print         /*MemberExpression_bracket*/
-    ,CallExpression_print                   /*CallExpression*/
-    ,PostfixExpression_inc_print            /*PostfixExpression_inc*/
-    ,PostfixExpression_dec_print            /*PostfixExpression_dec*/
-    ,UnaryExpression_delete_print           /*UnaryExpression_delete*/
-    ,UnaryExpression_void_print             /*UnaryExpression_void*/
-    ,UnaryExpression_typeof_print           /*UnaryExpression_typeof*/
-    ,UnaryExpression_preinc_print           /*UnaryExpression_preinc*/
-    ,UnaryExpression_predec_print           /*UnaryExpression_predec*/
-    ,UnaryExpression_plus_print             /*UnaryExpression_plus*/
-    ,UnaryExpression_minus_print            /*UnaryExpression_minus*/
-    ,UnaryExpression_inv_print              /*UnaryExpression_inv*/
-    ,UnaryExpression_not_print              /*UnaryExpression_not*/
-    ,MultiplicativeExpression_mul_print     /*MultiplicativeExpression_mul*/
-    ,MultiplicativeExpression_div_print     /*MultiplicativeExpression_div*/
-    ,MultiplicativeExpression_mod_print     /*MultiplicativeExpression_mod*/
-    ,AdditiveExpression_add_print           /*AdditiveExpression_add*/
-    ,AdditiveExpression_sub_print           /*AdditiveExpression_sub*/
-    ,ShiftExpression_lshift_print           /*ShiftExpression_lshift*/
-    ,ShiftExpression_rshift_print           /*ShiftExpression_rshift*/
-    ,ShiftExpression_urshift_print          /*ShiftExpression_urshift*/
-    ,RelationalExpression_lt_print          /*RelationalExpression_lt*/
-    ,RelationalExpression_gt_print          /*RelationalExpression_gt*/
-    ,RelationalExpression_le_print          /*RelationalExpression_le*/
-    ,RelationalExpression_ge_print          /*RelationalExpression_ge*/
-    ,RelationalExpression_instanceof_print  /*RelationalExpression_instanceof*/
-    ,RelationalExpression_in_print          /*RelationalExpression_in*/
-    ,EqualityExpression_eq_print            /*EqualityExpression_eq*/
-    ,EqualityExpression_ne_print            /*EqualityExpression_ne*/
-    ,EqualityExpression_seq_print           /*EqualityExpression_seq*/
-    ,EqualityExpression_sne_print           /*EqualityExpression_sne*/
-    ,BitwiseANDExpression_print             /*BitwiseANDExpression*/
-    ,BitwiseXORExpression_print             /*BitwiseXORExpression*/
-    ,BitwiseORExpression_print              /*BitwiseORExpression*/
-    ,LogicalANDExpression_print             /*LogicalANDExpression*/
-    ,LogicalORExpression_print              /*LogicalORExpression*/
-    ,ConditionalExpression_print            /*ConditionalExpression*/
-    ,0                                      /*AssignmentExpression*/
-    ,AssignmentExpression_simple_print      /*AssignmentExpression_simple*/
-    ,AssignmentExpression_muleq_print       /*AssignmentExpression_muleq*/
-    ,AssignmentExpression_diveq_print       /*AssignmentExpression_diveq*/
-    ,AssignmentExpression_modeq_print       /*AssignmentExpression_modeq*/
-    ,AssignmentExpression_addeq_print       /*AssignmentExpression_addeq*/
-    ,AssignmentExpression_subeq_print       /*AssignmentExpression_subeq*/
-    ,AssignmentExpression_lshifteq_print    /*AssignmentExpression_lshifteq*/
-    ,AssignmentExpression_rshifteq_print    /*AssignmentExpression_rshifteq*/
-    ,AssignmentExpression_urshifteq_print   /*AssignmentExpression_urshifteq*/
-    ,AssignmentExpression_andeq_print       /*AssignmentExpression_andeq*/
-    ,AssignmentExpression_xoreq_print       /*AssignmentExpression_xoreq*/
-    ,AssignmentExpression_oreq_print        /*AssignmentExpression_oreq*/
-    ,Expression_comma_print                 /*Expression_comma*/
-    ,Block_empty_print                      /*Block_empty*/
-    ,Binary_print                           /*StatementList*/
-    ,VariableStatement_print                /*VariableStatement*/
-    ,VariableDeclarationList_print          /*VariableDeclarationList*/
-    ,VariableDeclaration_print              /*VariableDeclaration*/
-    ,EmptyStatement_print                   /*EmptyStatement*/
-    ,ExpressionStatement_print              /*ExpressionStatement*/
-    ,IfStatement_print                      /*IfStatement*/
-    ,IterationStatement_dowhile_print       /*IterationStatement_dowhile*/
-    ,IterationStatement_while_print         /*IterationStatement_while*/
-    ,IterationStatement_for_print           /*IterationStatement_for*/
-    ,IterationStatement_forvar_print        /*IterationStatement_forvar*/
-    ,IterationStatement_forin_print         /*IterationStatement_forin*/
-    ,IterationStatement_forvarin_print      /*IterationStatement_forvarin*/
-    ,ContinueStatement_print                /*ContinueStatement*/
-    ,BreakStatement_print                   /*BreakStatement*/
-    ,ReturnStatement_print                  /*ReturnStatement*/
-    ,ReturnStatement_undef_print            /*ReturnStatement_undef*/
-    ,WithStatement_print                    /*WithStatement*/
-    ,SwitchStatement_print                  /*SwitchStatement*/
-    ,LabelledStatement_print                /*LabelledStatement*/
-    ,ThrowStatement_print                   /*ThrowStatement*/
-    ,0                                      /*TryStatement*/
-    ,TryStatement_catch_print               /*TryStatement_catch*/
-    ,TryStatement_finally_print             /*TryStatement_finally*/
-    ,TryStatement_catchfinally_print        /*TryStatement_catchfinally*/
-    ,Function_print                         /*Function*/
-    ,Function_print                         /*FunctionDeclaration*/
-    ,Function_print                         /*FunctionExpression*/
-    ,Unary_print                            /*FunctionBody*/
-    ,SourceElements_print                   /*SourceElements*/
-};
-#endif
 
 
 /*

@@ -171,6 +171,7 @@ SEE_ARG_ENABLE(parser-print,[yes],
    [AC_DEFINE(WITH_PARSER_PRINT, [1],
         [Define if you want to be able to print function bodies])
 ])
+AM_CONDITIONAL(WITH_PARSER_PRINT, test x"$enable_parser_print" = x"yes")
 
 SEE_ARG_ENABLE(parser-visit,[no],
    [experimental node visiting API],,

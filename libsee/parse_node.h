@@ -1,4 +1,10 @@
 
+/* Requires: <see/try.h> <see/value.h> */
+
+struct SEE_string;
+struct var;                     /* function.h */
+struct node;
+
 /* Classes of nodes in an AST resulting from a parse */
 enum nodeclass_enum {
         NODECLASS_None                               =  0,
@@ -206,7 +212,7 @@ struct AssignmentExpression_node {
 
 struct VariableDeclaration_node {
 	struct node node;
-	struct var var;
+	struct var *var;
 	struct node *init;
 };
 
@@ -289,3 +295,15 @@ struct SourceElements_node {
 	struct var *vars;
 };
 
+/*
+ * Convenience function for a checked cast of a node to a given type.
+ * Checking is disabled with NDEBUG.
+ */
+#ifdef NDEBUG
+#define CAST_NODE(na, cls)      ((struct cls##_node *)(na))
+#else
+#define CAST_NODE(na, cls)     ((struct cls##_node *)_SEE_cast_node(na, \
+                                NODECLASS_##cls, #cls, __FILE__, __LINE__))
+#endif
+struct node *_SEE_cast_node(struct node *, enum nodeclass_enum,
+                            const char *, const char *, int);

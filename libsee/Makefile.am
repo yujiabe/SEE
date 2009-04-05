@@ -12,6 +12,7 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dprint.c enumerate.c \
                    obj_Date.c obj_Error.c obj_Function.c obj_Global.c	\
                    obj_Math.c obj_Number.c obj_Object.c obj_RegExp.c	\
                    obj_String.c object.c parse.c printf.c         	\
+		   parse_cast.c						\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
 		   module.c code1.c math.c
@@ -27,6 +28,11 @@ libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
 		     scope.h tokens.h unicase.inc unicode.h unicode.inc	\
 		     stringdefs.h stringdefs.inc replace.h parse_node.h
 		   
+libsee_la_SOURCES += parse_print.h
+if WITH_PARSER_PRINT
+libsee_la_SOURCES += parse_print.c
+endif
+
 if NATIVE_DTOA
 libsee_la_SOURCES += dtoa_native.c
 else
