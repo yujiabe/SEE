@@ -183,57 +183,27 @@ struct code_context {
 };
 #endif
 
-/* TODO This structure to become obsolete */
-struct nodeclass {
 #ifndef NDEBUG
-	enum nodeclass_enum superclass;
-# define SUPERCLASS(cls)	NODECLASS_##cls,
-# define BASECLASS		NODECLASS_None,
-#else
-# define SUPERCLASS(cls)
-# define BASECLASS
+extern enum nodeclass_enum _SEE_nodeclass_superclass[];
 #endif
 #if WITH_PARSER_EVAL
-	void (*eval)(struct node *, struct SEE_context *, struct SEE_value *);
+extern void (*_SEE_nodeclass_eval[])(struct node *, 
+        struct SEE_context *, struct SEE_value *);
 #endif
 #if WITH_PARSER_CODEGEN
-	void (*codegen)(struct node *, struct code_context *);
-#endif
-#if WITH_PARSER_EVAL
-	void (*fproc)(struct node *, struct SEE_context *);
+extern void (*_SEE_nodeclass_codegen[])(struct node *, 
+        struct code_context *);
 #endif
 #if WITH_PARSER_PRINT
-	void (*print)(struct node *, struct printer *);
+extern void (*_SEE_nodeclass_print[])(struct node *, 
+        struct printer *);
 #endif
 #if WITH_PARSER_VISIT
-	void (*visit)(struct node *, visitor_fn_t, void *);
+extern void (*_SEE_nodeclass_visit[])(struct node *, 
+	visitor_fn_t, void *);
 #endif
-	int  (*isconst)(struct node *, struct SEE_interpreter *);
-};
-
-#if WITH_PARSER_EVAL
-# define PARSER_EVAL(fn)	fn,
-#else
-# define PARSER_EVAL(fn)	/* empty */
-#endif
-
-#if WITH_PARSER_CODEGEN
-# define PARSER_CODEGEN(fn)	fn,
-#else
-# define PARSER_CODEGEN(fn)	/* empty */
-#endif
-
-#if WITH_PARSER_PRINT
-# define PARSER_PRINT(fn)	fn,
-#else
-# define PARSER_PRINT(fn)	/* empty */
-#endif
-
-#if WITH_PARSER_VISIT
-# define PARSER_VISIT(fn)	fn,
-#else
-# define PARSER_VISIT(fn)	/* empty */
-#endif
+extern int (*_SEE_nodeclass_isconst[])(struct node *, 
+        struct SEE_interpreter *);
 
 #if WITH_PARSER_CODEGEN
         /* unsigned int node.maxstack */
@@ -340,8 +310,6 @@ struct printer {
 /*------------------------------------------------------------
  * function prototypes
  */
-
-extern struct nodeclass _SEE_parse_nodeclass[NODECLASS_MAX];
 
 #define Unary_nodeclass _SEE_parse_nodeclass[NODECLASS_Unary]
 #define Binary_nodeclass _SEE_parse_nodeclass[NODECLASS_Binary]
@@ -1154,7 +1122,7 @@ static void const_evaluate(struct node *, struct SEE_interpreter *,
 
 #endif /* NDEBUG */
 
-#define EVALFN(node) _SEE_parse_nodeclass[(node)->nodeclass].eval
+#define EVALFN(node) _SEE_nodeclass_eval[(node)->nodeclass]
 # define EVAL(node, ctxt, res)				\
     do {						\
 	struct SEE_throw_location * _loc_save = NULL;	\
@@ -1171,11 +1139,14 @@ static void const_evaluate(struct node *, struct SEE_interpreter *,
    * Note: there is no need to restore the _loc_save in
    * a try-finally block
    */
-#define FPROCFN(node) _SEE_parse_nodeclass[(node)->nodeclass].fproc
+/* There are only TWO fprocs used in ECMAScript node classes, so
+ * don't waste space. */
 #define FPROC(node, ctxt)				\
     do {						\
-	if (FPROCFN(node))                              \
-	    (*FPROCFN(node))((node), ctxt);             \
+	if ((node)->nodeclass == NODECLASS_FunctionDeclaration) \
+            FunctionDeclaration_fproc(node, ctxt);      \
+	else if ((node)->nodeclass == NODECLASS_SourceElements) \
+            SourceElements_fproc(node, ctxt);      \
     } while (0)
 
 #ifndef NDEBUG
@@ -1191,7 +1162,7 @@ static void const_evaluate(struct node *, struct SEE_interpreter *,
 #endif
 
 #if WITH_PARSER_PRINT
-#define PRINTFN(n) _SEE_parse_nodeclass[(n)->nodeclass].print
+#define PRINTFN(n) _SEE_nodeclass_print[(n)->nodeclass]
 #endif
 
 /*
@@ -1256,7 +1227,7 @@ static struct node *cast_node(struct node *, enum nodeclass_enum,
 /*
  * Visitor macro
  */
-# define VISITFN(n)  (_SEE_parse_nodeclass[(n)->nodeclass].visit
+# define VISITFN(n)  (_SEE_nodeclass_visit[(n)->nodeclass])
 # define VISIT(n, v, va)	do {			\
 	if (VISITFN(n))                			\
 	    (*VISITFN(n))(n, v, va);		\
@@ -1265,19 +1236,29 @@ static struct node *cast_node(struct node *, enum nodeclass_enum,
 #endif
 
 /* Returns true if the node returns a constant expression */
-#define ISCONSTFN(n)    _SEE_parse_nodeclass[(n)->nodeclass].isconst
+#define ISCONSTFN(n)    _SEE_nodeclass_isconst[(n)->nodeclass]
 #define ISCONST(n, interp) 				\
-	((n)->isconst_valid ? (n)->isconst :		\
-	  ((n)->isconst_valid = 1,			\
-	   (n)->isconst =				\
-	    (ISCONSTFN(n)             			\
-		? (*ISCONSTFN(n))(n, interp)	        \
-		: 0)))
+        isconst(n, interp)
+
+static int isconst(struct node *n, struct SEE_interpreter *interp) {
+    int flags = n->flags;
+    int isconst = 0;
+
+    if (flags & NODE_FLAG_ISCONST_VALID) {
+        isconst = flags & NODE_FLAG_ISCONST;
+    } else {
+        isconst = ISCONSTFN(n) ? (*ISCONSTFN(n))(n, interp) : 0;
+        if (isconst)
+            flags |= NODE_FLAG_ISCONST;
+        n->flags = flags | NODE_FLAG_ISCONST_VALID;
+    }
+    return isconst;
+}
 
 /* Codegen macros */
 
 #if WITH_PARSER_CODEGEN
-# define CODEGENFN(node) _SEE_parse_nodeclass[(node)->nodeclass].codegen
+# define CODEGENFN(node) _SEE_nodeclass_codegen[(node)->nodeclass]
 # define CODEGEN(node)	do {				\
 	if (!(cc)->no_const &&				\
 	    ISCONST(node, (cc)->code->interpreter) &&	\
@@ -1440,8 +1421,7 @@ new_node_internal(interp, sz, nc, filename, lineno, dbg_nc)
 	n->nodeclass = nc;
 	n->location.filename = filename;
 	n->location.lineno = lineno;
-	n->isconst_valid = 0;
-	n->isconst = 0;
+	n->flags = 0;
 #if WITH_PARSER_CODEGEN
 	n->is = 0;
 	n->maxstack = 0;
@@ -1485,7 +1465,7 @@ cast_node(na, nc, cname, file, line)
 	if (na) {
 		enum nodeclass_enum nac = na->nodeclass;
 		while (nac != NODECLASS_None && nac != nc)
-		    nac = _SEE_parse_nodeclass[nac].superclass;
+		    nac = _SEE_nodeclass_superclass[nac];
 		if (!nac) {
 		    dprintf("%s:%d: internal error: cast to %s failed [vers %s]\n",
 			file, line, cname, PACKAGE_VERSION);
@@ -10632,7 +10612,7 @@ TryStatement_parse(parser)
 	struct TryStatement_node *n;
 	enum nodeclass_enum nc;
         struct node *block, *bcatch, *bfinally;
-        struct SEE_string *ident;
+        struct SEE_string *ident = NULL;
 
 	EXPECT(tTRY);
 	block = PARSE(Block);
@@ -11849,859 +11829,611 @@ SEE_compare(interp, x, y)
 		return -1;
 }
 
-struct nodeclass _SEE_parse_nodeclass[NODECLASS_MAX] = {
-    /* NODECLASS_None */ {
-            BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(0)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_Unary */ {
-	    BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Unary_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_Binary */ {
-	    BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Binary_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_Literal */ {
-	    BASECLASS
-	    PARSER_EVAL(Literal_eval)
-	    PARSER_CODEGEN(Literal_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Literal_print)
-	    PARSER_VISIT(0)
-	    Always_isconst },
-
-    /* NODECLASS_StringLiteral */ {
-	    BASECLASS
-	    PARSER_EVAL(StringLiteral_eval)
-	    PARSER_CODEGEN(StringLiteral_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(StringLiteral_print)
-	    PARSER_VISIT(0)
-	    Always_isconst },
-
-    /* NODECLASS_RegularExpressionLiteral */ {
-	    BASECLASS
-	    PARSER_EVAL(RegularExpressionLiteral_eval)
-	    PARSER_CODEGEN(RegularExpressionLiteral_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RegularExpressionLiteral_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_PrimaryExpression_this */ {
-	    BASECLASS
-	    PARSER_EVAL(PrimaryExpression_this_eval)
-	    PARSER_CODEGEN(PrimaryExpression_this_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(PrimaryExpression_this_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_PrimaryExpression_ident */ {
-	    BASECLASS
-	    PARSER_EVAL(PrimaryExpression_ident_eval)
-	    PARSER_CODEGEN(PrimaryExpression_ident_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(PrimaryExpression_ident_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_ArrayLiteral */ {
-	    BASECLASS
-	    PARSER_EVAL(ArrayLiteral_eval)
-	    PARSER_CODEGEN(ArrayLiteral_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ArrayLiteral_print)
-	    PARSER_VISIT(ArrayLiteral_visit)
-	    0 },
-
-    /* NODECLASS_ObjectLiteral */ {
-	    BASECLASS
-	    PARSER_EVAL(ObjectLiteral_eval)
-	    PARSER_CODEGEN(ObjectLiteral_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ObjectLiteral_print)
-	    PARSER_VISIT(ObjectLiteral_visit)
-	    0 },
-
-    /* NODECLASS_Arguments */ {
-	    BASECLASS
-	    PARSER_EVAL(Arguments_eval)
-	    PARSER_CODEGEN(Arguments_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Arguments_print)
-	    PARSER_VISIT(Arguments_visit)
-	    Arguments_isconst },
-
-    /* NODECLASS_MemberExpression_new */ {
-	    BASECLASS
-	    PARSER_EVAL(MemberExpression_new_eval)
-	    PARSER_CODEGEN(MemberExpression_new_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MemberExpression_new_print)
-	    PARSER_VISIT(MemberExpression_new_visit)
-	    0 },
-
-    /* NODECLASS_MemberExpression_dot */ {
-	    BASECLASS
-	    PARSER_EVAL(MemberExpression_dot_eval)
-	    PARSER_CODEGEN(MemberExpression_dot_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MemberExpression_dot_print)
-	    PARSER_VISIT(MemberExpression_dot_visit)
-	    0 },
-
-    /* NODECLASS_MemberExpression_bracket */ {
-	    BASECLASS
-	    PARSER_EVAL(MemberExpression_bracket_eval)
-	    PARSER_CODEGEN(MemberExpression_bracket_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MemberExpression_bracket_print)
-	    PARSER_VISIT(MemberExpression_bracket_visit) 
-	    0 },
-
-    /* NODECLASS_CallExpression */ {
-	    BASECLASS
-	    PARSER_EVAL(CallExpression_eval)
-	    PARSER_CODEGEN(CallExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(CallExpression_print) 
-	    PARSER_VISIT(CallExpression_visit)
-	    0 },
-
-    /* NODECLASS_PostfixExpression_inc */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(PostfixExpression_inc_eval)
-	    PARSER_CODEGEN(PostfixExpression_inc_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(PostfixExpression_inc_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_PostfixExpression_dec */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(PostfixExpression_dec_eval)
-	    PARSER_CODEGEN(PostfixExpression_dec_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(PostfixExpression_dec_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_UnaryExpression_delete */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_delete_eval)
-	    PARSER_CODEGEN(UnaryExpression_delete_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_delete_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_void */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_void_eval)
-	    PARSER_CODEGEN(UnaryExpression_void_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_void_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_typeof */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_typeof_eval)
-	    PARSER_CODEGEN(UnaryExpression_typeof_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_typeof_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_preinc */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_preinc_eval)
-	    PARSER_CODEGEN(UnaryExpression_preinc_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_preinc_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_UnaryExpression_predec */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_predec_eval)
-	    PARSER_CODEGEN(UnaryExpression_predec_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_predec_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_UnaryExpression_plus */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_plus_eval)
-	    PARSER_CODEGEN(UnaryExpression_plus_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_plus_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_minus */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_minus_eval)
-	    PARSER_CODEGEN(UnaryExpression_minus_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_minus_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_inv */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_inv_eval)
-	    PARSER_CODEGEN(UnaryExpression_inv_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_inv_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_UnaryExpression_not */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(UnaryExpression_not_eval)
-	    PARSER_CODEGEN(UnaryExpression_not_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(UnaryExpression_not_print)
-	    PARSER_VISIT(Unary_visit)
-	    Unary_isconst },
-
-    /* NODECLASS_MultiplicativeExpression_mul */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(MultiplicativeExpression_mul_eval)
-	    PARSER_CODEGEN(MultiplicativeExpression_mul_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MultiplicativeExpression_mul_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_MultiplicativeExpression_div */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(MultiplicativeExpression_div_eval)
-	    PARSER_CODEGEN(MultiplicativeExpression_div_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MultiplicativeExpression_div_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_MultiplicativeExpression_mod */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(MultiplicativeExpression_mod_eval)
-	    PARSER_CODEGEN(MultiplicativeExpression_mod_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(MultiplicativeExpression_mod_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_AdditiveExpression_add */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(AdditiveExpression_add_eval)
-	    PARSER_CODEGEN(AdditiveExpression_add_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AdditiveExpression_add_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_AdditiveExpression_sub */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(AdditiveExpression_sub_eval)
-	    PARSER_CODEGEN(AdditiveExpression_sub_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AdditiveExpression_sub_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_ShiftExpression_lshift */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(ShiftExpression_lshift_eval)
-	    PARSER_CODEGEN(ShiftExpression_lshift_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ShiftExpression_lshift_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_ShiftExpression_rshift */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(ShiftExpression_rshift_eval)
-	    PARSER_CODEGEN(ShiftExpression_rshift_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ShiftExpression_rshift_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_ShiftExpression_urshift */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(ShiftExpression_urshift_eval)
-	    PARSER_CODEGEN(ShiftExpression_urshift_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ShiftExpression_urshift_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_lt */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_lt_eval)
-	    PARSER_CODEGEN(RelationalExpression_lt_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_lt_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_gt */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_gt_eval)
-	    PARSER_CODEGEN(RelationalExpression_gt_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_gt_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_le */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_le_eval)
-	    PARSER_CODEGEN(RelationalExpression_le_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_le_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_ge */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_ge_eval)
-	    PARSER_CODEGEN(RelationalExpression_ge_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_ge_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_instanceof */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_instanceof_eval)
-	    PARSER_CODEGEN(RelationalExpression_instanceof_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_instanceof_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_RelationalExpression_in */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(RelationalExpression_in_eval)
-	    PARSER_CODEGEN(RelationalExpression_in_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(RelationalExpression_in_print)
-	    PARSER_VISIT(Binary_visit) 
-	    Binary_isconst },
-
-    /* NODECLASS_EqualityExpression_eq */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(EqualityExpression_eq_eval)
-	    PARSER_CODEGEN(EqualityExpression_eq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(EqualityExpression_eq_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_EqualityExpression_ne */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(EqualityExpression_ne_eval)
-	    PARSER_CODEGEN(EqualityExpression_ne_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(EqualityExpression_ne_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_EqualityExpression_seq */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(EqualityExpression_seq_eval)
-	    PARSER_CODEGEN(EqualityExpression_seq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(EqualityExpression_seq_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_EqualityExpression_sne */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(EqualityExpression_sne_eval)
-	    PARSER_CODEGEN(EqualityExpression_sne_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(EqualityExpression_sne_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_BitwiseANDExpression */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(BitwiseANDExpression_eval)
-	    PARSER_CODEGEN(BitwiseANDExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(BitwiseANDExpression_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_BitwiseXORExpression */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(BitwiseXORExpression_eval)
-	    PARSER_CODEGEN(BitwiseXORExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(BitwiseXORExpression_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_BitwiseORExpression */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(BitwiseORExpression_eval)
-	    PARSER_CODEGEN(BitwiseORExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(BitwiseORExpression_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_LogicalANDExpression */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(LogicalANDExpression_eval)
-	    PARSER_CODEGEN(LogicalANDExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(LogicalANDExpression_print)
-	    PARSER_VISIT(Binary_visit)
-	    LogicalANDExpression_isconst },
-
-    /* NODECLASS_LogicalORExpression */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(LogicalORExpression_eval)
-	    PARSER_CODEGEN(LogicalORExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(LogicalORExpression_print)
-	    PARSER_VISIT(Binary_visit)
-	    LogicalORExpression_isconst },
-
-    /* NODECLASS_ConditionalExpression */ {
-	    BASECLASS
-	    PARSER_EVAL(ConditionalExpression_eval)
-	    PARSER_CODEGEN(ConditionalExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ConditionalExpression_print)
-	    PARSER_VISIT(ConditionalExpression_visit)
-	    ConditionalExpression_isconst },
-
-    /* NODECLASS_AssignmentExpression */ {              /* abstract */
-	    BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(0)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_simple */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_simple_eval)
-	    PARSER_CODEGEN(AssignmentExpression_simple_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_simple_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_muleq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_muleq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_muleq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_muleq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_diveq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_diveq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_diveq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_diveq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_modeq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_modeq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_modeq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_modeq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_addeq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_addeq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_addeq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_addeq_print)
-	    PARSER_VISIT(AssignmentExpression_visit) 
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_subeq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_subeq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_subeq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_subeq_print)
-	    PARSER_VISIT(AssignmentExpression_visit) 
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_lshifteq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_lshifteq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_lshifteq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_lshifteq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_rshifteq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_rshifteq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_rshifteq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_rshifteq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_urshifteq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_urshifteq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_urshifteq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_urshifteq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_andeq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_andeq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_andeq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_andeq_print)
-	    PARSER_VISIT(AssignmentExpression_visit) 
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_xoreq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_xoreq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_xoreq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_xoreq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_AssignmentExpression_oreq */ {
-	    SUPERCLASS(AssignmentExpression)
-	    PARSER_EVAL(AssignmentExpression_oreq_eval)
-	    PARSER_CODEGEN(AssignmentExpression_oreq_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(AssignmentExpression_oreq_print)
-	    PARSER_VISIT(AssignmentExpression_visit)
-	    0 },
-
-    /* NODECLASS_Expression_comma */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(Expression_comma_eval)
-	    PARSER_CODEGEN(Expression_comma_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Expression_comma_print)
-	    PARSER_VISIT(Binary_visit)
-	    Binary_isconst },
-
-    /* NODECLASS_Block_empty */ {
-	    BASECLASS
-	    PARSER_EVAL(Block_empty_eval)
-	    PARSER_CODEGEN(Block_empty_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Block_empty_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_StatementList */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(StatementList_eval)
-	    PARSER_CODEGEN(StatementList_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Binary_print)
-	    PARSER_VISIT(Binary_visit)
-	    0 },
-
-    /* NODECLASS_VariableStatement */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(VariableStatement_eval)
-	    PARSER_CODEGEN(VariableStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(VariableStatement_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_VariableDeclarationList */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(VariableDeclarationList_eval)
-	    PARSER_CODEGEN(VariableDeclarationList_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(VariableDeclarationList_print)
-	    PARSER_VISIT(Binary_visit)
-	    0 },
-
-    /* NODECLASS_VariableDeclaration */ {
-	    BASECLASS
-	    PARSER_EVAL(VariableDeclaration_eval)
-	    PARSER_CODEGEN(VariableDeclaration_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(VariableDeclaration_print)
-	    PARSER_VISIT(VariableDeclaration_visit)
-	    0 },
-
-    /* NODECLASS_EmptyStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(EmptyStatement_eval)
-	    PARSER_CODEGEN(EmptyStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(EmptyStatement_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_ExpressionStatement */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(ExpressionStatement_eval)
-	    PARSER_CODEGEN(ExpressionStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ExpressionStatement_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_IfStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(IfStatement_eval)
-	    PARSER_CODEGEN(IfStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IfStatement_print)
-	    PARSER_VISIT(IfStatement_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_dowhile */ {
-	    SUPERCLASS(IterationStatement_while)
-	    PARSER_EVAL(IterationStatement_dowhile_eval)
-	    PARSER_CODEGEN(IterationStatement_dowhile_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_dowhile_print)
-	    PARSER_VISIT(IterationStatement_while_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_while */ {
-	    BASECLASS
-	    PARSER_EVAL(IterationStatement_while_eval)
-	    PARSER_CODEGEN(IterationStatement_while_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_while_print)
-	    PARSER_VISIT(IterationStatement_while_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_for */ {
-	    BASECLASS
-	    PARSER_EVAL(IterationStatement_for_eval)
-	    PARSER_CODEGEN(IterationStatement_for_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_for_print)
-	    PARSER_VISIT(IterationStatement_for_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_forvar */ {
-	    SUPERCLASS(IterationStatement_for)
-	    PARSER_EVAL(IterationStatement_forvar_eval)
-	    PARSER_CODEGEN(IterationStatement_forvar_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_forvar_print)
-	    PARSER_VISIT(IterationStatement_for_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_forin */ {
-	    SUPERCLASS(IterationStatement_forin)
-	    PARSER_EVAL(IterationStatement_forin_eval)
-	    PARSER_CODEGEN(IterationStatement_forin_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_forin_print)
-	    PARSER_VISIT(IterationStatement_forin_visit)
-	    0 },
-
-    /* NODECLASS_IterationStatement_forvarin */ {
-	    SUPERCLASS(IterationStatement_forin)
-	    PARSER_EVAL(IterationStatement_forvarin_eval)
-	    PARSER_CODEGEN(IterationStatement_forvarin_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(IterationStatement_forvarin_print)
-	    PARSER_VISIT(IterationStatement_forin_visit)
-	    0 },
-
-    /* NODECLASS_ContinueStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(ContinueStatement_eval)
-	    PARSER_CODEGEN(ContinueStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ContinueStatement_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_BreakStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(BreakStatement_eval)
-	    PARSER_CODEGEN(BreakStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(BreakStatement_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_ReturnStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(ReturnStatement_eval)
-	    PARSER_CODEGEN(ReturnStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ReturnStatement_print)
-	    PARSER_VISIT(ReturnStatement_visit)
-	    0 },
-
-    /* NODECLASS_ReturnStatement_undef */ {
-	    BASECLASS
-	    PARSER_EVAL(ReturnStatement_undef_eval)
-	    PARSER_CODEGEN(ReturnStatement_undef_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ReturnStatement_undef_print)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_WithStatement */ {
-	    SUPERCLASS(Binary)
-	    PARSER_EVAL(WithStatement_eval)
-	    PARSER_CODEGEN(WithStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(WithStatement_print)
-	    PARSER_VISIT(Binary_visit)
-	    0 },
-
-    /* NODECLASS_SwitchStatement */ {
-	    BASECLASS
-	    PARSER_EVAL(SwitchStatement_eval)
-	    PARSER_CODEGEN(SwitchStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(SwitchStatement_print)
-	    PARSER_VISIT(SwitchStatement_visit)
-	    0 },
-
-    /* NODECLASS_LabelledStatement */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(LabelledStatement_eval)
-	    PARSER_CODEGEN(LabelledStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(LabelledStatement_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_ThrowStatement */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(ThrowStatement_eval)
-	    PARSER_CODEGEN(ThrowStatement_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(ThrowStatement_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_TryStatement */ {                      /* abstract */
-	    BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(0)
-	    PARSER_VISIT(0)
-	    0 },
-
-    /* NODECLASS_TryStatement_catch */ {
-	    SUPERCLASS(TryStatement)
-	    PARSER_EVAL(TryStatement_catch_eval)
-	    PARSER_CODEGEN(TryStatement_catch_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(TryStatement_catch_print)
-	    PARSER_VISIT(TryStatement_catch_visit)
-	    0 },
-
-    /* NODECLASS_TryStatement_finally */ {
-	    SUPERCLASS(TryStatement)
-	    PARSER_EVAL(TryStatement_finally_eval)
-	    PARSER_CODEGEN(TryStatement_finally_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(TryStatement_finally_print)
-	    PARSER_VISIT(TryStatement_finally_visit)
-	    0 },
-
-    /* NODECLASS_TryStatement_catchfinally */ {
-	    SUPERCLASS(TryStatement)
-	    PARSER_EVAL(TryStatement_catchfinally_eval)
-	    PARSER_CODEGEN(TryStatement_catchfinally_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(TryStatement_catchfinally_print)
-	    PARSER_VISIT(TryStatement_catchfinally_visit)
-	    0 },
-
-    /* NODECLASS_Function */ {                          /* abstract */
-	    BASECLASS
-	    PARSER_EVAL(0)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Function_print)
-	    PARSER_VISIT(Function_visit)
-	    0 },
-
-    /* NODECLASS_FunctionDeclaration */ {
-	    SUPERCLASS(Function)
-	    PARSER_EVAL(0 /* FunctionDeclaration_eval */)
-	    PARSER_CODEGEN(0)
-	    PARSER_EVAL(FunctionDeclaration_fproc)
-	    PARSER_PRINT(Function_print)
-	    PARSER_VISIT(Function_visit)
-	    0 },
-
-    /* NODECLASS_FunctionExpression */ {
-	    SUPERCLASS(Function)
-	    PARSER_EVAL(FunctionExpression_eval)
-	    PARSER_CODEGEN(FunctionExpression_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Function_print)
-	    PARSER_VISIT(Function_visit)
-	    0 },
-
-    /* NODECLASS_FunctionBody */ {
-	    SUPERCLASS(Unary)
-	    PARSER_EVAL(FunctionBody_eval)
-	    PARSER_CODEGEN(FunctionBody_codegen)
-	    PARSER_EVAL(0)
-	    PARSER_PRINT(Unary_print)
-	    PARSER_VISIT(Unary_visit)
-	    0 },
-
-    /* NODECLASS_SourceElements */ {
-	    BASECLASS
-	    PARSER_EVAL(SourceElements_eval)
-	    PARSER_CODEGEN(SourceElements_codegen)
-	    PARSER_EVAL(SourceElements_fproc)
-	    PARSER_PRINT(SourceElements_print)
-	    PARSER_VISIT(SourceElements_visit)
-	    0 } 
+#ifndef NDEBUG
+/* 
+ * Table of superclasses for a nodeclass.
+ * These are only used for checking CAST_NODE() calls
+ */
+enum nodeclass_enum _SEE_nodeclass_superclass[NODECLASS_MAX] = { 0 
+    ,NODECLASS_None                         /*Unary*/
+    ,NODECLASS_None                         /*Binary*/
+    ,NODECLASS_None                         /*Literal*/
+    ,NODECLASS_None                         /*StringLiteral*/
+    ,NODECLASS_None                         /*RegularExpressionLiteral*/
+    ,NODECLASS_None                         /*PrimaryExpression_this*/
+    ,NODECLASS_None                         /*PrimaryExpression_ident*/
+    ,NODECLASS_None                         /*ArrayLiteral*/
+    ,NODECLASS_None                         /*ObjectLiteral*/
+    ,NODECLASS_None                         /*Arguments*/
+    ,NODECLASS_None                         /*MemberExpression_new*/
+    ,NODECLASS_None                         /*MemberExpression_dot*/
+    ,NODECLASS_None                         /*MemberExpression_bracket*/
+    ,NODECLASS_None                         /*CallExpression*/
+    ,NODECLASS_Unary                        /*PostfixExpression_inc*/
+    ,NODECLASS_Unary                        /*PostfixExpression_dec*/
+    ,NODECLASS_Unary                        /*UnaryExpression_delete*/
+    ,NODECLASS_Unary                        /*UnaryExpression_void*/
+    ,NODECLASS_Unary                        /*UnaryExpression_typeof*/
+    ,NODECLASS_Unary                        /*UnaryExpression_preinc*/
+    ,NODECLASS_Unary                        /*UnaryExpression_predec*/
+    ,NODECLASS_Unary                        /*UnaryExpression_plus*/
+    ,NODECLASS_Unary                        /*UnaryExpression_minus*/
+    ,NODECLASS_Unary                        /*UnaryExpression_inv*/
+    ,NODECLASS_Unary                        /*UnaryExpression_not*/
+    ,NODECLASS_Binary                       /*MultiplicativeExpression_mul*/
+    ,NODECLASS_Binary                       /*MultiplicativeExpression_div*/
+    ,NODECLASS_Binary                       /*MultiplicativeExpression_mod*/
+    ,NODECLASS_Binary                       /*AdditiveExpression_add*/
+    ,NODECLASS_Binary                       /*AdditiveExpression_sub*/
+    ,NODECLASS_Binary                       /*ShiftExpression_lshift*/
+    ,NODECLASS_Binary                       /*ShiftExpression_rshift*/
+    ,NODECLASS_Binary                       /*ShiftExpression_urshift*/
+    ,NODECLASS_Binary                       /*RelationalExpression_lt*/
+    ,NODECLASS_Binary                       /*RelationalExpression_gt*/
+    ,NODECLASS_Binary                       /*RelationalExpression_le*/
+    ,NODECLASS_Binary                       /*RelationalExpression_ge*/
+    ,NODECLASS_Binary                       /*RelationalExpression_instanceof*/
+    ,NODECLASS_Binary                       /*RelationalExpression_in*/
+    ,NODECLASS_Binary                       /*EqualityExpression_eq*/
+    ,NODECLASS_Binary                       /*EqualityExpression_ne*/
+    ,NODECLASS_Binary                       /*EqualityExpression_seq*/
+    ,NODECLASS_Binary                       /*EqualityExpression_sne*/
+    ,NODECLASS_Binary                       /*BitwiseANDExpression*/
+    ,NODECLASS_Binary                       /*BitwiseXORExpression*/
+    ,NODECLASS_Binary                       /*BitwiseORExpression*/
+    ,NODECLASS_Binary                       /*LogicalANDExpression*/
+    ,NODECLASS_Binary                       /*LogicalORExpression*/
+    ,NODECLASS_None                         /*ConditionalExpression*/
+    ,NODECLASS_None                         /*AssignmentExpression*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_simple*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_muleq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_diveq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_modeq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_addeq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_subeq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_lshifteq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_rshifteq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_urshifteq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_andeq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_xoreq*/
+    ,NODECLASS_AssignmentExpression         /*AssignmentExpression_oreq*/
+    ,NODECLASS_Binary                       /*Expression_comma*/
+    ,NODECLASS_None                         /*Block_empty*/
+    ,NODECLASS_Binary                       /*StatementList*/
+    ,NODECLASS_Unary                        /*VariableStatement*/
+    ,NODECLASS_Binary                       /*VariableDeclarationList*/
+    ,NODECLASS_None                         /*VariableDeclaration*/
+    ,NODECLASS_None                         /*EmptyStatement*/
+    ,NODECLASS_Unary                        /*ExpressionStatement*/
+    ,NODECLASS_None                         /*IfStatement*/
+    ,NODECLASS_IterationStatement_while     /*IterationStatement_dowhile*/
+    ,NODECLASS_None                         /*IterationStatement_while*/
+    ,NODECLASS_None                         /*IterationStatement_for*/
+    ,NODECLASS_IterationStatement_for       /*IterationStatement_forvar*/
+    ,NODECLASS_IterationStatement_forin     /*IterationStatement_forin*/
+    ,NODECLASS_IterationStatement_forin     /*IterationStatement_forvarin*/
+    ,NODECLASS_None                         /*ContinueStatement*/
+    ,NODECLASS_None                         /*BreakStatement*/
+    ,NODECLASS_None                         /*ReturnStatement*/
+    ,NODECLASS_None                         /*ReturnStatement_undef*/
+    ,NODECLASS_Binary                       /*WithStatement*/
+    ,NODECLASS_None                         /*SwitchStatement*/
+    ,NODECLASS_Unary                        /*LabelledStatement*/
+    ,NODECLASS_Unary                        /*ThrowStatement*/
+    ,NODECLASS_None                         /*TryStatement*/
+    ,NODECLASS_TryStatement                 /*TryStatement_catch*/
+    ,NODECLASS_TryStatement                 /*TryStatement_finally*/
+    ,NODECLASS_TryStatement                 /*TryStatement_catchfinally*/
+    ,NODECLASS_None                         /*Function*/
+    ,NODECLASS_Function                     /*FunctionDeclaration*/
+    ,NODECLASS_Function                     /*FunctionExpression*/
+    ,NODECLASS_Unary                        /*FunctionBody*/
+    ,NODECLASS_None                         /*SourceElements*/
 };
+#endif
+
+#if WITH_PARSER_EVAL
+/*
+ * Table of evaluators used when executable ASTs are enabled
+ */
+void (*_SEE_nodeclass_eval[NODECLASS_MAX])(struct node *, 
+        struct SEE_context *, struct SEE_value *) = { 0
+    ,0                                      /*Unary*/
+    ,0                                      /*Binary*/
+    ,Literal_eval                           /*Literal*/
+    ,StringLiteral_eval                     /*StringLiteral*/
+    ,RegularExpressionLiteral_eval          /*RegularExpressionLiteral*/
+    ,PrimaryExpression_this_eval            /*PrimaryExpression_this*/
+    ,PrimaryExpression_ident_eval           /*PrimaryExpression_ident*/
+    ,ArrayLiteral_eval                      /*ArrayLiteral*/
+    ,ObjectLiteral_eval                     /*ObjectLiteral*/
+    ,Arguments_eval                         /*Arguments*/
+    ,MemberExpression_new_eval              /*MemberExpression_new*/
+    ,MemberExpression_dot_eval              /*MemberExpression_dot*/
+    ,MemberExpression_bracket_eval          /*MemberExpression_bracket*/
+    ,CallExpression_eval                    /*CallExpression*/
+    ,PostfixExpression_inc_eval             /*PostfixExpression_inc*/
+    ,PostfixExpression_dec_eval             /*PostfixExpression_dec*/
+    ,UnaryExpression_delete_eval            /*UnaryExpression_delete*/
+    ,UnaryExpression_void_eval              /*UnaryExpression_void*/
+    ,UnaryExpression_typeof_eval            /*UnaryExpression_typeof*/
+    ,UnaryExpression_preinc_eval            /*UnaryExpression_preinc*/
+    ,UnaryExpression_predec_eval            /*UnaryExpression_predec*/
+    ,UnaryExpression_plus_eval              /*UnaryExpression_plus*/
+    ,UnaryExpression_minus_eval             /*UnaryExpression_minus*/
+    ,UnaryExpression_inv_eval               /*UnaryExpression_inv*/
+    ,UnaryExpression_not_eval               /*UnaryExpression_not*/
+    ,MultiplicativeExpression_mul_eval      /*MultiplicativeExpression_mul*/
+    ,MultiplicativeExpression_div_eval      /*MultiplicativeExpression_div*/
+    ,MultiplicativeExpression_mod_eval      /*MultiplicativeExpression_mod*/
+    ,AdditiveExpression_add_eval            /*AdditiveExpression_add*/
+    ,AdditiveExpression_sub_eval            /*AdditiveExpression_sub*/
+    ,ShiftExpression_lshift_eval            /*ShiftExpression_lshift*/
+    ,ShiftExpression_rshift_eval            /*ShiftExpression_rshift*/
+    ,ShiftExpression_urshift_eval           /*ShiftExpression_urshift*/
+    ,RelationalExpression_lt_eval           /*RelationalExpression_lt*/
+    ,RelationalExpression_gt_eval           /*RelationalExpression_gt*/
+    ,RelationalExpression_le_eval           /*RelationalExpression_le*/
+    ,RelationalExpression_ge_eval           /*RelationalExpression_ge*/
+    ,RelationalExpression_instanceof_eval   /*RelationalExpression_instanceof*/
+    ,RelationalExpression_in_eval           /*RelationalExpression_in*/
+    ,EqualityExpression_eq_eval             /*EqualityExpression_eq*/
+    ,EqualityExpression_ne_eval             /*EqualityExpression_ne*/
+    ,EqualityExpression_seq_eval            /*EqualityExpression_seq*/
+    ,EqualityExpression_sne_eval            /*EqualityExpression_sne*/
+    ,BitwiseANDExpression_eval              /*BitwiseANDExpression*/
+    ,BitwiseXORExpression_eval              /*BitwiseXORExpression*/
+    ,BitwiseORExpression_eval               /*BitwiseORExpression*/
+    ,LogicalANDExpression_eval              /*LogicalANDExpression*/
+    ,LogicalORExpression_eval               /*LogicalORExpression*/
+    ,ConditionalExpression_eval             /*ConditionalExpression*/
+    ,0                                      /*AssignmentExpression*/
+    ,AssignmentExpression_simple_eval       /*AssignmentExpression_simple*/
+    ,AssignmentExpression_muleq_eval        /*AssignmentExpression_muleq*/
+    ,AssignmentExpression_diveq_eval        /*AssignmentExpression_diveq*/
+    ,AssignmentExpression_modeq_eval        /*AssignmentExpression_modeq*/
+    ,AssignmentExpression_addeq_eval        /*AssignmentExpression_addeq*/
+    ,AssignmentExpression_subeq_eval        /*AssignmentExpression_subeq*/
+    ,AssignmentExpression_lshifteq_eval     /*AssignmentExpression_lshifteq*/
+    ,AssignmentExpression_rshifteq_eval     /*AssignmentExpression_rshifteq*/
+    ,AssignmentExpression_urshifteq_eval    /*AssignmentExpression_urshifteq*/
+    ,AssignmentExpression_andeq_eval        /*AssignmentExpression_andeq*/
+    ,AssignmentExpression_xoreq_eval        /*AssignmentExpression_xoreq*/
+    ,AssignmentExpression_oreq_eval         /*AssignmentExpression_oreq*/
+    ,Expression_comma_eval                  /*Expression_comma*/
+    ,Block_empty_eval                       /*Block_empty*/
+    ,StatementList_eval                     /*StatementList*/
+    ,VariableStatement_eval                 /*VariableStatement*/
+    ,VariableDeclarationList_eval           /*VariableDeclarationList*/
+    ,VariableDeclaration_eval               /*VariableDeclaration*/
+    ,EmptyStatement_eval                    /*EmptyStatement*/
+    ,ExpressionStatement_eval               /*ExpressionStatement*/
+    ,IfStatement_eval                       /*IfStatement*/
+    ,IterationStatement_dowhile_eval        /*IterationStatement_dowhile*/
+    ,IterationStatement_while_eval          /*IterationStatement_while*/
+    ,IterationStatement_for_eval            /*IterationStatement_for*/
+    ,IterationStatement_forvar_eval         /*IterationStatement_forvar*/
+    ,IterationStatement_forin_eval          /*IterationStatement_forin*/
+    ,IterationStatement_forvarin_eval       /*IterationStatement_forvarin*/
+    ,ContinueStatement_eval                 /*ContinueStatement*/
+    ,BreakStatement_eval                    /*BreakStatement*/
+    ,ReturnStatement_eval                   /*ReturnStatement*/
+    ,ReturnStatement_undef_eval             /*ReturnStatement_undef*/
+    ,WithStatement_eval                     /*WithStatement*/
+    ,SwitchStatement_eval                   /*SwitchStatement*/
+    ,LabelledStatement_eval                 /*LabelledStatement*/
+    ,ThrowStatement_eval                    /*ThrowStatement*/
+    ,0                                      /*TryStatement*/
+    ,TryStatement_catch_eval                /*TryStatement_catch*/
+    ,TryStatement_finally_eval              /*TryStatement_finally*/
+    ,TryStatement_catchfinally_eval         /*TryStatement_catchfinally*/
+    ,0                                      /*Function*/
+    ,0 /* FunctionDeclaration_eval */       /*FunctionDeclaration*/
+    ,FunctionExpression_eval                /*FunctionExpression*/
+    ,FunctionBody_eval                      /*FunctionBody*/
+    ,SourceElements_eval                    /*SourceElements*/
+};
+#endif
+
+#ifdef WITH_PARSER_CODEGEN
+void (*_SEE_nodeclass_codegen[NODECLASS_MAX])(struct node *, 
+        struct code_context *) = { 0
+    ,0                                      /*Unary*/
+    ,0                                      /*Binary*/
+    ,Literal_codegen                        /*Literal*/
+    ,StringLiteral_codegen                  /*StringLiteral*/
+    ,RegularExpressionLiteral_codegen       /*RegularExpressionLiteral*/
+    ,PrimaryExpression_this_codegen         /*PrimaryExpression_this*/
+    ,PrimaryExpression_ident_codegen        /*PrimaryExpression_ident*/
+    ,ArrayLiteral_codegen                   /*ArrayLiteral*/
+    ,ObjectLiteral_codegen                  /*ObjectLiteral*/
+    ,Arguments_codegen                      /*Arguments*/
+    ,MemberExpression_new_codegen           /*MemberExpression_new*/
+    ,MemberExpression_dot_codegen           /*MemberExpression_dot*/
+    ,MemberExpression_bracket_codegen       /*MemberExpression_bracket*/
+    ,CallExpression_codegen                 /*CallExpression*/
+    ,PostfixExpression_inc_codegen          /*PostfixExpression_inc*/
+    ,PostfixExpression_dec_codegen          /*PostfixExpression_dec*/
+    ,UnaryExpression_delete_codegen         /*UnaryExpression_delete*/
+    ,UnaryExpression_void_codegen           /*UnaryExpression_void*/
+    ,UnaryExpression_typeof_codegen         /*UnaryExpression_typeof*/
+    ,UnaryExpression_preinc_codegen         /*UnaryExpression_preinc*/
+    ,UnaryExpression_predec_codegen         /*UnaryExpression_predec*/
+    ,UnaryExpression_plus_codegen           /*UnaryExpression_plus*/
+    ,UnaryExpression_minus_codegen          /*UnaryExpression_minus*/
+    ,UnaryExpression_inv_codegen            /*UnaryExpression_inv*/
+    ,UnaryExpression_not_codegen            /*UnaryExpression_not*/
+    ,MultiplicativeExpression_mul_codegen   /*MultiplicativeExpression_mul*/
+    ,MultiplicativeExpression_div_codegen   /*MultiplicativeExpression_div*/
+    ,MultiplicativeExpression_mod_codegen   /*MultiplicativeExpression_mod*/
+    ,AdditiveExpression_add_codegen         /*AdditiveExpression_add*/
+    ,AdditiveExpression_sub_codegen         /*AdditiveExpression_sub*/
+    ,ShiftExpression_lshift_codegen         /*ShiftExpression_lshift*/
+    ,ShiftExpression_rshift_codegen         /*ShiftExpression_rshift*/
+    ,ShiftExpression_urshift_codegen        /*ShiftExpression_urshift*/
+    ,RelationalExpression_lt_codegen        /*RelationalExpression_lt*/
+    ,RelationalExpression_gt_codegen        /*RelationalExpression_gt*/
+    ,RelationalExpression_le_codegen        /*RelationalExpression_le*/
+    ,RelationalExpression_ge_codegen        /*RelationalExpression_ge*/
+    ,RelationalExpression_instanceof_codegen/*RelationalExpression_instanceof*/
+    ,RelationalExpression_in_codegen        /*RelationalExpression_in*/
+    ,EqualityExpression_eq_codegen          /*EqualityExpression_eq*/
+    ,EqualityExpression_ne_codegen          /*EqualityExpression_ne*/
+    ,EqualityExpression_seq_codegen         /*EqualityExpression_seq*/
+    ,EqualityExpression_sne_codegen         /*EqualityExpression_sne*/
+    ,BitwiseANDExpression_codegen           /*BitwiseANDExpression*/
+    ,BitwiseXORExpression_codegen           /*BitwiseXORExpression*/
+    ,BitwiseORExpression_codegen            /*BitwiseORExpression*/
+    ,LogicalANDExpression_codegen           /*LogicalANDExpression*/
+    ,LogicalORExpression_codegen            /*LogicalORExpression*/
+    ,ConditionalExpression_codegen          /*ConditionalExpression*/
+    ,0                                      /*AssignmentExpression*/
+    ,AssignmentExpression_simple_codegen    /*AssignmentExpression_simple*/
+    ,AssignmentExpression_muleq_codegen     /*AssignmentExpression_muleq*/
+    ,AssignmentExpression_diveq_codegen     /*AssignmentExpression_diveq*/
+    ,AssignmentExpression_modeq_codegen     /*AssignmentExpression_modeq*/
+    ,AssignmentExpression_addeq_codegen     /*AssignmentExpression_addeq*/
+    ,AssignmentExpression_subeq_codegen     /*AssignmentExpression_subeq*/
+    ,AssignmentExpression_lshifteq_codegen  /*AssignmentExpression_lshifteq*/
+    ,AssignmentExpression_rshifteq_codegen  /*AssignmentExpression_rshifteq*/
+    ,AssignmentExpression_urshifteq_codegen /*AssignmentExpression_urshifteq*/
+    ,AssignmentExpression_andeq_codegen     /*AssignmentExpression_andeq*/
+    ,AssignmentExpression_xoreq_codegen     /*AssignmentExpression_xoreq*/
+    ,AssignmentExpression_oreq_codegen      /*AssignmentExpression_oreq*/
+    ,Expression_comma_codegen               /*Expression_comma*/
+    ,Block_empty_codegen                    /*Block_empty*/
+    ,StatementList_codegen                  /*StatementList*/
+    ,VariableStatement_codegen              /*VariableStatement*/
+    ,VariableDeclarationList_codegen        /*VariableDeclarationList*/
+    ,VariableDeclaration_codegen            /*VariableDeclaration*/
+    ,EmptyStatement_codegen                 /*EmptyStatement*/
+    ,ExpressionStatement_codegen            /*ExpressionStatement*/
+    ,IfStatement_codegen                    /*IfStatement*/
+    ,IterationStatement_dowhile_codegen     /*IterationStatement_dowhile*/
+    ,IterationStatement_while_codegen       /*IterationStatement_while*/
+    ,IterationStatement_for_codegen         /*IterationStatement_for*/
+    ,IterationStatement_forvar_codegen      /*IterationStatement_forvar*/
+    ,IterationStatement_forin_codegen       /*IterationStatement_forin*/
+    ,IterationStatement_forvarin_codegen    /*IterationStatement_forvarin*/
+    ,ContinueStatement_codegen              /*ContinueStatement*/
+    ,BreakStatement_codegen                 /*BreakStatement*/
+    ,ReturnStatement_codegen                /*ReturnStatement*/
+    ,ReturnStatement_undef_codegen          /*ReturnStatement_undef*/
+    ,WithStatement_codegen                  /*WithStatement*/
+    ,SwitchStatement_codegen                /*SwitchStatement*/
+    ,LabelledStatement_codegen              /*LabelledStatement*/
+    ,ThrowStatement_codegen                 /*ThrowStatement*/
+    ,0                                      /*TryStatement*/
+    ,TryStatement_catch_codegen             /*TryStatement_catch*/
+    ,TryStatement_finally_codegen           /*TryStatement_finally*/
+    ,TryStatement_catchfinally_codegen      /*TryStatement_catchfinally*/
+    ,0                                      /*Function*/
+    ,0                                      /*FunctionDeclaration*/
+    ,FunctionExpression_codegen             /*FunctionExpression*/
+    ,FunctionBody_codegen                   /*FunctionBody*/
+    ,SourceElements_codegen                 /*SourceElements*/
+};
+#endif
+
+#if WITH_PARSER_PRINT
+void (*_SEE_nodeclass_print[NODECLASS_MAX])(struct node *, 
+        struct printer *) = { 0
+    ,Unary_print                            /*Unary*/
+    ,Binary_print                           /*Binary*/
+    ,Literal_print                          /*Literal*/
+    ,StringLiteral_print                    /*StringLiteral*/
+    ,RegularExpressionLiteral_print         /*RegularExpressionLiteral*/
+    ,PrimaryExpression_this_print           /*PrimaryExpression_this*/
+    ,PrimaryExpression_ident_print          /*PrimaryExpression_ident*/
+    ,ArrayLiteral_print                     /*ArrayLiteral*/
+    ,ObjectLiteral_print                    /*ObjectLiteral*/
+    ,Arguments_print                        /*Arguments*/
+    ,MemberExpression_new_print             /*MemberExpression_new*/
+    ,MemberExpression_dot_print             /*MemberExpression_dot*/
+    ,MemberExpression_bracket_print         /*MemberExpression_bracket*/
+    ,CallExpression_print                   /*CallExpression*/
+    ,PostfixExpression_inc_print            /*PostfixExpression_inc*/
+    ,PostfixExpression_dec_print            /*PostfixExpression_dec*/
+    ,UnaryExpression_delete_print           /*UnaryExpression_delete*/
+    ,UnaryExpression_void_print             /*UnaryExpression_void*/
+    ,UnaryExpression_typeof_print           /*UnaryExpression_typeof*/
+    ,UnaryExpression_preinc_print           /*UnaryExpression_preinc*/
+    ,UnaryExpression_predec_print           /*UnaryExpression_predec*/
+    ,UnaryExpression_plus_print             /*UnaryExpression_plus*/
+    ,UnaryExpression_minus_print            /*UnaryExpression_minus*/
+    ,UnaryExpression_inv_print              /*UnaryExpression_inv*/
+    ,UnaryExpression_not_print              /*UnaryExpression_not*/
+    ,MultiplicativeExpression_mul_print     /*MultiplicativeExpression_mul*/
+    ,MultiplicativeExpression_div_print     /*MultiplicativeExpression_div*/
+    ,MultiplicativeExpression_mod_print     /*MultiplicativeExpression_mod*/
+    ,AdditiveExpression_add_print           /*AdditiveExpression_add*/
+    ,AdditiveExpression_sub_print           /*AdditiveExpression_sub*/
+    ,ShiftExpression_lshift_print           /*ShiftExpression_lshift*/
+    ,ShiftExpression_rshift_print           /*ShiftExpression_rshift*/
+    ,ShiftExpression_urshift_print          /*ShiftExpression_urshift*/
+    ,RelationalExpression_lt_print          /*RelationalExpression_lt*/
+    ,RelationalExpression_gt_print          /*RelationalExpression_gt*/
+    ,RelationalExpression_le_print          /*RelationalExpression_le*/
+    ,RelationalExpression_ge_print          /*RelationalExpression_ge*/
+    ,RelationalExpression_instanceof_print  /*RelationalExpression_instanceof*/
+    ,RelationalExpression_in_print          /*RelationalExpression_in*/
+    ,EqualityExpression_eq_print            /*EqualityExpression_eq*/
+    ,EqualityExpression_ne_print            /*EqualityExpression_ne*/
+    ,EqualityExpression_seq_print           /*EqualityExpression_seq*/
+    ,EqualityExpression_sne_print           /*EqualityExpression_sne*/
+    ,BitwiseANDExpression_print             /*BitwiseANDExpression*/
+    ,BitwiseXORExpression_print             /*BitwiseXORExpression*/
+    ,BitwiseORExpression_print              /*BitwiseORExpression*/
+    ,LogicalANDExpression_print             /*LogicalANDExpression*/
+    ,LogicalORExpression_print              /*LogicalORExpression*/
+    ,ConditionalExpression_print            /*ConditionalExpression*/
+    ,0                                      /*AssignmentExpression*/
+    ,AssignmentExpression_simple_print      /*AssignmentExpression_simple*/
+    ,AssignmentExpression_muleq_print       /*AssignmentExpression_muleq*/
+    ,AssignmentExpression_diveq_print       /*AssignmentExpression_diveq*/
+    ,AssignmentExpression_modeq_print       /*AssignmentExpression_modeq*/
+    ,AssignmentExpression_addeq_print       /*AssignmentExpression_addeq*/
+    ,AssignmentExpression_subeq_print       /*AssignmentExpression_subeq*/
+    ,AssignmentExpression_lshifteq_print    /*AssignmentExpression_lshifteq*/
+    ,AssignmentExpression_rshifteq_print    /*AssignmentExpression_rshifteq*/
+    ,AssignmentExpression_urshifteq_print   /*AssignmentExpression_urshifteq*/
+    ,AssignmentExpression_andeq_print       /*AssignmentExpression_andeq*/
+    ,AssignmentExpression_xoreq_print       /*AssignmentExpression_xoreq*/
+    ,AssignmentExpression_oreq_print        /*AssignmentExpression_oreq*/
+    ,Expression_comma_print                 /*Expression_comma*/
+    ,Block_empty_print                      /*Block_empty*/
+    ,Binary_print                           /*StatementList*/
+    ,VariableStatement_print                /*VariableStatement*/
+    ,VariableDeclarationList_print          /*VariableDeclarationList*/
+    ,VariableDeclaration_print              /*VariableDeclaration*/
+    ,EmptyStatement_print                   /*EmptyStatement*/
+    ,ExpressionStatement_print              /*ExpressionStatement*/
+    ,IfStatement_print                      /*IfStatement*/
+    ,IterationStatement_dowhile_print       /*IterationStatement_dowhile*/
+    ,IterationStatement_while_print         /*IterationStatement_while*/
+    ,IterationStatement_for_print           /*IterationStatement_for*/
+    ,IterationStatement_forvar_print        /*IterationStatement_forvar*/
+    ,IterationStatement_forin_print         /*IterationStatement_forin*/
+    ,IterationStatement_forvarin_print      /*IterationStatement_forvarin*/
+    ,ContinueStatement_print                /*ContinueStatement*/
+    ,BreakStatement_print                   /*BreakStatement*/
+    ,ReturnStatement_print                  /*ReturnStatement*/
+    ,ReturnStatement_undef_print            /*ReturnStatement_undef*/
+    ,WithStatement_print                    /*WithStatement*/
+    ,SwitchStatement_print                  /*SwitchStatement*/
+    ,LabelledStatement_print                /*LabelledStatement*/
+    ,ThrowStatement_print                   /*ThrowStatement*/
+    ,0                                      /*TryStatement*/
+    ,TryStatement_catch_print               /*TryStatement_catch*/
+    ,TryStatement_finally_print             /*TryStatement_finally*/
+    ,TryStatement_catchfinally_print        /*TryStatement_catchfinally*/
+    ,Function_print                         /*Function*/
+    ,Function_print                         /*FunctionDeclaration*/
+    ,Function_print                         /*FunctionExpression*/
+    ,Unary_print                            /*FunctionBody*/
+    ,SourceElements_print                   /*SourceElements*/
+};
+#endif
+
+#if WITH_PARSER_VISIT
+void (*_SEE_nodeclass_visit[NODECLASS_MAX])(struct node *, 
+	visitor_fn_t, void *) = { 0
+    ,Unary_visit                            /*Unary*/
+    ,Binary_visit                           /*Binary*/
+    ,0                                      /*Literal*/
+    ,0                                      /*StringLiteral*/
+    ,0                                      /*RegularExpressionLiteral*/
+    ,0                                      /*PrimaryExpression_this*/
+    ,0                                      /*PrimaryExpression_ident*/
+    ,ArrayLiteral_visit                     /*ArrayLiteral*/
+    ,ObjectLiteral_visit                    /*ObjectLiteral*/
+    ,Arguments_visit                        /*Arguments*/
+    ,MemberExpression_new_visit             /*MemberExpression_new*/
+    ,MemberExpression_dot_visit             /*MemberExpression_dot*/
+    ,MemberExpression_bracket_visit         /*MemberExpression_bracket*/
+    ,CallExpression_visit                   /*CallExpression*/
+    ,Unary_visit                            /*PostfixExpression_inc*/
+    ,Unary_visit                            /*PostfixExpression_dec*/
+    ,Unary_visit                            /*UnaryExpression_delete*/
+    ,Unary_visit                            /*UnaryExpression_void*/
+    ,Unary_visit                            /*UnaryExpression_typeof*/
+    ,Unary_visit                            /*UnaryExpression_preinc*/
+    ,Unary_visit                            /*UnaryExpression_predec*/
+    ,Unary_visit                            /*UnaryExpression_plus*/
+    ,Unary_visit                            /*UnaryExpression_minus*/
+    ,Unary_visit                            /*UnaryExpression_inv*/
+    ,Unary_visit                            /*UnaryExpression_not*/
+    ,Binary_visit                           /*MultiplicativeExpression_mul*/
+    ,Binary_visit                           /*MultiplicativeExpression_div*/
+    ,Binary_visit                           /*MultiplicativeExpression_mod*/
+    ,Binary_visit                           /*AdditiveExpression_add*/
+    ,Binary_visit                           /*AdditiveExpression_sub*/
+    ,Binary_visit                           /*ShiftExpression_lshift*/
+    ,Binary_visit                           /*ShiftExpression_rshift*/
+    ,Binary_visit                           /*ShiftExpression_urshift*/
+    ,Binary_visit                           /*RelationalExpression_lt*/
+    ,Binary_visit                           /*RelationalExpression_gt*/
+    ,Binary_visit                           /*RelationalExpression_le*/
+    ,Binary_visit                           /*RelationalExpression_ge*/
+    ,Binary_visit                           /*RelationalExpression_instanceof*/
+    ,Binary_visit                           /*RelationalExpression_in*/
+    ,Binary_visit                           /*EqualityExpression_eq*/
+    ,Binary_visit                           /*EqualityExpression_ne*/
+    ,Binary_visit                           /*EqualityExpression_seq*/
+    ,Binary_visit                           /*EqualityExpression_sne*/
+    ,Binary_visit                           /*BitwiseANDExpression*/
+    ,Binary_visit                           /*BitwiseXORExpression*/
+    ,Binary_visit                           /*BitwiseORExpression*/
+    ,Binary_visit                           /*LogicalANDExpression*/
+    ,Binary_visit                           /*LogicalORExpression*/
+    ,ConditionalExpression_visit            /*ConditionalExpression*/
+    ,AssignmentExpression_visit             /*AssignmentExpression*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_simple*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_muleq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_diveq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_modeq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_addeq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_subeq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_lshifteq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_rshifteq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_urshifteq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_andeq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_xoreq*/
+    ,AssignmentExpression_visit             /*AssignmentExpression_oreq*/
+    ,Binary_visit                           /*Expression_comma*/
+    ,0                                      /*Block_empty*/
+    ,Binary_visit                           /*StatementList*/
+    ,Unary_visit                            /*VariableStatement*/
+    ,Binary_visit                           /*VariableDeclarationList*/
+    ,VariableDeclaration_visit              /*VariableDeclaration*/
+    ,0                                      /*EmptyStatement*/
+    ,Unary_visit                            /*ExpressionStatement*/
+    ,IfStatement_visit                      /*IfStatement*/
+    ,IterationStatement_while_visit         /*IterationStatement_dowhile*/
+    ,IterationStatement_while_visit         /*IterationStatement_while*/
+    ,IterationStatement_for_visit           /*IterationStatement_for*/
+    ,IterationStatement_for_visit           /*IterationStatement_forvar*/
+    ,IterationStatement_forin_visit         /*IterationStatement_forin*/
+    ,IterationStatement_forin_visit         /*IterationStatement_forvarin*/
+    ,0                                      /*ContinueStatement*/
+    ,0                                      /*BreakStatement*/
+    ,ReturnStatement_visit                  /*ReturnStatement*/
+    ,0                                      /*ReturnStatement_undef*/
+    ,Binary_visit                           /*WithStatement*/
+    ,SwitchStatement_visit                  /*SwitchStatement*/
+    ,Unary_visit                            /*LabelledStatement*/
+    ,Unary_visit                            /*ThrowStatement*/
+    ,0                                      /*TryStatement*/
+    ,TryStatement_catch_visit               /*TryStatement_catch*/
+    ,TryStatement_finally_visit             /*TryStatement_finally*/
+    ,TryStatement_catchfinally_visit        /*TryStatement_catchfinally*/
+    ,Function_visit                         /*Function*/
+    ,Function_visit                         /*FunctionDeclaration*/
+    ,Function_visit                         /*FunctionExpression*/
+    ,Unary_visit                            /*FunctionBody*/
+    ,SourceElements_visit                   /*SourceElements*/
+};
+#endif
+
+/*
+ * isconst functions return true if the expression node will always evaluate
+ * to the same value; that is, it is a constant expression
+ */
+int (*_SEE_nodeclass_isconst[NODECLASS_MAX])(struct node *, 
+        struct SEE_interpreter *) = { 0
+    ,Unary_isconst                          /*Unary*/
+    ,Binary_isconst                         /*Binary*/
+    ,Always_isconst                         /*Literal*/
+    ,Always_isconst                         /*StringLiteral*/
+    ,0                                      /*RegularExpressionLiteral*/
+    ,0                                      /*PrimaryExpression_this*/
+    ,0                                      /*PrimaryExpression_ident*/
+    ,0                                      /*ArrayLiteral*/
+    ,0                                      /*ObjectLiteral*/
+    ,Arguments_isconst                      /*Arguments*/
+    ,0                                      /*MemberExpression_new*/
+    ,0                                      /*MemberExpression_dot*/
+    ,0                                      /*MemberExpression_bracket*/
+    ,0                                      /*CallExpression*/
+    ,0                                      /*PostfixExpression_inc*/
+    ,0                                      /*PostfixExpression_dec*/
+    ,Unary_isconst                          /*UnaryExpression_delete*/
+    ,Unary_isconst                          /*UnaryExpression_void*/
+    ,Unary_isconst                          /*UnaryExpression_typeof*/
+    ,0                                      /*UnaryExpression_preinc*/
+    ,0                                      /*UnaryExpression_predec*/
+    ,Unary_isconst                          /*UnaryExpression_plus*/
+    ,Unary_isconst                          /*UnaryExpression_minus*/
+    ,Unary_isconst                          /*UnaryExpression_inv*/
+    ,Unary_isconst                          /*UnaryExpression_not*/
+    ,Binary_isconst                         /*MultiplicativeExpression_mul*/
+    ,Binary_isconst                         /*MultiplicativeExpression_div*/
+    ,Binary_isconst                         /*MultiplicativeExpression_mod*/
+    ,Binary_isconst                         /*AdditiveExpression_add*/
+    ,Binary_isconst                         /*AdditiveExpression_sub*/
+    ,Binary_isconst                         /*ShiftExpression_lshift*/
+    ,Binary_isconst                         /*ShiftExpression_rshift*/
+    ,Binary_isconst                         /*ShiftExpression_urshift*/
+    ,Binary_isconst                         /*RelationalExpression_lt*/
+    ,Binary_isconst                         /*RelationalExpression_gt*/
+    ,Binary_isconst                         /*RelationalExpression_le*/
+    ,Binary_isconst                         /*RelationalExpression_ge*/
+    ,Binary_isconst                         /*RelationalExpression_instanceof*/
+    ,Binary_isconst                         /*RelationalExpression_in*/
+    ,Binary_isconst                         /*EqualityExpression_eq*/
+    ,Binary_isconst                         /*EqualityExpression_ne*/
+    ,Binary_isconst                         /*EqualityExpression_seq*/
+    ,Binary_isconst                         /*EqualityExpression_sne*/
+    ,Binary_isconst                         /*BitwiseANDExpression*/
+    ,Binary_isconst                         /*BitwiseXORExpression*/
+    ,Binary_isconst                         /*BitwiseORExpression*/
+    ,LogicalANDExpression_isconst           /*LogicalANDExpression*/
+    ,LogicalORExpression_isconst            /*LogicalORExpression*/
+    ,ConditionalExpression_isconst          /*ConditionalExpression*/
+    ,0                                      /*AssignmentExpression*/
+    ,0                                      /*AssignmentExpression_simple*/
+    ,0                                      /*AssignmentExpression_muleq*/
+    ,0                                      /*AssignmentExpression_diveq*/
+    ,0                                      /*AssignmentExpression_modeq*/
+    ,0                                      /*AssignmentExpression_addeq*/
+    ,0                                      /*AssignmentExpression_subeq*/
+    ,0                                      /*AssignmentExpression_lshifteq*/
+    ,0                                      /*AssignmentExpression_rshifteq*/
+    ,0                                      /*AssignmentExpression_urshifteq*/
+    ,0                                      /*AssignmentExpression_andeq*/
+    ,0                                      /*AssignmentExpression_xoreq*/
+    ,0                                      /*AssignmentExpression_oreq*/
+    ,Binary_isconst                         /*Expression_comma*/
+    ,0                                      /*Block_empty*/
+    ,0                                      /*StatementList*/
+    ,0                                      /*VariableStatement*/
+    ,0                                      /*VariableDeclarationList*/
+    ,0                                      /*VariableDeclaration*/
+    ,0                                      /*EmptyStatement*/
+    ,0                                      /*ExpressionStatement*/
+    ,0                                      /*IfStatement*/
+    ,0                                      /*IterationStatement_dowhile*/
+    ,0                                      /*IterationStatement_while*/
+    ,0                                      /*IterationStatement_for*/
+    ,0                                      /*IterationStatement_forvar*/
+    ,0                                      /*IterationStatement_forin*/
+    ,0                                      /*IterationStatement_forvarin*/
+    ,0                                      /*ContinueStatement*/
+    ,0                                      /*BreakStatement*/
+    ,0                                      /*ReturnStatement*/
+    ,0                                      /*ReturnStatement_undef*/
+    ,0                                      /*WithStatement*/
+    ,0                                      /*SwitchStatement*/
+    ,0                                      /*LabelledStatement*/
+    ,0                                      /*ThrowStatement*/
+    ,0                                      /*TryStatement*/
+    ,0                                      /*TryStatement_catch*/
+    ,0                                      /*TryStatement_finally*/
+    ,0                                      /*TryStatement_catchfinally*/
+    ,0                                      /*Function*/
+    ,0                                      /*FunctionDeclaration*/
+    ,0                                      /*FunctionExpression*/
+    ,0                                      /*FunctionBody*/
+    ,0                                      /*SourceElements*/
+};
+

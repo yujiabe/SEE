@@ -102,8 +102,9 @@ enum nodeclass_enum {
 struct node {
         enum nodeclass_enum nodeclass;
         struct SEE_throw_location location;     /* source location */
-        int isconst_valid : 1,          /* true if isconst field is valid */
-            isconst       : 1;          /* true if node is a constant eval */
+        int flags;
+#define NODE_FLAG_ISCONST               0x0000001
+#define NODE_FLAG_ISCONST_VALID         0x0000002
 
         /* XXX For codegen */
         unsigned int maxstack;
