@@ -135,9 +135,6 @@ struct node;
 struct printer;
 #endif
 
-#if WITH_PARSER_VISIT
-typedef void (*visitor_fn_t)(struct node *, void *);
-#endif
 
 #if WITH_PARSER_CODEGEN
 struct code_varscope {
@@ -196,10 +193,6 @@ extern void (*_SEE_nodeclass_codegen[])(struct node *,
 #if WITH_PARSER_PRINT
 extern void (*_SEE_nodeclass_print[])(struct node *, 
         struct printer *);
-#endif
-#if WITH_PARSER_VISIT
-extern void (*_SEE_nodeclass_visit[])(struct node *, 
-	visitor_fn_t, void *);
 #endif
 extern int (*_SEE_nodeclass_isconst[])(struct node *, 
         struct SEE_interpreter *);
@@ -910,43 +903,6 @@ static void print_functionbody(struct SEE_interpreter *interp,
         struct function *f, FILE *fp);
 #endif
 
-#if WITH_PARSER_VISIT
-static void ArrayLiteral_visit(struct node *na, visitor_fn_t v, void *va);
-static void ObjectLiteral_visit(struct node *na, visitor_fn_t v, void *va);
-static void Arguments_visit(struct node *na, visitor_fn_t v, void *va);
-static void MemberExpression_new_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void MemberExpression_dot_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void MemberExpression_bracket_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void CallExpression_visit(struct node *na, visitor_fn_t v, void *va);
-static void Unary_visit(struct node *na, visitor_fn_t v, void *va);
-static void Binary_visit(struct node *na, visitor_fn_t v, void *va);
-static void ConditionalExpression_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void AssignmentExpression_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void VariableDeclaration_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void IfStatement_visit(struct node *na, visitor_fn_t v, void *va);
-static void IterationStatement_while_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void IterationStatement_for_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void IterationStatement_forin_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void ReturnStatement_visit(struct node *na, visitor_fn_t v, void *va);
-static void SwitchStatement_visit(struct node *na, visitor_fn_t v, void *va);
-static void TryStatement_catch_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void TryStatement_finally_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void TryStatement_catchfinally_visit(struct node *na, visitor_fn_t v, 
-        void *va);
-static void Function_visit(struct node *na, visitor_fn_t v, void *va);
-static void SourceElements_visit(struct node *na, visitor_fn_t v, void *va);
-#endif
 
 #if WITH_PARSER_CODEGEN
 static void push_patchables(struct code_context *cc, unsigned int target, 
@@ -1222,17 +1178,6 @@ static struct node *cast_node(struct node *, enum nodeclass_enum,
     } while (0)
 #endif
 
-#if WITH_PARSER_VISIT
-/*
- * Visitor macro
- */
-# define VISITFN(n)  (_SEE_nodeclass_visit[(n)->nodeclass])
-# define VISIT(n, v, va)	do {			\
-	if (VISITFN(n))                			\
-	    (*VISITFN(n))(n, v, va);		\
-	(*(v))(n, va);					\
-    } while (0)
-#endif
 
 /* Returns true if the node returns a constant expression */
 #define ISCONSTFN(n)    _SEE_nodeclass_isconst[(n)->nodeclass]
@@ -2793,20 +2738,6 @@ ArrayLiteral_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-ArrayLiteral_visit(na, v, va)
-	struct node *na; /* (struct ArrayLiteral_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct ArrayLiteral_node *n = CAST_NODE(na, ArrayLiteral);
-	struct ArrayLiteral_element *element;
-
-	for (element = n->first; element; element = element->next)
-		VISIT(element->expr, v, va);
-}
-#endif
 
 static struct node *
 ArrayLiteral_parse(parser)
@@ -2938,20 +2869,6 @@ ObjectLiteral_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-ObjectLiteral_visit(na, v, va)
-	struct node *na; /* (struct ObjectLiteral_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct ObjectLiteral_node *n = CAST_NODE(na, ObjectLiteral);
-	struct ObjectLiteral_pair *pair;
-
-	for (pair = n->first; pair; pair = pair->next)
-		VISIT(pair->value, v, va);
-}
-#endif
 
 static struct node *
 ObjectLiteral_parse(parser)
@@ -3103,20 +3020,6 @@ Arguments_codegen(na, cc)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-Arguments_visit(na, v, va)
-	struct node *na; /* (struct Arguments_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct Arguments_node *n = CAST_NODE(na, Arguments);
-	struct Arguments_arg *arg;
-
-	for (arg = n->first; arg; arg = arg->next)
-		VISIT(arg->expr, v, va);
-}
-#endif
 
 static int
 Arguments_isconst(na, interp)
@@ -3270,20 +3173,6 @@ MemberExpression_new_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-MemberExpression_new_visit(na, v, va)
-	struct node *na; /* (struct MemberExpression_new_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct MemberExpression_new_node *n = 
-		CAST_NODE(na, MemberExpression_new);
-	VISIT(n->mexp, v, va);
-	if (n->args)
-		VISIT((struct node *)n->args, v, va);
-}
-#endif
 
 
 /* 11.2.1 */
@@ -3343,18 +3232,6 @@ MemberExpression_dot_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-MemberExpression_dot_visit(na, v, va)
-	struct node *na; /* (struct MemberExpression_dot_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct MemberExpression_dot_node *n = 
-		CAST_NODE(na, MemberExpression_dot);
-	VISIT(n->mexp, v, va);
-}
-#endif
 
 
 /* 11.2.1 */
@@ -3426,19 +3303,6 @@ MemberExpression_bracket_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-MemberExpression_bracket_visit(na, v, va)
-	struct node *na; /* (struct MemberExpression_bracket_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct MemberExpression_bracket_node *n = 
-		CAST_NODE(na, MemberExpression_bracket);
-	VISIT(n->mexp, v, va);
-	VISIT(n->name, v, va);
-}
-#endif
 
 
 static struct node *
@@ -3611,18 +3475,6 @@ CallExpression_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-CallExpression_visit(na, v, va)
-	struct node *na; /* (struct CallExpression_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct CallExpression_node *n = CAST_NODE(na, CallExpression);
-	VISIT(n->exp, v, va);
-	VISIT((struct node *)n->args, v, va);
-}
-#endif
 
 static struct node *
 LeftHandSideExpression_parse(parser)
@@ -3698,17 +3550,6 @@ LeftHandSideExpression_parse(parser)
  *	;
  */
 
-#if WITH_PARSER_VISIT
-static void
-Unary_visit(na, v, va)
-	struct node *na; /* (struct Unary_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	VISIT(n->a, v, va);
-}
-#endif
 
 #if WITH_PARSER_PRINT
 static void
@@ -4522,18 +4363,6 @@ UnaryExpression_parse(parser)
  */
 
 
-#if WITH_PARSER_VISIT
-static void
-Binary_visit(na, v, va)
-	struct node *na; /* (struct Binary_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	VISIT(n->a, v, va);
-	VISIT(n->b, v, va);
-}
-#endif
 
 #if WITH_PARSER_PRINT
 static void
@@ -6725,20 +6554,6 @@ ConditionalExpression_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-ConditionalExpression_visit(na, v, va)
-	struct node *na; /* (struct ConditionalExpression_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct ConditionalExpression_node *n = 
-		CAST_NODE(na, ConditionalExpression);
-	VISIT(n->a, v, va);
-	VISIT(n->b, v, va);
-	VISIT(n->c, v, va);
-}
-#endif
 
 static int
 ConditionalExpression_isconst(na, interp)
@@ -6810,19 +6625,6 @@ ConditionalExpression_parse(parser)
  *	;
  */
 
-#if WITH_PARSER_VISIT
-static void
-AssignmentExpression_visit(na, v, va)
-	struct node *na; /* (struct AssignmentExpression_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct AssignmentExpression_node *n = 
-		CAST_NODE(na, AssignmentExpression);
-	VISIT(n->lhs, v, va);
-	VISIT(n->expr, v, va);
-}
-#endif
 
 #if WITH_PARSER_EVAL
 static void
@@ -8161,19 +7963,6 @@ VariableDeclaration_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-VariableDeclaration_visit(na, v, va)
-	struct node *na; /* (struct VariableDeclaration_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct VariableDeclaration_node *n = 
-		CAST_NODE(na, VariableDeclaration);
-	if (n->init)
-		VISIT(n->init, v, va);
-}
-#endif
 
 
 static struct node *
@@ -8430,20 +8219,6 @@ IfStatement_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-IfStatement_visit(na, v, va)
-	struct node *na; /* (struct IfStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct IfStatement_node *n = CAST_NODE(na, IfStatement);
-	VISIT(n->cond, v, va);
-	VISIT(n->btrue, v, va);
-	if (n->bfalse)
-	    VISIT(n->bfalse, v, va);
-}
-#endif
 
 static struct node *
 IfStatement_parse(parser)
@@ -8584,20 +8359,6 @@ IterationStatement_dowhile_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-IterationStatement_while_visit(na, v, va)
-        struct node *na; /* (struct IterationStatement_while_node) */
-	visitor_fn_t v;
-	void *va;
-{
-        struct IterationStatement_while_node *n = 
-		CAST_NODE(na, IterationStatement_while);
-
-	VISIT(n->cond, v, va);
-	VISIT(n->body, v, va);
-}
-#endif
 
 
 #if WITH_PARSER_EVAL
@@ -8821,22 +8582,6 @@ IterationStatement_for_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-IterationStatement_for_visit(na, v, va)
-	struct node *na; /* (struct IterationStatement_for_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct IterationStatement_for_node *n = 
-		CAST_NODE(na, IterationStatement_for);
-
-	if (n->init) VISIT(n->init, v, va);
-	if (n->cond) VISIT(n->cond, v, va);
-	if (n->incr) VISIT(n->incr, v, va);
-	VISIT(n->body, v, va);
-}
-#endif
 
 /* 12.6.3 - "for (var init; cond; incr) body" */
 #if WITH_PARSER_EVAL
@@ -9087,20 +8832,6 @@ IterationStatement_forin_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-IterationStatement_forin_visit(na, v, va)
-	struct node *na; /* (struct IterationStatement_forin_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct IterationStatement_forin_node *n = 
-		CAST_NODE(na, IterationStatement_forin);
-	VISIT(n->lhs, v, va);
-	VISIT(n->list, v, va);
-	VISIT(n->body, v, va);
-}
-#endif
 
 
 
@@ -9600,17 +9331,6 @@ ReturnStatement_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-ReturnStatement_visit(na, v, va)
-	struct node *na; /* (struct ReturnStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct ReturnStatement_node *n = CAST_NODE(na, ReturnStatement);
-	VISIT(n->expr, v, va);
-}
-#endif
 
 
 #if WITH_PARSER_EVAL
@@ -9976,24 +9696,6 @@ SwitchStatement_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-SwitchStatement_visit(na, v, va)
-	struct node *na; /* (struct SwitchStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct SwitchStatement_node *n = CAST_NODE(na, SwitchStatement);
-	struct case_list *c;
-
-	VISIT(n->cond, v, va);
-	for (c = n->cases; c; c = c->next) {
-		if (c->expr) 
-		    VISIT(c->expr, v, va);
-		VISIT(c->body, v, va);
-	}
-}
-#endif
 
 
 static struct node *
@@ -10363,18 +10065,6 @@ TryStatement_catch_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-TryStatement_catch_visit(na, v, va)
-	struct node *na; /* (struct TryStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	VISIT(n->block, v, va);
-	VISIT(n->bcatch, v, va);
-}
-#endif
 
 
 
@@ -10452,18 +10142,6 @@ TryStatement_finally_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-TryStatement_finally_visit(na, v, va)
-	struct node *na; /* (struct TryStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	VISIT(n->block, v, va);
-	VISIT(n->bfinally, v, va);
-}
-#endif
 
 
 
@@ -10588,19 +10266,6 @@ TryStatement_catchfinally_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-TryStatement_catchfinally_visit(na, v, va)
-	struct node *na; /* (struct TryStatement_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct TryStatement_node *n = CAST_NODE(na, TryStatement);
-	VISIT(n->block, v, va);
-	VISIT(n->bcatch, v, va);
-	VISIT(n->bfinally, v, va);
-}
-#endif
 
 
 
@@ -10737,17 +10402,6 @@ Function_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-Function_visit(na, v, va)
-	struct node *na; /* (struct Function_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct Function_node *n = CAST_NODE(na, Function);
-	VISIT((struct node *)n->function->body, v, va);
-}
-#endif
 
 #if WITH_PARSER_EVAL
 static void
@@ -11263,22 +10917,6 @@ SourceElements_print(na, printer)
 }
 #endif
 
-#if WITH_PARSER_VISIT
-static void
-SourceElements_visit(na, v, va)
-	struct node *na; /* (struct SourceElements_node) */
-	visitor_fn_t v;
-	void *va;
-{
-	struct SourceElements_node *n = CAST_NODE(na, SourceElements);
-	struct SourceElement *e;
-
-	for (e = n->functions; e; e = e->next)
-		VISIT(e->node, v, va);
-	for (e = n->statements; e; e = e->next)
-		VISIT(e->node, v, va);
-}
-#endif
 
 /* Builds a simple SourceElements around a single statement */
 static struct node *
@@ -12234,105 +11872,6 @@ void (*_SEE_nodeclass_print[NODECLASS_MAX])(struct node *,
 };
 #endif
 
-#if WITH_PARSER_VISIT
-void (*_SEE_nodeclass_visit[NODECLASS_MAX])(struct node *, 
-	visitor_fn_t, void *) = { 0
-    ,Unary_visit                            /*Unary*/
-    ,Binary_visit                           /*Binary*/
-    ,0                                      /*Literal*/
-    ,0                                      /*StringLiteral*/
-    ,0                                      /*RegularExpressionLiteral*/
-    ,0                                      /*PrimaryExpression_this*/
-    ,0                                      /*PrimaryExpression_ident*/
-    ,ArrayLiteral_visit                     /*ArrayLiteral*/
-    ,ObjectLiteral_visit                    /*ObjectLiteral*/
-    ,Arguments_visit                        /*Arguments*/
-    ,MemberExpression_new_visit             /*MemberExpression_new*/
-    ,MemberExpression_dot_visit             /*MemberExpression_dot*/
-    ,MemberExpression_bracket_visit         /*MemberExpression_bracket*/
-    ,CallExpression_visit                   /*CallExpression*/
-    ,Unary_visit                            /*PostfixExpression_inc*/
-    ,Unary_visit                            /*PostfixExpression_dec*/
-    ,Unary_visit                            /*UnaryExpression_delete*/
-    ,Unary_visit                            /*UnaryExpression_void*/
-    ,Unary_visit                            /*UnaryExpression_typeof*/
-    ,Unary_visit                            /*UnaryExpression_preinc*/
-    ,Unary_visit                            /*UnaryExpression_predec*/
-    ,Unary_visit                            /*UnaryExpression_plus*/
-    ,Unary_visit                            /*UnaryExpression_minus*/
-    ,Unary_visit                            /*UnaryExpression_inv*/
-    ,Unary_visit                            /*UnaryExpression_not*/
-    ,Binary_visit                           /*MultiplicativeExpression_mul*/
-    ,Binary_visit                           /*MultiplicativeExpression_div*/
-    ,Binary_visit                           /*MultiplicativeExpression_mod*/
-    ,Binary_visit                           /*AdditiveExpression_add*/
-    ,Binary_visit                           /*AdditiveExpression_sub*/
-    ,Binary_visit                           /*ShiftExpression_lshift*/
-    ,Binary_visit                           /*ShiftExpression_rshift*/
-    ,Binary_visit                           /*ShiftExpression_urshift*/
-    ,Binary_visit                           /*RelationalExpression_lt*/
-    ,Binary_visit                           /*RelationalExpression_gt*/
-    ,Binary_visit                           /*RelationalExpression_le*/
-    ,Binary_visit                           /*RelationalExpression_ge*/
-    ,Binary_visit                           /*RelationalExpression_instanceof*/
-    ,Binary_visit                           /*RelationalExpression_in*/
-    ,Binary_visit                           /*EqualityExpression_eq*/
-    ,Binary_visit                           /*EqualityExpression_ne*/
-    ,Binary_visit                           /*EqualityExpression_seq*/
-    ,Binary_visit                           /*EqualityExpression_sne*/
-    ,Binary_visit                           /*BitwiseANDExpression*/
-    ,Binary_visit                           /*BitwiseXORExpression*/
-    ,Binary_visit                           /*BitwiseORExpression*/
-    ,Binary_visit                           /*LogicalANDExpression*/
-    ,Binary_visit                           /*LogicalORExpression*/
-    ,ConditionalExpression_visit            /*ConditionalExpression*/
-    ,AssignmentExpression_visit             /*AssignmentExpression*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_simple*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_muleq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_diveq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_modeq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_addeq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_subeq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_lshifteq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_rshifteq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_urshifteq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_andeq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_xoreq*/
-    ,AssignmentExpression_visit             /*AssignmentExpression_oreq*/
-    ,Binary_visit                           /*Expression_comma*/
-    ,0                                      /*Block_empty*/
-    ,Binary_visit                           /*StatementList*/
-    ,Unary_visit                            /*VariableStatement*/
-    ,Binary_visit                           /*VariableDeclarationList*/
-    ,VariableDeclaration_visit              /*VariableDeclaration*/
-    ,0                                      /*EmptyStatement*/
-    ,Unary_visit                            /*ExpressionStatement*/
-    ,IfStatement_visit                      /*IfStatement*/
-    ,IterationStatement_while_visit         /*IterationStatement_dowhile*/
-    ,IterationStatement_while_visit         /*IterationStatement_while*/
-    ,IterationStatement_for_visit           /*IterationStatement_for*/
-    ,IterationStatement_for_visit           /*IterationStatement_forvar*/
-    ,IterationStatement_forin_visit         /*IterationStatement_forin*/
-    ,IterationStatement_forin_visit         /*IterationStatement_forvarin*/
-    ,0                                      /*ContinueStatement*/
-    ,0                                      /*BreakStatement*/
-    ,ReturnStatement_visit                  /*ReturnStatement*/
-    ,0                                      /*ReturnStatement_undef*/
-    ,Binary_visit                           /*WithStatement*/
-    ,SwitchStatement_visit                  /*SwitchStatement*/
-    ,Unary_visit                            /*LabelledStatement*/
-    ,Unary_visit                            /*ThrowStatement*/
-    ,0                                      /*TryStatement*/
-    ,TryStatement_catch_visit               /*TryStatement_catch*/
-    ,TryStatement_finally_visit             /*TryStatement_finally*/
-    ,TryStatement_catchfinally_visit        /*TryStatement_catchfinally*/
-    ,Function_visit                         /*Function*/
-    ,Function_visit                         /*FunctionDeclaration*/
-    ,Function_visit                         /*FunctionExpression*/
-    ,Unary_visit                            /*FunctionBody*/
-    ,SourceElements_visit                   /*SourceElements*/
-};
-#endif
 
 /*
  * isconst functions return true if the expression node will always evaluate
