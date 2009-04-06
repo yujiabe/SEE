@@ -24,7 +24,7 @@
 #include "enumerate.h"
 #include "scope.h"
 #include "nmath.h"
-#include "parse.h"      /* XXX only for SEE_compare() */
+#include "compare.h"
 
 /*
 #include <see/cfunction.h>
@@ -32,10 +32,8 @@
 */
 
 #ifndef NDEBUG
-int SEE_eval_debug = 0;
+extern int SEE_eval_debug;
 #endif
-
-#define NO_TARGET       0
 
 /* Traces a statement-level event, or an eval() */
 #define TRACE(loc, ctxt, event)                         \
@@ -120,10 +118,6 @@ static void GetValue(struct SEE_context *context, struct SEE_value *v,
         struct SEE_value *res);
 static void PutValue(struct SEE_context *context, struct SEE_value *v, 
         struct SEE_value *w);
-
-static void EqualityExpression_eq(struct SEE_interpreter *interp,
-        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
-
 static void Literal_eval(struct node *na, struct SEE_context *context, 
         struct SEE_value *res);
 static void RegularExpressionLiteral_eval(struct node *na, 
@@ -209,8 +203,6 @@ static void ShiftExpression_urshift_common(struct SEE_value *r2,
 	struct SEE_value *res);
 static void ShiftExpression_urshift_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
-static void RelationalExpression_sub(struct SEE_interpreter *interp, 
-        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void RelationalExpression_lt_eval(struct node *na, 
         struct SEE_context *context, struct SEE_value *res);
 static void RelationalExpression_gt_eval(struct node *na, 
@@ -344,8 +336,6 @@ static void FunctionDeclaration_fproc(struct node *na,
         struct SEE_context *context);
 static void SourceElements_fproc(struct node *na, 
         struct SEE_context *context);
-static void EqualityExpression_seq(struct SEE_context *context, 
-        struct SEE_value *x, struct SEE_value *y, struct SEE_value *res);
 static void CallExpression_eval_common(struct SEE_context *, 
 	struct SEE_throw_location *, struct SEE_value *, int, 
 	struct SEE_value **, struct SEE_value *);
@@ -1241,57 +1231,6 @@ ShiftExpression_urshift_eval(na, context, res)
 	ShiftExpression_urshift_common(&r2, &r4, context, res);
 }
 
-/*
- * 11.8.5 Abstract relational comparison function.
- */
-static void
-RelationalExpression_sub(interp, x, y, res)
-        struct SEE_interpreter *interp;
-        struct SEE_value *x, *y, *res;
-{
-        struct SEE_value r1, r2, r4, r5;
-        struct SEE_value hint;
-        int k;
-
-        SEE_SET_OBJECT(&hint, interp->Number);
-
-        SEE_ToPrimitive(interp, x, &hint, &r1);
-        SEE_ToPrimitive(interp, y, &hint, &r2);
-        if (!(SEE_VALUE_GET_TYPE(&r1) == SEE_STRING &&
-              SEE_VALUE_GET_TYPE(&r2) == SEE_STRING))
-        {
-            SEE_ToNumber(interp, &r1, &r4);
-            SEE_ToNumber(interp, &r2, &r5);
-            if (SEE_NUMBER_ISNAN(&r4) || SEE_NUMBER_ISNAN(&r5))
-                SEE_SET_UNDEFINED(res);
-            else if (r4.u.number == r5.u.number)
-                SEE_SET_BOOLEAN(res, 0);
-            else if (SEE_NUMBER_ISPINF(&r4))
-                SEE_SET_BOOLEAN(res, 0);
-            else if (SEE_NUMBER_ISPINF(&r5))
-                SEE_SET_BOOLEAN(res, 1);
-            else if (SEE_NUMBER_ISNINF(&r5))
-                SEE_SET_BOOLEAN(res, 0);
-            else if (SEE_NUMBER_ISNINF(&r4))
-                SEE_SET_BOOLEAN(res, 1);
-            else
-                SEE_SET_BOOLEAN(res, r4.u.number < r5.u.number);
-        } else {
-            for (k = 0;
-                 k < r1.u.string->length && k < r2.u.string->length;
-                 k++)
-                if (r1.u.string->data[k] != r2.u.string->data[k])
-                        break;
-            if (k == r2.u.string->length)
-                SEE_SET_BOOLEAN(res, 0);
-            else if (k == r1.u.string->length)
-                SEE_SET_BOOLEAN(res, 1);
-            else
-                SEE_SET_BOOLEAN(res, r1.u.string->data[k] <
-                                 r2.u.string->data[k]);
-        }
-}
-
 /* 11.8.1 */
 static void
 RelationalExpression_lt_eval(na, context, res)
@@ -1306,7 +1245,7 @@ RelationalExpression_lt_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	RelationalExpression_sub(context->interpreter, &r2, &r4, res);
+	_SEE_RelationalExpression_sub(context->interpreter, &r2, &r4, res);
 	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
@@ -1325,7 +1264,7 @@ RelationalExpression_gt_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	RelationalExpression_sub(context->interpreter, &r4, &r2, res);
+	_SEE_RelationalExpression_sub(context->interpreter, &r4, &r2, res);
 	if (SEE_VALUE_GET_TYPE(res) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 }
@@ -1344,7 +1283,7 @@ RelationalExpression_le_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	RelationalExpression_sub(context->interpreter, &r4, &r2, &r5);
+	_SEE_RelationalExpression_sub(context->interpreter, &r4, &r2, &r5);
 	if (SEE_VALUE_GET_TYPE(&r5) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 	else
@@ -1365,7 +1304,7 @@ RelationalExpression_ge_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	RelationalExpression_sub(context->interpreter, &r2, &r4, &r5);
+	_SEE_RelationalExpression_sub(context->interpreter, &r2, &r4, &r5);
 	if (SEE_VALUE_GET_TYPE(&r5) == SEE_UNDEFINED)
 		SEE_SET_BOOLEAN(res, 0);
 	else
@@ -1420,114 +1359,6 @@ RelationalExpression_in_eval(na, context, res)
 	SEE_SET_BOOLEAN(res, r7);
 }
 
-
-/*
- * 11.9.3 Abstract equality function.
- */
-static void
-EqualityExpression_eq(interp, x, y, res)
-        struct SEE_interpreter *interp;
-        struct SEE_value *x, *y, *res;
-{
-        struct SEE_value tmp;
-        int xtype, ytype;
-
-        if (SEE_VALUE_GET_TYPE(x) == SEE_VALUE_GET_TYPE(y))
-            switch (SEE_VALUE_GET_TYPE(x)) {
-            case SEE_UNDEFINED:
-            case SEE_NULL:
-                SEE_SET_BOOLEAN(res, 1);
-                return;
-            case SEE_NUMBER:
-                if (SEE_NUMBER_ISNAN(x) || SEE_NUMBER_ISNAN(y))
-                    SEE_SET_BOOLEAN(res, 0);
-                else
-                    SEE_SET_BOOLEAN(res, x->u.number == y->u.number);
-                return;
-            case SEE_STRING:
-                SEE_SET_BOOLEAN(res, SEE_string_cmp(x->u.string,
-                    y->u.string) == 0);
-                return;
-            case SEE_BOOLEAN:
-                SEE_SET_BOOLEAN(res, !x->u.boolean == !y->u.boolean);
-                return;
-            case SEE_OBJECT:
-                SEE_SET_BOOLEAN(res,
-                        SEE_OBJECT_JOINED(x->u.object, y->u.object));
-                return;
-            default:
-                SEE_ASSERT(interp, !"unexpected token");
-            }
-        xtype = SEE_VALUE_GET_TYPE(x);
-        ytype = SEE_VALUE_GET_TYPE(y);
-        if (xtype == SEE_NULL && ytype == SEE_UNDEFINED)
-                SEE_SET_BOOLEAN(res, 1);
-        else if (xtype == SEE_UNDEFINED && ytype == SEE_NULL)
-                SEE_SET_BOOLEAN(res, 1);
-        else if (xtype == SEE_NUMBER && ytype == SEE_STRING) {
-                SEE_ToNumber(interp, y, &tmp);
-                EqualityExpression_eq(interp, x, &tmp, res);
-        } else if (xtype == SEE_STRING && ytype == SEE_NUMBER) {
-                SEE_ToNumber(interp, x, &tmp);
-                EqualityExpression_eq(interp, &tmp, y, res);
-        } else if (xtype == SEE_BOOLEAN) {
-                SEE_ToNumber(interp, x, &tmp);
-                EqualityExpression_eq(interp, &tmp, y, res);
-        } else if (ytype == SEE_BOOLEAN) {
-                SEE_ToNumber(interp, y, &tmp);
-                EqualityExpression_eq(interp, x, &tmp, res);
-        } else if ((xtype == SEE_STRING || xtype == SEE_NUMBER) &&
-                    ytype == SEE_OBJECT) {
-                SEE_ToPrimitive(interp, y, x, &tmp);
-                EqualityExpression_eq(interp, x, &tmp, res);
-        } else if ((ytype == SEE_STRING || ytype == SEE_NUMBER) &&
-                    xtype == SEE_OBJECT) {
-                SEE_ToPrimitive(interp, x, y, &tmp);
-                EqualityExpression_eq(interp, &tmp, y, res);
-        } else
-                SEE_SET_BOOLEAN(res, 0);
-}
-
-/*
- * 19.9.6 Strict equality function
- */
-static void
-EqualityExpression_seq(context, x, y, res)
-	struct SEE_context *context;
-	struct SEE_value *x, *y, *res;
-{
-	if (SEE_VALUE_GET_TYPE(x) != SEE_VALUE_GET_TYPE(y))
-	    SEE_SET_BOOLEAN(res, 0);
-	else
-	    switch (SEE_VALUE_GET_TYPE(x)) {
-	    case SEE_UNDEFINED:
-		SEE_SET_BOOLEAN(res, 1);
-		break;
-	    case SEE_NULL:
-		SEE_SET_BOOLEAN(res, 1);
-		break;
-	    case SEE_NUMBER:
-		if (SEE_NUMBER_ISNAN(x) || SEE_NUMBER_ISNAN(y))
-			SEE_SET_BOOLEAN(res, 0);
-		else
-			SEE_SET_BOOLEAN(res, x->u.number == y->u.number);
-		break;
-	    case SEE_STRING:
-		SEE_SET_BOOLEAN(res, SEE_string_cmp(x->u.string, 
-		    y->u.string) == 0);
-		break;
-	    case SEE_BOOLEAN:
-		SEE_SET_BOOLEAN(res, !x->u.boolean == !y->u.boolean);
-		break;
-	    case SEE_OBJECT:
-		SEE_SET_BOOLEAN(res, 
-			SEE_OBJECT_JOINED(x->u.object, y->u.object));
-		break;
-	    default:
-		SEE_SET_BOOLEAN(res, 0);
-	    }
-}
-
 /* 11.9.1 */
 static void
 EqualityExpression_eq_eval(na, context, res)
@@ -1542,7 +1373,7 @@ EqualityExpression_eq_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	EqualityExpression_eq(context->interpreter, &r4, &r2, res);
+	_SEE_EqualityExpression_eq(context->interpreter, &r4, &r2, res);
 }
 
 /* 11.9.2 */
@@ -1559,7 +1390,7 @@ EqualityExpression_ne_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	EqualityExpression_eq(context->interpreter, &r4, &r2, &t);
+	_SEE_EqualityExpression_eq(context->interpreter, &r4, &r2, &t);
 	SEE_SET_BOOLEAN(res, !t.u.boolean);
 }
 
@@ -1577,7 +1408,7 @@ EqualityExpression_seq_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	EqualityExpression_seq(context, &r4, &r2, res);
+	_SEE_EqualityExpression_seq(context->interpreter, &r4, &r2, res);
 }
 
 /* 11.9.5 */
@@ -1594,7 +1425,7 @@ EqualityExpression_sne_eval(na, context, res)
 	GetValue(context, &r1, &r2);
 	EVAL(n->b, context, &r3);
 	GetValue(context, &r3, &r4);
-	EqualityExpression_seq(context, &r4, &r2, &r5);
+	_SEE_EqualityExpression_seq(context->interpreter, &r4, &r2, &r5);
 	SEE_SET_BOOLEAN(res, !r5.u.boolean);
 }
 
@@ -2468,7 +2299,8 @@ SwitchStatement_caseblock(n, context, input, res)
 	    if (!c->expr) continue;
 	    EVAL(c->expr, context, &cc1);
 	    GetValue(context, &cc1, &cc2);
-	    EqualityExpression_seq(context, input, &cc2, &cc3);
+	    _SEE_EqualityExpression_seq(context->interpreter, input, 
+                        &cc2, &cc3);
 	    if (cc3.u.boolean)
 		break;
 	}
@@ -2836,42 +2668,8 @@ _SEE_eval_functionbody_isempty(interp, f)
         struct SEE_interpreter *interp;
         struct function *f;
 {
-        struct node *body = (struct node *)f->body;
-        struct SourceElements_node *se;
-        struct FunctionBody_node *fb;
-
-        fb = CAST_NODE(body, FunctionBody);
-        se = CAST_NODE(fb->u.a, SourceElements);
-        return se->statements == NULL &&
-               se->vars == NULL &&
-               (!fb->is_program || se->functions == NULL);
+        return _SEE_node_functionbody_isempty(interp, (struct node *)f->body);
 }
-
-/*
- * Compares two value using ECMAScript == and > operator semantics.
- * Returns  0 if x == y,
- *          1 if x > y or indeterminate,
- *         -1 otherwise.
- * This could be used as a better comparsion function for Array.sort().
- * Currently only used by RegExp.prototype.test()
- */
-int
-SEE_compare(interp, x, y)
-        struct SEE_interpreter *interp;
-        struct SEE_value *x, *y;
-{
-        struct SEE_value v;
-
-        EqualityExpression_eq(interp, x, y, &v);
-        if (v.u.boolean)
-                return 0;
-        RelationalExpression_sub(interp, x, y, &v);
-        if (SEE_VALUE_GET_TYPE(&v) == SEE_UNDEFINED || !v.u.boolean)
-                return 1;
-        else
-                return -1;
-}
-
 
 /*
  * Table of evaluators used when executable ASTs are enabled

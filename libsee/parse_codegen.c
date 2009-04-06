@@ -6,10 +6,29 @@
 #include <see/mem.h>
 #include <see/error.h>
 #include <see/value.h>
+#include <see/system.h>
+#include <see/string.h>
+#include <see/intern.h>
+#include <see/try.h>
 
 #include "dprint.h"
+#include "stringdefs.h"
+#include "function.h"
+#include "parse.h"
 #include "parse_node.h"
+#include "parse_const.h"
+#include "parse_codegen.h"
 #include "code.h"
+#include "nmath.h"              /* MAX() */
+
+extern int SEE_parse_debug;
+
+#define MAX3(a, b, c)    MAX(MAX(a, b), c)
+#define MAX4(a, b, c, d) MAX(MAX(a, b), MAX(c, d))
+
+#define PATCH_FIND_BREAK        0
+#define PATCH_FIND_CONTINUE     1
+#define CONTINUABLE 1
 
 struct code_varscope {
 	struct SEE_string *ident;
@@ -302,14 +321,14 @@ pop_patchables(cc, cont_addr, break_addr)
 
 /* Return the right patchables when breaking/continuing */
 static struct patchables *
-patch_find(cc, target, tok)
+patch_find(cc, target, type)
 	struct code_context *cc;
 	unsigned int target;
-	int tok;    /* tBREAK or tCONTINUE */
+	int type;    /* PATCH_FIND_BREAK or PATCH_FIND_CONTINUE */
 {
 	struct patchables *p;
 
-	if (target == NO_TARGET && tok == tCONTINUE) {
+	if (target == NO_TARGET && type == PATCH_FIND_CONTINUE) {
 	    for (p = cc->patchables; p; p = p->prev)
 		if (p->continuable)
 		    return p;
@@ -395,7 +414,7 @@ cg_const_codegen(node, cc)
 {
 	struct SEE_value value;
 
-	const_evaluate(node, cc->code->interpreter, &value);
+	_SEE_const_evaluate(node, cc->code->interpreter, &value);
 	CG_LITERAL(&value);
 	switch (SEE_VALUE_GET_TYPE(&value)) {
 	case SEE_UNDEFINED: node->is = CG_TYPE_UNDEFINED; break;
@@ -556,7 +575,7 @@ _SEE_codegen_make_body(interp, node, no_const)
 	struct code_context ccstorage, *cc;
 
 	/* If there is no body, return NULL */
-	if (FunctionBody_isempty(interp, node))
+	if (_SEE_node_functionbody_isempty(interp, node))
 	    return NULL;
 
 	cc = &ccstorage;
@@ -2250,7 +2269,7 @@ ContinueStatement_codegen(na, cc)
 	struct patchables *patchables;
 	SEE_code_patchable_t pa;
 
-	patchables = patch_find(cc, n->target, tCONTINUE);
+	patchables = patch_find(cc, n->target, PATCH_FIND_CONTINUE);
 	
 	CG_LOC(&na->location);
 
@@ -2274,7 +2293,7 @@ BreakStatement_codegen(na, cc)
 	struct patchables *patchables;
 	SEE_code_patchable_t pa;
 
-	patchables = patch_find(cc, n->target, tBREAK);
+	patchables = patch_find(cc, n->target, PATCH_FIND_BREAK);
 
 	CG_LOC(&na->location);
 
@@ -2549,6 +2568,7 @@ TryStatement_catchfinally_codegen(na, cc)
 
 }
 
+#if 0
 /* 13 */
 static void
 FunctionDeclaration_codegen(na, cc)
@@ -2558,6 +2578,7 @@ FunctionDeclaration_codegen(na, cc)
 	struct Function_node *n = CAST_NODE(na, Function);
 	/* TBD - never actually called? */
 }
+#endif
 
 /* 13 */
 static void

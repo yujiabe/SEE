@@ -101,6 +101,7 @@
 
 
 #include "parse_node.h"
+#include "parse_const.h"
 #if WITH_PARSER_PRINT
 # include "parse_print.h"
 #endif
@@ -110,27 +111,10 @@
 # include "parse_eval.h"
 #endif
 
-
-#define MAX3(a, b, c)    MAX(MAX(a, b), c)
-#define MAX4(a, b, c, d) MAX(MAX(a, b), MAX(c, d))
-
 #ifndef NDEBUG
 int SEE_parse_debug = 0;
+int SEE_eval_debug = 0;
 #endif
-
-/*------------------------------------------------------------
- * structure types
- */
-
-/*
- * Abstract syntax tree basic structure
- */
-struct node;
-
-
-extern int (*_SEE_nodeclass_isconst[])(struct node *, 
-        struct SEE_interpreter *);
-
 
 /*
  * A label is the identifier (string) before a statement that binds a 
@@ -206,7 +190,6 @@ static int lookahead(struct parser *parser, int n);
 
 static struct SEE_string *error_at(struct parser *parser, const char *fmt, 
         ...);
-static int Always_isconst(struct node *na, struct SEE_interpreter *interp);
 static struct node *Literal_parse(struct parser *parser);
 static struct node *NumericLiteral_parse(struct parser *parser);
 static struct node *StringLiteral_parse(struct parser *parser);
@@ -214,15 +197,11 @@ static struct node *RegularExpressionLiteral_parse(struct parser *parser);
 static struct node *PrimaryExpression_parse(struct parser *parser);
 static struct node *ArrayLiteral_parse(struct parser *parser);
 static struct node *ObjectLiteral_parse(struct parser *parser);
-static int Arguments_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static struct Arguments_node *Arguments_parse(struct parser *parser);
 static struct node *MemberExpression_parse(struct parser *parser);
 static struct node *LeftHandSideExpression_parse(struct parser *parser);
-static int Unary_isconst(struct node *na, struct SEE_interpreter *interp);
 static struct node *PostfixExpression_parse(struct parser *parser);
 static struct node *UnaryExpression_parse(struct parser *parser);
-static int Binary_isconst(struct node *na, struct SEE_interpreter *interp);
 static struct node *MultiplicativeExpression_parse(struct parser *parser);
 static struct node *AdditiveExpression_parse(struct parser *parser);
 static struct node *ShiftExpression_parse(struct parser *parser);
@@ -231,14 +210,8 @@ static struct node *EqualityExpression_parse(struct parser *parser);
 static struct node *BitwiseANDExpression_parse(struct parser *parser);
 static struct node *BitwiseXORExpression_parse(struct parser *parser);
 static struct node *BitwiseORExpression_parse(struct parser *parser);
-static int LogicalANDExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static struct node *LogicalANDExpression_parse(struct parser *parser);
-static int LogicalORExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static struct node *LogicalORExpression_parse(struct parser *parser);
-static int ConditionalExpression_isconst(struct node *na, 
-        struct SEE_interpreter *interp);
 static struct node *ConditionalExpression_parse(struct parser *parser);
 static struct node *AssignmentExpression_parse(struct parser *parser);
 static struct node *Expression_parse(struct parser *parser);
@@ -276,10 +249,7 @@ static struct node *SourceElements_parse(struct parser *parser);
 static void eval_functionbody(void *, struct SEE_context *, struct SEE_value *);
 
 static void *make_body(struct SEE_interpreter *, struct node *, int);
-static void const_evaluate(struct node *, struct SEE_interpreter *,
-	struct SEE_value *);
 
-#define CONTINUABLE 1
 #define NO_CONST    1
 
 /*------------------------------------------------------------
@@ -419,27 +389,6 @@ static void const_evaluate(struct node *, struct SEE_interpreter *,
 	    error_at(parser, "%s, near %s",		\
 	    m, SEE_tokenname(NEXT)))
 
-
-
-/* Returns true if the node returns a constant expression */
-#define ISCONSTFN(n)    _SEE_nodeclass_isconst[(n)->nodeclass]
-#define ISCONST(n, interp) 				\
-        isconst(n, interp)
-
-static int isconst(struct node *n, struct SEE_interpreter *interp) {
-    int flags = n->flags;
-    int isconst = 0;
-
-    if (flags & NODE_FLAG_ISCONST_VALID) {
-        isconst = flags & NODE_FLAG_ISCONST;
-    } else {
-        isconst = ISCONSTFN(n) ? (*ISCONSTFN(n))(n, interp) : 0;
-        if (isconst)
-            flags |= NODE_FLAG_ISCONST;
-        n->flags = flags | NODE_FLAG_ISCONST_VALID;
-    }
-    return isconst;
-}
 
 /* Codegen macros */
 
@@ -775,26 +724,6 @@ error_at(struct parser *parser, const char *fmt, ...)
 
 	return SEE_string_concat(interp,
 	    SEE_location_string(interp, &here), msg);
-}
-
-/*------------------------------------------------------------
- * Constant subexpression reduction
- *
- *  A subtree is 'constant' iff it
- *	- has no side-effects; and
- *	- yields the same result independent of context
- *  It follows then that a constant subtree can be evaluated using 
- *  a NULL context. We can perform that eval, and then replace the
- *  subtree with a node that generates that expression statically.
- */
-
-/* Always returns true to indicate this class of node is always constant. */
-static int
-Always_isconst(na, interp)
-	struct node *na;
-	struct SEE_interpreter *interp;
-{
-	return 1;
 }
 
 /*------------------------------------------------------------
@@ -1164,20 +1093,6 @@ ObjectLiteral_parse(parser)
  *
  */
 
-static int
-Arguments_isconst(na, interp)
-	struct node *na; /* (struct Arguments_node) */
-	struct SEE_interpreter *interp;
-{
-	struct Arguments_node *n = CAST_NODE(na, Arguments);
-	struct Arguments_arg *arg;
-
-	for (arg = n->first; arg; arg = arg->next)
-		if (!ISCONST(arg->expr, interp))
-			return 0;
-	return 1;
-}
-
 
 static struct Arguments_node *
 Arguments_parse(parser)
@@ -1336,16 +1251,6 @@ LeftHandSideExpression_parse(parser)
  *	;
  */
 
-static int
-Unary_isconst(na, interp)
-	struct node *na; /* (struct Unary_node) */
-	struct SEE_interpreter *interp;
-{
-	struct Unary_node *n = CAST_NODE(na, Unary);
-	return ISCONST(n->a, interp);
-}
-
-
 static struct node *
 PostfixExpression_parse(parser)
 	struct parser *parser;
@@ -1440,15 +1345,6 @@ UnaryExpression_parse(parser)
  *	|	MultiplicativeExpression '%' UnaryExpression	-- 11.5.3
  *	;
  */
-
-static int
-Binary_isconst(na, interp)
-	struct node *na; /* (struct Binary_node) */
-	struct SEE_interpreter *interp;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	return ISCONST(n->a, interp) && ISCONST(n->b, interp);
-}
 
 static struct node *
 MultiplicativeExpression_parse(parser)
@@ -1798,8 +1694,8 @@ BitwiseORExpression_parse(parser)
  */
 
 /* Executes a known-constant subtree to yield its value. */
-static void
-const_evaluate(node, interp, res)
+void
+_SEE_const_evaluate(node, interp, res)
 	struct node *node;
 	struct SEE_interpreter *interp;
 	struct SEE_value *res;
@@ -1842,22 +1738,6 @@ const_evaluate(node, interp, res)
 #endif
 }
 
-static int
-LogicalANDExpression_isconst(na, interp)
-	struct node *na; /* (struct Binary_node) */
-	struct SEE_interpreter *interp;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	if (ISCONST(n->a, interp)) {
-		struct SEE_value r1, r3;
-		const_evaluate(n->a, interp, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean ? ISCONST(n->b, interp) : 1;
-	} else
-		return 0;
-}
-
 static struct node *
 LogicalANDExpression_parse(parser)
 	struct parser *parser;
@@ -1888,21 +1768,6 @@ LogicalANDExpression_parse(parser)
  *	|	LogicalORExpressionNoIn tOROR LogicalANDExpressionNoIn
  *	;
  */
-static int
-LogicalORExpression_isconst(na, interp)
-	struct node *na; /* (struct Binary_node) */
-	struct SEE_interpreter *interp;
-{
-	struct Binary_node *n = CAST_NODE(na, Binary);
-	if (ISCONST(n->a, interp)) {
-		struct SEE_value r1, r3;
-		const_evaluate(n->a, interp, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean ? 1: ISCONST(n->b, interp);
-	} else
-		return 0;
-}
 
 static struct node *
 LogicalORExpression_parse(parser)
@@ -1938,24 +1803,6 @@ LogicalORExpression_parse(parser)
  *			AssignmentExpressionNoIn ':' AssignmentExpressionNoIn
  *	;
  */
-static int
-ConditionalExpression_isconst(na, interp)
-	struct node *na; /* (struct ConditionalExpression_node) */
-	struct SEE_interpreter *interp;
-{
-	struct ConditionalExpression_node *n = 
-		CAST_NODE(na, ConditionalExpression);
-	if (ISCONST(n->a, interp)) {
-		struct SEE_value r1, r3;
-		const_evaluate(n->a, interp, &r1);
-		SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(&r1) != SEE_REFERENCE);
-		SEE_ToBoolean(interp, &r1, &r3);
-		return r3.u.boolean 
-		    ? ISCONST(n->b, interp) 
-		    : ISCONST(n->c, interp);
-	} else
-		return 0;
-}
 
 static struct node *
 ConditionalExpression_parse(parser)
@@ -3371,23 +3218,34 @@ SEE_functionbody_isempty(interp, f)
 #endif
 }
 
+/* Returns true if the function body is empty */
+int
+_SEE_node_functionbody_isempty(interp, node)
+        struct SEE_interpreter *interp;
+        struct node *node;
+{
+        struct FunctionBody_node *fb = CAST_NODE(node, FunctionBody);
+        struct SourceElements_node *se = CAST_NODE(fb->u.a, SourceElements);
+        return se->statements == NULL &&
+               se->vars == NULL &&
+               (!fb->is_program || se->functions == NULL);
+}
+
+
 /* Returns the function body as a string */
 struct SEE_string *
 SEE_functionbody_string(interp, f)
 	struct SEE_interpreter *interp;
 	struct function *f;
 {
-	struct SEE_string *s = SEE_string_new(interp, 0);
+	struct SEE_string *s;
 
 #if WITH_PARSER_PRINT && !WITH_PARSER_CODEGEN
+        s = SEE_string_new(interp, 0);
         _SEE_parser_print(_SEE_parser_print_string_new(interp, s),
 	        (struct node *)f->body);
 #else
-	SEE_string_addch(s, '/');
-	SEE_string_addch(s, '*');
-	SEE_string_append_int(s, (int)f);
-	SEE_string_addch(s, '*');
-	SEE_string_addch(s, '/');
+        s = SEE_string_sprintf(interp, "/*%p*/", f);
 #endif
 	return s;
 }
@@ -3506,106 +3364,4 @@ SEE_context_eval(context, expr, res)
 	SEE_SET_STRING(argv[0], expr);
 	_SEE_call_eval(context, context->thisobj, 1, argv, res);
 }
-
-/*
- * isconst functions return true if the expression node will always evaluate
- * to the same value; that is, it is a constant expression
- */
-int (*_SEE_nodeclass_isconst[NODECLASS_MAX])(struct node *, 
-        struct SEE_interpreter *) = { 0
-    ,Unary_isconst                          /*Unary*/
-    ,Binary_isconst                         /*Binary*/
-    ,Always_isconst                         /*Literal*/
-    ,Always_isconst                         /*StringLiteral*/
-    ,0                                      /*RegularExpressionLiteral*/
-    ,0                                      /*PrimaryExpression_this*/
-    ,0                                      /*PrimaryExpression_ident*/
-    ,0                                      /*ArrayLiteral*/
-    ,0                                      /*ObjectLiteral*/
-    ,Arguments_isconst                      /*Arguments*/
-    ,0                                      /*MemberExpression_new*/
-    ,0                                      /*MemberExpression_dot*/
-    ,0                                      /*MemberExpression_bracket*/
-    ,0                                      /*CallExpression*/
-    ,0                                      /*PostfixExpression_inc*/
-    ,0                                      /*PostfixExpression_dec*/
-    ,Unary_isconst                          /*UnaryExpression_delete*/
-    ,Unary_isconst                          /*UnaryExpression_void*/
-    ,Unary_isconst                          /*UnaryExpression_typeof*/
-    ,0                                      /*UnaryExpression_preinc*/
-    ,0                                      /*UnaryExpression_predec*/
-    ,Unary_isconst                          /*UnaryExpression_plus*/
-    ,Unary_isconst                          /*UnaryExpression_minus*/
-    ,Unary_isconst                          /*UnaryExpression_inv*/
-    ,Unary_isconst                          /*UnaryExpression_not*/
-    ,Binary_isconst                         /*MultiplicativeExpression_mul*/
-    ,Binary_isconst                         /*MultiplicativeExpression_div*/
-    ,Binary_isconst                         /*MultiplicativeExpression_mod*/
-    ,Binary_isconst                         /*AdditiveExpression_add*/
-    ,Binary_isconst                         /*AdditiveExpression_sub*/
-    ,Binary_isconst                         /*ShiftExpression_lshift*/
-    ,Binary_isconst                         /*ShiftExpression_rshift*/
-    ,Binary_isconst                         /*ShiftExpression_urshift*/
-    ,Binary_isconst                         /*RelationalExpression_lt*/
-    ,Binary_isconst                         /*RelationalExpression_gt*/
-    ,Binary_isconst                         /*RelationalExpression_le*/
-    ,Binary_isconst                         /*RelationalExpression_ge*/
-    ,Binary_isconst                         /*RelationalExpression_instanceof*/
-    ,Binary_isconst                         /*RelationalExpression_in*/
-    ,Binary_isconst                         /*EqualityExpression_eq*/
-    ,Binary_isconst                         /*EqualityExpression_ne*/
-    ,Binary_isconst                         /*EqualityExpression_seq*/
-    ,Binary_isconst                         /*EqualityExpression_sne*/
-    ,Binary_isconst                         /*BitwiseANDExpression*/
-    ,Binary_isconst                         /*BitwiseXORExpression*/
-    ,Binary_isconst                         /*BitwiseORExpression*/
-    ,LogicalANDExpression_isconst           /*LogicalANDExpression*/
-    ,LogicalORExpression_isconst            /*LogicalORExpression*/
-    ,ConditionalExpression_isconst          /*ConditionalExpression*/
-    ,0                                      /*AssignmentExpression*/
-    ,0                                      /*AssignmentExpression_simple*/
-    ,0                                      /*AssignmentExpression_muleq*/
-    ,0                                      /*AssignmentExpression_diveq*/
-    ,0                                      /*AssignmentExpression_modeq*/
-    ,0                                      /*AssignmentExpression_addeq*/
-    ,0                                      /*AssignmentExpression_subeq*/
-    ,0                                      /*AssignmentExpression_lshifteq*/
-    ,0                                      /*AssignmentExpression_rshifteq*/
-    ,0                                      /*AssignmentExpression_urshifteq*/
-    ,0                                      /*AssignmentExpression_andeq*/
-    ,0                                      /*AssignmentExpression_xoreq*/
-    ,0                                      /*AssignmentExpression_oreq*/
-    ,Binary_isconst                         /*Expression_comma*/
-    ,0                                      /*Block_empty*/
-    ,0                                      /*StatementList*/
-    ,0                                      /*VariableStatement*/
-    ,0                                      /*VariableDeclarationList*/
-    ,0                                      /*VariableDeclaration*/
-    ,0                                      /*EmptyStatement*/
-    ,0                                      /*ExpressionStatement*/
-    ,0                                      /*IfStatement*/
-    ,0                                      /*IterationStatement_dowhile*/
-    ,0                                      /*IterationStatement_while*/
-    ,0                                      /*IterationStatement_for*/
-    ,0                                      /*IterationStatement_forvar*/
-    ,0                                      /*IterationStatement_forin*/
-    ,0                                      /*IterationStatement_forvarin*/
-    ,0                                      /*ContinueStatement*/
-    ,0                                      /*BreakStatement*/
-    ,0                                      /*ReturnStatement*/
-    ,0                                      /*ReturnStatement_undef*/
-    ,0                                      /*WithStatement*/
-    ,0                                      /*SwitchStatement*/
-    ,0                                      /*LabelledStatement*/
-    ,0                                      /*ThrowStatement*/
-    ,0                                      /*TryStatement*/
-    ,0                                      /*TryStatement_catch*/
-    ,0                                      /*TryStatement_finally*/
-    ,0                                      /*TryStatement_catchfinally*/
-    ,0                                      /*Function*/
-    ,0                                      /*FunctionDeclaration*/
-    ,0                                      /*FunctionExpression*/
-    ,0                                      /*FunctionBody*/
-    ,0                                      /*SourceElements*/
-};
 

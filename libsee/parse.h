@@ -22,9 +22,6 @@ void  SEE_functionbody_print(struct SEE_interpreter *i, struct function *f);
 struct SEE_string *SEE_functionbody_string(struct SEE_interpreter *i, 
 	struct function *f);
 int SEE_functionbody_isempty(struct SEE_interpreter *i, struct function *f);
-int SEE_compare(struct SEE_interpreter *i, struct SEE_value *x, 
-	struct SEE_value *y);
-
 
 void _SEE_call_eval(struct SEE_context *context, 
         struct SEE_object *thisobj, int argc, struct SEE_value **argv, 

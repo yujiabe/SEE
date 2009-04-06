@@ -222,6 +222,8 @@ struct IfStatement_node {
 	struct node *cond, *btrue, *bfalse;
 };
 
+#define NO_TARGET       0
+
 struct IterationStatement_while_node {
 	struct node  node;
 	unsigned int target;
@@ -308,3 +310,10 @@ struct SourceElements_node {
 #endif
 struct node *_SEE_cast_node(struct node *, enum nodeclass_enum,
                             const char *, const char *, int);
+
+/** Evaluates a constant node using minimal context. */
+void _SEE_const_evaluate(struct node *, struct SEE_interpreter *, 
+        struct SEE_value *res);
+int _SEE_node_functionbody_isempty(struct SEE_interpreter *interp,
+        struct node *node);
+

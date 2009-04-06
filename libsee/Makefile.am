@@ -15,7 +15,7 @@ libsee_la_SOURCES= cfunction.c scope.c debug.c dprint.c enumerate.c \
 		   parse_cast.c						\
 		   string.c stringdefs.c system.c tokens.c try.c 	\
 		   unicase.c unicode.c value.c version.c		\
-		   module.c code1.c math.c
+		   module.c math.c compare.c
 
 libsee_la_SOURCES+= regex.c regex_ecma.c
 if WITH_PCRE
@@ -26,12 +26,17 @@ libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
 		     dprint.h enumerate.h function.h init.h code1.h	\
 		     lex.h nmath.h parse.h platform.h printf.h regex.h 	\
 		     scope.h tokens.h unicase.inc unicode.h unicode.inc	\
-		     stringdefs.h stringdefs.inc replace.h parse_node.h
+		     stringdefs.h stringdefs.inc replace.h parse_node.h \
+		     compare.h
+
+libsee_la_SOURCES += parse_eval.h
+libsee_la_SOURCES += parse_const.h
+libsee_la_SOURCES += parse_const.c
 
 libsee_la_SOURCES += parse_codegen.h
-libsee_la_SOURCES += parse_eval.h
 if WITH_PARSER_CODEGEN
 libsee_la_SOURCES += parse_codegen.c
+libsee_la_SOURCES += code1.c
 else
 libsee_la_SOURCES += parse_eval.c
 endif

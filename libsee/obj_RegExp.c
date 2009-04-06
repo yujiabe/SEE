@@ -50,7 +50,7 @@
 #include "stringdefs.h"
 #include "init.h"
 #include "nmath.h"
-#include "parse.h"
+#include "compare.h"
 
 /*
  * 15.10 The RegExp object.

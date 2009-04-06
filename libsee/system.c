@@ -120,7 +120,11 @@ struct SEE_system SEE_system = {
 	NULL,				/* gcollect */
 #endif
 	NULL,				/* transit_sec_domain */
+#if WITH_PARSER_CODEGEN
 	_SEE_code1_alloc,		/* code_alloc */
+#else
+	NULL,            		/* code_alloc */
+#endif
 	NULL,				/* object_construct */
 	&_SEE_ecma_regex_engine		/* default_regex_engine */
 };
