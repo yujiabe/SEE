@@ -325,15 +325,19 @@ create_server_threads(service)
 
 		printf("listening on port %s\n", service);
 
+#ifdef SO_REUSEADDR
 		opt = 1;
 		if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, 
 		    sizeof opt) < 0)
 			warn("setsockopt SO_REUSEADDR");
+#endif
 
+#ifdef SO_REUSEPORT
 		opt = 1;
 		if (setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &opt,
 		    sizeof opt) < 0)
 			warn("setsockopt SO_REUSEPORT");
+#endif
 
 		sp = (int *)malloc(sizeof (int));
 		if (!sp)
