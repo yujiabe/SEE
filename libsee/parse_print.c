@@ -54,8 +54,6 @@ static void string_print_string(struct printer *printer,
 static void string_print_char(struct printer *printer, int c);
 static struct printer *string_printer_new(struct SEE_interpreter *interp, 
         struct SEE_string *string);
-static void print_functionbody(struct SEE_interpreter *interp, 
-        struct function *f, FILE *fp);
 
 static void NumericLiteral_print(struct Literal_node *n,
         struct printer *printer);
