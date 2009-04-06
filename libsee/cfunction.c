@@ -206,12 +206,13 @@ SEE_cfunction_toString(interp, self, thisobj, argc, argv, res)
 	struct SEE_string *s;
 	struct cfunction *f = tocfunction(interp, thisobj);
 
-	s = SEE_string_new(interp, 0);
-	SEE_string_append(s, STR(cfunction_body1));
-	SEE_string_append(s, f->name);
-	SEE_string_append(s, STR(cfunction_body2));
-	SEE_string_append_int(s, (int)f->func);
-	SEE_string_append(s, STR(cfunction_body3));
+        s = SEE_string_sprintf(interp,
+                "%S%S%S%p%S",
+                STR(cfunction_body1),
+                f->name,
+                STR(cfunction_body2),
+                f->func,
+                STR(cfunction_body3));
 	SEE_SET_STRING(res, s);
 }
 

@@ -79,9 +79,7 @@ static unsigned int
 hashfn(s)
 	struct SEE_string *s;
 {
-        /* Doesn't really matter here if sizeof(pointer_t) != sizeof(int) */
-	return ((((unsigned int)s) >> 8) ^ (unsigned int)s >> 7) 
-		% SEE_NATIVE_HASHLEN;
+        return (s - (struct SEE_string *)0) % SEE_NATIVE_HASHLEN;
 }
 
 /*

@@ -144,8 +144,7 @@ slist_cmp_fast(a, b)
 	struct propname_list **sa = (struct propname_list **)a;
 	struct propname_list **sb = (struct propname_list **)b;
 	if ((*sa)->name != (*sb)->name)
-                /* XXX following may fail when pointer_t > int */
-		return (int)(*sa)->name - (int)(*sb)->name;
+		return (char *)(*sa)->name - (char *)(*sb)->name;
 	return (*sa)->depth - (*sb)->depth;
 }
 
