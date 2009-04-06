@@ -1,3 +1,6 @@
+/* (c) 2009 David Leonard. All rights reserved. */
+
+/* UNUSED */
 
 typedef void (*visitor_fn_t)(struct node *, void *);
 

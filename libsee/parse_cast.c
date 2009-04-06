@@ -1,4 +1,4 @@
-
+/* (c) 2009 David Leonard. All rights reserved. */
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif

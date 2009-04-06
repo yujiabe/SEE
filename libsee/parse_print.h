@@ -1,3 +1,4 @@
+/* (c) 2009 David Leonard. All rights reserved. */
 
 struct printer;
 struct node;
