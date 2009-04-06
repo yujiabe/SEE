@@ -79,7 +79,7 @@ static unsigned int
 hashfn(s)
 	struct SEE_string *s;
 {
-        return (s - (struct SEE_string *)0) % SEE_NATIVE_HASHLEN;
+        return (unsigned)(s - (struct SEE_string *)0) % SEE_NATIVE_HASHLEN;
 }
 
 /*
