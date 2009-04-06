@@ -163,4 +163,7 @@ test("function F(){try{1;}finally{return 2;}return 3;}F()", 2);
 /* Bug 132 */
 test("function F(){while(1){try{throw 1}catch(e){break}return 1}return 2}F()", 2);
 
+/* Bug 141 */
+test("{a:1,}", Exception(SyntaxError));
+
 finish()
