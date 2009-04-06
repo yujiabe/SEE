@@ -108,6 +108,10 @@ static void global_writeval(struct SEE_interpreter *, struct SEE_object *,
         struct SEE_object *, int, struct SEE_value **, struct SEE_value *);
 #endif
 
+static void init_eval_context(struct SEE_context *context,
+	struct SEE_interpreter *interp, struct SEE_object *thisobj, 
+        struct SEE_object *variable, struct SEE_scope *scope);
+
 static int is_StrWhiteSpace(int);
 static void AddEscape(struct SEE_interpreter *, struct SEE_string *, 
         unsigned int);
@@ -236,14 +240,35 @@ global_eval(interp, self, thisobj, argc, argv, res)
 	struct SEE_value **argv, *res;
 {
         /*
-	 * This function should never be called.
-	 *
          * Invocation of the Global.eval() function object is special:
-         * parse.c checks for it and calls the C function eval()
-         * there directly. The only way we could get here is if the host
-         * application has tried to call it directly, which is naughty!
+         * every executer should check for it and call the one of the
+         * SEE eval() methods directly, passing it context such as scope
+         * and the activation object. The only way we could get here is if 
+         * the host application has tried to call it directly, which ECMA262
+         * prohibits.
+         *
+         * However, in Javascript compatibility mode, we simulate a new
+         * context. The scope is one constructed from global and this.
          */
-	SEE_error_throw_string(interp, interp->EvalError, STR(internal_error));
+
+	if (SEE_COMPAT_JS(interp, >=, JS11)) {
+            struct SEE_context context;
+            struct SEE_scope *scope;
+            struct SEE_object *variable;
+
+            if (thisobj) {
+                scope = SEE_NEW(interp, struct SEE_scope);
+                scope->obj = thisobj;
+                scope->next = interp->Global_scope;
+            } else {
+                thisobj = interp->Global;
+                scope = interp->Global_scope;
+            }
+            init_eval_context(&context, interp, thisobj, variable, scope);
+            _SEE_call_eval(&context, thisobj, argc, argv, res);
+        } else
+            SEE_error_throw_string(interp, interp->EvalError, 
+                STR(eval_not_callable));
 }
 
 static int
@@ -937,6 +962,22 @@ SEE_Global_eval(interp, inp, res)
 		res);
 }
 
+static void
+init_eval_context(context, interp, thisobj, variable, scope)
+	struct SEE_context *context;
+	struct SEE_interpreter *interp;
+	struct SEE_object *thisobj;
+	struct SEE_object *variable;
+	struct SEE_scope *scope;
+{
+	context->interpreter = interp;
+	context->activation = SEE_Object_new(interp);
+	context->scope = scope;
+	context->variable = variable;
+	context->varattr = SEE_ATTR_DONTDELETE;
+	context->thisobj = thisobj;
+}
+
 void
 SEE_eval(interp, inp, thisobj, variable, scope, res)
 	struct SEE_interpreter *interp;
@@ -952,14 +993,9 @@ SEE_eval(interp, inp, thisobj, variable, scope, res)
 	old_traceback = interp->traceback;
 	interp->traceback = NULL;
 
-	context.interpreter = interp;
-	context.activation = SEE_Object_new(interp);
-	context.scope = scope;
-	context.variable = variable;
-	context.varattr = SEE_ATTR_DONTDELETE;
-	context.thisobj = thisobj;
+	init_eval_context(&context, interp, thisobj, variable, scope);
 
-        _SEE_eval_input(&context, thisobj, inp, res);
+	_SEE_eval_input(&context, thisobj, inp, res);
 
 	interp->traceback = old_traceback;
 }

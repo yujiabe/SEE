@@ -81,6 +81,7 @@ bad_unicode =		"Unicode codepoint is too large for UTF-16"
 array_sort_error =	"Sort comparison function did not return a number"
 toLocaleString_notfunc   = "'toLocaleString' property is not a function"
 toLocaleString_notstring = "toLocaleString() property did not return a string"
+eval_not_callable =     "eval() must not be invoked indirectly"
 
 too_many_args =		"Too many arguments"
 string_not_ascii =	"String contains non-ASCII character(s)"

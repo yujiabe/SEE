@@ -148,6 +148,14 @@ test("/?/", Exception(SyntaxError))
 /* Bug 115 */
 test("Object.prototype.isPrototypeOf(new Number(123))", true);
 
+/* Bug 116 */
+compat('js11')
+var o = new Object();
+test("eval.call(o,\"var x=3\"); o.x", 3);
+test("eval.call(o,\"x\")", 3);
+test("eval.apply(o, [\"var x = 7\"]); o.x", 7);
+compat('');
+
 /* Bug 117 */
 test("var functest; (function functest(arg){if(arg)return 1;functest=function(arg){return 2;};return functest(true);})(false)", 1)
 

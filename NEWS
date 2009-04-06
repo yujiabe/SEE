@@ -7,6 +7,7 @@
   Bug 122: uninitialized AST field in parser
   Bug 120: library compiled with -DNDEBUG misses SEE_throw() debug point
   Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
+  Bug 116: Support eval.call and eval.apply in compatibility mode
   Bug 18:  refactored parser
 
 3.0 [2008-02-09]
