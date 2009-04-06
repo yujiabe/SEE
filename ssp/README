@@ -16,6 +16,10 @@ plus the following:
 If the QUERY_STRING is "raw", then the raw javascript to be
 executed is shown.
 
+The modules in this directory are:
+        httpd.c         - process HTTP request and invoke ssp in own thread
+        pool.c          - memory pool allocator, as alternative to a GC
+        ssp.c           - loads a file and executes code within <%...%>
 
 Run the server (httpd) from this source directory, it listens on port 8000.
 Then visit http://127.0.0.1:8000/test.ssp with your web browser. You should
