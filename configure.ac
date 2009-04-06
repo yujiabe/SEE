@@ -185,6 +185,8 @@ SEE_ARG_ENABLE(bytecode,[yes],
    [AC_DEFINE(WITH_PARSER_CODEGEN, [1],
         [Define if you want to use the code generator])
 ])
+AM_CONDITIONAL(WITH_PARSER_CODEGEN, test x"$enable_bytecode" = x"yes")
+
 SEE_ARG_ENABLE(ast-eval,[no],
    [in-AST evaluator],,
    [AC_DEFINE(WITH_PARSER_EVAL, [1],

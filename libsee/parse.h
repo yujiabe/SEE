@@ -25,4 +25,13 @@ int SEE_functionbody_isempty(struct SEE_interpreter *i, struct function *f);
 int SEE_compare(struct SEE_interpreter *i, struct SEE_value *x, 
 	struct SEE_value *y);
 
+
+void _SEE_call_eval(struct SEE_context *context, 
+        struct SEE_object *thisobj, int argc, struct SEE_value **argv, 
+        struct SEE_value *res);
+
+void _SEE_eval_input(struct SEE_context *context, 
+        struct SEE_object *thisobj, struct SEE_input *inp,
+        struct SEE_value *res);
+
 #endif /* _SEE_h_parse_ */

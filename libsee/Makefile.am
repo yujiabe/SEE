@@ -27,6 +27,14 @@ libsee_la_SOURCES += array.h cfunction_private.h code.h dprint.h dtoa.h \
 		     lex.h nmath.h parse.h platform.h printf.h regex.h 	\
 		     scope.h tokens.h unicase.inc unicode.h unicode.inc	\
 		     stringdefs.h stringdefs.inc replace.h parse_node.h
+
+libsee_la_SOURCES += parse_codegen.h
+libsee_la_SOURCES += parse_eval.h
+if WITH_PARSER_CODEGEN
+libsee_la_SOURCES += parse_codegen.c
+else
+libsee_la_SOURCES += parse_eval.c
+endif
 		   
 libsee_la_SOURCES += parse_print.h
 if WITH_PARSER_PRINT

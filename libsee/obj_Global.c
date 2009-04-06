@@ -946,15 +946,11 @@ SEE_eval(interp, inp, thisobj, variable, scope, res)
 	struct SEE_scope *scope;
 	struct SEE_value *res;
 {
-	struct function *f;
 	struct SEE_context context;
-	struct SEE_value cres;
 	struct SEE_traceback *old_traceback;
 
 	old_traceback = interp->traceback;
 	interp->traceback = NULL;
-
-	f = SEE_parse_program(interp, inp);
 
 	context.interpreter = interp;
 	context.activation = SEE_Object_new(interp);
@@ -963,7 +959,7 @@ SEE_eval(interp, inp, thisobj, variable, scope, res)
 	context.varattr = SEE_ATTR_DONTDELETE;
 	context.thisobj = thisobj;
 
-	SEE_eval_functionbody(f, &context, res ? res : &cres);
+        _SEE_eval_input(&context, thisobj, inp, res);
 
 	interp->traceback = old_traceback;
 }
