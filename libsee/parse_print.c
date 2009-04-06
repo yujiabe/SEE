@@ -1,3 +1,4 @@
+/* (c) 2009 David Leonard. All rights reserved. */
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -11,6 +12,7 @@
 #include <see/interpreter.h>
 #include <see/try.h>
 #include <see/error.h>
+#include <see/system.h>
 #include <see/mem.h>
 
 #include "function.h"
@@ -1646,21 +1648,6 @@ string_printer_new(interp, string)
 	printer_init(&sp->printer, interp, &string_printerclass);
 	sp->string = string;
 	return (struct printer *)sp;
-}
-
-/*
- * Prints a function body to standard error.
- */
-static void
-print_functionbody(interp, f, fp)
-	struct SEE_interpreter *interp;
-	struct function *f;
-	FILE *fp;
-{
-	struct printer *printer;
-
-	printer = stdio_printer_new(interp, fp);
-	PRINT((struct node *)f->body);
 }
 
 void (*_SEE_nodeclass_print[NODECLASS_MAX])(struct node *, 
