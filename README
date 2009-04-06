@@ -30,5 +30,6 @@ Directory organisation:
   libsee/	- Library source
   include/see	- Public header files
   shell/	- Demo/test program 'see-shell'
+  ssp/          - Demo HTTP server that runs server-side Javascript
 
 
