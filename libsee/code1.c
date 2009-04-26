@@ -76,7 +76,7 @@ struct block {
 	    struct SEE_object *obj;
 	    struct enum_context *prev;
 	} enum_context;
-	struct SEE_scope with;
+	struct SEE_scope *with;
 	struct {
 	    SEE_try_context_t context;
 	    struct block *last_try_block;
@@ -1456,9 +1456,10 @@ code1_exec(sco, ctxt, res)
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_OBJECT);
 	    block = &blockbottom[blocklevel];
 	    block->type = BLOCK_WITH;
-	    block->u.with.next = scope;
-	    block->u.with.obj = vp->u.object;
-	    scope = &block->u.with;
+	    block->u.with = SEE_NEW(interp, struct SEE_scope);
+	    block->u.with->next = scope;
+	    block->u.with->obj = vp->u.object;
+	    scope = block->u.with;
 	    blocklevel++;
 	    break;
 
@@ -1471,9 +1472,10 @@ code1_exec(sco, ctxt, res)
 
             /* Convert the topmost CATCH block into a WITH block */
             block->type = BLOCK_WITH;
-            block->u.with.next = scope;
-            block->u.with.obj = obj;
-            scope = &block->u.with;     /* Push a new scope */
+	    block->u.with = SEE_NEW(interp, struct SEE_scope);
+	    block->u.with->next = scope;
+	    block->u.with->obj = vp->u.object;
+            scope = block->u.with;     /* Push a new scope */
             break;
 
         case INST_ENDF:
@@ -1605,7 +1607,7 @@ code1_exec(sco, ctxt, res)
 		    if (SEE_eval_debug)
 			dprintf("ending WITH\n");
 #endif
-		    scope = block->u.with.next;
+		    scope = block->u.with->next;
                     break;
 
             case BLOCK_CATCH:
