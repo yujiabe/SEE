@@ -26,6 +26,10 @@ function testf(text, expected) {
 }
 testf("return 1", 1); /* test the testf function */
 
+/* Dummy function that is unlikely to be optimized away */
+function dummy() { dummy2(); }
+function dummy2() {}
+
 /* Test for various flow control difference */
 testf("try{return 1} catch(e){return 2};                   return 4", 1);
 testf("try{throw  0} catch(e){return 2};                   return 4", 2);
@@ -33,6 +37,9 @@ testf("try{return 1} catch(e){return 2} finally{return 3}; return 4", 3);
 testf("try{throw  0} catch(e){return 2} finally{return 3}; return 4", 3);
 testf("try{return 1} catch(e){throw  2};                   return 4", 1);
 testf("try{throw  0} catch(e){throw  2};                   return 4", 
+							    Exception(2));
+testf("try{return 1} catch(e){throw  2} finally{dummy()};  return 4", 1);
+testf("try{throw  0} catch(e){throw  2} finally{dummy()};  return 4", 
 							    Exception(2));
 testf("try{return 1} catch(e){throw  2} finally{throw  3}; return 4",
 							    Exception(3));

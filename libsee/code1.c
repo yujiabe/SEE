@@ -63,7 +63,13 @@
 #include "replace.h"
 
 struct block {
-    enum { BLOCK_ENUM, BLOCK_WITH, BLOCK_TRYC, BLOCK_TRYF, BLOCK_FINALLY } type;
+    enum { 
+        BLOCK_ENUM, 
+        BLOCK_WITH, 
+        BLOCK_CATCH, 
+        BLOCK_FINALLY, 
+        BLOCK_FINALLY2
+    } type;
     union {
 	struct enum_context {
 	    struct SEE_string **props0, **props;
@@ -75,16 +81,17 @@ struct block {
 	    SEE_try_context_t context;
 	    struct block *last_try_block;
 	    SEE_int32_t handler;
+	    SEE_int32_t resume;
 	    unsigned int stack;
-	    unsigned int block;	/* Block level we are transiting to */
-	} tryf;
+	} finally;
 	struct {
 	    SEE_try_context_t context;
 	    struct block *last_try_block;
 	    SEE_int32_t handler;
 	    unsigned int stack;
 	    struct SEE_string *ident;
-	} tryc;
+            struct SEE_object *obj;
+	} catch;
     } u;
 };
 
@@ -439,6 +446,7 @@ code1_gen_op0(sco, op)
 	case SEE_CODE_BOR:	add_byte(co, INST_BOR); break;
 	case SEE_CODE_S_ENUM:	add_byte(co, INST_S_ENUM); break;
 	case SEE_CODE_S_WITH:	add_byte(co, INST_S_WITH); break;
+	case SEE_CODE_S_CATCH:	add_byte(co, INST_S_CATCH); break;
 	default: SEE_ASSERT(sco->interpreter, !"bad op0");
 	}
 
@@ -995,18 +1003,19 @@ code1_exec(sco, ctxt, res)
 
 	/* Fetch next instruction byte into op,arg and increment pc */
 #define FETCH_INST(pc, op, arg)	 do {			    \
-	op = *pc++;					    \
-	if ((op & INST_ARG_MASK) == INST_ARG_NONE) 	    \
-	    arg = 0;					    \
-	else if ((op & INST_ARG_MASK) == INST_ARG_BYTE)	    \
-	    arg = *pc++;				    \
-	else {						    \
-	    memcpy(&arg, pc, sizeof arg);		    \
-	    pc += sizeof arg;				    \
-	}						    \
-    } while (0)
+            op = *pc++;					    \
+            if ((op & INST_ARG_MASK) == INST_ARG_NONE) 	    \
+                arg = 0;				    \
+            else if ((op & INST_ARG_MASK) == INST_ARG_BYTE) \
+                arg = *pc++;				    \
+            else {					    \
+                memcpy(&arg, pc, sizeof arg);		    \
+                pc += sizeof arg;			    \
+            }						    \
+        } while (0)
 
 	FETCH_INST(pc, op, arg);
+
 	switch (op & INST_OP_MASK) {
 	case INST_NOP:
 	    break;
@@ -1421,6 +1430,20 @@ code1_exec(sco, ctxt, res)
 	    blocklevel++;
 	    break;
 
+        case INST_S_CATCH:
+            /* Check that the top block really is a CATCH block */
+            SEE_ASSERT(interp, blocklevel > 0);
+	    block = &blockbottom[blocklevel - 1];
+            SEE_ASSERT(interp, block->type == BLOCK_CATCH);
+            obj = block->u.catch.obj;
+
+            /* Convert the topmost CATCH block into a WITH block */
+            block->type = BLOCK_WITH;
+            block->u.with.next = scope;
+            block->u.with.obj = obj;
+            scope = &block->u.with;     /* Push a new scope */
+            break;
+
 	/*--------------------------------------------------
 	 * Instructions that take one argument
 	 */
@@ -1497,14 +1520,25 @@ code1_exec(sco, ctxt, res)
 	 */
 	case INST_END:
 	    new_blocklevel = arg;
-    end:
-    	    while (new_blocklevel <= blocklevel) {
-		if (blocklevel == 0)
-		    return;
-		blocklevel--;
-		block = &blockbottom[blocklevel];
-		if (block->type == BLOCK_ENUM) {
-		    /* Ending an ENUM block terminates the enumerator */
+    	    if (blocklevel < new_blocklevel)
+                break;
+            /* 
+             * END is a special instruction that only
+             * advance PC when it is a no-op.
+             * Because PC is advanced during instruction reads,
+             * and because END,n is always two bytes, we can
+             * reverse it easily.
+             */
+            pc -= 2; 
+
+            /* When there are no blocks left, then return */
+            if (blocklevel == 0)
+                return;
+
+            block = &blockbottom[--blocklevel];
+            switch (block->type) {
+            case BLOCK_ENUM:
+                /* Ending an ENUM block terminates the enumerator */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending ENUM\n");
@@ -1512,73 +1546,79 @@ code1_exec(sco, ctxt, res)
 		    SEE_ASSERT(interp, enum_context == &block->u.enum_context);
 		    SEE_enumerate_free(interp, enum_context->props0);
 		    enum_context = enum_context->prev;
-		} else if (block->type == BLOCK_WITH) {
-		    /* Ending an WITH block restores the scope chain */
+                    break;
+
+            case BLOCK_WITH:
+		    /* Ending a WITH block restores the scope chain */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending WITH\n");
 #endif
 		    scope = block->u.with.next;
-		} else if (block->type == BLOCK_TRYC) {
-		    /* Ending a TRYC (catch) block handles a caught 
-		     * exception and converts into a WITH block */
+                    break;
+
+            case BLOCK_CATCH:
+		    /* Ending a CATCH block only happens when an
+                     * exception has not been caught.
+                     * Simply finalize the unused try context.
+                     */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
-			dprintf("ending TRYC\n");
+			dprintf("ending CATCH\n");
 #endif
-		    if (block->u.tryc.context.done) {
-			SEE_ASSERT(interp, block == try_block);
-			try_block = block->u.tryc.last_try_block;
-			_SEE_TRY_FINI(interp, block->u.tryc.context);
-		    }
-		    vp = SEE_CAUGHT(block->u.tryc.context);
-		    if (vp) {
-			stack = stackbottom + block->u.tryc.stack;
-			obj = SEE_Object_new(interp);
-			SEE_OBJECT_PUT(interp, obj, block->u.tryc.ident,
-			    vp, SEE_ATTR_DONTDELETE);
-			pc = co->inst + block->u.tryc.handler;
-			/* Convert the block into a WITH */
-			block->type = BLOCK_WITH;
-			block->u.with.next = scope;
-			block->u.with.obj = obj;
-			scope = &block->u.with;
-			blocklevel++;
-			break;
-		    } 
-		} else if (block->type == BLOCK_TRYF) {
-		    /* Ending a TRYF (try-finally) converts into a FINALLY
+                    SEE_ASSERT(interp, block == try_block);
+                    block->u.catch.context.done = 1;
+                    _SEE_TRY_FINI(interp, block->u.catch.context);
+                    try_block = block->u.catch.last_try_block;
+                    break;
+
+            case BLOCK_FINALLY:
+		    /* Ending a FINALLY (try-finally) converts into a FINALLY2
 		     * block and branches to the finally handler */
-#ifndef NDEBUG
-		    if (SEE_eval_debug)
-			dprintf("ending TRYF - running handler\n");
-#endif
-		    if (block->u.tryf.context.done) {
-			SEE_ASSERT(interp, block == try_block);
-			try_block = block->u.tryf.last_try_block;
-			_SEE_TRY_FINI(interp, block->u.tryf.context);
-		    }
-		    block->u.tryf.block = new_blocklevel;
-		    stack = stackbottom + block->u.tryc.stack;
-		    pc = co->inst + block->u.tryf.handler;
-		    /* convert the block into a FINALLY */
-		    block->type = BLOCK_FINALLY;
-		    blocklevel++;
-		    break;
-		} else if (block->type == BLOCK_FINALLY) {
-		    /* Ending a FINALLY block re-throws any
-		     * uncaught exceptions, and resumes unwinding
-		     * the block stack. */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending FINALLY\n");
 #endif
-		    new_blocklevel = block->u.tryf.block;
-		    if (SEE_CAUGHT(block->u.tryf.context))
+                    /* 1. finalise the context */
+                    SEE_ASSERT(interp, block == try_block);
+                    try_block = block->u.finally.last_try_block;
+                    block->u.finally.context.done = 1;
+                    _SEE_TRY_FINI(interp, block->u.finally.context);
+
+                    /* 2. convert to a new FINALLY2 block */
+		    block->type = BLOCK_FINALLY2;
+		    blocklevel++; /* Re-add the block */
+
+                    /* Resume this END instruction later */
+                    block->u.finally.resume = pc - co->inst;
+
+                    /* Change the pc so that the current END is interrupted */
+                    pc = co->inst + block->u.finally.handler;
+		    break;
+
+            case BLOCK_FINALLY2:
+		    /* Ending a finally handler. */
+#ifndef NDEBUG
+		    if (SEE_eval_debug)
+			dprintf("ending FINALLY2\n");
+#endif
+                    /* If we had an exception we re-throw it */
+		    if (SEE_CAUGHT(block->u.finally.context)) {
 			TRACE(SEE_TRACE_THROW);
-		    SEE_DEFAULT_CATCH(interp, block->u.tryf.context);
-		}
-	    }
+                        SEE_DEFAULT_CATCH(interp, block->u.finally.context);
+                    }
+
+                    /* Resume the thing that triggered the finally */
+                    SEE_ASSERT(interp, block->u.finally.resume != -1);
+                    pc = co->inst + block->u.finally.resume;
+
+                    break;
+#ifndef NDEBUG
+            default:
+                    SEE_ASSERT(interp, "invalid block type");
+#endif
+            }
+
 	    break;
 
 	/*--------------------------------------------------
@@ -1616,43 +1656,70 @@ code1_exec(sco, ctxt, res)
 	case INST_S_TRYC:
 	    POP(vp);
 	    SEE_ASSERT(interp, SEE_VALUE_GET_TYPE(vp) == SEE_STRING);
-	    block = &blockbottom[blocklevel];
-	    block->type = BLOCK_TRYC;
-	    block->u.tryc.handler = arg;
-	    block->u.tryc.stack = stack - stackbottom;
-	    block->u.tryc.ident = vp->u.string;
-	    block->u.tryc.last_try_block = try_block;
+	    block = &blockbottom[blocklevel++];
+	    block->type = BLOCK_CATCH;
+	    block->u.catch.handler = arg;
+	    block->u.catch.stack = stack - stackbottom;
+	    block->u.catch.ident = vp->u.string;
+	    block->u.catch.last_try_block = try_block;
+
 	    try_block = block;
-	    _SEE_TRY_INIT(interp, try_block->u.tryc.context);
-	    try_block->u.tryc.context.done = 1;
-	    if (_SEE_TRY_SETJMP(interp, try_block->u.tryc.context)) {
-		try_block->u.tryc.context.done = 0;
-		block = try_block;
-		try_block = block->u.tryc.last_try_block;
-		new_blocklevel = (block - blockbottom) + 1;
-		goto end;
-	    }
-	    blocklevel++;
+	    try_block->u.catch.context.done = 0;
+	    _SEE_TRY_INIT(interp, try_block->u.catch.context);
+	    if (_SEE_TRY_SETJMP(interp, try_block->u.catch.context)) {
+                /* Executed when an exception has been caught by this block: */
+                /* Note: _SEE_TRY_FINI will have been called */
+                block = try_block;
+                SEE_ASSERT(interp, block->type == BLOCK_CATCH);
+                try_block = block->u.catch.last_try_block;
+                vp = SEE_CAUGHT(block->u.catch.context);
+#ifndef NDEBUG
+                if (SEE_eval_debug)
+                    dprintf("CATCH block caught exception %p\n", vp);
+#endif
+                /* Create a scope object to hold the exception */
+                obj = SEE_Object_new(interp);
+                SEE_OBJECT_PUT(interp, obj, block->u.catch.ident,
+                    vp, SEE_ATTR_DONTDELETE);
+                block->u.catch.obj = obj;
+                /* Restore the stack */
+                stack = stackbottom + block->u.catch.stack;
+                /* Set the PC to the catch handler */
+                pc = co->inst + block->u.catch.handler;
+                /* Resume processing instuctions in the handler. 
+                 * Hopefully there will be a S.CATCH real soon. */
+            }
 	    break;
 
 	case INST_S_TRYF:
-	    block = &blockbottom[blocklevel];
-	    block->type = BLOCK_TRYF;
-	    block->u.tryf.handler = arg;
-	    block->u.tryf.stack = stack - stackbottom;
-	    block->u.tryf.block = -1;
-	    block->u.tryf.last_try_block = try_block;
+	    block = &blockbottom[blocklevel++];
+	    block->type = BLOCK_FINALLY;
+	    block->u.finally.handler = arg;
+	    block->u.finally.stack = stack - stackbottom;
+	    block->u.finally.last_try_block = try_block;
 	    try_block = block;
-	    _SEE_TRY_INIT(interp, try_block->u.tryf.context);
-	    try_block->u.tryf.context.done = 1;
-	    if (_SEE_TRY_SETJMP(interp, try_block->u.tryf.context)) {
-		try_block->u.tryf.context.done = 0;
-		block = try_block;
-		try_block = block->u.tryf.last_try_block;
-		new_blocklevel = (block - blockbottom) + 1;
-		goto end;
+	    _SEE_TRY_INIT(interp, try_block->u.finally.context);
+	    try_block->u.finally.context.done = 0;
+	    if (_SEE_TRY_SETJMP(interp, try_block->u.finally.context)) {
+                /* Executed when an exception has been caught by this block. */
+                /* Note: _SEE_TRY_FINI will have been called */
+                block = try_block;
+                SEE_ASSERT(interp, block->type == BLOCK_FINALLY);
+                try_block = block->u.finally.last_try_block;
+
+                /* Restore the stack */
+                stack = stackbottom + block->u.finally.stack;
+		/* Convert the block into a FINALLY2. */
+                block->type = BLOCK_FINALLY2;
+                /* Leave context.done==0 to indicate that an exception
+                 * had been caught. No need to save the current PC */
+                pc = co->inst + block->u.finally.handler;
+                /* Continue execution in the handler, which is usually 
+                 * an END instruction to clean up earlier blocks. */
+#ifndef NDEBUG
+                block->u.finally.resume = -1; /* Store a bogus resume point */
+#endif
 	    }
-	    blocklevel++;
 	    break;
 
 	case INST_FUNC:
@@ -1828,6 +1895,7 @@ disasm(co, pc)
 	case INST_BOR:		dprintf("BOR"); break;
 	case INST_S_ENUM:	dprintf("S_ENUM"); break;
 	case INST_S_WITH:	dprintf("S_WITH"); break;
+	case INST_S_CATCH:	dprintf("S_CATCH"); break;
 
 	case INST_NEW:		dprintf("NEW,%d", arg); break;
 	case INST_CALL:		dprintf("CALL,%d", arg); break;

@@ -192,6 +192,7 @@ static int cg_var_set_all_scope(struct code_context *, int);
 # define CG_BOR()		_CG_OP0(BOR)
 # define CG_S_ENUM()		_CG_OP0(S_ENUM)
 # define CG_S_WITH()		_CG_OP0(S_WITH)
+# define CG_S_CATCH()		_CG_OP0(S_CATCH)
 
 /* Special PUTVALUE that takes attributes */
 # define CG_PUTVALUEA(attr)	_CG_OP1(PUTVALUEA,attr)
@@ -2479,9 +2480,12 @@ TryStatement_catch_codegen(na, cc)
 	CODEGEN(n->block);	    /* - */
 	CG_B_ALWAYS_f(L2);
     CG_LABEL(L1);
+        /* If the catch variable was declared var then temporarily remove it
+         * from the scope. */
 	in_scope = cg_var_is_in_scope(cc, n->ident);
 	if (in_scope)
 	    cg_var_set_scope(cc, n->ident, 0);
+	CG_S_CATCH();	            /* - */
 	CODEGEN(n->bcatch);	    /* - */
 	if (in_scope)
 	    cg_var_set_scope(cc, n->ident, 1);
@@ -2509,6 +2513,8 @@ TryStatement_finally_codegen(na, cc)
 	CG_B_ALWAYS_f(L2);
     CG_LABEL(L1);
 	CG_GETC();		    /* val */
+        if (cc->max_block_depth > cg_block_current(cc))
+            CG_END(cg_block_current(cc)+1); 
 	CODEGEN(n->bfinally);	    /* val */
 	CG_SETC();		    /* - */
     CG_LABEL(L2);
@@ -2541,12 +2547,15 @@ TryStatement_catchfinally_codegen(na, cc)
 	in_scope = cg_var_is_in_scope(cc, n->ident);
 	if (in_scope)
 	    cg_var_set_scope(cc, n->ident, 0);
+	CG_S_CATCH();	            /* - */
 	CODEGEN(n->bcatch);	    /* - */
 	if (in_scope)
 	    cg_var_set_scope(cc, n->ident, 1);
 	CG_B_ALWAYS_f(L3b);
     CG_LABEL(L1);
 	CG_GETC();		    /* val */
+        if (cc->max_block_depth > cg_block_current(cc))
+            CG_END(cg_block_current(cc)+1); 
 	CODEGEN(n->bfinally);	    /* val */
 	CG_SETC();		    /* - */
     CG_LABEL(L3a);

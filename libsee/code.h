@@ -87,7 +87,8 @@ enum SEE_code_op0 {
 	SEE_CODE_BOR,			/*     val val | num        */
 
 	SEE_CODE_S_ENUM,		/*         obj | -          */
-	SEE_CODE_S_WITH 		/*         obj | -          */
+	SEE_CODE_S_WITH,		/*         obj | -          */
+	SEE_CODE_S_CATCH		/*         obj | -          */
 
 };
 

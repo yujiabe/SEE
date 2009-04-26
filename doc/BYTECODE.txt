@@ -39,40 +39,67 @@ The value stack
 ---------------
 
 The value stack is used for computing expressions. Most of the instructions
-described in this file work on the value stack.
+described in this file work on the value stack. The value stack is bounded
+for any one function, as the parser is able to determine the maximum
+number of values the stack could contain in that function.
 
-See the section on 'Notation' below for more information on how the
-top content of the value stack is represented in this document.
+I use a notation inspired by Adobe Postscript to describe manipulations on
+the value stack. See the section on 'Notation' below.
 
 The block stack
 ---------------
 
 Some of the instructions in this file work on the block stack. The block 
-stack is used for keeping track of:
+stack is independent of the value stack and is used for keeping track of:
 
     * enumerators ('for ... in')
     * try-catch and try-finally handling
     * scope extension ('with')
 
-Blocks are created using S.ENUM, S.TRYC, S.TRYF, S.WITH instructions, and
-are numbered from one. Some block types cannot be directly created by an
-instruction. All blocks end with the END instruction, which can end
-multiple blocks. Ending block zero (END,0) terminates the function and
-returns the C register to the caller. This is how 'return' is implemented.
+The block stack is independent of the value stack. The top element of the
+block stack, if any, is the current block. We say the program creates a block
+when a new block is pushed onto the top of the stack. Similarly, the
+program ends a block as it is popped.
 
-The process of ending a block will have side effects depending on the block
-being ended. For example, ending the FINALLY block transfers control to a
-finally handler, and pushes a FINALLY2 block onto the block stack (whose 
-purpose is to restore C and PC correctly when it is ended).
+The most important feature of blocks is that as the program ends a block, 
+it triggers a behaviour such as restoring the scope chain or jumping to 
+instructions implementing the finally part of a try-finally statement.
 
-Generally, expressions will make use of the value stack, while statements 
-will make use of the block stack and the C register.
+New blocks are created by the 4 instructions S.ENUM, S.TRYC, S.TRYF,
+and S.WITH instructions, and a special instruction S.CATCH is used to modify
+the block stack. There are 5 types of blocks that may exist on
+the block stack: ENUM, CATCH, FINALLY, FINALLY2 and WITH. These are all
+described in detail in the section "Block Behaviour".
+
+Blocks are numbered from the bottom of the stack, starting at number 1.
+
+Blocks are only ended by the instruction END,n. This instruction ends all
+blocks numbered n and higher, beginning with the highest. 
+
+Attempting to end "block zero" terminates the function and returns the C 
+register to the caller. This is how the 'return' statement is implemented.
+
+A block's end behaviour may interrupt the END instruction, stopping further
+blocks from being ended and usually causing flow of control to resume 
+elsewhere. However, the language eventually returns control to restart
+the interrupted END instruction and all blocks will be ended. Because of this,
+the END instruction is different to most in that it only advances the PC
+when the block stack is short enough. Otherwise it loops on itself.
+
+For example, ending a FINALLY block transfers control to a finally handler, 
+which pushes a FINALLY2 block onto the block stack. When the FINALLY2 block
+is ended, it restores the C and PC registers to return control to the END
+statement that ended the original FINALLY block.
+
+Generally, expressions use the value stack, while statements use the block 
+stack and the C register.
 
 Initial conditions
 ------------------
+On entry to a function, the following machine state is defined:
 
     PC = initial instruction
-    C  = undefined
+    C  = the value 'undefined'
     L  = not defined
     E  = not defined
     block stack = empty
@@ -81,44 +108,46 @@ Initial conditions
 INSTRUCTION SUMMARY
 ===================
 
-Notation
---------
+Instruction notation
+--------------------
 
-Instructions marked with a '*' below may throw exceptions. Instructions 
-without a '*' do not throw exceptions.
+This section describes the notation used in subsequent sections for defining
+all the virtual machine instructions.
 
-Instructions that operate on the value stack describe the before and after
-states of the stack in the form "before | after". For example, the
-subtraction operator SUB is indicated like this:
+Instructions marked with a '*' in the first column may throw exceptions. 
+Instructions without a '*' cannot throw exceptions.
+
+Most instructions operate on the value stack, and we need a notation to
+describe the before and after states of the stack. We use general notation 
+of "before | after". For example, the subtraction operator SUB is described 
+like this:
 
 	SUB    num1 num2 | num3
+            Let num3 = num1 - num2
 
-Indicating that num2 is first popped off the stack, followed by num1,
+This indicates that num2 is first popped off the stack, then num1,
 then num3 is pushed. On both sides, the top of the stack is always 
 written rightmost in the list.  An empty list is represented by '-'.
 
-The elements on the value stack are of constrained types. For example
-the 'num2' element above is a number value. The abbreviations of the
-value types, and (some union types) are:
+The notation also indicates type constraints on the elements. For example,
+the 'num2' element from the example is guaranteed to be a SEE_NUMBER value. 
 
-    * bool	- SEE_BOOLEAN
-    * num	- SEE_NUMBER
-    * str	- SEE_STRING
-    * obj	- SEE_OBJECT
-    * ref	- SEE_REFERENCE (possibly)
-    * cmpl	- SEE_COMPLETION
-    * null	- SEE_NULL
-    * undef	- SEE_UNDEFINED
+The abbreviations of the value types and some union types are as follows:
 
-    * any	- any SEE_value (i.e. unknown type)
-                  i.e. { bool + num + str + obj + ref + cmpl + null + undef }
+    * bool	= { SEE_BOOLEAN }
+    * num	= { SEE_NUMBER }
+    * str	= { SEE_STRING }
+    * null	= { SEE_NULL }
+    * undef	= { SEE_UNDEFINED }
+    * obj	= { SEE_OBJECT }
+    * ref	= { SEE_REFERENCE }
+    * cmpl	= { SEE_COMPLETION }
+    * any	= bool + num + str + null + undef + obj + ref + cmpl
+    * val	= bool + num + str + null + undef + obj
+    * prim	= bool + num + str + null + undef
 
-    * val	- values; same as 'any', but excluding 'cmpl' or 'ref'
-                  i.e. { bool + num + str + obj + null + undef }
-
-    * prim	- primitives; The same as 'val', but excluding 'obj'
-                  i.e. { bool + num + str + null + undef }
-
+Briefly, 'prim' indicates non-object values, while 'any' indicates things
+of unknown type.
 
 Call instructions
 -----------------
@@ -145,6 +174,8 @@ Call instructions
 
     Note: The L, C, E registers are unchanged by the CALL/NEW instructions.
 
+XXX TODO the arguments to each NEW and CALL are in practice 'val', not 'any'.
+
 
 Special instructions
 --------------------
@@ -156,63 +187,68 @@ Special instructions
     LITERAL,val    - | val
 	Pushes a copy of a literal value onto the stack.
 
-    LOC,filename,lineno      - | -
-	Sets the current location ('L' register).
+    LOC,filename:lineno      - | -
+	Sets the L register to the source current location.
 
 
     Notes: Implementations are encouraged to generate fixed tables (of 
     functions, literals and location tags) during parse, and then to use 
-    integer arguments to the special instructions above.
+    non-negative integer arguments to the special instructions above.
 
 
 Generic instructions
 --------------------
 
-    NOP		   - | -
-	No operation. (Used for padding)
+    NOP  	    - | -
+	No operation. (Used for padding.)
 
-    DUP		any1 | any1 any1
-	Duplicates the value on top of the stack
+    DUP  	    any1 | any1 any1
+	Duplicates the value on top of the stack.
 
-    POP		any1 | -
-	Removes the topmost element on the stack
+    POP  	    any1 | -
+	Removes the topmost element on the stack.
 
     EXCH	    any1 any2 | any2 any1
-	Exchanges the top two elements on the stack
+	Exchanges the top two elements on the stack.
 
     ROLL3	    any1 any2 any3 | any3 any1 any2
 	Rotates the top three elements. The top element is
-	pushed down past the next two elements, and those two elements
+	pushed down beneath the next two elements, and those two elements
 	rise up by one position.
 
 
 Miscellaneous instructions
 --------------------------
 
-*   THROW	    val | ?
-	Throws an exception consisting of the given value
+*   THROW	    val | -
+	Throws an exception with value val.
+
+        Note: The resulting state of the stack is not usefully defined 
+        here because no following instruction will ever see the stack
+        in that state. However, it is convenient for some analysis to
+        assume that THROW does indeed continue.
 
     SETC	val | -
-	Sets the C register to the given value. 
+	Sets the C register to the given value.
 
     GETC	- | val
-	Pushes the value of the C register 
+	Pushes the value of the C register.
 
 
 Context instructions
 --------------------
 
     THIS	- | obj
-	Pushes the 'this' object from the current context
+	Pushes the 'this' object from the current context onto the stack.
 
     OBJECT	- | obj
-	Pushes the object interp->Object onto the stack
+	Pushes the object interp->Object onto the stack.
 
     ARRAY	- | obj
-	Pushes the object interp->Array onto the stack
+	Pushes the object interp->Array onto the stack.
 
     REGEXP	- | obj
-	Pushes the object interp->Regexp onto the stack
+	Pushes the object interp->Regexp onto the stack.
 
 
 Primitive instructions
@@ -230,55 +266,56 @@ Primitive instructions
 
 *   PUTVALUE	ref val | -
 *   PUTVALUE,n	ref val | -
-	Computes PutValue(ref, val) (8.7.2), i.e ref.[[Put]](val)
-	PUTVALUE,n is a variant that assigns non-default (non-zero)
-	attributes.
+	Computes PutValue(ref, val) (8.7.2), i.e ref.[[Put]](val).
+	PUTVALUE,n is a variant of PUTVALUE that puts values
+        with non-default (non-zero) attributes.
 
     VREF,n	- | ref
 	Returns a reference to a variable. Variables are always referenced
 	from the context variable object. Variables are always initialised
 	to undefined in the variables object before the function body begins,
-	unless they already exist.  The VREF instruction is equivalent to a 
-	LOOKUP with the variable name when the variable object is closest
-	in scope.
+	unless they already exist.  The VREF instruction is equivalent to the 
+        instructions <LITERAL,name;LOOKUP> when the variable object is closest
+        in scope.
 
-*   DELETE	any1 | bool
-	1. If any is not a reference, then pushes TRUE
-	2. Otherwise call [[Delete]] on the reference (11.4.1)
-	3. Push the result of the [[Delete]] call
+*   DELETE	any1 | bool1
+	1. If any is not a reference, then let bool1=true
+	2. Otherwise let bool1 be the result of calling [[Delete]] 
+           on the reference (11.4.1)
 
-    TYPEOF	any | str
-	1. If any is a reference with null base, then 
+    TYPEOF	any1 | str1
+	1. If any1 is a reference with null base, then 
 	   let v = undefined
-	2. If any is a reference with a non-null base, then
-	   let v = GetValue(any)
-	3. If any is not a reference, then let v = any
-	3. Push a string representing the type of v (11.4.3)
+	2. If any1 is a reference with a non-null base, then
+	   let v = GetValue(any1)
+	3. If any1 is not a reference, then 
+           let v = any1
+	3. Let str1 be a string representing the type of v (11.4.3)
 
 Conversion instructions
 -----------------------
 
 *   TOOBJECT	val | obj
-	Calls ToObject(val) (9.9). May throw an exception
+	Let obj be the result of ToObject(val) (9.9).
 
 *   TONUMBER	val | num
-	Calls ToObject(val) (9.3). May throw an exception
+	Let num be the result of ToObject(val) (9.3).
 
     TOBOOLEAN	val | bool
-	Calls ToBoolean(val) (9.2)
+	Let bool be the result of ToBoolean(val) (9.2).
 
 *   TOSTRING	val | str
-	Calls ToString(val) (9.8). May throw an exception
+	Let str be the result of ToString(val) (9.8).
 
 *   TOPRIMITIVE	val | prim
-	Calls ToPrimitive(val) (9.1) May thrown an exception
+	Let prim be the result of ToPrimitive(val) (9.1).
 
     Notes: These instructions have no effect when the value on the top
-    of the stack is already the right type. Peephole optimization can 
+    of the stack is already of the right type. Peephole optimization may 
     occur when the type constraints of instructions obviate the need 
-    for conversions. For example, the DELETE instruction always pushes 
-    a boolean; so an immediately subsequent TOBOOLEAN instruction can be
-    removed.
+    for these conversions. For example, the DELETE instruction always pushes 
+    a boolean; so any immediately following TOBOOLEAN instruction can be
+    removed by a peephole optimizer.
 
 
 Arithmetic instructions (11.6.3)
@@ -313,42 +350,43 @@ Arithmetic instructions (11.6.3)
 
     RSHIFT	val1 val2 | num3
 	Let num3 = ToInt32(val1) >> (ToUint32(val2) & 0x1f) 
-	The most significant bit is propagated, and the result is signed.
+	The most significant bit is propagated, and the result is
+        an integer in the range [-(2^31), 2^31).
 
     URSHIFT	val1 val2 | num3
 	Let num3 = ToUint32(val1) >> (ToUint32(val2) & 0x1f)
 	The most signifiant bit of result is set to zero, and the result is
-	an positive 31 bit integer. (11.7.3)
+	an integer in the range [0, 2^32). (11.7.3)
 
 
 Relational instructions (11.8)
 -----------------------
 
     LT		val1 val2 | bool
-	Compute val1 < val2 (see 11.8.1)
+	Let bool = (val1 < val2) (see 11.8.1)
 
     GT		val1 val2 | bool
-	Compute val1 > val2 (see 11.8.2)
+	Let bool = (val1 > val2) (see 11.8.2)
 
     LE		val1 val2 | bool
-	Compute val1 <= val2 (see 11.8.3)
+	Let bool = (val1 <= val2) (see 11.8.3)
 
     GE		val1 val2 | bool
-	Compute val1 >= val2 (see 11.8.4)
+	Let bool = (val1 >= val2) (see 11.8.4)
 
 *   INSTANCEOF	val1 val2 | bool
-	1. If val2 is not an object, throws a TypeError exception
-	2. compute val2.[[HasInstance]](val1)
+	1. If val2 is not an object, throw a TypeError exception
+	2. Otherwise, let bool = (val2.[[HasInstance]](val1))
 
 *   IN		str1 val2 | bool
-	1. if val2 is not an object, throws a TypeError exception
-	2. compute val2.[[HasProperty]](str1)
+	1. If val2 is not an object, throw a TypeError exception
+	2. Otherwise, let bool = (val2.[[HasProperty]](str1))
 
     EQ		val1 val2 | bool
-	Compute val1 == val2 (see 11.9.3)
+	Let bool = (val1 == val2) (see 11.9.3)
 
     SEQ		val1 val2 | bool
-	Compute val1 === val2 (see 11.9.6)
+	Let bool = (val1 === val2) (see 11.9.6)
 
 
 Binary bitwise instructions (11.10)
@@ -357,130 +395,255 @@ Binary bitwise instructions (11.10)
     BAND	val1 val2 | num3
     BXOR	val1 val2 | num3
     BOR		val1 val2 | num3
-	Compute num3 = ToInt32(val1) @ ToInt32(val2)
+	Let num3 = (ToInt32(val1) [&^|] ToInt32(val2))  (bitwise operation)
 
 
 Branch instructions
 -------------------
 
     B.ALWAYS,x 	    - | -
-	Sets PC = x
+	Set PC = x.
 
     B.TRUE,x	 bool | -
-	If bool is true, then set PC = x
+	If bool is true, then set PC = x.
 
     B.ENUM,x	    - | - str		(when branch IS taken)
 		    - | -		(when branch IS NOT taken)
-	If the enumeration register E is exhausted, branches to <x>.
-	Otherwise, pushes the next identifier string from E onto the value
-	stack and does not branch.
-	The B.ENUM instruction only returns strings str where 
-	obj.[[HasProperty]](str) is true. (This is checked each time).
+	1. If the enumeration register E is exhausted, then branch to x.
+	2. Otherwise, push the next identifier string from E onto the value
+	   stack (and do not branch).
+	The B.ENUM instruction only pushes a string str where 
+	obj.[[HasProperty]](str) is true. This is checked each time.
 
 
 Block instructions
 ------------------
 
     S.ENUM	    obj | -
-	Pushes an enumeration block. See B.ENUM instruction and
-	the section below on 'The ENUM block'.
-	
+	1. Create and pushes a new enumeration block. 
+
+        See the B.ENUM instruction above and 'The ENUM block' section below.
 	Conceptually, this instruction saves register E, and
-	then sets E to the enumeration of obj.
+	then sets E to the new enumeration of obj.
 
     S.WITH	    obj | -
-	Inserts obj into the front of the context's scope chain,
-	and pushes a 'WITH' block. See 'The WITH block', below.
+	1. Insert obj into the front of the context's scope chain.
+	2. Create and push a new 'WITH' block. See 'The WITH block' below.
 
     S.TRYC,x	    str | -
-	Creates and pushes a CATCH block. See 'The CATCH block' below.
+	1. Creates and pushes a CATCH block. 
+
+        See 'The CATCH block' below.
 	The address x indicates the entry point of the catch handler.
 
     S.TRYF,x	    - | -
-	Creates and pushes a FINALLY block. See 'The FINALLY block' below.
+	1. Creates and pushes a FINALLY block. 
+
+        See 'The FINALLY block' below.
 	The address x indicates the entry point of the finally handler.
-	The finally handler should end with an END
+	The finally handler at x should finish with an appropiate END.
+
+    S.CATCH         - | -
+        1. Inserts the object from the top (CATCH) block into the scope chain
+        2. Converts the top (CATCH) block into a WITH block.
+
+        Note that this instruction modifies a block on the block stack,
+        rather than just creating a new one. Also, it does not 'end' the 
+        top CATCH block, but rather replaces it.
 
     END,n	    - | ?
-	Pops all blocks up to and including the nth block, invoking their
-	end behaviours in sequence. The virtual machine is terminated
-	on an END,0 instruction.
+        1. If there are less than n blocks remaining on the stack, then
+           continue onto the next instruction.
+        2. If there are no blocks on the stack, terminate the 
+           program and return C.
+        3. End the block on top of the block stack by popping it
+           and invoking its end behaviour.
+        4. Go to step 1 unless the end behaviour transfered control.
+           Note: this step may be implemented by leaving the PC 
+           alone so that the virtual machine execution loop ends up 
+           re-executing the current END instruction.
 
 	Conceptually, the END instruction pops one block, and then
-	returns control to itself (i.e. the PC does not advance) until the
-	block stack height is smaller than n.
+	returns control to itself. This continues until the block stack 
+        height is n-1.
 
+        When there are less than n blocks on the block stack, this instruction
+        is equivalent to a NOP.
 
 Block behaviour
 ===============
 
+Block behaviours do not access values from the value stack. This is because
+some blocks manipulate the value stack while 
+
 The WITH block
 
-    A WITH block is created with the S.WITH instruction. 
+    A WITH block is created by the S.WITH and S.CATCH instructions. 
 
-    When this block is created, it records the state of the scope chain
-    before the scope insertion of the S.WITH instruction.
+    On creation it records the state of the scope chain
+    before the scope insertion performed by the instruction.
 
-    When this block is ended, it restores the scope chain.
-    There is no other side-effect.
+    When this block is ended, it merely restores the scope chain. 
 
 The ENUM block
 
-    An ENUM block is created with the S.ENUM instruction. 
-    It affects only the way the B.ENUM branch instruction works.
-    It records the value of the E register before it is changed
+    An ENUM block is created by the S.ENUM instruction. 
+
+    On creation it saves the value of the E register before it is changed
     by the S.ENUM instruction.
 
     When this block is ended, it restores the E register.
-    There is no other side-effect.
 
 The CATCH block
 
-    A CATCH block is created with the S.TRYC instruction. It initialises
-    a SEE_TRY context.
+    A CATCH block is created by the S.TRYC instruction. 
+    
+    On creation of a CATCH block the following steps are taken:
+       1. activate a SEE_TRY context for catching future instruction exceptions
+       2. save the current height of the value stack
+       3. saves the starting adddress of the catch handler
 
-    When a CATCH block is ended, it is removed from the block stack, and
-    the SEE_TRY context is finalized. There is no other side-effect.
+    If an exception occurs while a CATCH block is active, the following steps 
+    are performed:
+	1. Deactivate the SEE_TRY context
+        2. Create a new Object K with a property set to the caught exception
+        3. Save the object in the block to indicate an exception was caught.
+           This is so it may be later consumed by a S.CATCH instruction.
+	4. Truncate the value stack to the saved height
+        5. Set the PC to the address of the catch handler, which 
+           should be an END statement followed by an S.CATCH.
 
-    If an exception occurs within the context, the following steps happen:
+    When a CATCH block is ended, then an exception could not have been 
+    caught, and the following steps are performed:
+        1. Deactivate the SEE_TRY context
 
-	- the SEE_TRY context is finalized.
-	- the value stack is truncated to its length at the time of S.TRYC
-	- a new Object is created, with a property set to the caught exception
-	  value. This object is inserted at the front of the scope chain.
-	- the CATCH block is replaced by a WITH block
-	- control is passed to the address given to the S.TRYC instruction
+ Structure of a S.TRYC handler
 
-    Note that the catch handler should end the WITH block with an END,n 
-    instruction and then explicitly pass control to after the try-catch block.
+    A catch handler should have the following structure:
+        END,x+1
+        S.CATCH   ; converts CATCH block x into a WITH block, pushes scope
+        ...
+        END,x
+
+    where x is the computed depth of the CATCH block. 
+
+    For examepl, consider this function:
+
+        function () {
+           try { AAA; } 
+           catch(e) { BBB; }
+        }
+
+    For this function, a code generator may generate the following,
+    unoptimized code:
+
+        0: S.TRYC,3
+        1: {AAA}
+        2: B.ALWAYS,6
+        3: END,2
+        4: S.CATCH
+        5: {BBB}
+        6: END,1
+        7: END,0
+
+    The execution of this code when AAA completes is illustrated as follows:
+
+        PC=0 blocks={}              S.TRYC,3
+        PC=1 blocks={CATCH<3>}      {AAA} - completes successfully
+        PC=2 blocks={CATCH<3>}      B.ALWAYS,6
+        PC=6 blocks={CATCH<3>}      END,1 - ending CATCH has little effect
+        PC=7 blocks={}              END,0
+
+    And when AAA throws an exception:
+
+        PC=0 blocks={}              S.TRYC,3
+        PC=1 blocks={CATCH<3>}      {AAA} - throws an exception with blocks
+        PC=3 blocks={CATCH<3,e>,+}  END,2 - ends blocks indicated by '+'
+        PC=4 blocks={CATCH<3,e>}    S.CATCH - convert CATCH to WITH using e
+        PC=5 blocks={WITH}          {BBB}
+        PC=6 blocks={WITH}          END,1 - ends the WITH block
+        PC=7 blocks={}
 
 The FINALLY block
 
-    A FINALLY block is created with the S.TRYF instruction. It initialises
-    a SEE_TRY context.
+    A FINALLY block is created with the S.TRYF instruction. 
+    
+    On creation of a FINALLY block the following steps are followed:
+        1. activate a SEE_TRY context.
+        2. record the depth of the value stack
 
     When a FINALLY block is ended, the following steps happen:
-
-	- the SEE_TRY context is finalised.
-	- the value stack is truncated to its length at the time of S.TRYF
-	- the FINALLY block is replaced with a FINALLY2 block
-	- the PC of the END instruction is stored in the FINALLY2 block
-	- control is passed to the finally handler.
+	1. finalise the SEE_TRY context
+	2. replace the FINALLY block with a new FINALLY2 block
+        3. if the SEE_TRY context had caught an exception, then
+           store the exception in the FINALLY2 block
+	4. otherwise save the current PC as a resume point
+	5. set the PC to the handler from the FINALLY block
 
     When an exception occurs inside a FINALLY block context, the
-    same steps occur, except that instead of a PC, a flag is recorded in 
-    the FINALLY2 block to indicate that an exception was caught and it
-    should be re-thrown.
+    following steps occur:
+	1. the value stack is truncated to its length at the time of S.TRYF
+        2. the FINALLY block is ended (see steps above)
+           Note especially that the FINALLY2 block will end up
+           holding the exception value for rethrow.
 
-    Note that the finally handler should end with an END,n instruction
-    that will direct flow of control elsewhere. (See below)
+ Structure of a S.TRYF handler
+
+    The handler should start with an END statement that cleans up
+    any potential blocks above the FINALLY2 block, performs the finalization
+    action and then ends the FINALLY2 block.
+
+        END,x+1
+        ...
+        END,x
+
+    For example, consider this function:
+
+        function () {
+           try { CCC; } 
+           finally { DDD; }
+        }
+
+    For this function, a code generator may generate the following,
+    unoptimized code:
+
+        0: S.TRYF,3
+        1: {CCC}
+        2: B.ALWAYS,5
+        3: END,2
+        4: {DDD}
+        5: END,1
+        6: END,0
+
+    The execution of this code when CCC completes is illustrated
+    as follows:
+
+        PC=0 blocks={}              S.TRYF,3
+        PC=1 blocks={FINALLY<3>}    {CCC} - completes successfully
+        PC=2 blocks={FINALLY<3>}    B.ALWAYS,5
+        PC=5 blocks={FINALLY<3>}    END,1 - saves PC as resume
+        PC=3 blocks={FINALLY2<5>}   END,2 - no effect
+        PC=4 blocks={FINALLY2<5>}   {DDD}
+        PC=5 blocks={FINALLY2<5>}   END,1 - resumes PC=5
+        PC=5 blocks={}              END,1 - no effect
+        PC=6 blocks={}              END,0
+
+    And the execution of this code when CCC throws an exception e is 
+    as follows:
+
+        PC=0 blocks={}              S.TRYF,3
+        PC=1 blocks={FINALLY<3>}    {CCC} - throws an exception
+        PC=3 blocks={FINALLY2<e>,+} END,2 - ends blocks indicated by '+'
+        PC=4 blocks={FINALLY2<e>}   {DDD}
+        PC=5 blocks={FINALLY2<e>}   END,1 - re-throws exception 'e'
+        -- Note that the exception e now escapes the virtual machine
 
 The FINALLY2 block
 
     A FINALLY2 block is created only when a FINALLY block is ended.
+
     When the FINALLY2 block is ended, the following steps happen:
-	- if an exception was recorded as caught, then it is rethrown
-	  as if SEE_DEFAULT_CATCH() were called
-	- otherwise, flow of control is returned to the PC stored previously.
-	  (this will cause the triggering END instruction to be re-executed).
+	1. if an exception was recorded as caught, then it is rethrown
+	   as if SEE_DEFAULT_CATCH() were called
+        2. set the PC to the saved resume point
 

@@ -96,8 +96,8 @@
 #define INST_FUNC		0x39
 #define INST_LITERAL		0x3a
 #define INST_LOC		0x3b
+#define INST_S_CATCH		0x3c
 
-                             /* 0x3c unused */
                              /* 0x3d unused */
                              /* 0x3e unused */
                              /* 0x3f unused */
