@@ -1,17 +1,16 @@
 
-3.1 [unreleased]
-  Bug 141: Don't allow commas at the end of object displays
-  Bug 140: Segfault when re-using 'with' scopes outside of defining func
+3.1 [2008-04-26]
+  Bug 141: allow commas at the end of object literals only for JS1.1+
+  Bug 140: don't segfault when re-using 'with' scopes outside of defining func
   Bug 139: detect NetBSD/powerpc in dtoa
-  Bug 133, 135: add -lpcre, -lgcc to output from libsee-config --libs
-  Bug 131, 132: control in bytecode finally handlers corrected
-  Bug 126: add missing call to SEE_INPUT_CLOSE in SEE_call_args's UTF8 handler
-  Bug 122: uninitialized AST field in parser
-  Bug 120: library compiled with -DNDEBUG misses SEE_throw() debug point
-  Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
+  Bugs 133, 135: add -lpcre, -lgcc to output from libsee-config --libs
+  Bugs 131, 132: control can leave bytecode exception handlers correctly
+  Bug 126: properly close inputs in SEE_call_args's UTF8 handler
+  Bug 122: AST field was uninitialized in parser
+  Bug 120: library compiled with -DNDEBUG missed SEE_throw() debug point
+  Bug 119: library compiled with -DNDEBUG missed _SEE_intern_assert()
   Bug 116: Support eval.call and eval.apply in compatibility mode
   Bug 18:  refactored parser
-  Compat: allow trailing comma in object literals for JS1.1+
 
 3.0 [2008-02-09]
   Bug 118: Programs w/only function decls had no effect in bytecode mode

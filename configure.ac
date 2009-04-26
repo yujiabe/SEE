@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([see],
-        [3.0.]esyscmd((svnversion .||echo 0)|tr : _|tr -d \\012)[_snapshot],
+        [3.1.]esyscmd((svnversion .||echo 0)|tr : _|tr -d \\012)[_snapshot],
 	[leonard@users.sourceforge.net])
 AC_PREREQ(2.52)
 AM_INIT_AUTOMAKE
@@ -27,6 +27,7 @@ dnl programs required
 dnl
 
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_SED
 
 AC_LIBLTDL_CONVENIENCE([libltdl])

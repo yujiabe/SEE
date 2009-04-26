@@ -1,6 +1,9 @@
 
 This file summaries the API changes (header and library)
 
+API 3.1 / libsee 2:1:1
+   ~SEE_throw()
+
 API 3.0 / libsee 2:0:0
 
    +SEE_call_args()
