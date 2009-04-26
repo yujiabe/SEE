@@ -33,7 +33,7 @@ enum SEE_code_op1 {
 	SEE_CODE_PUTVALUEA		/*        ref val | -   */
 };
 
-/* Generic operators that work on the stack or virtual registers */
+/* Operand-less operators that work on the stack, virtual registers etc. */
 enum SEE_code_op0 {
 	SEE_CODE_NOP,			/*           - | -          */
 	SEE_CODE_DUP,			/*         any | any any    */
@@ -88,8 +88,8 @@ enum SEE_code_op0 {
 
 	SEE_CODE_S_ENUM,		/*         obj | -          */
 	SEE_CODE_S_WITH,		/*         obj | -          */
-	SEE_CODE_S_CATCH		/*         obj | -          */
-
+	SEE_CODE_S_CATCH,		/*           - | -          */
+	SEE_CODE_ENDF    		/*           - | -          */
 };
 
 /* Branch instructions that have a single instruction-address operand.

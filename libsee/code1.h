@@ -97,8 +97,8 @@
 #define INST_LITERAL		0x3a
 #define INST_LOC		0x3b
 #define INST_S_CATCH		0x3c
+#define INST_ENDF   		0x3d
 
-                             /* 0x3d unused */
                              /* 0x3e unused */
                              /* 0x3f unused */
                              /* ---- don't exceed 0x3f! */

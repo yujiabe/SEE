@@ -81,8 +81,8 @@ struct block {
 	    SEE_try_context_t context;
 	    struct block *last_try_block;
 	    SEE_int32_t handler;
-	    SEE_int32_t resume;
 	    unsigned int stack;
+	    SEE_int32_t resume;
 	} finally;
 	struct {
 	    SEE_try_context_t context;
@@ -447,6 +447,7 @@ code1_gen_op0(sco, op)
 	case SEE_CODE_S_ENUM:	add_byte(co, INST_S_ENUM); break;
 	case SEE_CODE_S_WITH:	add_byte(co, INST_S_WITH); break;
 	case SEE_CODE_S_CATCH:	add_byte(co, INST_S_CATCH); break;
+	case SEE_CODE_ENDF:	add_byte(co, INST_ENDF); break;
 	default: SEE_ASSERT(sco->interpreter, !"bad op0");
 	}
 
@@ -996,7 +997,38 @@ code1_exec(sco, ctxt, res)
 		}
 		dprintf(" ]");
 	    }
-	    dprintf(" blocklevel=%d\n", blocklevel);
+	    dprintf(" blocks=");
+            if (blocklevel == 0)
+                dprintf("[]");
+            else {
+                dprintf("[");
+                for (i = 0; i < blocklevel; i++)
+                    switch((block = &blockbottom[i])->type) {
+                    case BLOCK_ENUM: 
+                        dprintf(" ENUM"); 
+                        break;
+                    case BLOCK_WITH: 
+                        dprintf(" WITH"); 
+                        break; 
+                    case BLOCK_CATCH: 
+                        dprintf(" CATCH<%x>", block->u.catch.handler); 
+                        break; 
+                    case BLOCK_FINALLY: 
+                        dprintf(" FINALLY<%x/%u>", 
+                                block->u.finally.handler,
+                                block->u.finally.stack); 
+                        break; 
+                    case BLOCK_FINALLY2: 
+                        dprintf(" FINALLY2<%x/%u>", 
+                                block->u.finally.resume,
+                                block->u.finally.stack); 
+                        break;
+                    default:
+                        dprintf(" ?");
+                    }
+                dprintf(" ]");
+            }
+            dprintf("\n");
 	    disasm(co, pc - co->inst);
 	}
 #endif
@@ -1444,6 +1476,25 @@ code1_exec(sco, ctxt, res)
             scope = &block->u.with;     /* Push a new scope */
             break;
 
+        case INST_ENDF:
+            /*
+             * End a finally handler in a way that restores
+             * the circumstances the moment it was triggered.
+             */
+            SEE_ASSERT(interp, blocklevel > 0);
+            block = &blockbottom[--blocklevel];
+            SEE_ASSERT(interp, block->type == BLOCK_FINALLY2);
+
+            /* If we had an exception we re-throw it */
+            if (SEE_CAUGHT(block->u.finally.context)) {
+                TRACE(SEE_TRACE_THROW);
+                SEE_DEFAULT_CATCH(interp, block->u.finally.context);
+            }
+
+            SEE_ASSERT(interp, block->u.finally.resume != -1);
+            pc = co->inst + block->u.finally.resume;
+            break;
+
 	/*--------------------------------------------------
 	 * Instructions that take one argument
 	 */
@@ -1597,21 +1648,11 @@ code1_exec(sco, ctxt, res)
 		    break;
 
             case BLOCK_FINALLY2:
-		    /* Ending a finally handler. */
+		    /* Ending a finally handler abnormally. */
 #ifndef NDEBUG
 		    if (SEE_eval_debug)
 			dprintf("ending FINALLY2\n");
 #endif
-                    /* If we had an exception we re-throw it */
-		    if (SEE_CAUGHT(block->u.finally.context)) {
-			TRACE(SEE_TRACE_THROW);
-                        SEE_DEFAULT_CATCH(interp, block->u.finally.context);
-                    }
-
-                    /* Resume the thing that triggered the finally */
-                    SEE_ASSERT(interp, block->u.finally.resume != -1);
-                    pc = co->inst + block->u.finally.resume;
-
                     break;
 #ifndef NDEBUG
             default:
@@ -1674,8 +1715,11 @@ code1_exec(sco, ctxt, res)
                 try_block = block->u.catch.last_try_block;
                 vp = SEE_CAUGHT(block->u.catch.context);
 #ifndef NDEBUG
-                if (SEE_eval_debug)
-                    dprintf("CATCH block caught exception %p\n", vp);
+                if (SEE_eval_debug) {
+                    dprintf("CATCH block caught exception ");
+                    dprintv(interp, vp);
+                    dprintf("\n");
+                }
 #endif
                 /* Create a scope object to hold the exception */
                 obj = SEE_Object_new(interp);
@@ -1896,6 +1940,7 @@ disasm(co, pc)
 	case INST_S_ENUM:	dprintf("S_ENUM"); break;
 	case INST_S_WITH:	dprintf("S_WITH"); break;
 	case INST_S_CATCH:	dprintf("S_CATCH"); break;
+	case INST_ENDF: 	dprintf("ENDF"); break;
 
 	case INST_NEW:		dprintf("NEW,%d", arg); break;
 	case INST_CALL:		dprintf("CALL,%d", arg); break;

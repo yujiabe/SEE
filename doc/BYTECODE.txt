@@ -73,11 +73,14 @@ described in detail in the section "Block Behaviour".
 
 Blocks are numbered from the bottom of the stack, starting at number 1.
 
-Blocks are only ended by the instruction END,n. This instruction ends all
-blocks numbered n and higher, beginning with the highest. 
+Blocks are ended by the instruction END,n. This instruction ends all
+blocks numbered n and higher, beginning with the highest.  There is
+a special ENDF instruction used only for ending a FINALLY2 handler block 
+by restoring conditions for continuation.
 
-Attempting to end "block zero" terminates the function and returns the C 
-register to the caller. This is how the 'return' statement is implemented.
+Attempting to end "block zero" (END,0) terminates the function and returns 
+the C register to the caller. This is how the 'return' statement is 
+implemented.
 
 A block's end behaviour may interrupt the END instruction, stopping further
 blocks from being ended and usually causing flow of control to resume 
@@ -470,6 +473,15 @@ Block instructions
         When there are less than n blocks on the block stack, this instruction
         is equivalent to a NOP.
 
+    ENDF 	    - | ?
+        1. Remove the FINALLY2 block from the top of the stack
+        2. If the block held a valid exception, re-throw it
+	   as if SEE_DEFAULT_CATCH() were called
+        3. Otherwise, set PC to the saved resume location.
+
+        This separate instruction is required to disambiguated the
+        use of END,n within a finally handler (i.e. return, break, continue).
+
 Block behaviour
 ===============
 
@@ -577,7 +589,8 @@ The FINALLY block
 	2. replace the FINALLY block with a new FINALLY2 block
         3. if the SEE_TRY context had caught an exception, then
            store the exception in the FINALLY2 block
-	4. otherwise save the current PC as a resume point
+	4. otherwise save the current PC as a resume point and
+        5                 the intended x of the current END,x instruction
 	5. set the PC to the handler from the FINALLY block
 
     When an exception occurs inside a FINALLY block context, the
@@ -590,12 +603,13 @@ The FINALLY block
  Structure of a S.TRYF handler
 
     The handler should start with an END statement that cleans up
-    any potential blocks above the FINALLY2 block, performs the finalization
-    action and then ends the FINALLY2 block.
+    any potential blocks above the FINALLY2 block. Then it should
+    performs the finalization body, and at the end perform an ENDF
+    to complete the finally block.
 
         END,x+1
         ...
-        END,x
+        ENDF
 
     For example, consider this function:
 
@@ -612,7 +626,7 @@ The FINALLY block
         2: B.ALWAYS,5
         3: END,2
         4: {DDD}
-        5: END,1
+        5: ENDF
         6: END,0
 
     The execution of this code when CCC completes is illustrated
@@ -624,7 +638,7 @@ The FINALLY block
         PC=5 blocks={FINALLY<3>}    END,1 - saves PC as resume
         PC=3 blocks={FINALLY2<5>}   END,2 - no effect
         PC=4 blocks={FINALLY2<5>}   {DDD}
-        PC=5 blocks={FINALLY2<5>}   END,1 - resumes PC=5
+        PC=5 blocks={FINALLY2<5>}   ENDF - resumes at PC=5
         PC=5 blocks={}              END,1 - no effect
         PC=6 blocks={}              END,0
 
@@ -642,8 +656,7 @@ The FINALLY2 block
 
     A FINALLY2 block is created only when a FINALLY block is ended.
 
-    When the FINALLY2 block is ended, the following steps happen:
-	1. if an exception was recorded as caught, then it is rethrown
-	   as if SEE_DEFAULT_CATCH() were called
-        2. set the PC to the saved resume point
+    When the FINALLY2 block is ended, it indicates that a finally block
+    has been abnormally left. There are no side-effects, other than that
+    any saved exception or resume PC is lost.
 

@@ -193,6 +193,7 @@ static int cg_var_set_all_scope(struct code_context *, int);
 # define CG_S_ENUM()		_CG_OP0(S_ENUM)
 # define CG_S_WITH()		_CG_OP0(S_WITH)
 # define CG_S_CATCH()		_CG_OP0(S_CATCH)
+# define CG_ENDF()		_CG_OP0(ENDF)
 
 /* Special PUTVALUE that takes attributes */
 # define CG_PUTVALUEA(attr)	_CG_OP1(PUTVALUEA,attr)
@@ -2276,7 +2277,7 @@ ContinueStatement_codegen(na, cc)
 
 	/* Generate an END instruction if we are continuing to an outer block */
 	if (patchables->block_depth < cc->block_depth)
-	    CG_END(patchables->block_depth);
+	    CG_END(patchables->block_depth+1);
 
 	CG_B_ALWAYS_f(pa);
 	patch_add_continue(cc, patchables, pa);
@@ -2300,7 +2301,7 @@ BreakStatement_codegen(na, cc)
 
 	/* Generate an END instruction if we are breaking to an outer block */
 	if (patchables->block_depth < cc->block_depth)
-	    CG_END(patchables->block_depth);
+	    CG_END(patchables->block_depth+1);
 
 	CG_B_ALWAYS_f(pa);
 	patch_add_break(cc, patchables, pa);
@@ -2517,6 +2518,7 @@ TryStatement_finally_codegen(na, cc)
             CG_END(cg_block_current(cc)+1); 
 	CODEGEN(n->bfinally);	    /* val */
 	CG_SETC();		    /* - */
+        CG_ENDF();
     CG_LABEL(L2);
 	CG_END(cg_block_current(cc));
 	cg_block_leave(cc);
@@ -2552,15 +2554,16 @@ TryStatement_catchfinally_codegen(na, cc)
 	if (in_scope)
 	    cg_var_set_scope(cc, n->ident, 1);
 	CG_B_ALWAYS_f(L3b);
+	cg_block_leave(cc);
     CG_LABEL(L1);
 	CG_GETC();		    /* val */
         if (cc->max_block_depth > cg_block_current(cc))
-            CG_END(cg_block_current(cc)+1); 
+            CG_END(cg_block_current(cc) + 1); 
 	CODEGEN(n->bfinally);	    /* val */
 	CG_SETC();		    /* - */
+        CG_ENDF();
     CG_LABEL(L3a);
     CG_LABEL(L3b);
-	cg_block_leave(cc);
 	CG_END(cg_block_current(cc));
 	cg_block_leave(cc);
 
