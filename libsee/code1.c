@@ -1474,7 +1474,7 @@ code1_exec(sco, ctxt, res)
             block->type = BLOCK_WITH;
 	    block->u.with = SEE_NEW(interp, struct SEE_scope);
 	    block->u.with->next = scope;
-	    block->u.with->obj = vp->u.object;
+	    block->u.with->obj = obj;
             scope = block->u.with;     /* Push a new scope */
             break;
 
