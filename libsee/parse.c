@@ -1019,8 +1019,13 @@ ObjectLiteral_parse(parser)
 	    (*pairp)->value = PARSE(AssignmentExpression);
 	    if (NEXT != '}') {
 		    EXPECTX(',', "',' or '}'"); 
-                    if (NEXT == '}')
-                        EXPECTED("string, identifier or number");
+                    /*
+                     * A comma before the closing brace is permitted
+                     * by netscape, but not by JScript or ECMA-262-3.
+                     */
+                    if (!SEE_COMPAT_JS(parser->interpreter, >=, JS11))
+                        if (NEXT == '}')
+                            EXPECTED("string, identifier or number after ','");
 	    }
 	    pairp = &(*pairp)->next;
 	}

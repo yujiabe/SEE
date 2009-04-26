@@ -6,8 +6,9 @@ Things to do
         Ideas: GNU lightning (pseudo-RISC to native insn assembler)
                LLVM (has a JIT module but is all in C++)
                DotGNU's libJIT (looks very promising)
-* fix my bytecode spec so that exceptions and break actually work
+* add some optimization to the code generator
 
+* fix my bytecode spec so that exceptions and break actually work [done]
 * split parse.c up into the three parts of the grammar [done]
 * switch from executable AST to compact bytecode [done]
 * add an argument converter, eg

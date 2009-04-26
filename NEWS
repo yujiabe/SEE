@@ -11,6 +11,7 @@
   Bug 119: library compiled with -DNDEBUG misses _SEE_intern_assert()
   Bug 116: Support eval.call and eval.apply in compatibility mode
   Bug 18:  refactored parser
+  Compat: allow trailing comma in object literals for JS1.1+
 
 3.0 [2008-02-09]
   Bug 118: Programs w/only function decls had no effect in bytecode mode
